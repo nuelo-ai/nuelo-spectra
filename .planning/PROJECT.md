@@ -8,6 +8,18 @@ Spectra is an AI-powered data analytics platform that transforms how users inter
 
 Accurate data analysis. The AI must generate correct, safe Python code that produces reliable results. If the code is wrong or the sandbox isn't secure, the entire product fails. Everything else—polish, features, exports—depends on users trusting the analysis is accurate.
 
+## Current Milestone: v1.0 MVP
+
+**Goal:** Ship minimum viable product that proves the core value—users can upload data, ask questions, and get accurate AI-powered analysis.
+
+**Target features:**
+- Authentication (signup, login, password reset, session persistence)
+- File upload with AI interpretation (Onboarding Agent)
+- Tabbed file management (upload multiple files, switch between them, per-file chat history)
+- Chat with data (4 AI agents: Onboarding, Coding, Code Checker, Data Analysis)
+- Interactive Data Cards (streaming responses, sortable tables, visual polish)
+- Basic settings (profile editing, password change)
+
 ## Requirements
 
 ### Validated
@@ -18,7 +30,7 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **Authentication:**
 - [ ] User can sign up with email and password
-- [ ] User receives email verification after signup
+- [ ] User can log in with email and password
 - [ ] User can reset password via email link
 - [ ] User session persists across browser refresh
 
@@ -28,6 +40,14 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 - [ ] AI Onboarding Agent analyzes data structure and generates natural language summary
 - [ ] User can provide optional context to improve AI interpretation
 - [ ] User can refine AI's understanding of the data
+
+**File Management:**
+- [ ] User can view list of uploaded files with metadata (name, size, upload date)
+- [ ] User can delete files with confirmation dialog
+- [ ] Each file has its own chat tab
+- [ ] User can switch between file tabs
+- [ ] Chat history persists per file
+- [ ] Current active file is clearly displayed
 
 **Chat with Data:**
 - [ ] User can ask questions about their data in natural language
@@ -40,18 +60,8 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 **Interactive Data Cards:**
 - [ ] Results display as Data Cards with streaming responses
 - [ ] Data Cards show: Query Brief, Data Table, AI Explanation
-- [ ] Data tables are sortable, filterable, and support expand/collapse
+- [ ] Data tables are sortable and filterable
 - [ ] Visual polish: smooth animations, loading states, transitions
-- [ ] User can save Data Cards to Collections
-- [ ] User can export Data Card as CSV (data only)
-- [ ] User can export Data Card as PDF report
-
-**Collections Management:**
-- [ ] User can view list of uploaded files
-- [ ] User can view list of saved Data Card reports
-- [ ] User can download files individually or in bulk
-- [ ] User can delete files and reports with confirmation
-- [ ] Collections shows file metadata (name, size, upload date)
 
 **Settings:**
 - [ ] User can view and edit profile (first name, last name)
@@ -60,9 +70,14 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 ### Out of Scope
 
+- **Email verification on signup** — Deferred to v2. Let users in immediately; add verification later for security.
+- **Save Data Cards to Collections** — Deferred to v2. Focus on real-time analysis first; saving for later review is polish.
+- **CSV/PDF export from Data Cards** — Deferred to v2. View results in-app for v1; export proves less critical than analysis accuracy.
+- **Full Collections organization** — Deferred to v2. Basic file list sufficient for v1; organizing into collections adds complexity.
+- **Bulk file download** — Deferred to v2. Users can delete individual files; bulk operations not essential for MVP.
 - **Google OAuth authentication** — Deferred to v2. Email/password sufficient for MVP validation.
 - **Visualization Agent** — Deferred to v2. Focus on accurate analysis first; charts can come later.
-- **PowerPoint export** — Deferred to v2. PDF export proves the concept; PowerPoint adds significant complexity.
+- **PowerPoint export** — Deferred to v2. PDF export (also deferred) proves the concept; PowerPoint adds significant complexity.
 - **Billing and subscription management** — Deferred to v2. Need to validate product-market fit before building payment infrastructure.
 - **Credit tracking system** — Deferred to v2. No billing means no credits needed yet.
 - **S3/cloud file storage** — Deferred to v2. Local storage sufficient for MVP; cloud storage adds deployment complexity.
@@ -109,10 +124,13 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | Next.js for frontend | Supports streaming AI responses natively, modern full-stack framework, handles SSR and API routes | — Pending |
 | 4 AI agents for v1 (skip Visualization) | Timeline constraint. Onboarding, Coding, Code Checker, Data Analysis are core to accuracy. Visualization can be added later. | — Pending |
 | Email auth only (defer Google OAuth) | Reduces complexity, faster to ship. OAuth is polish, not core value. | — Pending |
-| PDF export only (defer PowerPoint) | PDF proves export capability. PowerPoint generation adds significant complexity for marginal v1 value. | — Pending |
+| Skip email verification for v1 | Let users in immediately after signup. Verification adds friction and complexity not needed to validate core value. | — Pending |
+| Tabbed file interface with per-file chat history | Each file gets its own chat tab. More intuitive than single shared history, validates multi-file workflow without full Collections. | — Pending |
+| Basic file management (no Collections) | File list with metadata (name, size, date), delete, and tabs. Proves file handling without collection organization complexity. | — Pending |
+| Skip export features for v1 | No CSV/PDF export, no saved Data Cards. Focus on real-time analysis accuracy first; export is polish for later. | — Pending |
 | Skip billing for v1 | Need product validation before building payment infrastructure. Avoids Stripe integration, credit tracking, subscription logic. | — Pending |
 | Local file storage (defer S3) | Simpler deployment, fewer dependencies. S3 adds cost and configuration complexity not needed for MVP. | — Pending |
 | Explore AG-UI for Data Cards | Mentioned in architecture requirements for dynamic AI-generated components. Worth researching but not a hard requirement—any solution achieving interactive, polished Data Cards works. | — Pending |
 
 ---
-*Last updated: 2026-02-01 after initialization*
+*Last updated: 2026-02-02 after v1.0 milestone scoping*
