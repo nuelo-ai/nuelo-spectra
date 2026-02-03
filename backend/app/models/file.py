@@ -1,4 +1,4 @@
-from sqlalchemy import String, BigInteger, DateTime, ForeignKey
+from sqlalchemy import String, BigInteger, DateTime, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
@@ -27,6 +27,8 @@ class File(Base):
     file_path: Mapped[str] = mapped_column(String(500))
     file_size: Mapped[int] = mapped_column(BigInteger)
     file_type: Mapped[str] = mapped_column(String(50))  # csv, xlsx, xls
+    data_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    user_context: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc)
