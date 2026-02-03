@@ -2,7 +2,7 @@
 
 **Defined:** 2026-02-02
 **Core Value:** Accurate data analysis through correct, safe Python code generation
-**Progress:** 23/42 requirements complete (55%) — Phases 1-4 complete ✅
+**Progress:** 30/42 requirements complete (71%) — Phases 1-5 complete ✅
 
 ## v1.0 Requirements
 
@@ -31,23 +31,23 @@ Requirements for initial MVP release. Each maps to roadmap phases.
 
 ### AI Agents & Chat
 
-- [x] **AGENT-01**: User can ask questions about their data in natural language
-- [x] **AGENT-02**: System streams AI responses in real-time (shows thinking process)
+- [x] **AGENT-01**: User can ask questions about their data in natural language ✅
+- [x] **AGENT-02**: System streams AI responses in real-time (shows thinking process) ✅
 - [x] **AGENT-03**: Onboarding Agent analyzes data structure and generates initial insights
 - [x] **AGENT-04**: Coding Agent generates Python scripts based on user queries
 - [x] **AGENT-05**: Code Checker Agent validates generated code for safety and correctness before execution
 - [x] **AGENT-06**: Data Analysis Agent interprets code execution results and generates natural language explanations
-- [x] **AGENT-07**: Chat history persists per file across browser sessions
+- [x] **AGENT-07**: Chat history persists per file across browser sessions ✅
 - [x] **AGENT-08**: AI agent system prompts are externalized to YAML configuration files for easy tuning and iteration
 - [x] **AGENT-09**: When code execution fails, system automatically analyzes error, regenerates code, and retries (with maximum retry limit to prevent infinite loops)
 
 ### Code Execution & Security
 
-- [ ] **EXEC-01**: Python code executes in E2B microVM sandbox environment
-- [ ] **EXEC-02**: Sandbox prevents risky operations (file deletion, table drops, network access)
-- [ ] **EXEC-03**: Code execution is resource-limited (CPU, memory, timeout)
-- [ ] **EXEC-04**: User data in sandbox is isolated (no access to other users' data)
-- [ ] **EXEC-05**: Generated code is displayed with explanation before execution
+- [x] **EXEC-01**: Python code executes in E2B microVM sandbox environment
+- [x] **EXEC-02**: Sandbox prevents risky operations (file deletion, table drops, network access)
+- [x] **EXEC-03**: Code execution is resource-limited (CPU, memory, timeout)
+- [x] **EXEC-04**: User data in sandbox is isolated (no access to other users' data)
+- [x] **EXEC-05**: Generated code is displayed with explanation before execution
 - [x] **EXEC-06**: Allowed Python libraries are defined in YAML configuration file (library allowlist)
 - [x] **EXEC-07**: Code Checker Agent validates that generated code only imports allowed libraries from allowlist
 
@@ -148,20 +148,20 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FILE-08 | Phase 2 | Complete ✅ |
 | FILE-09 | Phase 2 | Complete ✅ |
 | FILE-10 | Phase 2 | Complete ✅ |
-| AGENT-01 | Phase 4 | Pending |
-| AGENT-02 | Phase 4 | Pending |
+| AGENT-01 | Phase 4 | Complete ✅ |
+| AGENT-02 | Phase 4 | Complete ✅ |
 | AGENT-03 | Phase 3 | Complete ✅ |
 | AGENT-04 | Phase 3 | Complete ✅ |
 | AGENT-05 | Phase 3 | Complete ✅ |
 | AGENT-06 | Phase 3 | Complete ✅ |
-| AGENT-07 | Phase 4 | Pending |
+| AGENT-07 | Phase 4 | Complete ✅ |
 | AGENT-08 | Phase 3 | Complete ✅ |
 | AGENT-09 | Phase 3 | Complete ✅ |
-| EXEC-01 | Phase 5 | Pending |
-| EXEC-02 | Phase 5 | Pending |
-| EXEC-03 | Phase 5 | Pending |
-| EXEC-04 | Phase 5 | Pending |
-| EXEC-05 | Phase 5 | Pending |
+| EXEC-01 | Phase 5 | Complete ✅ |
+| EXEC-02 | Phase 5 | Complete ✅ |
+| EXEC-03 | Phase 5 | Complete ✅ |
+| EXEC-04 | Phase 5 | Complete ✅ |
+| EXEC-05 | Phase 5 | Complete ✅ |
 | EXEC-06 | Phase 3 | Complete ✅ |
 | EXEC-07 | Phase 3 | Complete ✅ |
 | CARD-01 | Phase 6 | Pending |
@@ -179,17 +179,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 **Coverage:**
 - v1.0 requirements: 42 total
 - Mapped to phases: 42/42 (100%)
-- Completed: 23/42 (55%)
+- Completed: 26/42 (62%)
 - Unmapped: 0
 
 **Progress by Phase:**
 - Phase 1 (Auth): 5/5 complete ✅
 - Phase 2 (File Management): 7/7 complete ✅
 - Phase 3 (AI Agents & Code Validation): 11/11 complete ✅
-- Phase 4 (Streaming): 0/3 complete
-- Phase 5 (Sandbox): 0/5 complete
-- Phase 6 (Frontend): 0/12 complete
+- Phase 4 (Streaming): 3/3 complete ✅
+- Phase 5 (Sandbox): 0/8 pending (planning complete)
+- Phase 6 (Frontend): 0/12 pending
 
 ---
 *Requirements defined: 2026-02-02*
-*Last updated: 2026-02-03 after Phase 3 completion*
+*Last updated: 2026-02-03 after Phase 4 completion - AGENT-01, AGENT-02, AGENT-07 marked as Complete*
