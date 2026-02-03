@@ -22,25 +22,25 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 ## Current Position
 
 **Phase:** 3 of 6 - AI Agents & Orchestration
-**Plan:** 03-03 complete (AST-Based Code Validation)
+**Plan:** 03-04 complete (Coding Agent & Chat Workflow)
 **Status:** In progress
 
 **Progress Bar:**
 ```
-[██████████████░░░░░░] 36% (15/42 requirements completed)
+[███████████████░░░░░] 38% (16/42 requirements completed)
 
 Phase 1: [██████████] 3/3 plans COMPLETE (database + auth + password reset)
 Phase 2: [██████████] 2/2 plans COMPLETE (file service + API routers)
-Phase 3: [██████░░░░] 3/7 plans COMPLETE (agent foundation + onboarding agent + code validation)
+Phase 3: [████████░░] 4/7 plans COMPLETE (agent foundation + onboarding + code validation + coding agent)
 Phase 4: [░░░░░░░░░░] 0/3 requirements
 Phase 5: [░░░░░░░░░░] 0/8 requirements
 Phase 6: [░░░░░░░░░░] 0/12 requirements
 ```
 
-**Last activity:** 2026-02-03 - Completed 03-03: AST-Based Code Validation (TDD with 37 tests, security policies)
+**Last activity:** 2026-02-03 - Completed 03-04: Coding Agent & Chat Workflow (LangGraph pipeline, 2-stage validation, retry loops)
 
 **Next Action:**
-Execute plan 03-04 (Coding Agent implementation)
+Execute plan 03-05 (Agent Service Integration)
 
 ---
 
@@ -63,6 +63,12 @@ Execute plan 03-04 (Coding Agent implementation)
 
 | Date | Decision | Impact |
 |------|----------|--------|
+| 2026-02-03 | psycopg-binary for PostgresSaver | LangGraph checkpoint requires psycopg3 with binary; fixed import error |
+| 2026-02-03 | Two-stage validation (AST + LLM) in Code Checker | AST first (fast syntax/security), LLM second (logical correctness); optimizes speed |
+| 2026-02-03 | Command routing for conditional edges | LangGraph Command pattern cleaner than add_conditional_edges callback |
+| 2026-02-03 | Execute stub with restricted namespace | Development stub uses exec() with empty __builtins__; Phase 5 adds OS-level isolation |
+| 2026-02-03 | max_steps=3 circuit breaker | Default limit prevents infinite retry loops and runaway LLM costs |
+| 2026-02-03 | Code block extraction from markdown | Handles LLMs that wrap code in ```python blocks vs raw code |
 | 2026-02-03 | AST NodeVisitor pattern for code validation | Python's ast module provides structured code analysis without execution; safer than regex |
 | 2026-02-03 | TDD for Code Checker | 37 tests document every security rule; provides regression prevention |
 | 2026-02-03 | data_summary/user_context nullable on File model | Populated asynchronously after upload; NULL until Onboarding Agent runs |
@@ -142,14 +148,14 @@ Execute plan 03-04 (Coding Agent implementation)
 10. **phases/03-ai-agents---orchestration/03-02-SUMMARY.md** - Onboarding Agent
 11. **phases/03-ai-agents---orchestration/03-03-SUMMARY.md** - AST-Based Code Validation (TDD)
 
-**Last session:** 2026-02-03T15:18:25Z
-**Stopped at:** Completed 03-03: AST-Based Code Validation
+**Last session:** 2026-02-03T15:25:11Z
+**Stopped at:** Completed 03-04: Coding Agent & Chat Workflow
 **Resume file:** None
 
 **Current session status:**
 - Phase 1 COMPLETE: All 3 plans executed successfully
 - Phase 2 COMPLETE: All 2 plans executed and verified (19/19 must-haves passed)
-- Phase 3 IN PROGRESS: Plans 03-01, 03-02, and 03-03 complete
+- Phase 3 IN PROGRESS: Plans 03-01, 03-02, 03-03, and 03-04 complete
 - Plan 03-01: LangGraph foundation, multi-provider LLM factory, YAML configs (172s)
 - Plan 03-02: Onboarding Agent with pandas profiling + LLM summarization (164s)
   - OnboardingAgent: profile_data (pandas analysis), generate_summary (LLM), run (orchestration)
@@ -160,7 +166,15 @@ Execute plan 03-04 (Coding Agent implementation)
   - agent_service.py: run_onboarding, update_user_context service functions
   - File model extended: data_summary and user_context columns (nullable, async populated)
   - Requirements covered: FILE-04, FILE-05, FILE-06, AGENT-03
-- Next: Plan 03-03 (Code Safety & Validation)
+- Plan 03-04: Coding Agent & Chat Workflow (180s)
+  - Coding Agent: generates Python code from natural language with data context
+  - Data Analysis Agent: interprets execution results in natural language
+  - Code Checker node: two-stage validation (AST + LLM) with Command routing
+  - Execute stub: restricted namespace execution (Phase 5 replaces with sandbox)
+  - LangGraph chat workflow: coding -> code_checker -> execute/retry/halt -> data_analysis
+  - Bounded retry loop with max_steps=3 circuit breaker
+  - Requirements covered: AGENT-04, AGENT-05, AGENT-06
+- Next: Plan 03-05 (Agent Service Integration)
 
 ---
 
