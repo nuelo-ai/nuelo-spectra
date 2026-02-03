@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     stream_timeout_seconds: int = 180
     stream_ping_interval: int = 30
 
+    # Sandbox
+    e2b_api_key: str = ""
+    sandbox_timeout_seconds: int = 60
+    sandbox_memory_mb: int = 1024
+    sandbox_max_retries: int = 2
+
     model_config = SettingsConfigDict(env_file=".env")
 
     def get_cors_origins(self) -> list[str]:
