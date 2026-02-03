@@ -22,25 +22,25 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 ## Current Position
 
 **Phase:** 2 of 6 - File Upload & Management
-**Plan:** 02-01 complete (File Service Foundation)
+**Plan:** 02-02 complete (File & Chat API Routers)
 **Status:** In progress
 
 **Progress Bar:**
 ```
-[████████░░░░░░░░░░░░] 14% (6/42 requirements completed)
+[████████░░░░░░░░░░░░] 19% (8/42 requirements completed)
 
 Phase 1: [██████████] 3/3 plans COMPLETE (database + auth + password reset)
-Phase 2: [██░░░░░░░░] 1/7 requirements (file service foundation)
+Phase 2: [████░░░░░░] 2/7 requirements (file service + API routers)
 Phase 3: [░░░░░░░░░░] 0/7 requirements
 Phase 4: [░░░░░░░░░░] 0/3 requirements
 Phase 5: [░░░░░░░░░░] 0/8 requirements
 Phase 6: [░░░░░░░░░░] 0/12 requirements
 ```
 
-**Last activity:** 2026-02-03 - Completed 02-01-PLAN.md (File Service Foundation)
+**Last activity:** 2026-02-03 - Completed 02-02-PLAN.md (File & Chat API Routers)
 
 **Next Action:**
-Continue Phase 2 with Plan 02-02 (File API Router) or run `/gsd:plan-phase` to create next plan.
+Continue Phase 2 with Plan 02-03 or run `/gsd:plan-phase` to create next plan.
 
 ---
 
@@ -63,6 +63,9 @@ Continue Phase 2 with Plan 02-02 (File API Router) or run `/gsd:plan-phase` to c
 
 | Date | Decision | Impact |
 |------|----------|--------|
+| 2026-02-03 | MultiPartParser configured before app creation | Starlette caches parser at import; must override 1MB limit at module level |
+| 2026-02-03 | Chat endpoints verify file ownership twice | GET/POST chat call FileService.get_user_file first; prevents cross-user access |
+| 2026-02-03 | Extension validation in router layer | Router validates before service call; separation of HTTP vs business logic |
 | 2026-02-03 | Chunked file uploads (1MB chunks) | Prevents OOM on large files; size limit checked during upload |
 | 2026-02-03 | Pandas validation in thread pool | asyncio.to_thread avoids blocking event loop; validates only 5 rows |
 | 2026-02-03 | SQL delete for cascade reliability | ORM session.delete unreliable in async; SQL ensures cascade works |
@@ -86,9 +89,9 @@ Continue Phase 2 with Plan 02-02 (File API Router) or run `/gsd:plan-phase` to c
 ### Active Todos
 
 **Immediate (Phase 2 Continuation):**
-- [ ] Plan 02-02: File API Router with upload/list/get/delete endpoints
-- [ ] Plan 02-03: File metadata endpoints and validation
-- [ ] Continue through Phase 2 requirements
+- [x] Plan 02-01: File Service Foundation (COMPLETE)
+- [x] Plan 02-02: File & Chat API Routers (COMPLETE)
+- [ ] Plan 02-03 or next: Continue through Phase 2 requirements
 
 **Research Needed:**
 - Phase 3: LangGraph conditional edges and retry loop patterns for Code Checker validation
@@ -120,17 +123,19 @@ Continue Phase 2 with Plan 02-02 (File API Router) or run `/gsd:plan-phase` to c
 5. **phases/01-backend-foundation-a-authentication/01-02-SUMMARY.md** - JWT authentication
 6. **phases/01-backend-foundation-a-authentication/01-03-SUMMARY.md** - Password reset & API completion
 7. **phases/02-file-upload-management/02-01-SUMMARY.md** - File service foundation
+8. **phases/02-file-upload-management/02-02-SUMMARY.md** - File & Chat API Routers
 
-**Last session:** 2026-02-03T02:55:24Z
-**Stopped at:** Completed 02-01-PLAN.md (File Service Foundation)
+**Last session:** 2026-02-03T03:02:08Z
+**Stopped at:** Completed 02-02-PLAN.md (File & Chat API Routers)
 **Resume file:** None
 
 **Current session status:**
 - Phase 1 COMPLETE: All 3 plans executed successfully
-- Phase 2 IN PROGRESS: Plan 02-01 complete (file service foundation)
+- Phase 2 IN PROGRESS: Plans 02-01 and 02-02 complete
 - Plan 02-01: FileService with chunked uploads, pandas validation, user-isolated storage
-- File dependencies installed: aiofiles, pandas, openpyxl, xlrd
-- Ready for Plan 02-02: File API Router to expose service as HTTP endpoints
+- Plan 02-02: REST API routers for file and chat endpoints, MultiPartParser 50MB configured
+- API surface: 14 endpoints total (8 Phase 1 + 6 Phase 2)
+- Verified: CSV/Excel upload, user isolation, cascade delete, 2MB file upload working
 
 ---
 
