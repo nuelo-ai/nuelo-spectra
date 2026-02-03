@@ -37,3 +37,16 @@ class MessageResponse(BaseModel):
     """Generic message response schema."""
 
     message: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    """Request schema for password reset request."""
+
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    """Request schema for password reset."""
+
+    token: str
+    new_password: str = Field(..., min_length=8)

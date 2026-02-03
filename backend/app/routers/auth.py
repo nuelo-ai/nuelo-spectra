@@ -10,14 +10,24 @@ from app.config import Settings, get_settings
 from app.database import get_db
 from app.dependencies import CurrentUser
 from app.schemas.auth import (
+    ForgotPasswordRequest,
     LoginRequest,
+    MessageResponse,
     RefreshRequest,
+    ResetPasswordRequest,
     SignupRequest,
     TokenResponse
 )
 from app.schemas.user import UserResponse
 from app.services import auth as auth_service
-from app.utils.security import create_tokens, verify_token
+from app.services.email import send_password_reset_email
+from app.utils.security import (
+    create_password_reset_token,
+    create_tokens,
+    hash_password,
+    verify_password_reset_token,
+    verify_token
+)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -159,3 +169,94 @@ async def get_current_user_info(
         User profile information
     """
     return UserResponse.model_validate(current_user)
+
+
+@router.post("/forgot-password", response_model=MessageResponse, status_code=status.HTTP_202_ACCEPTED)
+async def forgot_password(
+    request: ForgotPasswordRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    settings: Annotated[Settings, Depends(get_settings)]
+) -> MessageResponse:
+    """Request a password reset email.
+
+    ALWAYS returns 202 regardless of whether the email exists, to prevent
+    user enumeration attacks.
+
+    Args:
+        request: Email address to send reset link to
+        db: Database session
+        settings: Application settings
+
+    Returns:
+        Generic success message (always same response)
+    """
+    from sqlalchemy import select
+    from app.models.user import User
+
+    # Query user by email
+    result = await db.execute(
+        select(User).where(User.email == request.email)
+    )
+    user = result.scalar_one_or_none()
+
+    # If user exists, send reset email
+    if user:
+        # Create password reset token (valid for 10 minutes)
+        reset_token = create_password_reset_token(request.email, settings)
+
+        # Build reset link
+        reset_link = f"{settings.frontend_url}/reset-password?token={reset_token}"
+
+        # Send email (or log to console in dev mode)
+        await send_password_reset_email(user.email, reset_link, settings)
+
+    # ALWAYS return same response (prevent email enumeration)
+    return MessageResponse(
+        message="If the email exists, a reset link has been sent"
+    )
+
+
+@router.post("/reset-password", response_model=MessageResponse)
+async def reset_password(
+    request: ResetPasswordRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    settings: Annotated[Settings, Depends(get_settings)]
+) -> MessageResponse:
+    """Reset user password using a valid reset token.
+
+    Args:
+        request: Reset token and new password
+        db: Database session
+        settings: Application settings
+
+    Returns:
+        Success message
+
+    Raises:
+        HTTPException: 400 if token is invalid or user not found
+    """
+    from sqlalchemy import select
+    from app.models.user import User
+
+    # Verify token and extract email
+    email = verify_password_reset_token(request.token, settings)
+
+    # Query user by email
+    result = await db.execute(
+        select(User).where(User.email == email)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid token"
+        )
+
+    # Hash new password
+    user.hashed_password = hash_password(request.new_password)
+
+    # Commit to database
+    await db.commit()
+
+    return MessageResponse(message="Password reset successful")

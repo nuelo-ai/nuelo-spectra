@@ -149,3 +149,66 @@ def verify_token(token: str, token_type: str, settings: Settings) -> str:
             detail="Invalid token",
             headers={"WWW-Authenticate": "Bearer"}
         )
+
+
+def create_password_reset_token(email: str, settings: Settings) -> str:
+    """Create a JWT password reset token.
+
+    Args:
+        email: User email to encode in the token
+        settings: Application settings containing JWT configuration
+
+    Returns:
+        Encoded JWT password reset token (valid for 10 minutes)
+    """
+    expire = datetime.now(timezone.utc) + timedelta(minutes=10)
+    payload = {
+        "sub": email,
+        "exp": expire,
+        "type": "password_reset"
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
+
+
+def verify_password_reset_token(token: str, settings: Settings) -> str:
+    """Verify and decode a password reset token.
+
+    Args:
+        token: JWT password reset token to verify
+        settings: Application settings containing JWT configuration
+
+    Returns:
+        Email address extracted from the token
+
+    Raises:
+        HTTPException: If token is invalid, expired, or wrong type
+    """
+    try:
+        payload = jwt.decode(
+            token,
+            settings.secret_key,
+            algorithms=[settings.algorithm]  # Explicitly set algorithm to prevent 'none' attack
+        )
+
+        # Validate token type
+        if payload.get("type") != "password_reset":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired reset token"
+            )
+
+        # Extract email from 'sub' claim
+        email: str | None = payload.get("sub")
+        if email is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired reset token"
+            )
+
+        return email
+
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token"
+        )
