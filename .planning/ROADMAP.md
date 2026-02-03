@@ -95,6 +95,15 @@ Plans:
 
 **Requirements:** AGENT-03, AGENT-04, AGENT-05, AGENT-06, AGENT-08, FILE-04, FILE-05, FILE-06
 
+**Plans:** 5 plans
+
+Plans:
+- [ ] 03-01-PLAN.md -- Install LangGraph dependencies, YAML configs (prompts + allowlist), state schemas, config loader
+- [ ] 03-02-PLAN.md -- Onboarding Agent with data profiling and LLM summary, File model migration, agent service layer
+- [ ] 03-03-PLAN.md -- Code Checker AST validation (TDD) with allowlist enforcement
+- [ ] 03-04-PLAN.md -- Coding Agent, Data Analysis Agent, LangGraph chat workflow with conditional routing
+- [ ] 03-05-PLAN.md -- Wire agents into file upload and chat routers, full API integration
+
 **Success Criteria:**
 1. Onboarding Agent analyzes uploaded data structure and generates natural language summary
 2. User can provide optional context during upload to improve AI interpretation
@@ -241,7 +250,7 @@ Plans:
 |-------|--------|--------------|------------|
 | **1 - Backend Foundation & Authentication** | Complete | 5/5 | 100% |
 | **2 - File Upload & Management** | Complete | 7/7 | 100% |
-| **3 - AI Agents & Orchestration** | Pending | 7/7 | 0% |
+| **3 - AI Agents & Orchestration** | Planned | 8/8 | 0% |
 | **4 - Streaming Infrastructure** | Pending | 3/3 | 0% |
 | **5 - Sandbox Security & Code Execution** | Pending | 8/8 | 0% |
 | **6 - Frontend UI & Interactive Data Cards** | Pending | 12/12 | 0% |
@@ -254,19 +263,19 @@ Plans:
 
 ```
 Phase 1: Backend Foundation & Authentication
-    ↓
+    |
 Phase 2: File Upload & Management
-    ↓
+    |
 Phase 3: AI Agents & Orchestration
-    ↓
+    |
 Phase 4: Streaming Infrastructure
-    ↘
+    \
 Phase 5: Sandbox Security & Code Execution
-    ↓
+    |
 Phase 6: Frontend UI & Interactive Data Cards
 ```
 
-**Critical Path:** 1 → 2 → 3 → 4 → 5 → 6 (strictly sequential)
+**Critical Path:** 1 -> 2 -> 3 -> 4 -> 5 -> 6 (strictly sequential)
 
 **Rationale:**
 - Phase 1 blocks all others (authentication required for user isolation)
@@ -294,4 +303,4 @@ Phase 6: Frontend UI & Interactive Data Cards
 ---
 
 *Last updated: 2026-02-03*
-*Next step: `/gsd:discuss-phase 3` or `/gsd:plan-phase 3` to begin AI Agents & Orchestration*
+*Next step: `/gsd:execute-phase 3` to begin AI Agents & Orchestration*
