@@ -22,25 +22,25 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 ## Current Position
 
 **Phase:** 3 of 6 - AI Agents & Orchestration
-**Plan:** 03-01 complete (Agent Foundation & Config)
+**Plan:** 03-02 complete (Onboarding Agent)
 **Status:** In progress
 
 **Progress Bar:**
 ```
-[████████████░░░░░░░░] 29% (12/42 requirements completed)
+[█████████████░░░░░░░] 33% (14/42 requirements completed)
 
 Phase 1: [██████████] 3/3 plans COMPLETE (database + auth + password reset)
 Phase 2: [██████████] 2/2 plans COMPLETE (file service + API routers)
-Phase 3: [██░░░░░░░░] 1/7 plans COMPLETE (agent foundation)
+Phase 3: [████░░░░░░] 2/7 plans COMPLETE (agent foundation + onboarding agent)
 Phase 4: [░░░░░░░░░░] 0/3 requirements
 Phase 5: [░░░░░░░░░░] 0/8 requirements
 Phase 6: [░░░░░░░░░░] 0/12 requirements
 ```
 
-**Last activity:** 2026-02-03 - Completed 03-01: Agent Foundation & Config (LangGraph, multi-provider LLM, YAML configs, state schemas)
+**Last activity:** 2026-02-03 - Completed 03-02: Onboarding Agent (pandas profiling + LLM summarization)
 
 **Next Action:**
-Execute plan 03-02 (Onboarding Agent implementation)
+Execute plan 03-03 (Code Safety & Validation)
 
 ---
 
@@ -63,6 +63,10 @@ Execute plan 03-02 (Onboarding Agent implementation)
 
 | Date | Decision | Impact |
 |------|----------|--------|
+| 2026-02-03 | data_summary/user_context nullable on File model | Populated asynchronously after upload; NULL until Onboarding Agent runs |
+| 2026-02-03 | asyncio.to_thread for pandas profiling | Prevents event loop blocking during data analysis operations |
+| 2026-02-03 | v1 always appends user context | Simple append pattern; v2 will ask user to re-run or append |
+| 2026-02-03 | Agent service layer pattern | Service functions bridge API endpoints and agent logic for clean separation |
 | 2026-02-03 | LangGraph TypedDict for state (not Pydantic) | LangGraph requires TypedDict; compatible with StateGraph |
 | 2026-02-03 | Multi-provider LLM factory pattern | Agents work with Anthropic/OpenAI/Google via BaseChatModel interface |
 | 2026-02-03 | YAML for agent prompts and allowlists | Externalized config enables prompt iteration without deployment |
@@ -133,21 +137,23 @@ Execute plan 03-02 (Onboarding Agent implementation)
 7. **phases/02-file-upload-management/02-01-SUMMARY.md** - File service foundation
 8. **phases/02-file-upload-management/02-02-SUMMARY.md** - File & Chat API Routers
 9. **phases/03-ai-agents---orchestration/03-01-SUMMARY.md** - Agent Foundation & Config
+10. **phases/03-ai-agents---orchestration/03-02-SUMMARY.md** - Onboarding Agent
 
-**Last session:** 2026-02-03T15:10:59Z
-**Stopped at:** Completed 03-01: Agent Foundation & Config
+**Last session:** 2026-02-03T15:17:11Z
+**Stopped at:** Completed 03-02: Onboarding Agent
 **Resume file:** None
 
 **Current session status:**
 - Phase 1 COMPLETE: All 3 plans executed successfully
 - Phase 2 COMPLETE: All 2 plans executed and verified (19/19 must-haves passed)
-- Phase 3 IN PROGRESS: Plan 03-01 complete (Agent Foundation & Config)
-- Plan 03-01: LangGraph 1.0.7, multi-provider LLM (Anthropic/OpenAI/Google), YAML configs, TypedDict state schemas
-- Dependencies installed: langgraph, langgraph-checkpoint-postgres, langsmith, langchain-core, pyyaml, provider SDKs
-- Configuration created: prompts.yaml (4 agents), allowlist.yaml (security policies), llm_factory (provider-agnostic)
-- State schemas: OnboardingState and ChatAgentState TypedDicts for LangGraph workflows
-- Duration: 172 seconds (~3 minutes)
-- Next: Plan 03-02 (Onboarding Agent implementation)
+- Phase 3 IN PROGRESS: Plans 03-01 and 03-02 complete
+- Plan 03-01: LangGraph foundation, multi-provider LLM factory, YAML configs (172s)
+- Plan 03-02: Onboarding Agent with pandas profiling + LLM summarization (164s)
+  - OnboardingAgent: profile_data (pandas analysis), generate_summary (LLM), run (orchestration)
+  - agent_service.py: run_onboarding, update_user_context service functions
+  - File model extended: data_summary and user_context columns (nullable, async populated)
+  - Requirements covered: FILE-04, FILE-05, FILE-06, AGENT-03
+- Next: Plan 03-03 (Code Safety & Validation)
 
 ---
 
