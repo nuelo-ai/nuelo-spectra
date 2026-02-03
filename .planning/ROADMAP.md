@@ -21,6 +21,13 @@ This roadmap delivers Spectra's MVP in 6 phases, structured to prove the core va
 
 **Requirements:** AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md -- Project skeleton, config, database models, Alembic migrations
+- [ ] 01-02-PLAN.md -- Auth endpoints (signup, login, refresh), JWT security, get_current_user dependency
+- [ ] 01-03-PLAN.md -- Password reset flow, email service, health check, CORS, final wiring
+
 **Success Criteria:**
 1. User can create account with email and password
 2. User can log in with email and password and session persists across browser refresh
