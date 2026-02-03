@@ -139,7 +139,12 @@ async def coding_agent(state: ChatAgentState) -> dict:
     validation_errors = state.get("validation_errors", [])
     if validation_errors:
         error_feedback = "\n".join(validation_errors)
-        user_message += f"\n\nPrevious code had issues:\n{error_feedback}\nPlease regenerate the code fixing these issues."
+        # Check if this is an execution error (vs validation error)
+        execution_result = state.get("execution_result", "")
+        if execution_result.startswith("Execution error:"):
+            user_message += f"\n\nThe previous code failed during execution:\n{error_feedback}\nPlease regenerate the code fixing the execution error. Consider using simpler operations if the error was a timeout or memory issue."
+        else:
+            user_message += f"\n\nPrevious code had validation issues:\n{error_feedback}\nPlease regenerate the code fixing these issues."
 
     # Initialize LLM using factory
     api_key = _get_api_key(settings)

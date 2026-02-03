@@ -352,10 +352,12 @@ async def execute_in_sandbox(
 
 
 async def halt_node(state: ChatAgentState) -> dict:
-    """Halt node for when max retries are exceeded.
+    """Halt node for when max retries are exceeded or unrecoverable errors occur.
 
-    Returns a user-friendly error message indicating that valid code
-    could not be generated after multiple attempts.
+    Returns user-friendly error messages tailored to the type of failure:
+    - execution_failed: code ran but failed in sandbox (timeout, runtime error)
+    - file_not_found / file_read_error: data file unavailable
+    - max_retries_exceeded: validation failures exhausted retry budget
 
     Args:
         state: Current chat workflow state
@@ -364,26 +366,46 @@ async def halt_node(state: ChatAgentState) -> dict:
         dict: State update with final_response and error
     """
     writer = get_stream_writer()
-    writer({
-        "type": "error",
-        "event": "error",
-        "message": f"Unable to generate valid code after {state.get('max_steps', 3)} attempts"
-    })
-
+    error_type = state.get("error", "")
     max_steps = state.get("max_steps", 3)
-    validation_errors = state.get("validation_errors", [])
 
-    error_summary = ", ".join(validation_errors) if validation_errors else "Unknown issues"
-
-    final_response = (
-        f"I was unable to generate valid code after {max_steps} attempts. "
-        f"Errors encountered: {error_summary}. "
-        f"Please try rephrasing your question or providing more context."
-    )
+    if error_type == "execution_failed":
+        writer({
+            "type": "error",
+            "event": "error",
+            "message": "Unable to complete analysis after multiple attempts"
+        })
+        final_response = (
+            "Unable to complete analysis. "
+            "Try: filtering data first, breaking into simpler questions, or rephrasing your query."
+        )
+    elif error_type in ("file_not_found", "file_read_error"):
+        writer({
+            "type": "error",
+            "event": "error",
+            "message": "Data file unavailable"
+        })
+        final_response = (
+            "Unable to access your data file. "
+            "Please re-upload your file and try again."
+        )
+    else:
+        writer({
+            "type": "error",
+            "event": "error",
+            "message": f"Unable to generate valid code after {max_steps} attempts"
+        })
+        validation_errors = state.get("validation_errors", [])
+        error_summary = ", ".join(validation_errors) if validation_errors else "Unknown issues"
+        final_response = (
+            f"I was unable to generate valid code after {max_steps} attempts. "
+            f"Errors encountered: {error_summary}. "
+            f"Please try rephrasing your question or providing more context."
+        )
 
     return {
         "final_response": final_response,
-        "error": "max_retries_exceeded",
+        "error": error_type or "max_retries_exceeded",
     }
 
 
