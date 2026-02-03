@@ -58,6 +58,12 @@ Plans:
 
 **Requirements:** FILE-01, FILE-02, FILE-03, FILE-07, FILE-08, FILE-09, FILE-10
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md -- Install dependencies (aiofiles, pandas, openpyxl, xlrd), extend config, create file schemas and file service
+- [ ] 02-02-PLAN.md -- File router, chat message support (schemas/service/router), main.py wiring with MultiPartParser config
+
 **Success Criteria:**
 1. User can upload Excel (.xlsx, .xls) and CSV files up to 50MB
 2. System validates file format and structure before accepting upload
@@ -234,7 +240,7 @@ Plans:
 | Phase | Status | Requirements | Completion |
 |-------|--------|--------------|------------|
 | **1 - Backend Foundation & Authentication** | Complete | 5/5 | 100% |
-| **2 - File Upload & Management** | Pending | 7/7 | 0% |
+| **2 - File Upload & Management** | Planned | 7/7 | 0% |
 | **3 - AI Agents & Orchestration** | Pending | 7/7 | 0% |
 | **4 - Streaming Infrastructure** | Pending | 3/3 | 0% |
 | **5 - Sandbox Security & Code Execution** | Pending | 8/8 | 0% |
@@ -287,5 +293,5 @@ Phase 6: Frontend UI & Interactive Data Cards
 
 ---
 
-*Last updated: 2026-02-02*
-*Next step: `/gsd:plan-phase 1` to begin execution*
+*Last updated: 2026-02-03*
+*Next step: `/gsd:execute-phase 2` to begin execution*
