@@ -14,6 +14,8 @@ class FileUploadResponse(BaseModel):
     file_size: int
     file_type: str
     created_at: datetime
+    data_summary: str | None = None
+    user_context: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -27,6 +29,7 @@ class FileListItem(BaseModel):
     file_type: str
     created_at: datetime
     updated_at: datetime
+    has_summary: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -41,5 +44,7 @@ class FileDetailResponse(BaseModel):
     file_type: str
     created_at: datetime
     updated_at: datetime
+    data_summary: str | None = None
+    user_context: str | None = None
 
     model_config = ConfigDict(from_attributes=True)

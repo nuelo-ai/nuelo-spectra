@@ -40,3 +40,20 @@ class ChatMessageList(BaseModel):
 
     messages: list[ChatMessageResponse]
     total: int
+
+
+class ChatQueryRequest(BaseModel):
+    """Request schema for AI chat query."""
+
+    content: str
+
+
+class ChatAgentResponse(BaseModel):
+    """Response schema for AI chat query with agent execution details."""
+
+    user_query: str
+    generated_code: str | None = None
+    execution_result: str | None = None
+    analysis: str
+    error: str | None = None
+    retry_count: int = 0
