@@ -1,0 +1,40 @@
+allowed_libraries:
+  - pandas
+  - numpy
+  - datetime
+  - math
+  - statistics
+  - collections
+  - itertools
+  - functools
+  - re
+  - json
+
+unsafe_builtins:
+  - eval
+  - exec
+  - __import__
+  - compile
+  - execfile
+  - globals
+  - locals
+
+unsafe_modules:
+  - os
+  - sys
+  - subprocess
+  - shutil
+  - socket
+  - http
+  - urllib
+  - requests
+  - pathlib
+  - io
+  - pickle
+  - shelve
+
+unsafe_operations:
+  - open
+  - file
+  - input
+  - raw_input
