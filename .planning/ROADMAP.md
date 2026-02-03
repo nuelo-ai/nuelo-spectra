@@ -149,20 +149,20 @@ Plans:
 2. System streams AI responses in real-time showing thinking process
 3. Chat history persists per file across browser sessions
 4. Streaming connections auto-reconnect if network drops during long queries
-5. Partial results are saved even if connection fails mid-stream
+5. Failed streams save nothing to database (clean failure state, no partial results)
 
 **Deliverables:**
 - FastAPI SSE streaming endpoint (/chat/stream) with sse-starlette
 - Next.js API route proxy for SSE to frontend
 - EventSource client with auto-reconnect logic
-- Database persistence during streaming (save messages incrementally)
+- Atomic chat history persistence on stream completion (save nothing on failure)
 - Disconnect detection with graceful error handling
 - Chat history persistence to PostgreSQL
 - Streaming error event types (code_error, network_error, timeout)
 
 **Technical Notes:**
 - SSE preferred over WebSockets (simpler, auto-reconnect built-in)
-- Checkpoint partial results to database during streaming
+- Save on completion only: atomic writes after successful stream, clean rollback on failure
 - Test with mobile networks to validate reconnection behavior
 - Yield error events instead of raising exceptions (keeps stream alive)
 
