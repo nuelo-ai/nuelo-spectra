@@ -88,13 +88,10 @@ Run `/gsd:discuss-phase 3` or `/gsd:plan-phase 3` to begin AI Agents & Orchestra
 
 ### Active Todos
 
-**Immediate (Phase 3 Planning):**
-- [ ] Run `/gsd:discuss-phase 3` to gather context for AI Agents & Orchestration
-- [ ] Research LangGraph patterns for multi-agent workflows
-- [ ] Design agent state management and conditional edges
+**Immediate (Phase 3 Execution):**
+- [ ] Setup API keys for Phase 3 execution (see `.planning/todos/pending/2026-02-03-setup-api-keys-for-phase-3.md`)
 
 **Research Needed:**
-- Phase 3: LangGraph conditional edges and retry loop patterns for Code Checker validation
 - Phase 5: E2B vs self-hosted gVisor decision (complexity vs cost tradeoff for single developer)
 
 **Deferred to Later Phases:**
