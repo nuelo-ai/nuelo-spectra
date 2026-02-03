@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     email_service_api_key: str = ""
     email_from: str = "noreply@spectra.app"
 
+    # File Upload
+    upload_dir: str = "uploads"
+    max_file_size_mb: int = 50
+
     model_config = SettingsConfigDict(env_file=".env")
 
     def get_cors_origins(self) -> list[str]:
