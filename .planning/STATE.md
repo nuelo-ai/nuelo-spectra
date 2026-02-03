@@ -91,6 +91,9 @@ Run `/gsd:discuss-phase 3` or `/gsd:plan-phase 3` to begin AI Agents & Orchestra
 **Immediate (Phase 3 Execution):**
 - [ ] Setup API keys for Phase 3 execution (see `.planning/todos/pending/2026-02-03-setup-api-keys-for-phase-3.md`)
 
+**Phase 3 Enhancements:**
+- [ ] Add OpenRouter and Ollama LLM provider support (see `.planning/todos/pending/2026-02-03-add-openrouter-and-ollama-llm-support.md`)
+
 **Research Needed:**
 - Phase 5: E2B vs self-hosted gVisor decision (complexity vs cost tradeoff for single developer)
 
