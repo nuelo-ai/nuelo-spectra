@@ -186,7 +186,7 @@ def validate_code(
     validator.visit(tree)
 
     # Return result
-    if validator.errors:
-        return ValidationResult(is_valid=False, errors=validator.errors)
-    else:
-        return ValidationResult(is_valid=True, errors=[])
+    return ValidationResult(
+        is_valid=len(validator.errors) == 0,
+        errors=validator.errors,
+    )
