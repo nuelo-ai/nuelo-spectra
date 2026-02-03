@@ -1,11 +1,18 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
+
+from starlette.formparsers import MultiPartParser
+
+# Override Starlette default 1MB limit for file uploads (50MB)
+MultiPartParser.max_file_size = 1024 * 1024 * 50
+MultiPartParser.max_part_size = 1024 * 1024 * 50
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.database import engine
-from app.routers import auth, health
+from app.routers import auth, chat, files, health
 
 # Get settings
 settings = get_settings()
@@ -14,8 +21,9 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager for startup and shutdown events."""
-    # Startup: verify database connection is configured
-    # (actual connection happens on first request via get_db)
+    # Startup: create uploads directory if it doesn't exist
+    Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
+    # (actual database connection happens on first request via get_db)
     yield
     # Shutdown: dispose of database engine
     await engine.dispose()
@@ -42,6 +50,8 @@ app.add_middleware(
 # Include routers
 app.include_router(health.router)
 app.include_router(auth.router)
+app.include_router(files.router)
+app.include_router(chat.router)
 
 
 @app.get("/")
