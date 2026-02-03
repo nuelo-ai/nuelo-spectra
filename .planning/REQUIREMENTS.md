@@ -17,16 +17,16 @@ Requirements for initial MVP release. Each maps to roadmap phases.
 
 ### File Management
 
-- [ ] **FILE-01**: User can upload Excel files (.xlsx, .xls) up to 50MB
-- [ ] **FILE-02**: User can upload CSV files (.csv) up to 50MB
-- [ ] **FILE-03**: System validates file format and structure before acceptance
+- [x] **FILE-01**: User can upload Excel files (.xlsx, .xls) up to 50MB
+- [x] **FILE-02**: User can upload CSV files (.csv) up to 50MB
+- [x] **FILE-03**: System validates file format and structure before acceptance
 - [ ] **FILE-04**: AI Onboarding Agent analyzes uploaded data structure and generates natural language summary
 - [ ] **FILE-05**: User can provide optional context during upload to improve AI interpretation
 - [ ] **FILE-06**: User can refine AI's understanding of the data after initial analysis
-- [ ] **FILE-07**: User can view list of uploaded files with metadata (name, size, upload date)
-- [ ] **FILE-08**: User can delete files with confirmation dialog
-- [ ] **FILE-09**: Each file has its own chat tab in the interface
-- [ ] **FILE-10**: User can switch between file tabs with independent chat histories
+- [x] **FILE-07**: User can view list of uploaded files with metadata (name, size, upload date)
+- [x] **FILE-08**: User can delete files with confirmation dialog
+- [x] **FILE-09**: Each file has its own chat tab in the interface
+- [x] **FILE-10**: User can switch between file tabs with independent chat histories
 
 ### AI Agents & Chat
 
