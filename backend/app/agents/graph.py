@@ -16,6 +16,7 @@ import numpy as np
 from langgraph.graph import StateGraph
 from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.types import Command
+from langgraph.config import get_stream_writer
 
 from app.agents.state import ChatAgentState
 from app.agents.coding import coding_agent
@@ -74,6 +75,15 @@ async def code_checker_node(
     Returns:
         Command: Routing command with state updates
     """
+    writer = get_stream_writer()
+    writer({
+        "type": "status",
+        "event": "validation_started",
+        "message": "Validating...",
+        "step": 2,
+        "total_steps": 4
+    })
+
     generated_code = state.get("generated_code", "")
     error_count = state.get("error_count", 0)
     max_steps = state.get("max_steps", 3)
@@ -97,6 +107,13 @@ async def code_checker_node(
             )
         else:
             # Retry: send back to coding agent with feedback
+            writer({
+                "type": "retry",
+                "event": "retry",
+                "message": f"Code validation failed: {'; '.join(ast_result.errors[:2])}",
+                "attempt": new_error_count,
+                "max_attempts": max_steps
+            })
             return Command(
                 goto="coding_agent",
                 update={
@@ -174,6 +191,13 @@ async def code_checker_node(
             )
         else:
             # Retry with feedback
+            writer({
+                "type": "retry",
+                "event": "retry",
+                "message": f"Code validation failed: {'; '.join(issues[:2])}",
+                "attempt": new_error_count,
+                "max_attempts": max_steps
+            })
             return Command(
                 goto="coding_agent",
                 update={
@@ -203,6 +227,15 @@ async def execute_code_stub(state: ChatAgentState) -> dict:
         >>> result["execution_result"]
         '4'
     """
+    writer = get_stream_writer()
+    writer({
+        "type": "status",
+        "event": "execution_started",
+        "message": "Executing...",
+        "step": 3,
+        "total_steps": 4
+    })
+
     # TODO Phase 5: Replace with E2B sandbox execution
     generated_code = state.get("generated_code", "")
 
@@ -252,6 +285,13 @@ async def halt_node(state: ChatAgentState) -> dict:
     Returns:
         dict: State update with final_response and error
     """
+    writer = get_stream_writer()
+    writer({
+        "type": "error",
+        "event": "error",
+        "message": f"Unable to generate valid code after {state.get('max_steps', 3)} attempts"
+    })
+
     max_steps = state.get("max_steps", 3)
     validation_errors = state.get("validation_errors", [])
 

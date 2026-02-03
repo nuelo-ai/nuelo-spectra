@@ -2,6 +2,7 @@
 
 import re
 from langchain_core.messages import HumanMessage, SystemMessage
+from langgraph.config import get_stream_writer
 
 from app.agents.config import get_agent_prompt, get_agent_max_tokens, get_allowed_libraries
 from app.agents.llm_factory import get_llm
@@ -95,6 +96,27 @@ async def coding_agent(state: ChatAgentState) -> dict:
         >>> "generated_code" in result
         True
     """
+    writer = get_stream_writer()
+
+    # Check if this is a retry
+    error_count = state.get("error_count", 0)
+    if error_count > 0:
+        writer({
+            "type": "status",
+            "event": "coding_started",
+            "message": f"Regenerating code (attempt {error_count + 1}/{state.get('max_steps', 3)})...",
+            "step": 1,
+            "total_steps": 4
+        })
+    else:
+        writer({
+            "type": "status",
+            "event": "coding_started",
+            "message": "Generating code...",
+            "step": 1,
+            "total_steps": 4
+        })
+
     settings = get_settings()
 
     # Load system prompt from YAML

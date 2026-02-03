@@ -1,6 +1,7 @@
 """Data Analysis Agent for interpreting code execution results."""
 
 from langchain_core.messages import HumanMessage, SystemMessage
+from langgraph.config import get_stream_writer
 
 from app.agents.config import get_agent_prompt, get_agent_max_tokens
 from app.agents.llm_factory import get_llm
@@ -55,6 +56,15 @@ async def data_analysis_agent(state: ChatAgentState) -> dict:
         >>> "analysis" in result and "final_response" in result
         True
     """
+    writer = get_stream_writer()
+    writer({
+        "type": "status",
+        "event": "analysis_started",
+        "message": "Analyzing...",
+        "step": 4,
+        "total_steps": 4
+    })
+
     settings = get_settings()
 
     # Load system prompt from YAML
