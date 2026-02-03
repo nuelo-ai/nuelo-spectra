@@ -10,8 +10,8 @@ The workflow includes:
 """
 
 from typing import Literal
-import pandas as pd
-import numpy as np
+import asyncio
+import os
 
 from langgraph.graph import StateGraph
 from langgraph.checkpoint.postgres import PostgresSaver
@@ -25,6 +25,7 @@ from app.agents.data_analysis import data_analysis_agent
 from app.agents.config import get_agent_prompt, get_agent_max_tokens
 from app.agents.llm_factory import get_llm
 from app.config import get_settings
+from app.services.sandbox import E2BSandboxRuntime, ExecutionResult
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -208,26 +209,78 @@ async def code_checker_node(
             )
 
 
-async def execute_code_stub(state: ChatAgentState) -> dict:
-    """Execute Python code in restricted namespace (development stub).
+async def execute_in_sandbox(
+    state: ChatAgentState,
+) -> dict | Command[Literal["coding_agent", "halt"]]:
+    """Execute Python code in E2B Firecracker microVM sandbox.
 
-    This is a STUB for Phase 3. Real sandbox execution comes in Phase 5.
-    The AST validation from Code Checker provides the safety layer.
-    Phase 5 will add OS-level isolation with E2B or gVisor.
+    This replaces the development stub with real OS-level isolation via E2B.
+    Uploads user data file to sandbox, executes code with timeout, and handles
+    errors with intelligent retry routing.
 
     Args:
         state: Current chat workflow state with generated_code
 
     Returns:
-        dict: State update with execution_result (or error)
+        dict: State update with execution_result on success
+        Command: Routing to coding_agent (retry) or halt (exhausted) on error
 
     Example:
-        >>> state = {"generated_code": "result = 2 + 2"}
-        >>> result = await execute_code_stub(state)
+        >>> state = {"generated_code": "result = 2 + 2", "file_path": "/data.csv"}
+        >>> result = await execute_in_sandbox(state)
         >>> result["execution_result"]
         '4'
     """
     writer = get_stream_writer()
+    settings = get_settings()
+
+    # Emit code display event BEFORE execution (EXEC-05)
+    writer({
+        "type": "content",
+        "event": "code_display",
+        "message": "Code validated, preparing execution...",
+        "generated_code": state.get("generated_code", ""),
+        "step": 3,
+        "total_steps": 4
+    })
+
+    # Read user's data file from disk with error handling
+    file_path = state.get("file_path", "")
+    data_file = None
+    data_filename = None
+    if file_path:
+        data_filename = os.path.basename(file_path)
+        try:
+            with open(file_path, "rb") as f:
+                data_file = f.read()
+        except FileNotFoundError:
+            writer({
+                "type": "error",
+                "event": "error",
+                "message": "Data file not found. Please re-upload your file and try again."
+            })
+            return Command(
+                goto="halt",
+                update={
+                    "execution_result": "Error: Data file not found on server",
+                    "error": "file_not_found",
+                },
+            )
+        except (IOError, OSError) as e:
+            writer({
+                "type": "error",
+                "event": "error",
+                "message": "Unable to read data file. Please re-upload your file and try again."
+            })
+            return Command(
+                goto="halt",
+                update={
+                    "execution_result": f"Error: Unable to read data file: {e}",
+                    "error": "file_read_error",
+                },
+            )
+
+    # Emit execution started status
     writer({
         "type": "status",
         "event": "execution_started",
@@ -236,41 +289,66 @@ async def execute_code_stub(state: ChatAgentState) -> dict:
         "total_steps": 4
     })
 
-    # TODO Phase 5: Replace with E2B sandbox execution
-    generated_code = state.get("generated_code", "")
+    # Create E2B runtime and execute in thread pool (SDK is synchronous)
+    runtime = E2BSandboxRuntime(timeout_seconds=settings.sandbox_timeout_seconds)
 
-    try:
-        # Create restricted namespace with pandas and numpy
-        namespace = {"pd": pd, "np": np, "result": None}
+    result: ExecutionResult = await asyncio.to_thread(
+        runtime.execute,
+        code=state.get("generated_code", ""),
+        timeout=float(settings.sandbox_timeout_seconds),
+        data_file=data_file,
+        data_filename=data_filename,
+    )
 
-        # Execute code in restricted environment
-        # NOTE: Using empty __builtins__ to restrict access, but this is NOT
-        # sufficient for production. Phase 5 adds proper OS-level isolation.
-        exec(generated_code, {"__builtins__": {}, "pd": pd, "np": np}, namespace)
-
-        # Get result
-        result_value = namespace.get("result", None)
-
-        if result_value is None:
-            return {"execution_result": "Error: No 'result' variable found in code"}
-
-        # Convert result to string for display
-        # Handle pandas DataFrames, Series, and basic types
-        if isinstance(result_value, pd.DataFrame):
-            result_str = result_value.to_string()
-        elif isinstance(result_value, pd.Series):
-            result_str = result_value.to_string()
+    # Handle execution result
+    if result.success:
+        # Success: build execution_result string from stdout
+        if result.stdout:
+            execution_result = "\n".join(result.stdout)
+        elif result.results:
+            # Fallback: use results list if no stdout
+            execution_result = str(result.results)
         else:
-            result_str = str(result_value)
+            execution_result = "Code executed successfully (no output)"
 
-        return {"execution_result": result_str}
+        return {"execution_result": execution_result}
+    else:
+        # Execution failed: check retry budget
+        error_msg = f"{result.error['name']}: {result.error['value']}"
+        new_error_count = state.get("error_count", 0) + 1
 
-    except Exception as e:
-        # Execution error - return error message
-        return {
-            "execution_result": f"Execution error: {str(e)}",
-            "error": str(e),
-        }
+        if new_error_count < settings.sandbox_max_retries + 1:
+            # Retries remaining: route to coding_agent with error context
+            writer({
+                "type": "retry",
+                "event": "retry",
+                "message": f"Execution failed: {error_msg}. Retrying with adjusted code...",
+                "attempt": new_error_count,
+                "max_attempts": state.get("max_steps", 3)
+            })
+            return Command(
+                goto="coding_agent",
+                update={
+                    "execution_result": f"Execution error: {error_msg}",
+                    "validation_errors": [f"Execution error: {error_msg}. Please fix the code."],
+                    "error_count": new_error_count,
+                },
+            )
+        else:
+            # Retries exhausted: route to halt
+            writer({
+                "type": "error",
+                "event": "error",
+                "message": f"Execution failed after {new_error_count} attempts"
+            })
+            return Command(
+                goto="halt",
+                update={
+                    "execution_result": f"Execution error: {error_msg}",
+                    "error_count": new_error_count,
+                    "error": "execution_failed",
+                },
+            )
 
 
 async def halt_node(state: ChatAgentState) -> dict:
@@ -342,7 +420,7 @@ def build_chat_graph(postgres_url: str):
     # Add nodes
     graph.add_node("coding_agent", coding_agent)
     graph.add_node("code_checker", code_checker_node)
-    graph.add_node("execute", execute_code_stub)
+    graph.add_node("execute", execute_in_sandbox)
     graph.add_node("data_analysis", data_analysis_agent)
     graph.add_node("halt", halt_node)
 
