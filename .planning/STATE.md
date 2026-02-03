@@ -22,25 +22,25 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 ## Current Position
 
 **Phase:** 4 of 6 - Streaming Infrastructure
-**Plan:** 04-01 complete (SSE Events & Stream Writer Integration)
+**Plan:** 04-02 complete (SSE Endpoint & Atomic Persistence)
 **Status:** In progress
 
 **Progress Bar:**
 ```
-[████████████████░░░░] 41% (18/42 requirements completed)
+[█████████████████░░░] 43% (19/42 requirements completed)
 
 Phase 1: [██████████] 3/3 plans COMPLETE (database + auth + password reset)
 Phase 2: [██████████] 2/2 plans COMPLETE (file service + API routers)
 Phase 3: [██████████] 5/7 plans COMPLETE (foundation + onboarding + validation + coding + integration)
-Phase 4: [███░░░░░░░] 1/3 plans COMPLETE (SSE events & stream writers)
+Phase 4: [██████░░░░] 2/3 plans COMPLETE (SSE events + streaming endpoint)
 Phase 5: [░░░░░░░░░░] 0/8 requirements
 Phase 6: [░░░░░░░░░░] 0/12 requirements
 ```
 
-**Last activity:** 2026-02-03 - Completed 04-01: SSE Events & Stream Writer Integration (streaming event types, agent node instrumentation)
+**Last activity:** 2026-02-03 - Completed 04-02: SSE Endpoint & Atomic Persistence (streaming service + FastAPI SSE endpoint + atomic chat history)
 
 **Next Action:**
-Continue Phase 4 with plan 04-02 (SSE Endpoint Implementation)
+Continue Phase 4 with plan 04-03 (Error Handling & Reconnection)
 
 ---
 
@@ -63,6 +63,10 @@ Continue Phase 4 with plan 04-02 (SSE Endpoint Implementation)
 
 | Date | Decision | Impact |
 |------|----------|--------|
+| 2026-02-03 | Fresh database session for stream persistence | async_session_maker() creates new session for chat history writes; prevents connection timeout on long streams (2-3 min) |
+| 2026-02-03 | Failed streams save nothing to database | Clean failure state - only successful stream completions appear in chat history |
+| 2026-02-03 | Stream metadata in assistant message | duration_ms, retry_count, errors stored in metadata_json for debugging and analytics |
+| 2026-02-03 | File ownership verified before stream starts | Fast fail with HTTP 404 before event generator starts; proper error vs SSE event |
 | 2026-02-03 | StreamEventType enum with 10 event types | 4 status + 2 progress + 2 content + 2 terminal events cover all agent workflow transitions |
 | 2026-02-03 | Stream timeout 180 seconds | 3-minute timeout balances patience for complex queries vs user frustration |
 | 2026-02-03 | User-facing messages hide agent names | "Generating code..." not "Coding Agent thinking..." - simpler UX |
@@ -156,16 +160,17 @@ Continue Phase 4 with plan 04-02 (SSE Endpoint Implementation)
 10. **phases/03-ai-agents---orchestration/03-02-SUMMARY.md** - Onboarding Agent
 11. **phases/03-ai-agents---orchestration/03-03-SUMMARY.md** - AST-Based Code Validation (TDD)
 12. **phases/04-streaming-infrastructure/04-01-SUMMARY.md** - SSE Events & Stream Writer Integration
+13. **phases/04-streaming-infrastructure/04-02-SUMMARY.md** - SSE Endpoint & Atomic Persistence
 
-**Last session:** 2026-02-03T22:45:35Z
-**Stopped at:** Completed 04-01: SSE Events & Stream Writer Integration
+**Last session:** 2026-02-03T17:26:54Z
+**Stopped at:** Completed 04-02: SSE Endpoint & Atomic Persistence
 **Resume file:** None
 
 **Current session status:**
 - Phase 1 COMPLETE: All 3 plans executed successfully
 - Phase 2 COMPLETE: All 2 plans executed and verified (19/19 must-haves passed)
 - Phase 3 IN PROGRESS: Plans 03-01, 03-02, 03-03, 03-04, and 03-05 complete
-- Phase 4 IN PROGRESS: Plan 04-01 complete
+- Phase 4 IN PROGRESS: Plans 04-01 and 04-02 complete
 - Plan 04-01: SSE Events & Stream Writer Integration (3min)
   - StreamEventType enum with 10 event types (4 status, 2 progress, 2 content, 2 terminal)
   - StreamEvent Pydantic model for typed SSE payloads
@@ -174,7 +179,15 @@ Continue Phase 4 with plan 04-02 (SSE Endpoint Implementation)
   - User-facing messages without agent name exposure
   - Retry event emission with attempt counts and error details
   - Requirements covered: STREAM-01 (partial - event types defined, nodes emit events)
-- Next: Plans 04-02 and 04-03 (complete streaming infrastructure)
+- Plan 04-02: SSE Endpoint & Atomic Persistence (2min)
+  - run_chat_query_stream() async generator yields SSE events from LangGraph astream()
+  - POST /chat/{file_id}/stream endpoint with EventSourceResponse
+  - Atomic chat history persistence with fresh database session on completion
+  - Stream metadata tracked: duration_ms, retry_count, errors
+  - Failed streams save nothing (clean failure state)
+  - Disconnect detection and keepalive pings
+  - Requirements covered: AGENT-02 (streaming AI responses), AGENT-07 (chat history), STREAM-01 (complete)
+- Next: Plan 04-03 (Error Handling & Reconnection)
 
 ---
 
