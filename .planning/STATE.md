@@ -21,26 +21,26 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 
 ## Current Position
 
-**Phase:** 3 of 6 - AI Agents & Orchestration
-**Plan:** 03-05 complete (Agent Service Integration)
+**Phase:** 4 of 6 - Streaming Infrastructure
+**Plan:** 04-01 complete (SSE Events & Stream Writer Integration)
 **Status:** In progress
 
 **Progress Bar:**
 ```
-[████████████████░░░░] 40% (17/42 requirements completed)
+[████████████████░░░░] 41% (18/42 requirements completed)
 
 Phase 1: [██████████] 3/3 plans COMPLETE (database + auth + password reset)
 Phase 2: [██████████] 2/2 plans COMPLETE (file service + API routers)
 Phase 3: [██████████] 5/7 plans COMPLETE (foundation + onboarding + validation + coding + integration)
-Phase 4: [░░░░░░░░░░] 0/3 requirements
+Phase 4: [███░░░░░░░] 1/3 plans COMPLETE (SSE events & stream writers)
 Phase 5: [░░░░░░░░░░] 0/8 requirements
 Phase 6: [░░░░░░░░░░] 0/12 requirements
 ```
 
-**Last activity:** 2026-02-03 - Completed 03-05: Agent Service Integration (HTTP API wired to agents, background onboarding, thread isolation)
+**Last activity:** 2026-02-03 - Completed 04-01: SSE Events & Stream Writer Integration (streaming event types, agent node instrumentation)
 
 **Next Action:**
-Continue Phase 3 with remaining plans (03-06, 03-07)
+Continue Phase 4 with plan 04-02 (SSE Endpoint Implementation)
 
 ---
 
@@ -63,6 +63,10 @@ Continue Phase 3 with remaining plans (03-06, 03-07)
 
 | Date | Decision | Impact |
 |------|----------|--------|
+| 2026-02-03 | StreamEventType enum with 10 event types | 4 status + 2 progress + 2 content + 2 terminal events cover all agent workflow transitions |
+| 2026-02-03 | Stream timeout 180 seconds | 3-minute timeout balances patience for complex queries vs user frustration |
+| 2026-02-03 | User-facing messages hide agent names | "Generating code..." not "Coding Agent thinking..." - simpler UX |
+| 2026-02-03 | get_stream_writer() in all agent nodes | LangGraph streaming instrumentation at node entry points; no-op outside astream() |
 | 2026-02-03 | psycopg-binary for PostgresSaver | LangGraph checkpoint requires psycopg3 with binary; fixed import error |
 | 2026-02-03 | Two-stage validation (AST + LLM) in Code Checker | AST first (fast syntax/security), LLM second (logical correctness); optimizes speed |
 | 2026-02-03 | Command routing for conditional edges | LangGraph Command pattern cleaner than add_conditional_edges callback |
@@ -151,42 +155,26 @@ Continue Phase 3 with remaining plans (03-06, 03-07)
 9. **phases/03-ai-agents---orchestration/03-01-SUMMARY.md** - Agent Foundation & Config
 10. **phases/03-ai-agents---orchestration/03-02-SUMMARY.md** - Onboarding Agent
 11. **phases/03-ai-agents---orchestration/03-03-SUMMARY.md** - AST-Based Code Validation (TDD)
+12. **phases/04-streaming-infrastructure/04-01-SUMMARY.md** - SSE Events & Stream Writer Integration
 
-**Last session:** 2026-02-03T15:30:49Z
-**Stopped at:** Completed 03-05: Agent Service Integration
+**Last session:** 2026-02-03T22:45:35Z
+**Stopped at:** Completed 04-01: SSE Events & Stream Writer Integration
 **Resume file:** None
 
 **Current session status:**
 - Phase 1 COMPLETE: All 3 plans executed successfully
 - Phase 2 COMPLETE: All 2 plans executed and verified (19/19 must-haves passed)
 - Phase 3 IN PROGRESS: Plans 03-01, 03-02, 03-03, 03-04, and 03-05 complete
-- Plan 03-01: LangGraph foundation, multi-provider LLM factory, YAML configs (172s)
-- Plan 03-02: Onboarding Agent with pandas profiling + LLM summarization (164s)
-  - OnboardingAgent: profile_data (pandas analysis), generate_summary (LLM), run (orchestration)
-- Plan 03-03: AST-Based Code Validation with TDD (242s, 37 tests)
-  - CodeValidator: AST NodeVisitor pattern for security validation
-  - validate_code(): validates syntax, imports, unsafe builtins, unsafe operations
-  - Comprehensive test coverage documenting all security rules
-  - agent_service.py: run_onboarding, update_user_context service functions
-  - File model extended: data_summary and user_context columns (nullable, async populated)
-  - Requirements covered: FILE-04, FILE-05, FILE-06, AGENT-03
-- Plan 03-04: Coding Agent & Chat Workflow (180s)
-  - Coding Agent: generates Python code from natural language with data context
-  - Data Analysis Agent: interprets execution results in natural language
-  - Code Checker node: two-stage validation (AST + LLM) with Command routing
-  - Execute stub: restricted namespace execution (Phase 5 replaces with sandbox)
-  - LangGraph chat workflow: coding -> code_checker -> execute/retry/halt -> data_analysis
-  - Bounded retry loop with max_steps=3 circuit breaker
-  - Requirements covered: AGENT-04, AGENT-05, AGENT-06
-- Plan 03-05: Agent Service Integration (207s)
-  - run_chat_query service function: orchestrates LangGraph workflow from HTTP layer
-  - Background onboarding: asyncio.create_task triggers agent after file upload
-  - Thread isolation: file_{file_id}_user_{user_id} for per-file chat memory
-  - Updated schemas: FileUploadResponse, ChatAgentResponse with agent fields
-  - New endpoints: POST /files/{file_id}/context, GET /files/{file_id}/summary, POST /chat/{file_id}/query
-  - Full end-to-end flow: upload → onboarding → chat query → 4-agent pipeline → response
-  - Requirements covered: FILE-04, FILE-05, FILE-06, AGENT-03, AGENT-04, AGENT-05, AGENT-06, AGENT-08
-- Next: Plans 03-06 and 03-07
+- Phase 4 IN PROGRESS: Plan 04-01 complete
+- Plan 04-01: SSE Events & Stream Writer Integration (3min)
+  - StreamEventType enum with 10 event types (4 status, 2 progress, 2 content, 2 terminal)
+  - StreamEvent Pydantic model for typed SSE payloads
+  - Stream timeout 180s and ping interval 30s configuration
+  - get_stream_writer() integration in all 5 agent nodes
+  - User-facing messages without agent name exposure
+  - Retry event emission with attempt counts and error details
+  - Requirements covered: STREAM-01 (partial - event types defined, nodes emit events)
+- Next: Plans 04-02 and 04-03 (complete streaming infrastructure)
 
 ---
 
