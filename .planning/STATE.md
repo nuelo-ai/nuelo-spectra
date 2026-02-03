@@ -22,25 +22,25 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 ## Current Position
 
 **Phase:** 3 of 6 - AI Agents & Orchestration
-**Plan:** 03-02 complete (Onboarding Agent)
+**Plan:** 03-03 complete (AST-Based Code Validation)
 **Status:** In progress
 
 **Progress Bar:**
 ```
-[█████████████░░░░░░░] 33% (14/42 requirements completed)
+[██████████████░░░░░░] 36% (15/42 requirements completed)
 
 Phase 1: [██████████] 3/3 plans COMPLETE (database + auth + password reset)
 Phase 2: [██████████] 2/2 plans COMPLETE (file service + API routers)
-Phase 3: [████░░░░░░] 2/7 plans COMPLETE (agent foundation + onboarding agent)
+Phase 3: [██████░░░░] 3/7 plans COMPLETE (agent foundation + onboarding agent + code validation)
 Phase 4: [░░░░░░░░░░] 0/3 requirements
 Phase 5: [░░░░░░░░░░] 0/8 requirements
 Phase 6: [░░░░░░░░░░] 0/12 requirements
 ```
 
-**Last activity:** 2026-02-03 - Completed 03-02: Onboarding Agent (pandas profiling + LLM summarization)
+**Last activity:** 2026-02-03 - Completed 03-03: AST-Based Code Validation (TDD with 37 tests, security policies)
 
 **Next Action:**
-Execute plan 03-03 (Code Safety & Validation)
+Execute plan 03-04 (Coding Agent implementation)
 
 ---
 
@@ -63,6 +63,8 @@ Execute plan 03-03 (Code Safety & Validation)
 
 | Date | Decision | Impact |
 |------|----------|--------|
+| 2026-02-03 | AST NodeVisitor pattern for code validation | Python's ast module provides structured code analysis without execution; safer than regex |
+| 2026-02-03 | TDD for Code Checker | 37 tests document every security rule; provides regression prevention |
 | 2026-02-03 | data_summary/user_context nullable on File model | Populated asynchronously after upload; NULL until Onboarding Agent runs |
 | 2026-02-03 | asyncio.to_thread for pandas profiling | Prevents event loop blocking during data analysis operations |
 | 2026-02-03 | v1 always appends user context | Simple append pattern; v2 will ask user to re-run or append |
@@ -138,18 +140,23 @@ Execute plan 03-03 (Code Safety & Validation)
 8. **phases/02-file-upload-management/02-02-SUMMARY.md** - File & Chat API Routers
 9. **phases/03-ai-agents---orchestration/03-01-SUMMARY.md** - Agent Foundation & Config
 10. **phases/03-ai-agents---orchestration/03-02-SUMMARY.md** - Onboarding Agent
+11. **phases/03-ai-agents---orchestration/03-03-SUMMARY.md** - AST-Based Code Validation (TDD)
 
-**Last session:** 2026-02-03T15:17:11Z
-**Stopped at:** Completed 03-02: Onboarding Agent
+**Last session:** 2026-02-03T15:18:25Z
+**Stopped at:** Completed 03-03: AST-Based Code Validation
 **Resume file:** None
 
 **Current session status:**
 - Phase 1 COMPLETE: All 3 plans executed successfully
 - Phase 2 COMPLETE: All 2 plans executed and verified (19/19 must-haves passed)
-- Phase 3 IN PROGRESS: Plans 03-01 and 03-02 complete
+- Phase 3 IN PROGRESS: Plans 03-01, 03-02, and 03-03 complete
 - Plan 03-01: LangGraph foundation, multi-provider LLM factory, YAML configs (172s)
 - Plan 03-02: Onboarding Agent with pandas profiling + LLM summarization (164s)
   - OnboardingAgent: profile_data (pandas analysis), generate_summary (LLM), run (orchestration)
+- Plan 03-03: AST-Based Code Validation with TDD (242s, 37 tests)
+  - CodeValidator: AST NodeVisitor pattern for security validation
+  - validate_code(): validates syntax, imports, unsafe builtins, unsafe operations
+  - Comprehensive test coverage documenting all security rules
   - agent_service.py: run_onboarding, update_user_context service functions
   - File model extended: data_summary and user_context columns (nullable, async populated)
   - Requirements covered: FILE-04, FILE-05, FILE-06, AGENT-03
