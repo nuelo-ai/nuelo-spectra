@@ -1,6 +1,7 @@
 """Chat message schemas."""
 
 from datetime import datetime
+from enum import Enum
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, field_validator
@@ -57,3 +58,40 @@ class ChatAgentResponse(BaseModel):
     analysis: str
     error: str | None = None
     retry_count: int = 0
+
+
+class StreamEventType(str, Enum):
+    """SSE event types for streaming agent execution status."""
+
+    # Status events - agent phase transitions
+    CODING_STARTED = "coding_started"
+    VALIDATION_STARTED = "validation_started"
+    EXECUTION_STARTED = "execution_started"
+    ANALYSIS_STARTED = "analysis_started"
+
+    # Progress events
+    PROGRESS = "progress"
+    RETRY = "retry"
+
+    # Content events
+    CONTENT_CHUNK = "content_chunk"
+    NODE_COMPLETE = "node_complete"
+
+    # Terminal events
+    COMPLETED = "completed"
+    ERROR = "error"
+
+
+class StreamEvent(BaseModel):
+    """Typed SSE event payload for agent streaming."""
+
+    type: StreamEventType
+    event: str | None = None  # Specific event name (coding_started, etc.)
+    message: str | None = None  # User-facing message
+    step: int | None = None  # Current step (1-4)
+    total_steps: int | None = None  # Total steps (4)
+    node: str | None = None  # Node name for node_complete events
+    text: str | None = None  # Content text for chunk events
+    attempt: int | None = None  # Retry attempt number
+    max_attempts: int | None = None  # Max retry attempts
+    data: dict | None = None  # Additional data payload

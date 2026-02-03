@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     langsmith_project: str = "spectra-agents"
     langsmith_tracing: bool = False
 
+    # Streaming
+    stream_timeout_seconds: int = 180
+    stream_ping_interval: int = 30
+
     model_config = SettingsConfigDict(env_file=".env")
 
     def get_cors_origins(self) -> list[str]:
