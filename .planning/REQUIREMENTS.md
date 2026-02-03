@@ -132,13 +132,54 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TBD | TBD | Pending |
+| AUTH-01 | Phase 1 | Pending |
+| AUTH-02 | Phase 1 | Pending |
+| AUTH-03 | Phase 1 | Pending |
+| AUTH-04 | Phase 1 | Pending |
+| AUTH-05 | Phase 1 | Pending |
+| FILE-01 | Phase 2 | Pending |
+| FILE-02 | Phase 2 | Pending |
+| FILE-03 | Phase 2 | Pending |
+| FILE-04 | Phase 3 | Pending |
+| FILE-05 | Phase 3 | Pending |
+| FILE-06 | Phase 3 | Pending |
+| FILE-07 | Phase 2 | Pending |
+| FILE-08 | Phase 2 | Pending |
+| FILE-09 | Phase 2 | Pending |
+| FILE-10 | Phase 2 | Pending |
+| AGENT-01 | Phase 4 | Pending |
+| AGENT-02 | Phase 4 | Pending |
+| AGENT-03 | Phase 3 | Pending |
+| AGENT-04 | Phase 3 | Pending |
+| AGENT-05 | Phase 3 | Pending |
+| AGENT-06 | Phase 3 | Pending |
+| AGENT-07 | Phase 4 | Pending |
+| AGENT-08 | Phase 3 | Pending |
+| AGENT-09 | Phase 5 | Pending |
+| EXEC-01 | Phase 5 | Pending |
+| EXEC-02 | Phase 5 | Pending |
+| EXEC-03 | Phase 5 | Pending |
+| EXEC-04 | Phase 5 | Pending |
+| EXEC-05 | Phase 5 | Pending |
+| EXEC-06 | Phase 5 | Pending |
+| EXEC-07 | Phase 5 | Pending |
+| CARD-01 | Phase 6 | Pending |
+| CARD-02 | Phase 6 | Pending |
+| CARD-03 | Phase 6 | Pending |
+| CARD-04 | Phase 6 | Pending |
+| CARD-05 | Phase 6 | Pending |
+| CARD-06 | Phase 6 | Pending |
+| CARD-07 | Phase 6 | Pending |
+| CARD-08 | Phase 6 | Pending |
+| SETT-01 | Phase 6 | Pending |
+| SETT-02 | Phase 6 | Pending |
+| SETT-03 | Phase 6 | Pending |
 
 **Coverage:**
-- v1.0 requirements: TBD total
-- Mapped to phases: TBD
-- Unmapped: TBD ⚠️
+- v1.0 requirements: 42 total
+- Mapped to phases: 42/42 (100%)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-02*
-*Last updated: 2026-02-02 after initial definition*
+*Last updated: 2026-02-02 after roadmap creation*
