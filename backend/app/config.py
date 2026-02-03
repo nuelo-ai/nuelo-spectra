@@ -28,6 +28,19 @@ class Settings(BaseSettings):
     upload_dir: str = "uploads"
     max_file_size_mb: int = 50
 
+    # LLM Provider
+    llm_provider: str = "anthropic"
+    anthropic_api_key: str = ""
+    openai_api_key: str = ""
+    google_api_key: str = ""
+    agent_model: str = "claude-sonnet-4-20250514"
+    agent_max_retries: int = 3
+
+    # LangSmith
+    langsmith_api_key: str = ""
+    langsmith_project: str = "spectra-agents"
+    langsmith_tracing: bool = False
+
     model_config = SettingsConfigDict(env_file=".env")
 
     def get_cors_origins(self) -> list[str]:
