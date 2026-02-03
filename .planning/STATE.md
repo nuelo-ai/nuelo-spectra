@@ -22,25 +22,25 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 ## Current Position
 
 **Phase:** 3 of 6 - AI Agents & Orchestration
-**Plan:** 03-04 complete (Coding Agent & Chat Workflow)
+**Plan:** 03-05 complete (Agent Service Integration)
 **Status:** In progress
 
 **Progress Bar:**
 ```
-[███████████████░░░░░] 38% (16/42 requirements completed)
+[████████████████░░░░] 40% (17/42 requirements completed)
 
 Phase 1: [██████████] 3/3 plans COMPLETE (database + auth + password reset)
 Phase 2: [██████████] 2/2 plans COMPLETE (file service + API routers)
-Phase 3: [████████░░] 4/7 plans COMPLETE (agent foundation + onboarding + code validation + coding agent)
+Phase 3: [██████████] 5/7 plans COMPLETE (foundation + onboarding + validation + coding + integration)
 Phase 4: [░░░░░░░░░░] 0/3 requirements
 Phase 5: [░░░░░░░░░░] 0/8 requirements
 Phase 6: [░░░░░░░░░░] 0/12 requirements
 ```
 
-**Last activity:** 2026-02-03 - Completed 03-04: Coding Agent & Chat Workflow (LangGraph pipeline, 2-stage validation, retry loops)
+**Last activity:** 2026-02-03 - Completed 03-05: Agent Service Integration (HTTP API wired to agents, background onboarding, thread isolation)
 
 **Next Action:**
-Execute plan 03-05 (Agent Service Integration)
+Continue Phase 3 with remaining plans (03-06, 03-07)
 
 ---
 
@@ -80,6 +80,10 @@ Execute plan 03-05 (Agent Service Integration)
 | 2026-02-03 | YAML for agent prompts and allowlists | Externalized config enables prompt iteration without deployment |
 | 2026-02-03 | agent_max_retries=3 default | Circuit breaker prevents infinite retry loops and runaway costs |
 | 2026-02-03 | Lazy imports in LLM factory | Users only need SDK for their chosen provider |
+| 2026-02-03 | Background onboarding with asyncio.create_task | Upload response immediate; onboarding runs async with new session |
+| 2026-02-03 | Thread ID format: file_{file_id}_user_{user_id} | Per-file chat memory isolation via LangGraph checkpointer |
+| 2026-02-03 | Separate AI query vs direct message endpoints | POST /chat/{file_id}/query for AI, POST /chat/{file_id}/messages for direct |
+| 2026-02-03 | GET /files/{file_id}/summary for status polling | Frontend checks onboarding completion before enabling chat |
 | 2026-02-03 | MultiPartParser configured before app creation | Starlette caches parser at import; must override 1MB limit at module level |
 | 2026-02-03 | Chat endpoints verify file ownership twice | GET/POST chat call FileService.get_user_file first; prevents cross-user access |
 | 2026-02-03 | Extension validation in router layer | Router validates before service call; separation of HTTP vs business logic |
@@ -148,14 +152,14 @@ Execute plan 03-05 (Agent Service Integration)
 10. **phases/03-ai-agents---orchestration/03-02-SUMMARY.md** - Onboarding Agent
 11. **phases/03-ai-agents---orchestration/03-03-SUMMARY.md** - AST-Based Code Validation (TDD)
 
-**Last session:** 2026-02-03T15:25:11Z
-**Stopped at:** Completed 03-04: Coding Agent & Chat Workflow
+**Last session:** 2026-02-03T15:30:49Z
+**Stopped at:** Completed 03-05: Agent Service Integration
 **Resume file:** None
 
 **Current session status:**
 - Phase 1 COMPLETE: All 3 plans executed successfully
 - Phase 2 COMPLETE: All 2 plans executed and verified (19/19 must-haves passed)
-- Phase 3 IN PROGRESS: Plans 03-01, 03-02, 03-03, and 03-04 complete
+- Phase 3 IN PROGRESS: Plans 03-01, 03-02, 03-03, 03-04, and 03-05 complete
 - Plan 03-01: LangGraph foundation, multi-provider LLM factory, YAML configs (172s)
 - Plan 03-02: Onboarding Agent with pandas profiling + LLM summarization (164s)
   - OnboardingAgent: profile_data (pandas analysis), generate_summary (LLM), run (orchestration)
@@ -174,7 +178,15 @@ Execute plan 03-05 (Agent Service Integration)
   - LangGraph chat workflow: coding -> code_checker -> execute/retry/halt -> data_analysis
   - Bounded retry loop with max_steps=3 circuit breaker
   - Requirements covered: AGENT-04, AGENT-05, AGENT-06
-- Next: Plan 03-05 (Agent Service Integration)
+- Plan 03-05: Agent Service Integration (207s)
+  - run_chat_query service function: orchestrates LangGraph workflow from HTTP layer
+  - Background onboarding: asyncio.create_task triggers agent after file upload
+  - Thread isolation: file_{file_id}_user_{user_id} for per-file chat memory
+  - Updated schemas: FileUploadResponse, ChatAgentResponse with agent fields
+  - New endpoints: POST /files/{file_id}/context, GET /files/{file_id}/summary, POST /chat/{file_id}/query
+  - Full end-to-end flow: upload → onboarding → chat query → 4-agent pipeline → response
+  - Requirements covered: FILE-04, FILE-05, FILE-06, AGENT-03, AGENT-04, AGENT-05, AGENT-06, AGENT-08
+- Next: Plans 03-06 and 03-07
 
 ---
 
