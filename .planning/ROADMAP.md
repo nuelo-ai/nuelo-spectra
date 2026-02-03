@@ -175,6 +175,12 @@ Plans:
 
 **Requirements:** EXEC-01, EXEC-02, EXEC-03, EXEC-04, EXEC-05, EXEC-06, EXEC-07, AGENT-09
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 05-01-PLAN.md -- SandboxRuntime Protocol abstraction, E2BSandboxRuntime implementation, ExecutionResult models, sandbox config
+- [ ] 05-02-PLAN.md -- Replace execute_code_stub with E2B sandbox execution, wire file data, code display streaming, execution error retry
+
 **Success Criteria:**
 1. Python code executes in E2B microVM sandbox environment
 2. Sandbox prevents risky operations (file deletion, table drops, network access)
@@ -258,7 +264,7 @@ Plans:
 | **2 - File Upload & Management** | Complete | 7/7 | 100% |
 | **3 - AI Agents & Orchestration** | Complete | 8/8 | 100% |
 | **4 - Streaming Infrastructure** | Complete | 3/3 | 100% |
-| **5 - Sandbox Security & Code Execution** | Pending | 8/8 | 0% |
+| **5 - Sandbox Security & Code Execution** | Planned | 8/8 | 0% |
 | **6 - Frontend UI & Interactive Data Cards** | Pending | 12/12 | 0% |
 
 **Overall Progress:** 55% (23/42 requirements completed)
@@ -309,4 +315,4 @@ Phase 6: Frontend UI & Interactive Data Cards
 ---
 
 *Last updated: 2026-02-03*
-*Next step: `/gsd:plan-phase 5` to plan Sandbox Security & Code Execution*
+*Next step: `/gsd:execute-phase 5` to execute Sandbox Security & Code Execution*
