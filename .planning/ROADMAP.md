@@ -98,11 +98,11 @@ Plans:
 **Plans:** 5 plans
 
 Plans:
-- [ ] 03-01-PLAN.md -- Install LangGraph dependencies, YAML configs (prompts + allowlist), state schemas, config loader
-- [ ] 03-02-PLAN.md -- Onboarding Agent with data profiling and LLM summary, File model migration, agent service layer
-- [ ] 03-03-PLAN.md -- Code Checker AST validation (TDD) with allowlist enforcement
-- [ ] 03-04-PLAN.md -- Coding Agent, Data Analysis Agent, LangGraph chat workflow with conditional routing
-- [ ] 03-05-PLAN.md -- Wire agents into file upload and chat routers, full API integration
+- [x] 03-01-PLAN.md -- Install LangGraph dependencies, YAML configs (prompts + allowlist), state schemas, config loader
+- [x] 03-02-PLAN.md -- Onboarding Agent with data profiling and LLM summary, File model migration, agent service layer
+- [x] 03-03-PLAN.md -- Code Checker AST validation (TDD) with allowlist enforcement
+- [x] 03-04-PLAN.md -- Coding Agent, Data Analysis Agent, LangGraph chat workflow with conditional routing
+- [x] 03-05-PLAN.md -- Wire agents into file upload and chat routers, full API integration
 
 **Success Criteria:**
 1. Onboarding Agent analyzes uploaded data structure and generates natural language summary
@@ -124,7 +124,7 @@ Plans:
 - Token usage monitoring and max_tokens caps
 
 **Technical Notes:**
-- LangGraph conditional edges: Code Checker validates → execute or regenerate
+- LangGraph conditional edges: Code Checker validates -> execute or regenerate
 - Code Checker uses AST analysis to detect hallucinated pandas functions
 - YAML prompt configs enable fast iteration without code changes
 - Monitor token costs from day one (output tokens 3-10x input)
@@ -137,6 +137,12 @@ Plans:
 **Dependencies:** Phase 3 (requires AI agents to generate streaming content)
 
 **Requirements:** AGENT-01, AGENT-02, AGENT-07
+
+**Plans:** 2 plans
+
+Plans:
+- [ ] 04-01-PLAN.md -- SSE event types, streaming config, sse-starlette install, inject stream writers into agent nodes
+- [ ] 04-02-PLAN.md -- Streaming service function (astream), SSE endpoint, atomic chat history persistence with metadata
 
 **Success Criteria:**
 1. User can ask questions about their data in natural language through chat interface
@@ -181,7 +187,7 @@ Plans:
 
 **Deliverables:**
 - E2B microVM integration with Firecracker runtime
-- Multi-layer sandbox defense: RestrictedPython AST → Docker → E2B/gVisor
+- Multi-layer sandbox defense: RestrictedPython AST -> Docker -> E2B/gVisor
 - Resource limits configuration (memory, CPU, timeout)
 - Network isolation (--network=none for Docker layer)
 - YAML library allowlist configuration
@@ -250,12 +256,12 @@ Plans:
 |-------|--------|--------------|------------|
 | **1 - Backend Foundation & Authentication** | Complete | 5/5 | 100% |
 | **2 - File Upload & Management** | Complete | 7/7 | 100% |
-| **3 - AI Agents & Orchestration** | Planned | 8/8 | 0% |
-| **4 - Streaming Infrastructure** | Pending | 3/3 | 0% |
+| **3 - AI Agents & Orchestration** | Complete | 8/8 | 100% |
+| **4 - Streaming Infrastructure** | Planned | 3/3 | 0% |
 | **5 - Sandbox Security & Code Execution** | Pending | 8/8 | 0% |
 | **6 - Frontend UI & Interactive Data Cards** | Pending | 12/12 | 0% |
 
-**Overall Progress:** 29% (12/42 requirements completed)
+**Overall Progress:** 48% (20/42 requirements completed)
 
 ---
 
@@ -303,4 +309,4 @@ Phase 6: Frontend UI & Interactive Data Cards
 ---
 
 *Last updated: 2026-02-03*
-*Next step: `/gsd:execute-phase 3` to begin AI Agents & Orchestration*
+*Next step: `/gsd:execute-phase 4` to begin Streaming Infrastructure*
