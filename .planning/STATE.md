@@ -90,10 +90,12 @@ Run `/gsd:discuss-phase 3` or `/gsd:plan-phase 3` to begin AI Agents & Orchestra
 
 **Immediate (Phase 3 Execution):**
 - [ ] Setup API keys for Phase 3 execution (see `.planning/todos/pending/2026-02-03-setup-api-keys-for-phase-3.md`)
-- [ ] Make agent LLM provider configurable (see `.planning/todos/pending/2026-02-03-make-agent-llm-provider-configurable.md`)
 
 **Research Needed:**
 - Phase 5: E2B vs self-hosted gVisor decision (complexity vs cost tradeoff for single developer)
+
+**Completed:**
+- [x] Make agent LLM provider configurable - integrated into Phase 3 plans (03-01, 03-02, 03-04)
 
 **Deferred to Later Phases:**
 - Frontend UI components (Phase 6)
