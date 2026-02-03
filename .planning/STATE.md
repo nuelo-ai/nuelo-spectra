@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-02-03
 **Milestone:** v1.0 MVP
-**Status:** Phase 1 In Progress
+**Status:** Phase 1 Complete
 
 ---
 
@@ -22,14 +22,14 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 ## Current Position
 
 **Phase:** 1 of 6 - Backend Foundation & Authentication
-**Plan:** 01-02 complete (JWT authentication)
-**Status:** In progress
+**Plan:** 01-03 complete (Password reset & API completion)
+**Status:** Phase complete
 
 **Progress Bar:**
 ```
-[█████░░░░░░░░░░░░░░░] 10% (4/42 requirements completed)
+[███████░░░░░░░░░░░░░] 12% (5/42 requirements completed)
 
-Phase 1: [████░░░░░░] 2/5 plans (database + auth foundation)
+Phase 1: [██████████] 3/3 plans COMPLETE (database + auth + password reset)
 Phase 2: [░░░░░░░░░░] 0/7 requirements
 Phase 3: [░░░░░░░░░░] 0/7 requirements
 Phase 4: [░░░░░░░░░░] 0/3 requirements
@@ -37,10 +37,10 @@ Phase 5: [░░░░░░░░░░] 0/8 requirements
 Phase 6: [░░░░░░░░░░] 0/12 requirements
 ```
 
-**Last activity:** 2026-02-03 - Completed 01-02-PLAN.md (JWT Authentication)
+**Last activity:** 2026-02-03 - Completed 01-03-PLAN.md (Password Reset & API Completion)
 
 **Next Action:**
-Continue Phase 1 with remaining plans (password reset, session management, final integration)
+Phase 1 complete. Ready to start Phase 2 (Agent Management & Chat) or Phase 6 (Frontend) in parallel
 
 ---
 
@@ -63,6 +63,11 @@ Continue Phase 1 with remaining plans (password reset, session management, final
 
 | Date | Decision | Impact |
 |------|----------|--------|
+| 2026-02-03 | Forgot-password always returns 202 | Prevents email enumeration attacks; same response for exists/not-exists |
+| 2026-02-03 | Reset tokens expire in 10 minutes | Short window reduces attack surface; balances security with usability |
+| 2026-02-03 | Email service dev mode fallback | Console logging when no API key set; enables local dev without email account |
+| 2026-02-03 | CORS explicit origins (not wildcard) | Security: wildcard rejected by browser when allow_credentials=True |
+| 2026-02-03 | Lifespan handler for engine disposal | Prevents connection pool leaks; FastAPI best practice for cleanup |
 | 2026-02-03 | JWT tokens contain only user_id (no PII) | Minimizes data exposure if token intercepted; user_id in 'sub' claim only |
 | 2026-02-03 | pwdlib[argon2] for password hashing | Modern Argon2id algorithm; passlib is abandoned; prevents timing attacks |
 | 2026-02-03 | Explicit algorithm in jwt.decode() | Security: prevents 'none' algorithm attack by enforcing HS256 |
@@ -76,10 +81,10 @@ Continue Phase 1 with remaining plans (password reset, session management, final
 
 ### Active Todos
 
-**Immediate (Phase 1 Planning):**
-- [ ] Run `/gsd:plan-phase 1` to create detailed execution plan
-- [ ] Define FastAPI project structure and directory layout
-- [ ] Set up development environment (PostgreSQL, Python 3.12+, uv package manager)
+**Immediate (Phase 2 Planning):**
+- [ ] Run `/gsd:plan-phase 2` to create detailed execution plan for Agent Management & Chat
+- [ ] Define agent orchestration patterns and state management
+- [ ] Set up LangGraph integration for multi-agent workflows
 
 **Research Needed:**
 - Phase 3: LangGraph conditional edges and retry loop patterns for Code Checker validation
@@ -109,17 +114,20 @@ Continue Phase 1 with remaining plans (password reset, session management, final
 3. **PROJECT.md** - Core value, constraints, target features for v1.0
 4. **phases/01-backend-foundation-a-authentication/01-01-SUMMARY.md** - Database foundation completed
 5. **phases/01-backend-foundation-a-authentication/01-02-SUMMARY.md** - JWT authentication completed
+6. **phases/01-backend-foundation-a-authentication/01-03-SUMMARY.md** - Password reset & API completion
 
-**Last session:** 2026-02-03T01:45:15Z
-**Stopped at:** Completed 01-02-PLAN.md (JWT Authentication)
+**Last session:** 2026-02-03T01:52:33Z
+**Stopped at:** Completed 01-03-PLAN.md (Password Reset & API Completion) - PHASE 1 COMPLETE
 **Resume file:** None
 
 **Current session status:**
-- Plan 01-01 complete: FastAPI + PostgreSQL + SQLAlchemy models
-- Plan 01-02 complete: JWT auth with signup, login, refresh endpoints
-- Authentication ready: get_current_user dependency available for protecting endpoints
-- Requirements satisfied: AUTH-01 (signup), AUTH-02 (login), AUTH-04 (refresh), AUTH-05 (protected endpoints)
-- Ready for Plan 01-03 and beyond
+- Phase 1 COMPLETE: All 3 plans executed successfully
+- Plan 01-01: FastAPI + PostgreSQL + SQLAlchemy models with UUID primary keys
+- Plan 01-02: JWT auth with signup, login, refresh, and get_current_user dependency
+- Plan 01-03: Password reset flow, email service, health check, CORS, complete API wiring
+- Requirements satisfied: AUTH-01 (signup), AUTH-02 (login), AUTH-03 (password reset), AUTH-04 (refresh), AUTH-05 (data isolation)
+- Backend foundation production-ready with 8 endpoints: /, /health, /auth/* (signup, login, refresh, me, forgot-password, reset-password)
+- Ready for Phase 2 (Agent Management & Chat) or Phase 6 (Frontend) in parallel
 
 ---
 
