@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-02-04
 **Milestone:** v1.0 MVP
-**Status:** UAT Round 3 Complete - 3 fixes confirmed (markdown, button handler, error state) + 3 new gaps diagnosed (stale dev server, scroll UX, sidebar errors)
+**Status:** Critical Fixes Verified - All 4 ad-hoc fixes tested and working (proxy bypass, dialog widths, overflow). Ready for UAT round 4 or phase verification.
 
 ---
 
@@ -12,7 +12,7 @@
 Accurate data analysis through correct, safe Python code generation. If the code is wrong or the sandbox isn't secure, the entire product fails.
 
 **Current Focus:**
-UAT round 3 complete (plan 06-19). Plans 06-17 and 06-18 partially verified: markdown rendering confirmed working, button handler confirmed resilient, but dialog width and sidebar still broken due to stale dev server. Scroll UX needs redesign. Frontend dev server restart required before next round of testing.
+Critical fixes verified after UAT round 3. Bypassed broken Next.js proxy (307 redirects dropping auth headers), fixed dialog width CSS specificity for both upload and info modals, resolved viewport overflow. All functionality tested and working: sidebar populates, upload flow complete, dialogs properly sized.
 
 **Key Constraint:**
 Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolation) is non-negotiable for production.
@@ -22,8 +22,8 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 ## Current Position
 
 **Phase:** 6 of 6 - Frontend UI & Interactive Data Cards
-**Plan:** 18 plans complete (15 core + 06-17, 06-18 gap closures + 06-19 UAT retest)
-**Status:** UAT Round 3 diagnosed -- 3 fixes confirmed, 3 new gaps identified (dev server restart + scroll UX + sidebar errors)
+**Plan:** 18 plans complete + 4 ad-hoc fixes verified (proxy bypass, 2x dialog width, overflow)
+**Status:** All critical gaps resolved - sidebar auth working, dialogs properly sized, upload flow complete
 
 **Progress Bar:**
 ```
@@ -34,15 +34,15 @@ Phase 2: [██████████] 2/2 plans COMPLETE (file service + API
 Phase 3: [██████████] 5/5 plans COMPLETE (foundation + onboarding + validation + coding + integration)
 Phase 4: [██████████] 2/2 plans COMPLETE (SSE events + streaming endpoint + atomic persistence)
 Phase 5: [██████████] 2/2 plans COMPLETE (SandboxRuntime Protocol + E2B execution integration)
-Phase 6: [█████████░] 18 plans (UAT round 3: 3 fixes confirmed, 3 gaps remain)
+Phase 6: [██████████] 18 plans + 4 critical fixes VERIFIED (proxy bypass, dialog widths, overflow)
 ```
 
-**Last activity:** 2026-02-04 - Completed plan 06-19: UAT retest round 3 (3 fixes confirmed, 3 new gaps diagnosed)
+**Last activity:** 2026-02-04 - Verified 4 critical fixes after UAT round 3: proxy bypass, upload dialog width, info modal width, overflow fix. User tested and confirmed all working.
 
 **Next Action:**
-1. Restart frontend dev server (`npm run dev`) to apply Tailwind v4 @plugin changes and updated React code
-2. Fix scroll UX: move overflow-y-auto from DialogContent to analysis text container only
-3. Run UAT round 4 to verify dialog width, sidebar, and scroll behavior after restart
+1. Run comprehensive UAT round 4 to verify all 23+ tests pass
+2. OR skip formal UAT and proceed to Phase 6 verification
+3. OR consider Phase 6 complete and plan next milestone
 
 ---
 
