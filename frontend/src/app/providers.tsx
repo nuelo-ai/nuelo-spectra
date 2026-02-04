@@ -4,10 +4,11 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { makeQueryClient } from "@/lib/query-client";
+import { AuthProvider } from "@/hooks/useAuth";
 
 /**
  * Client-side providers wrapper.
- * Wraps children with TanStack Query provider and sonner toast notifications.
+ * Wraps children with TanStack Query provider, Auth provider, and sonner toast notifications.
  */
 export function Providers({ children }: { children: React.ReactNode }) {
   // Create QueryClient instance only on client side
@@ -15,8 +16,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
-      <Toaster />
+      <AuthProvider>
+        {children}
+        <Toaster />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
