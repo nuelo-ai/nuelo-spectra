@@ -50,3 +50,22 @@ class ResetPasswordRequest(BaseModel):
 
     token: str
     new_password: str = Field(..., min_length=8)
+
+
+class ProfileUpdateRequest(BaseModel):
+    """Request schema for profile update."""
+
+    first_name: str | None = Field(None, max_length=100)
+    last_name: str | None = Field(None, max_length=100)
+
+    def model_post_init(self, __context) -> None:
+        """Validate that at least one field is provided."""
+        if self.first_name is None and self.last_name is None:
+            raise ValueError("At least one field (first_name or last_name) must be provided")
+
+
+class ChangePasswordRequest(BaseModel):
+    """Request schema for password change."""
+
+    current_password: str
+    new_password: str = Field(..., min_length=8)
