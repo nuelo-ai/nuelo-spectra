@@ -9,6 +9,8 @@ from app.config import Settings
 
 logger = logging.getLogger(__name__)
 
+_DEV_PLACEHOLDERS = {"", "dev-api-key", "your-email-api-key", "changeme"}
+
 
 async def send_password_reset_email(
     to_email: str,
@@ -29,7 +31,7 @@ async def send_password_reset_email(
         True if email sent successfully or logged (dev mode), False otherwise
     """
     # Development mode: log reset link instead of sending email
-    if not settings.email_service_api_key:
+    if not settings.email_service_api_key or settings.email_service_api_key.strip() in _DEV_PLACEHOLDERS:
         logger.info("=" * 80)
         logger.info("PASSWORD RESET REQUEST (Development Mode)")
         logger.info(f"To: {to_email}")
