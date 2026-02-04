@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 
 interface FileInfoModalProps {
@@ -69,7 +70,7 @@ export function FileInfoModal({ fileId, onClose }: FileInfoModalProps) {
             ) : summary?.data_summary ? (
               <div className="bg-accent/50 p-4 rounded-lg">
                 <div className="prose prose-sm max-w-none dark:prose-invert">
-                  <ReactMarkdown>{summary.data_summary}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary.data_summary}</ReactMarkdown>
                 </div>
               </div>
             ) : (
