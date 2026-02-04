@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-02-04
 **Milestone:** v1.0 MVP
-**Status:** Milestone Complete - All 6 Phases Verified (42/42 requirements) + UAT Gap Closure (Plans 06-10, 06-11, 06-12)
+**Status:** Milestone Complete - All 6 Phases Verified (42/42 requirements) + UAT Gap Closure Complete (Plans 06-10, 06-11, 06-12)
 
 ---
 
@@ -22,8 +22,8 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 ## Current Position
 
 **Phase:** 6 of 6 - Frontend UI & Interactive Data Cards
-**Plan:** 10 of 12 plans complete (gap closure in progress)
-**Status:** Phase 6 UAT Gap Closure - Backend logging & PostgresSaver fixed (06-10 complete)
+**Plan:** 12 of 12 plans complete
+**Status:** Phase 6 Complete - All UAT Gap Closure Plans Finished (06-10, 06-11, 06-12)
 
 **Progress Bar:**
 ```
@@ -37,10 +37,10 @@ Phase 5: [██████████] 2/2 plans COMPLETE (SandboxRuntime Pro
 Phase 6: [██████████] 9/9 plans COMPLETE (gap closure complete; all requirements verified)
 ```
 
-**Last activity:** 2026-02-04 - Completed 06-10: Backend Logging & PostgresSaver Fix (UAT Gap Closure)
+**Last activity:** 2026-02-04 - Completed 06-12: Profile Update Navigation Refresh (UAT Gap Closure Final Plan)
 
 **Next Action:**
-Continue UAT gap closure. Execute plan 06-11 (UAT re-test execution) to verify fixes unblock failing tests. Then execute 06-12 (fix any remaining issues).
+All UAT gap closure plans complete (06-10, 06-11, 06-12). Phase 6 finished. Ready for full verification or deployment.
 
 ---
 
@@ -63,6 +63,8 @@ Continue UAT gap closure. Execute plan 06-11 (UAT re-test execution) to verify f
 
 | Date | Decision | Impact |
 |------|----------|--------|
+| 2026-02-04 | React Context updates via callback injection | TanStack Query mutations (useUpdateProfile) use callback injection pattern (onProfileUpdated parameter) instead of calling other hooks directly (React hooks rules). Enables profile updates to propagate immediately to AuthProvider's React Context, which then triggers top navigation re-render. Implemented in 06-12. |
+| 2026-02-04 | Removed dead useQueryClient invalidation code | useUpdateProfile was invalidating TanStack Query ["user"] that doesn't exist. User data is managed in React Context (AuthProvider useState) not via TanStack Query. Deleted queryClient.invalidateQueries call and useQueryClient import. Implemented in 06-12. |
 | 2026-02-04 | Manual context manager entry for PostgresSaver | Since the graph is cached globally via get_or_create_graph() and reused across requests, using standard `with` block would close connection prematurely. Manual __enter__() keeps checkpointer alive for application lifetime. Implemented in 06-10. |
 | 2026-02-04 | Convert SQLAlchemy async URL to psycopg format | settings.database_url uses SQLAlchemy format (postgresql+asyncpg://) but PostgresSaver expects psycopg format (postgresql://). Simple string replacement converts between formats. Implemented in 06-10. |
 | 2026-02-04 | Logging configured as first import in main.py | Placed logging.basicConfig() as very first lines in main.py before any other imports to ensure all subsequent logger.getLogger() calls inherit INFO level configuration. Implemented in 06-10. |
@@ -238,9 +240,10 @@ Continue UAT gap closure. Execute plan 06-11 (UAT re-test execution) to verify f
 23. **phases/06-frontend-ui-interactive-data-cards/06-08-SUMMARY.md** - Visual Polish & Animations
 24. **phases/06-frontend-ui-interactive-data-cards/06-09-SUMMARY.md** - ChatInterface Wiring (Gap Closure)
 25. **phases/06-frontend-ui-interactive-data-cards/06-10-SUMMARY.md** - Backend Logging & PostgresSaver Fix (UAT Gap Closure)
+26. **phases/06-frontend-ui-interactive-data-cards/06-12-SUMMARY.md** - Profile Update Navigation Refresh (UAT Gap Closure Final Plan)
 
-**Last session:** 2026-02-04T11:01:51Z
-**Stopped at:** Completed 06-10: Backend Logging & PostgresSaver Fix - UAT Gap Closure Backend Fixes
+**Last session:** 2026-02-04T22:03:18Z
+**Stopped at:** Completed 06-12: Profile Update Navigation Refresh - UAT Gap Closure Complete
 **Resume file:** None
 
 **Current session status:**
@@ -362,6 +365,13 @@ Continue UAT gap closure. Execute plan 06-11 (UAT re-test execution) to verify f
     - Unblocked UAT Test 3 (password reset console link now visible)
     - Unblocked UAT Tests 12-21 (AI chat functionality now works)
     - Fixes: logging configuration, LangGraph PostgreSQL checkpointing
+  - Plan 06-12: Profile Update Navigation Refresh (UAT Gap Closure) (1min) COMPLETE
+    - Added updateUser method to AuthProvider (React Context state update)
+    - Changed useUpdateProfile to accept onProfileUpdated callback parameter
+    - Removed dead useQueryClient code invalidating non-existent ["user"] query
+    - ProfileForm passes useAuth().updateUser to useUpdateProfile
+    - Profile name changes now appear in top navigation immediately without page refresh
+    - Closes UAT Test 23: profile update navigation refresh issue
 
 ---
 
