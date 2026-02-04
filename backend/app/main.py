@@ -1,3 +1,11 @@
+import logging
+
+# Configure logging for development - ensures INFO messages are visible
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+
 from contextlib import asynccontextmanager
 from pathlib import Path
 
