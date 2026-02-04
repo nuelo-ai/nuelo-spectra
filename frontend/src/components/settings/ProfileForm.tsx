@@ -15,8 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 
 export function ProfileForm() {
-  const { user } = useAuth();
-  const updateProfile = useUpdateProfile();
+  const { user, updateUser } = useAuth();
+  const updateProfile = useUpdateProfile(updateUser);
 
   const [firstName, setFirstName] = useState(user?.first_name || "");
   const [lastName, setLastName] = useState(user?.last_name || "");

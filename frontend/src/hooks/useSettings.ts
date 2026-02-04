@@ -3,7 +3,7 @@
  * Uses TanStack Query for mutations with optimistic updates and toast notifications.
  */
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { toast } from "sonner";
 import type {
@@ -14,11 +14,9 @@ import type {
 
 /**
  * Hook for updating user profile (first_name, last_name).
- * On success: invalidates user query and shows success toast.
+ * On success: calls onProfileUpdated callback and shows success toast.
  */
-export function useUpdateProfile() {
-  const queryClient = useQueryClient();
-
+export function useUpdateProfile(onProfileUpdated?: (user: UserResponse) => void) {
   return useMutation({
     mutationFn: async (data: ProfileUpdateRequest) => {
       const response = await apiClient.patch("/auth/me", data);
@@ -31,8 +29,7 @@ export function useUpdateProfile() {
       return (await response.json()) as UserResponse;
     },
     onSuccess: (updatedUser) => {
-      // Invalidate user query to refetch latest data
-      queryClient.invalidateQueries({ queryKey: ["user"] });
+      onProfileUpdated?.(updatedUser);
       toast.success("Profile updated successfully");
     },
     onError: (error: Error) => {
