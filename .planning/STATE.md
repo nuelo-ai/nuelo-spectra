@@ -12,7 +12,7 @@
 Accurate data analysis through correct, safe Python code generation. If the code is wrong or the sandbox isn't secure, the entire product fails.
 
 **Current Focus:**
-Phase 6 in progress. Frontend foundation, auth UI, Zustand tab store, and chat interface with SSE streaming complete. Ready for Data Cards visualization implementation.
+Phase 6 in progress. Frontend foundation, auth UI, file management with multi-tab interface, and chat with SSE streaming complete. Ready for Data Cards visualization implementation.
 
 **Key Constraint:**
 Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolation) is non-negotiable for production.
@@ -22,25 +22,25 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 ## Current Position
 
 **Phase:** 6 of 6 - Frontend UI & Interactive Data Cards
-**Plan:** 4 of 12 plans complete
+**Plan:** 3 of 12 plans complete
 **Status:** In Progress
 
 **Progress Bar:**
 ```
-[████████████████████░] 83% (36/42 requirements completed)
+[███████████████████░░] 79% (34/42 requirements completed)
 
 Phase 1: [██████████] 3/3 plans COMPLETE (database + auth + password reset)
 Phase 2: [██████████] 2/2 plans COMPLETE (file service + API routers)
 Phase 3: [██████████] 5/5 plans COMPLETE (foundation + onboarding + validation + coding + integration)
 Phase 4: [██████████] 2/2 plans COMPLETE (SSE events + streaming endpoint + atomic persistence)
 Phase 5: [██████████] 2/2 plans COMPLETE (SandboxRuntime Protocol + E2B execution integration)
-Phase 6: [████░░░░░░] 6/12 requirements (foundation + auth + tabs + chat interface)
+Phase 6: [███░░░░░░░] 4/12 requirements (foundation + auth + file management)
 ```
 
-**Last activity:** 2026-02-04 - Completed 06-04: Chat Interface with SSE Streaming
+**Last activity:** 2026-02-04 - Completed 06-03: File Management UI with Multi-Tab Interface
 
 **Next Action:**
-Continue Phase 6 implementation: Data Cards visualization, file upload UI, sidebar integration, settings page
+Continue Phase 6 implementation: chat interface with SSE streaming, Data Cards visualization, settings page
 
 ---
 
@@ -63,11 +63,12 @@ Continue Phase 6 implementation: Data Cards visualization, file upload UI, sideb
 
 | Date | Decision | Impact |
 |------|----------|--------|
-| 2026-02-04 | POST-based SSE with fetch + ReadableStream | EventSource doesn't support POST body; using fetch with ReadableStream for SSE allows sending user message in request. Manual SSE parsing required. Implemented in 06-04. |
-| 2026-02-04 | Optimistic UI updates for user messages | User messages appear instantly via queryClient.setQueryData before server persistence; improves perceived responsiveness. useAddLocalMessage helper. Implemented in 06-04. |
-| 2026-02-04 | Invalidate + refetch on stream completion | Server-side atomic persistence happens after stream completes; frontend invalidates query to fetch persisted messages. Implemented in 06-04. |
-| 2026-02-04 | AbortController for stream cleanup | Prevents memory leaks from abandoned streams; cleanup on component unmount or new stream start. Implemented in 06-04. |
-| 2026-02-04 | Status messages mapped from event types | User-friendly agent phase descriptions ("Generating code...") instead of raw event types (coding_started). Improves UX clarity. Implemented in 06-04. |
+| 2026-02-04 | Auto-poll file summary during upload | useFileSummary polls every 3s until data_summary is not null; detects when onboarding completes; upload dialog auto-closes and tab opens when ready. Implemented in 06-03. |
+| 2026-02-04 | Max 5 tabs enforced in Zustand store | Prevents UI clutter and browser memory issues; openTab returns false when at limit; toast alert provides feedback. Implemented in 06-03. |
+| 2026-02-04 | 3-stage upload progress (Uploading -> Analyzing -> Ready) | Communicates backend onboarding process to user; sets expectations for 2-3 second async analysis; improves perceived responsiveness. Implemented in 06-03. |
+| 2026-02-04 | react-dropzone for file upload | Industry standard for drag-and-drop; handles MIME type validation (.csv, .xlsx, .xls), max size (50MB), browser compatibility. Implemented in 06-03. |
+| 2026-02-04 | TanStack Query for file CRUD operations | Built-in caching, refetching, mutation handling; automatic file list refresh after upload/delete; polling for onboarding completion. Implemented in 06-03. |
+| 2026-02-04 | Zustand for tab state management | Lightweight state for frequently changing tabs; simple openTab/closeTab/switchTab operations; no React Context boilerplate. Implemented in 06-03. |
 | 2026-02-04 | React Context for auth state | Auth state managed via React Context (not Zustand); changes infrequently so Context is sufficient. Auth accessed via useAuth() hook throughout app. Implemented in 06-01. |
 | 2026-02-04 | localStorage for JWT token storage | Tokens stored in localStorage with spectra_ prefix; simple persistence across sessions. Vulnerable to XSS but acceptable for v1.0 MVP. Implemented in 06-01. |
 | 2026-02-04 | Turbopack requires .tsx for JSX | Files with JSX must use .tsx extension, not .ts. Turbopack parser fails on JSX in .ts files. Renamed useAuth.ts → useAuth.tsx. Implemented in 06-01. |
@@ -200,12 +201,10 @@ Continue Phase 6 implementation: Data Cards visualization, file upload UI, sideb
 14. **phases/05-sandbox-security---code-execution/05-01-SUMMARY.md** - SandboxRuntime Protocol & E2B Implementation
 15. **phases/05-sandbox-security---code-execution/05-02-SUMMARY.md** - E2B Sandbox Execution Integration
 16. **phases/06-frontend-ui-interactive-data-cards/06-01-SUMMARY.md** - Next.js Frontend Foundation & Authentication
-17. **phases/06-frontend-ui-interactive-data-cards/06-02-SUMMARY.md** - User Settings Endpoints & UI
-18. **phases/06-frontend-ui-interactive-data-cards/06-03-SUMMARY.md** - Zustand Tab Store & File Manager Hooks
-19. **phases/06-frontend-ui-interactive-data-cards/06-04-SUMMARY.md** - Chat Interface with SSE Streaming
+17. **phases/06-frontend-ui-interactive-data-cards/06-03-SUMMARY.md** - File Management UI with Multi-Tab Interface
 
-**Last session:** 2026-02-04T00:29:43Z
-**Stopped at:** Completed 06-04: Chat Interface with SSE Streaming
+**Last session:** 2026-02-04T00:30:30Z
+**Stopped at:** Completed 06-03: File Management UI with Multi-Tab Interface
 **Resume file:** None
 
 **Current session status:**
@@ -244,7 +243,7 @@ Continue Phase 6 implementation: Data Cards visualization, file upload UI, sideb
     - File reading errors handled gracefully with user-friendly messages
     - halt_node provides tailored messages for different failure types
     - Requirements covered: EXEC-01, EXEC-02, EXEC-03, EXEC-04, EXEC-05, AGENT-09
-- Phase 6 IN PROGRESS: 4/12 plans executed (6/12 requirements met)
+- Phase 6 IN PROGRESS: 2/12 plans executed (4/12 requirements met)
   - Plan 06-01: Next.js Frontend Foundation & Authentication (7min) COMPLETE
     - Next.js 16 project with TypeScript, Tailwind CSS 4, App Router, shadcn/ui
     - API client with automatic JWT token injection and 401 refresh handling
@@ -255,17 +254,17 @@ Continue Phase 6 implementation: Data Cards visualization, file upload UI, sideb
     - TanStack Query configured with 60s staleTime
     - Next.js rewrites proxy /api/* to localhost:8000
     - Requirements covered: UI-01, UI-02, UI-03
-  - Plan 06-02: User Settings Endpoints & UI (skipped - already implemented in 06-01)
-  - Plan 06-03: Zustand Tab Store & File Manager Hooks (completed separately)
-  - Plan 06-04: Chat Interface with SSE Streaming (2min) COMPLETE
-    - useSSEStream: POST-based SSE streaming with fetch + ReadableStream
-    - Parses all 10 StreamEvent types with user-friendly status messages
-    - useChatMessages: TanStack Query hook for chat history
-    - ChatInterface: message list, auto-scroll, streaming, error handling
-    - ChatInput: auto-expanding textarea with Enter-to-send, Shift+Enter for newlines
-    - ChatMessage: user (right) vs assistant (left) styling with streaming support
-    - TypingIndicator: animated three-dot loading indicator
-    - Requirements covered: UI-04, UI-05, UI-06
+  - Plan 06-03: File Management UI with Multi-Tab Interface (4min) COMPLETE
+    - Zustand tab store: max 5 tabs, openTab/closeTab/switchTab operations
+    - TanStack Query hooks: useFiles, useUploadFile, useDeleteFile, useFileSummary
+    - FileSidebar: file list with info/delete buttons, ScrollArea, upload dialog
+    - FileUploadZone: react-dropzone drag-drop, 3-stage progress (Uploading -> Analyzing -> Ready)
+    - FileInfoModal: displays data_summary and user_context from onboarding
+    - Dashboard layout: FileSidebar (260px) + main content (flex-1)
+    - Dashboard page: horizontal tab bar with close buttons, empty state
+    - Auto-poll file summary every 3s until onboarding completes
+    - shadcn/ui: dialog, progress, alert-dialog, scroll-area, tooltip
+    - Requirement covered: UI-04 (file upload and management UI)
 
 ---
 
