@@ -21,12 +21,13 @@ This roadmap delivers Spectra's MVP in 6 phases, structured to prove the core va
 
 **Requirements:** AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05
 
-**Plans:** 3 plans
+**Plans:** 4 plans
 
 Plans:
 - [x] 01-01-PLAN.md -- Project skeleton, config, database models, Alembic migrations
 - [x] 01-02-PLAN.md -- Auth endpoints (signup, login, refresh), JWT security, get_current_user dependency
 - [x] 01-03-PLAN.md -- Password reset flow, email service, health check, CORS, final wiring
+- [ ] 01-04-PLAN.md -- Gap closure: Fix email service dev mode detection for password reset
 
 **Success Criteria:**
 1. User can create account with email and password
@@ -273,7 +274,7 @@ Plans:
 
 | Phase | Status | Requirements | Completion |
 |-------|--------|--------------|------------|
-| **1 - Backend Foundation & Authentication** | Complete | 5/5 | 100% |
+| **1 - Backend Foundation & Authentication** | Gap Closure | 5/5 | 100% |
 | **2 - File Upload & Management** | Complete | 7/7 | 100% |
 | **3 - AI Agents & Orchestration** | Complete | 8/8 | 100% |
 | **4 - Streaming Infrastructure** | Complete | 3/3 | 100% |
@@ -327,5 +328,5 @@ Phase 6: Frontend UI & Interactive Data Cards
 
 ---
 
-*Last updated: 2026-02-04 - Phase 6 COMPLETE (42/42 requirements, all 6 phases verified)*
-*Next step: Audit milestone to verify cross-phase integration and E2E flows*
+*Last updated: 2026-02-04 - Phase 1 gap closure plan created (01-04-PLAN.md)*
+*Next step: Execute 01-04 to fix email service dev mode, then re-verify UAT Tests 7 and 8*
