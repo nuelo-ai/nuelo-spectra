@@ -5,6 +5,7 @@ import { useTabStore } from "@/stores/tabStore";
 import { Button } from "@/components/ui/button";
 import { X, Upload, FileSpreadsheet } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ChatInterface } from "@/components/chat/ChatInterface";
 
 /**
  * Dashboard page - shows tab bar and content area for file chats.
@@ -85,19 +86,10 @@ export default function DashboardPage() {
       {/* Content area */}
       <div className="flex-1 overflow-y-auto">
         {currentTab ? (
-          <div className="p-6">
-            <div className="max-w-4xl mx-auto">
-              <div className="bg-accent/30 border border-dashed rounded-lg p-8 text-center">
-                <FileSpreadsheet className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h2 className="text-lg font-medium mb-2">
-                  Chat for {currentTab.fileName}
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Chat interface will be implemented in Plan 04
-                </p>
-              </div>
-            </div>
-          </div>
+          <ChatInterface
+            fileId={currentTab.fileId}
+            fileName={currentTab.fileName}
+          />
         ) : (
           <div className="flex flex-col items-center justify-center h-full px-8">
             <div className="max-w-md text-center space-y-4">
