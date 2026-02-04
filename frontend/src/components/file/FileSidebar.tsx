@@ -187,7 +187,7 @@ export function FileSidebar() {
 
       {/* Upload dialog */}
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <DialogContent className="sm:max-w-4xl max-h-[85vh]">
+        <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Upload File</DialogTitle>
           </DialogHeader>
