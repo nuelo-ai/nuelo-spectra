@@ -6,6 +6,7 @@ cleanup via context manager.
 """
 import time
 from e2b_code_interpreter import Sandbox
+from app.config import get_settings
 from .models import ExecutionResult
 
 
@@ -54,10 +55,14 @@ class E2BSandboxRuntime:
             ExecutionResult with stdout, stderr, results, error, timing
         """
         start_time = time.time()
+        settings = get_settings()
 
         try:
-            # Create fresh sandbox with timeout
-            with Sandbox.create(timeout=int(timeout)) as sandbox:
+            # Create fresh sandbox with timeout and API key from settings
+            with Sandbox.create(
+                timeout=int(timeout),
+                api_key=settings.e2b_api_key
+            ) as sandbox:
                 # Upload data file if provided
                 if data_file and data_filename:
                     sandbox.filesystem.write(
