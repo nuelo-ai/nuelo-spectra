@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-02-04
 **Milestone:** v1.0 MVP
-**Status:** Milestone Complete - All 6 Phases Verified (42/42 requirements) + All UAT Gap Closures Complete (Plans 06-10, 06-11, 06-12, 06-14, 06-15)
+**Status:** Milestone Complete - All 6 Phases Verified (42/42 requirements) + All UAT Gap Closures Complete (Plans 06-10, 06-11, 06-12, 06-14, 06-15, 06-17, 06-18)
 
 ---
 
@@ -12,7 +12,7 @@
 Accurate data analysis through correct, safe Python code generation. If the code is wrong or the sandbox isn't secure, the entire product fails.
 
 **Current Focus:**
-All UAT gap closures complete. Plan 06-15 (upload flow UI fixes: markdown rendering, FILE-05, FILE-06, sidebar refetch) COMPLETE. Phase 6 fully verified with 20/20 must-haves passed.
+All UAT gap closures complete. Plan 06-17 (markdown rendering + dialog sizing) and 06-18 (button handler resilience) COMPLETE. Phase 6 fully verified with 20/20 must-haves passed.
 
 **Key Constraint:**
 Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolation) is non-negotiable for production.
@@ -22,7 +22,7 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 ## Current Position
 
 **Phase:** 6 of 6 - Frontend UI & Interactive Data Cards
-**Plan:** 15 of 15 plans complete
+**Plan:** 17 plans complete (15 core + 06-17, 06-18 gap closures)
 **Status:** Phase 6 VERIFIED - All UAT Gap Closures Complete (20/20 must-haves passed)
 
 **Progress Bar:**
@@ -34,13 +34,13 @@ Phase 2: [██████████] 2/2 plans COMPLETE (file service + API
 Phase 3: [██████████] 5/5 plans COMPLETE (foundation + onboarding + validation + coding + integration)
 Phase 4: [██████████] 2/2 plans COMPLETE (SSE events + streaming endpoint + atomic persistence)
 Phase 5: [██████████] 2/2 plans COMPLETE (SandboxRuntime Protocol + E2B execution integration)
-Phase 6: [██████████] 15/15 plans COMPLETE (all UAT gaps closed; 20/20 must-haves verified)
+Phase 6: [██████████] 17 plans COMPLETE (all UAT gaps closed; 20/20 must-haves verified)
 ```
 
-**Last activity:** 2026-02-04 - Completed Phase 6 upload flow UI fixes (plan 06-15: markdown rendering, FILE-05, FILE-06)
+**Last activity:** 2026-02-04 - Completed plan 06-17: Markdown rendering + dialog sizing (typography plugin, remark-gfm, viewport containment)
 
 **Next Action:**
-All 6 phases complete and verified. Ready for milestone audit (/gsd:audit-milestone) before archiving v1.0.
+All 6 phases complete and verified. Remaining gap closure plan 06-19 may still be needed. Ready for milestone audit (/gsd:audit-milestone) before archiving v1.0.
 
 ---
 
@@ -63,6 +63,7 @@ All 6 phases complete and verified. Ready for milestone audit (/gsd:audit-milest
 
 | Date | Decision | Impact |
 |------|----------|--------|
+| 2026-02-04 | Use @plugin directive for @tailwindcss/typography in Tailwind v4 | @tailwindcss/typography v0.5.x is a CommonJS JS plugin, not a CSS module. Tailwind v4 requires @plugin for JS plugins, not @import. @import only works for CSS-based modules. Implemented in 06-17. |
 | 2026-02-04 | Remove mutation's automatic refetch to fix double-refetch conflict | Plan 06-14 added refetchQueries to mutation's onSuccess, but Continue to Chat button also calls refetchQueries. Double refetch caused 5-second sidebar loading delay and empty result. Removed mutation's refetch, rely solely on button's explicit awaited refetch. Implemented in 06-15. |
 | 2026-02-04 | Local state caching for React Query object references | React Query returns new object references on each render. Added analysisText local state to cache analysis text once loaded. Ensures analysis display persists even if React Query returns different object reference. Implemented in 06-15. |
 | 2026-02-04 | react-markdown for markdown rendering | Installed react-markdown@10.1.0 for rendering markdown analysis text. Use Tailwind prose classes (prose prose-sm dark:prose-invert) for styling. No remark/rehype plugins needed for basic rendering. Implemented in 06-15. |
@@ -252,9 +253,10 @@ All 6 phases complete and verified. Ready for milestone audit (/gsd:audit-milest
 27. **phases/06-frontend-ui-interactive-data-cards/06-12-SUMMARY.md** - Profile Update Navigation Refresh (UAT Gap Closure)
 28. **phases/06-frontend-ui-interactive-data-cards/06-14-SUMMARY.md** - Upload Flow Analysis Visibility & Sidebar Population (Final UAT Gap Closure)
 29. **phases/06-frontend-ui-interactive-data-cards/06-15-SUMMARY.md** - Upload Flow UI Fixes (markdown rendering, FILE-05, FILE-06)
+30. **phases/06-frontend-ui-interactive-data-cards/06-17-SUMMARY.md** - Markdown Rendering & Dialog Sizing (typography plugin, remark-gfm, viewport containment)
 
-**Last session:** 2026-02-04T19:06:07Z
-**Stopped at:** Completed 06-15: Upload Flow UI Fixes - All four UAT issues resolved
+**Last session:** 2026-02-04T20:05:06Z
+**Stopped at:** Completed 06-17: Markdown rendering + dialog sizing gap closure
 **Resume file:** None
 
 **Current session status:**
@@ -412,6 +414,14 @@ All 6 phases complete and verified. Ready for milestone audit (/gsd:audit-milest
     - useFileManager: remove mutation's premature refetchQueries to fix 5-second sidebar loading conflict
     - Fixes all four UAT issues: markdown rendering, modal sizing, FILE-05, FILE-06
     - Sidebar populates within 1-2 seconds (not 5+) after clicking Continue to Chat
+  - Plan 06-17: Markdown Rendering & Dialog Sizing (4min) COMPLETE
+    - Installed @tailwindcss/typography@0.5.19 and remark-gfm@4.0.1
+    - Configured @plugin "@tailwindcss/typography" in globals.css (Tailwind v4 @plugin directive)
+    - Added remarkGfm plugin to ReactMarkdown in FileUploadZone and FileInfoModal
+    - Fixed upload dialog width from max-w-lg (512px) to max-w-4xl (896px)
+    - Added max-h-[85vh] overflow-y-auto to upload dialog for viewport containment
+    - Reduced analysis container from max-h-[60vh] to max-h-[40vh] for button visibility
+    - Prose utility classes now active for markdown styling (headings, bold, lists, tables)
 
 ---
 
