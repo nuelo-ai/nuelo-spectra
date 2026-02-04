@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 01-backend-foundation-a-authentication
 source:
   - 01-01-SUMMARY.md
@@ -73,7 +73,13 @@ skipped: 1
   reason: "User reported: email not sent. likely email provider is not set correctly. can be solved later"
   severity: minor
   test: 7
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Dev mode console logging not activating because EMAIL_SERVICE_API_KEY is set to 'dev-api-key' in .env file. Email service uses falsy check (if not settings.email_service_api_key) which fails with non-empty string, causing code to attempt Mailgun API call with fake key instead of logging to console."
+  artifacts:
+    - path: "backend/.env"
+      issue: "Contains EMAIL_SERVICE_API_KEY=dev-api-key which prevents dev mode"
+    - path: "backend/app/services/email.py"
+      issue: "Dev mode check on line 32 uses falsy check, console logging lines 33-39"
+  missing:
+    - "Remove or set EMAIL_SERVICE_API_KEY to empty string in backend/.env to enable dev mode"
+    - "Or add explicit dev mode detection and better error logging"
+  debug_session: ".planning/debug/email-not-sent-forgot-password.md"
