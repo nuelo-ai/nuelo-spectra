@@ -7,6 +7,7 @@ import { useUploadFile, useFileSummary } from "@/hooks/useFileManager";
 import { useTabStore } from "@/stores/tabStore";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface FileUploadZoneProps {
   onUploadComplete?: () => void;
@@ -18,6 +19,7 @@ type UploadStage = "idle" | "uploading" | "analyzing" | "ready";
  * Drag-and-drop file upload zone with staged progress indicators
  */
 export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
+  const queryClient = useQueryClient();
   const { mutate: uploadFile } = useUploadFile();
   const { openTab } = useTabStore();
 
@@ -82,6 +84,9 @@ export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
             setUploadedFileId(data.id);
             setUploadedFileName(data.original_filename);
 
+            // Invalidate file list to trigger refresh
+            queryClient.invalidateQueries({ queryKey: ["files"] });
+
             // Move to analyzing stage
             setUploadStage("analyzing");
 
@@ -105,7 +110,7 @@ export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
         }
       );
     },
-    [uploadFile, openTab, onUploadComplete]
+    [uploadFile, openTab, onUploadComplete, queryClient]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
