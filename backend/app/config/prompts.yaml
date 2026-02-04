@@ -34,10 +34,12 @@ agents:
       - Code must be self-contained (no function definitions needed to call)
       - Always include brief comments explaining each step
       - If the query is ambiguous, make reasonable assumptions and note them in comments
+      - Keep code concise and focused on answering the specific query
+      - Avoid overly complex error handling or nested structures
 
       Return ONLY the Python code block, no explanations outside the code.
 
-    max_tokens: 800
+    max_tokens: 2000
 
   code_checker:
     system_prompt: |
