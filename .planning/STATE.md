@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-02-04
 **Milestone:** v1.0 MVP
-**Status:** Milestone Complete - All 6 Phases Verified (42/42 requirements) + All UAT Gap Closures Complete (Plans 06-10, 06-11, 06-12, 06-14)
+**Status:** Milestone Complete - All 6 Phases Verified (42/42 requirements) + All UAT Gap Closures Complete (Plans 06-10, 06-11, 06-12, 06-14, 06-15)
 
 ---
 
@@ -12,7 +12,7 @@
 Accurate data analysis through correct, safe Python code generation. If the code is wrong or the sandbox isn't secure, the entire product fails.
 
 **Current Focus:**
-All UAT gap closures complete. Plan 06-14 (useFileSummary query disabling + file list refetch) COMPLETE. Phase 6 fully verified with 20/20 must-haves passed.
+All UAT gap closures complete. Plan 06-15 (upload flow UI fixes: markdown rendering, FILE-05, FILE-06, sidebar refetch) COMPLETE. Phase 6 fully verified with 20/20 must-haves passed.
 
 **Key Constraint:**
 Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolation) is non-negotiable for production.
@@ -22,7 +22,7 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 ## Current Position
 
 **Phase:** 6 of 6 - Frontend UI & Interactive Data Cards
-**Plan:** 14 of 14 plans complete
+**Plan:** 15 of 15 plans complete
 **Status:** Phase 6 VERIFIED - All UAT Gap Closures Complete (20/20 must-haves passed)
 
 **Progress Bar:**
@@ -34,10 +34,10 @@ Phase 2: [██████████] 2/2 plans COMPLETE (file service + API
 Phase 3: [██████████] 5/5 plans COMPLETE (foundation + onboarding + validation + coding + integration)
 Phase 4: [██████████] 2/2 plans COMPLETE (SSE events + streaming endpoint + atomic persistence)
 Phase 5: [██████████] 2/2 plans COMPLETE (SandboxRuntime Protocol + E2B execution integration)
-Phase 6: [██████████] 14/14 plans COMPLETE (all UAT gaps closed; 20/20 must-haves verified)
+Phase 6: [██████████] 15/15 plans COMPLETE (all UAT gaps closed; 20/20 must-haves verified)
 ```
 
-**Last activity:** 2026-02-04 - Completed Phase 6 final gap closure (plan 06-14) + verification (20/20 passed)
+**Last activity:** 2026-02-04 - Completed Phase 6 upload flow UI fixes (plan 06-15: markdown rendering, FILE-05, FILE-06)
 
 **Next Action:**
 All 6 phases complete and verified. Ready for milestone audit (/gsd:audit-milestone) before archiving v1.0.
@@ -63,6 +63,9 @@ All 6 phases complete and verified. Ready for milestone audit (/gsd:audit-milest
 
 | Date | Decision | Impact |
 |------|----------|--------|
+| 2026-02-04 | Remove mutation's automatic refetch to fix double-refetch conflict | Plan 06-14 added refetchQueries to mutation's onSuccess, but Continue to Chat button also calls refetchQueries. Double refetch caused 5-second sidebar loading delay and empty result. Removed mutation's refetch, rely solely on button's explicit awaited refetch. Implemented in 06-15. |
+| 2026-02-04 | Local state caching for React Query object references | React Query returns new object references on each render. Added analysisText local state to cache analysis text once loaded. Ensures analysis display persists even if React Query returns different object reference. Implemented in 06-15. |
+| 2026-02-04 | react-markdown for markdown rendering | Installed react-markdown@10.1.0 for rendering markdown analysis text. Use Tailwind prose classes (prose prose-sm dark:prose-invert) for styling. No remark/rehype plugins needed for basic rendering. Implemented in 06-15. |
 | 2026-02-04 | Keep queries enabled across related lifecycle states | useFileSummary now enabled in both "analyzing" and "ready" states via OR condition. Prevents React Query from clearing cached data when stage transitions. Query stays enabled while data is still needed for UI display. Implemented in 06-14. |
 | 2026-02-04 | Use refetchQueries for immediate observer updates | Changed useUploadFile mutation from invalidateQueries to refetchQueries. invalidateQueries only marks query as stale (lazy refetch), refetchQueries forces immediate refetch for all active observers like FileSidebar. Ensures UI updates immediately. Implemented in 06-14. |
 | 2026-02-04 | Remove redundant query invalidation from component handlers | FileUploadZone onDrop handler had manual invalidateQueries call redundant with mutation's onSuccess. Removed to avoid double-invalidation and confusion. Mutation handles query management. Implemented in 06-14. |
@@ -248,9 +251,10 @@ All 6 phases complete and verified. Ready for milestone audit (/gsd:audit-milest
 26. **phases/06-frontend-ui-interactive-data-cards/06-11-SUMMARY.md** - FileUploadZone Race Condition Fix (UAT Gap Closure)
 27. **phases/06-frontend-ui-interactive-data-cards/06-12-SUMMARY.md** - Profile Update Navigation Refresh (UAT Gap Closure)
 28. **phases/06-frontend-ui-interactive-data-cards/06-14-SUMMARY.md** - Upload Flow Analysis Visibility & Sidebar Population (Final UAT Gap Closure)
+29. **phases/06-frontend-ui-interactive-data-cards/06-15-SUMMARY.md** - Upload Flow UI Fixes (markdown rendering, FILE-05, FILE-06)
 
-**Last session:** 2026-02-04T13:07:00Z
-**Stopped at:** Completed 06-14: Upload Flow Gap Closure - Phase 6 Complete (20/20 must-haves verified)
+**Last session:** 2026-02-04T19:06:07Z
+**Stopped at:** Completed 06-15: Upload Flow UI Fixes - All four UAT issues resolved
 **Resume file:** None
 
 **Current session status:**
@@ -395,6 +399,19 @@ All 6 phases complete and verified. Ready for milestone audit (/gsd:audit-milest
     - FileSidebar updates immediately via forced refetch instead of lazy stale marking
     - Unblocks 8 of 12 UAT tests (Tests 2-7 plus downstream Tests 8-11)
     - Upload-to-chat workflow now completes end-to-end: upload → analysis displays → Continue to Chat → sidebar populates → tab opens
+  - Plan 06-15: Upload Flow UI Fixes (markdown, FILE-05, FILE-06) (4min) COMPLETE
+    - Installed react-markdown@10.1.0 for markdown rendering
+    - FileUploadZone: render analysis as formatted markdown (prose classes) in max-h-[60vh] container
+    - FileUploadZone: add analysisText local state to cache analysis across React Query re-references
+    - FileUploadZone: add optional user context textarea (FILE-05) in ready state
+    - FileUploadZone: send context to POST /files/{id}/context when Continue to Chat clicked
+    - FileInfoModal: increase modal size from max-w-2xl to max-w-4xl for better readability
+    - FileInfoModal: render data_summary as markdown instead of raw text
+    - FileInfoModal: add Refine AI Understanding feedback form (FILE-06) with Save Feedback button
+    - useFileManager: add useUpdateFileContext mutation hook for POST /files/{id}/context
+    - useFileManager: remove mutation's premature refetchQueries to fix 5-second sidebar loading conflict
+    - Fixes all four UAT issues: markdown rendering, modal sizing, FILE-05, FILE-06
+    - Sidebar populates within 1-2 seconds (not 5+) after clicking Continue to Chat
 
 ---
 
