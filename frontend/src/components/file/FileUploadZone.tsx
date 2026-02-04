@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { apiClient } from "@/lib/api-client";
 
 interface FileUploadZoneProps {
@@ -203,9 +204,9 @@ export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
           {/* Analysis result display when ready */}
           {uploadStage === "ready" && analysisText && (
             <div className="space-y-4">
-              <div className="max-h-[60vh] overflow-y-auto bg-accent/50 rounded-lg p-4">
+              <div className="max-h-[40vh] overflow-y-auto bg-accent/50 rounded-lg p-4">
                 <div className="prose prose-sm max-w-none dark:prose-invert">
-                  <ReactMarkdown>{analysisText}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{analysisText}</ReactMarkdown>
                 </div>
               </div>
 
@@ -230,40 +231,50 @@ export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
               <div className="flex justify-center">
                 <button
                   onClick={async () => {
-                    // Send user context if provided (FILE-05)
-                    if (userContextInput.trim() && uploadedFileId) {
-                      try {
-                        await apiClient.post(`/files/${uploadedFileId}/context`, {
-                          context: userContextInput,
-                        });
-                      } catch (error) {
-                        toast.error("Failed to save context");
-                        return;
+                    try {
+                      // Step 1: Save user context (non-blocking, fire-and-forget)
+                      // Context is OPTIONAL -- failure must never block dialog close or tab open
+                      if (userContextInput.trim() && uploadedFileId) {
+                        try {
+                          await apiClient.post(`/files/${uploadedFileId}/context`, {
+                            context: userContextInput,
+                          });
+                        } catch (error) {
+                          console.error("Failed to save user context:", error);
+                          toast.error("Context could not be saved, but your file is ready.");
+                          // Do NOT return -- proceed with dialog close and tab open
+                        }
                       }
+
+                      // Step 2: Refresh sidebar file list
+                      try {
+                        queryClient.invalidateQueries({ queryKey: ["files"], exact: true });
+                        await queryClient.refetchQueries({ queryKey: ["files"], exact: true });
+                      } catch (error) {
+                        console.error("Failed to refresh file list:", error);
+                        // Sidebar will catch up via refetchInterval fallback
+                      }
+
+                      // Step 3: Open file tab
+                      if (uploadedFileId) {
+                        openTab(uploadedFileId, uploadedFileName);
+                      }
+                    } catch (error) {
+                      console.error("Continue to Chat handler error:", error);
+                      toast.error("Something went wrong. Your file was uploaded successfully.");
+                    } finally {
+                      // ALWAYS close dialog and reset state, regardless of any errors above
+                      if (onUploadComplete) {
+                        onUploadComplete();
+                      }
+                      setUploadStage("idle");
+                      setProgress(0);
+                      setUploadedFileId(null);
+                      setUploadedFileName("");
+                      setAnalysisText(null);
+                      setUserContextInput("");
+                      hasTransitioned.current = false;
                     }
-
-                    // Invalidate and refetch file list to ensure sidebar updates
-                    queryClient.invalidateQueries({ queryKey: ["files"] });
-                    await queryClient.refetchQueries({ queryKey: ["files"] });
-
-                    // Open the file tab
-                    if (uploadedFileId) {
-                      openTab(uploadedFileId, uploadedFileName);
-                    }
-
-                    // Close dialog
-                    if (onUploadComplete) {
-                      onUploadComplete();
-                    }
-
-                    // Reset state
-                    setUploadStage("idle");
-                    setProgress(0);
-                    setUploadedFileId(null);
-                    setUploadedFileName("");
-                    setAnalysisText(null);
-                    setUserContextInput("");
-                    hasTransitioned.current = false;
                   }}
                   className="bg-primary text-primary-foreground rounded py-2 px-6 hover:opacity-90 transition-opacity"
                 >
