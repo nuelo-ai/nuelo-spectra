@@ -219,17 +219,18 @@ Plans:
 
 **Requirements:** CARD-01, CARD-02, CARD-03, CARD-04, CARD-05, CARD-06, CARD-07, CARD-08, SETT-01, SETT-02, SETT-03
 
-**Plans:** 8 plans
+**Plans:** 9 plans
 
 Plans:
-- [ ] 06-01-PLAN.md -- Scaffold Next.js 16 project, install dependencies, shadcn/ui init, auth pages, API client, TypeScript types
-- [ ] 06-02-PLAN.md -- Backend settings endpoints (PATCH /auth/me, POST /auth/change-password)
-- [ ] 06-03-PLAN.md -- File sidebar, drag-drop upload with progress, file info modal, tab store (Zustand)
-- [ ] 06-04-PLAN.md -- Chat interface, SSE streaming hook, message rendering, typing indicator
-- [ ] 06-05-PLAN.md -- Data Cards with progressive rendering, TanStack Table (sorting/filtering/pagination)
-- [ ] 06-06-PLAN.md -- CSV/Markdown download buttons, Python code display with copy
-- [ ] 06-07-PLAN.md -- Settings page (profile editing, password change, account info)
-- [ ] 06-08-PLAN.md -- Visual polish (animations, loading states, transitions) + end-to-end verification
+- [x] 06-01-PLAN.md -- Scaffold Next.js 16 project, install dependencies, shadcn/ui init, auth pages, API client, TypeScript types
+- [x] 06-02-PLAN.md -- Backend settings endpoints (PATCH /auth/me, POST /auth/change-password)
+- [x] 06-03-PLAN.md -- File sidebar, drag-drop upload with progress, file info modal, tab store (Zustand)
+- [x] 06-04-PLAN.md -- Chat interface, SSE streaming hook, message rendering, typing indicator
+- [x] 06-05-PLAN.md -- Data Cards with progressive rendering, TanStack Table (sorting/filtering/pagination)
+- [x] 06-06-PLAN.md -- CSV/Markdown download buttons, Python code display with copy
+- [x] 06-07-PLAN.md -- Settings page (profile editing, password change, account info)
+- [x] 06-08-PLAN.md -- Visual polish (animations, loading states, transitions) + end-to-end verification
+- [ ] 06-09-PLAN.md -- Gap closure: Wire ChatInterface into dashboard page
 
 **Success Criteria:**
 1. Query results display as Data Cards with streaming responses appearing progressively
@@ -277,9 +278,9 @@ Plans:
 | **3 - AI Agents & Orchestration** | Complete | 8/8 | 100% |
 | **4 - Streaming Infrastructure** | Complete | 3/3 | 100% |
 | **5 - Sandbox Security & Code Execution** | Complete | 8/8 | 100% |
-| **6 - Frontend UI & Interactive Data Cards** | Planned | 0/12 | 0% |
+| **6 - Frontend UI & Interactive Data Cards** | In Progress | 11/12 | 92% |
 
-**Overall Progress:** 71% (30/42 requirements completed)
+**Overall Progress:** 97% (41/42 requirements completed)
 
 ---
 
@@ -326,5 +327,5 @@ Phase 6: Frontend UI & Interactive Data Cards
 
 ---
 
-*Last updated: 2026-02-03 - Phase 6 planned with 8 plans in 4 waves*
-*Next step: Execute Phase 6 - Frontend UI & Interactive Data Cards*
+*Last updated: 2026-02-03 - Phase 6 gap closure plan 06-09 added (ChatInterface wiring)*
+*Next step: Execute gap closure plan 06-09*
