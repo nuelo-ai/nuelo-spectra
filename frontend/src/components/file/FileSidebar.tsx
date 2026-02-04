@@ -32,7 +32,7 @@ import { FileInfoModal } from "./FileInfoModal";
  * with actions to open tabs, view info, and delete files
  */
 export function FileSidebar() {
-  const { data: files, isLoading } = useFiles();
+  const { data: files, isLoading, isError } = useFiles();
   const { mutate: deleteFile } = useDeleteFile();
   const { tabs, currentTabId, openTab, closeTabForDeletedFile } = useTabStore();
 
@@ -90,6 +90,12 @@ export function FileSidebar() {
               {[1, 2, 3].map((i) => (
                 <div key={i} className="skeleton h-12 rounded-lg" />
               ))}
+            </div>
+          ) : isError ? (
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center opacity-60">
+              <FileSpreadsheet className="h-12 w-12 text-destructive mb-3" />
+              <p className="text-sm text-destructive font-medium">Failed to load files</p>
+              <p className="text-xs text-muted-foreground mt-1">Retrying automatically...</p>
             </div>
           ) : files && files.length > 0 ? (
             <div className="space-y-1">

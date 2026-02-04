@@ -21,6 +21,9 @@ export function useFiles() {
       return response.json();
     },
     refetchOnWindowFocus: true,
+    // Independent fallback: sidebar discovers new files within 10s
+    // even if button handler fails to trigger manual refetch
+    refetchInterval: 10000,
   });
 }
 
