@@ -63,6 +63,10 @@ All 6 phases complete and verified. Remaining gap closure plan 06-19 may still b
 
 | Date | Decision | Impact |
 |------|----------|--------|
+| 2026-02-04 | try/catch/finally for guaranteed dialog close | Continue to Chat button handler uses finally block to always close dialog and reset state, regardless of errors in context POST, refetch, or tab open. User can never get stuck in a dialog that won't close. Implemented in 06-18. |
+| 2026-02-04 | refetchInterval 10s as independent sidebar fallback | useFiles query polls every 10 seconds as safety net. Primary path (button handler explicit refetch) is instant; this ensures sidebar discovers files even if button handler fails. Implemented in 06-18. |
+| 2026-02-04 | Error state replaces misleading empty state in sidebar | FileSidebar shows "Failed to load files" + "Retrying automatically..." when query errors, instead of misleading "No files yet". Honest error feedback with automatic recovery via refetchInterval. Implemented in 06-18. |
+| 2026-02-04 | exact: true on invalidateQueries/refetchQueries | Prevents over-refetching summary query when only file list needs updating. Reduces unnecessary network traffic in button handler. Implemented in 06-18. |
 | 2026-02-04 | Use @plugin directive for @tailwindcss/typography in Tailwind v4 | @tailwindcss/typography v0.5.x is a CommonJS JS plugin, not a CSS module. Tailwind v4 requires @plugin for JS plugins, not @import. @import only works for CSS-based modules. Implemented in 06-17. |
 | 2026-02-04 | Remove mutation's automatic refetch to fix double-refetch conflict | Plan 06-14 added refetchQueries to mutation's onSuccess, but Continue to Chat button also calls refetchQueries. Double refetch caused 5-second sidebar loading delay and empty result. Removed mutation's refetch, rely solely on button's explicit awaited refetch. Implemented in 06-15. |
 | 2026-02-04 | Local state caching for React Query object references | React Query returns new object references on each render. Added analysisText local state to cache analysis text once loaded. Ensures analysis display persists even if React Query returns different object reference. Implemented in 06-15. |
@@ -254,9 +258,10 @@ All 6 phases complete and verified. Remaining gap closure plan 06-19 may still b
 28. **phases/06-frontend-ui-interactive-data-cards/06-14-SUMMARY.md** - Upload Flow Analysis Visibility & Sidebar Population (Final UAT Gap Closure)
 29. **phases/06-frontend-ui-interactive-data-cards/06-15-SUMMARY.md** - Upload Flow UI Fixes (markdown rendering, FILE-05, FILE-06)
 30. **phases/06-frontend-ui-interactive-data-cards/06-17-SUMMARY.md** - Markdown Rendering & Dialog Sizing (typography plugin, remark-gfm, viewport containment)
+31. **phases/06-frontend-ui-interactive-data-cards/06-18-SUMMARY.md** - Button Handler Resilience & Sidebar Fallback Refresh (try/catch/finally, refetchInterval, error state)
 
-**Last session:** 2026-02-04T20:05:06Z
-**Stopped at:** Completed 06-17: Markdown rendering + dialog sizing gap closure
+**Last session:** 2026-02-04T20:03:58Z
+**Stopped at:** Completed 06-18: Button handler resilience + sidebar fallback refresh
 **Resume file:** None
 
 **Current session status:**
@@ -422,6 +427,14 @@ All 6 phases complete and verified. Remaining gap closure plan 06-19 may still b
     - Added max-h-[85vh] overflow-y-auto to upload dialog for viewport containment
     - Reduced analysis container from max-h-[60vh] to max-h-[40vh] for button visibility
     - Prose utility classes now active for markdown styling (headings, bold, lists, tables)
+  - Plan 06-18: Button Handler Resilience & Sidebar Fallback Refresh (2min) COMPLETE
+    - Rewrote Continue to Chat onClick with try/catch/finally for fault tolerance
+    - Removed early return in context POST catch that blocked dialog close and tab open
+    - Added exact: true on invalidateQueries/refetchQueries to prevent over-refetching
+    - finally block guarantees dialog close + state reset regardless of any errors
+    - Added refetchInterval: 10000 to useFiles for independent 10s sidebar refresh
+    - Added isError state to FileSidebar with "Failed to load files" error UI
+    - Error state replaces misleading "No files yet" when query fails
 
 ---
 
