@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { Upload, FileSpreadsheet, CheckCircle2 } from "lucide-react";
 import { useUploadFile, useFileSummary } from "@/hooks/useFileManager";
@@ -31,26 +31,17 @@ export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
   // Poll for file summary when in analyzing stage
   const { data: summary } = useFileSummary(uploadStage === "analyzing" ? uploadedFileId : null);
 
-  // Check if analysis is complete
-  if (uploadStage === "analyzing" && summary?.data_summary) {
-    setUploadStage("ready");
-    setProgress(100);
+  // Track if we've already transitioned to ready state to prevent duplicate transitions
+  const hasTransitioned = useRef(false);
 
-    // Auto-close dialog after brief delay
-    setTimeout(() => {
-      if (uploadedFileId) {
-        openTab(uploadedFileId, uploadedFileName);
-      }
-      if (onUploadComplete) {
-        onUploadComplete();
-      }
-      // Reset state
-      setUploadStage("idle");
-      setProgress(0);
-      setUploadedFileId(null);
-      setUploadedFileName("");
-    }, 1500);
-  }
+  // Check if analysis is complete and transition to ready state
+  useEffect(() => {
+    if (uploadStage === "analyzing" && summary?.data_summary && !hasTransitioned.current) {
+      hasTransitioned.current = true;
+      setUploadStage("ready");
+      setProgress(100);
+    }
+  }, [uploadStage, summary?.data_summary]);
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -110,7 +101,7 @@ export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
         }
       );
     },
-    [uploadFile, openTab, onUploadComplete, queryClient]
+    [uploadFile, queryClient]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -203,6 +194,44 @@ export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
             <p className="text-sm text-center text-muted-foreground">
               {uploadedFileName}
             </p>
+          )}
+
+          {/* Analysis result display when ready */}
+          {uploadStage === "ready" && summary?.data_summary && (
+            <div className="space-y-4">
+              <div className="max-h-48 overflow-y-auto bg-accent/50 rounded-lg p-4">
+                <p className="text-sm whitespace-pre-wrap">{summary.data_summary}</p>
+              </div>
+              <div className="flex justify-center">
+                <button
+                  onClick={async () => {
+                    // Invalidate and refetch file list to ensure sidebar updates
+                    queryClient.invalidateQueries({ queryKey: ["files"] });
+                    await queryClient.refetchQueries({ queryKey: ["files"] });
+
+                    // Open the file tab
+                    if (uploadedFileId) {
+                      openTab(uploadedFileId, uploadedFileName);
+                    }
+
+                    // Close dialog
+                    if (onUploadComplete) {
+                      onUploadComplete();
+                    }
+
+                    // Reset state
+                    setUploadStage("idle");
+                    setProgress(0);
+                    setUploadedFileId(null);
+                    setUploadedFileName("");
+                    hasTransitioned.current = false;
+                  }}
+                  className="bg-primary text-primary-foreground rounded py-2 px-6 hover:opacity-90 transition-opacity"
+                >
+                  Continue to Chat
+                </button>
+              </div>
+            </div>
           )}
         </div>
       )}

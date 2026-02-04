@@ -27,6 +27,7 @@ interface AuthContextType {
   logout: () => void;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, newPassword: string) => Promise<void>;
+  updateUser: (user: UserResponse) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -143,6 +144,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateUser = (updatedUser: UserResponse) => {
+    setUser(updatedUser);
+  };
+
   const value = {
     user,
     isLoading,
@@ -152,6 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     forgotPassword,
     resetPassword,
+    updateUser,
   };
 
   return (
