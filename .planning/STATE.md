@@ -22,7 +22,7 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 ## Current Position
 
 **Phase:** 6 of 6 - Frontend UI & Interactive Data Cards
-**Plan:** 12 of 12 plans complete
+**Plan:** 13 of 13 plans complete
 **Status:** Phase 6 VERIFIED - All UAT Gap Closure Complete (18/18 must-haves passed)
 
 **Progress Bar:**
@@ -34,10 +34,10 @@ Phase 2: [██████████] 2/2 plans COMPLETE (file service + API
 Phase 3: [██████████] 5/5 plans COMPLETE (foundation + onboarding + validation + coding + integration)
 Phase 4: [██████████] 2/2 plans COMPLETE (SSE events + streaming endpoint + atomic persistence)
 Phase 5: [██████████] 2/2 plans COMPLETE (SandboxRuntime Protocol + E2B execution integration)
-Phase 6: [██████████] 12/12 plans COMPLETE (all UAT gaps closed; 18/18 must-haves verified)
+Phase 6: [██████████] 13/13 plans COMPLETE (all UAT gaps closed; 18/18 must-haves verified)
 ```
 
-**Last activity:** 2026-02-04 - Completed Phase 6 UAT gap closure (06-10, 06-11, 06-12) + verification (18/18 passed)
+**Last activity:** 2026-02-04 - Completed 06-14-PLAN.md (upload flow analysis visibility and sidebar population fixes)
 
 **Next Action:**
 All 6 phases complete and verified. Milestone v1.0 ready for audit and E2E integration testing before deployment.
@@ -63,6 +63,9 @@ All 6 phases complete and verified. Milestone v1.0 ready for audit and E2E integ
 
 | Date | Decision | Impact |
 |------|----------|--------|
+| 2026-02-04 | Keep queries enabled across related lifecycle states | useFileSummary now enabled in both "analyzing" and "ready" states via OR condition. Prevents React Query from clearing cached data when stage transitions. Query stays enabled while data is still needed for UI display. Implemented in 06-14. |
+| 2026-02-04 | Use refetchQueries for immediate observer updates | Changed useUploadFile mutation from invalidateQueries to refetchQueries. invalidateQueries only marks query as stale (lazy refetch), refetchQueries forces immediate refetch for all active observers like FileSidebar. Ensures UI updates immediately. Implemented in 06-14. |
+| 2026-02-04 | Remove redundant query invalidation from component handlers | FileUploadZone onDrop handler had manual invalidateQueries call redundant with mutation's onSuccess. Removed to avoid double-invalidation and confusion. Mutation handles query management. Implemented in 06-14. |
 | 2026-02-04 | React Context updates via callback injection | TanStack Query mutations (useUpdateProfile) use callback injection pattern (onProfileUpdated parameter) instead of calling other hooks directly (React hooks rules). Enables profile updates to propagate immediately to AuthProvider's React Context, which then triggers top navigation re-render. Implemented in 06-12. |
 | 2026-02-04 | Removed dead useQueryClient invalidation code | useUpdateProfile was invalidating TanStack Query ["user"] that doesn't exist. User data is managed in React Context (AuthProvider useState) not via TanStack Query. Deleted queryClient.invalidateQueries call and useQueryClient import. Implemented in 06-12. |
 | 2026-02-04 | useEffect with hasTransitioned ref for upload state transition | FileUploadZone analysis completion logic moved from component body to useEffect hook with ref guard. Prevents race condition from multiple renders creating duplicate setTimeout callbacks. Ensures one-time state transition. Implemented in 06-11. |
