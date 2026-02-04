@@ -220,7 +220,7 @@ Plans:
 
 **Requirements:** CARD-01, CARD-02, CARD-03, CARD-04, CARD-05, CARD-06, CARD-07, CARD-08, SETT-01, SETT-02, SETT-03
 
-**Plans:** 14 plans
+**Plans:** 16 plans
 
 Plans:
 - [x] 06-01-PLAN.md -- Scaffold Next.js 16 project, install dependencies, shadcn/ui init, auth pages, API client, TypeScript types
@@ -237,6 +237,8 @@ Plans:
 - [x] 06-12-PLAN.md -- Gap closure: Profile update immediate nav refresh
 - [x] 06-13-PLAN.md -- UAT retest: Re-verify all tests after gap closure fixes
 - [x] 06-14-PLAN.md -- Gap closure: Fix useFileSummary query disabling + file list refetch
+- [ ] 06-15-PLAN.md -- Gap closure: Harden upload flow with local state, onboarding timeout, debug logging
+- [ ] 06-16-PLAN.md -- UAT retest: Verify upload flow fixes with console log debugging
 
 **Success Criteria:**
 1. Query results display as Data Cards with streaming responses appearing progressively
@@ -284,9 +286,9 @@ Plans:
 | **3 - AI Agents & Orchestration** | Complete | 8/8 | 100% |
 | **4 - Streaming Infrastructure** | Complete | 3/3 | 100% |
 | **5 - Sandbox Security & Code Execution** | Complete | 8/8 | 100% |
-| **6 - Frontend UI & Interactive Data Cards** | Complete | 12/12 | 100% |
+| **6 - Frontend UI & Interactive Data Cards** | UAT Gap Closure | 12/12 | 95% (upload flow UAT failing) |
 
-**Overall Progress:** 100% (42/42 requirements completed) - All phases verified and complete
+**Overall Progress:** 100% requirements coded (42/42) - UAT gap closure in progress for upload flow
 
 ---
 
@@ -333,5 +335,5 @@ Phase 6: Frontend UI & Interactive Data Cards
 
 ---
 
-*Last updated: 2026-02-04 - Phase 6 complete: All 14 plans executed and verified (20/20 must-haves passed)*
-*Next step: Run /gsd:audit-milestone for final verification before archiving*
+*Last updated: 2026-02-04 - Phase 6 UAT gap closure: Plans 06-15 and 06-16 created for persistent upload flow fix*
+*Next step: Execute 06-15 then 06-16 to close remaining UAT gaps*
