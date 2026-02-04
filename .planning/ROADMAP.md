@@ -220,7 +220,7 @@ Plans:
 
 **Requirements:** CARD-01, CARD-02, CARD-03, CARD-04, CARD-05, CARD-06, CARD-07, CARD-08, SETT-01, SETT-02, SETT-03
 
-**Plans:** 12 plans
+**Plans:** 14 plans
 
 Plans:
 - [x] 06-01-PLAN.md -- Scaffold Next.js 16 project, install dependencies, shadcn/ui init, auth pages, API client, TypeScript types
@@ -235,6 +235,8 @@ Plans:
 - [x] 06-10-PLAN.md -- Gap closure: Backend logging config + PostgresSaver context manager fix
 - [x] 06-11-PLAN.md -- Gap closure: FileUploadZone race condition fix + analysis display
 - [x] 06-12-PLAN.md -- Gap closure: Profile update immediate nav refresh
+- [x] 06-13-PLAN.md -- UAT retest: Re-verify all tests after gap closure fixes
+- [ ] 06-14-PLAN.md -- Gap closure: Fix useFileSummary query disabling + file list refetch
 
 **Success Criteria:**
 1. Query results display as Data Cards with streaming responses appearing progressively
@@ -282,9 +284,9 @@ Plans:
 | **3 - AI Agents & Orchestration** | Complete | 8/8 | 100% |
 | **4 - Streaming Infrastructure** | Complete | 3/3 | 100% |
 | **5 - Sandbox Security & Code Execution** | Complete | 8/8 | 100% |
-| **6 - Frontend UI & Interactive Data Cards** | Complete | 12/12 | 100% |
+| **6 - Frontend UI & Interactive Data Cards** | UAT Gap Closure | 12/12 | 100% |
 
-**Overall Progress:** 100% (42/42 requirements completed) - UAT gap closure in progress
+**Overall Progress:** 100% (42/42 requirements completed) - UAT gap closure round 2 in progress
 
 ---
 
@@ -331,5 +333,5 @@ Phase 6: Frontend UI & Interactive Data Cards
 
 ---
 
-*Last updated: 2026-02-04 - Phase 6 UAT gap closure complete (all 12 plans executed)*
-*Next step: Audit milestone completion and E2E integration testing*
+*Last updated: 2026-02-04 - Phase 6 UAT gap closure round 2 (plan 06-14 for useFileSummary + refetch fixes)*
+*Next step: Execute 06-14 then re-run UAT*
