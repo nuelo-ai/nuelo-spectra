@@ -1,8 +1,8 @@
 # Project State: Spectra v1.0 MVP
 
-**Last Updated:** 2026-02-03
+**Last Updated:** 2026-02-04
 **Milestone:** v1.0 MVP
-**Status:** Phase 5 Complete
+**Status:** Phase 6 In Progress
 
 ---
 
@@ -12,7 +12,7 @@
 Accurate data analysis through correct, safe Python code generation. If the code is wrong or the sandbox isn't secure, the entire product fails.
 
 **Current Focus:**
-Phase 5 complete. E2B Cloud sandbox execution fully integrated with LangGraph workflow. Backend MVP complete: auth, file upload, AI agents, streaming, and secure code execution. Ready for Phase 6: Frontend UI implementation.
+Phase 6 in progress. Backend MVP complete. Building frontend UI: Next.js 16 with TypeScript, Tailwind CSS, TanStack Query, shadcn/ui. Profile and password management API endpoints ready for settings page.
 
 **Key Constraint:**
 Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolation) is non-negotiable for production.
@@ -21,26 +21,26 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 
 ## Current Position
 
-**Phase:** 5 of 6 - Sandbox Security & Code Execution
-**Plan:** 2/2 plans complete
-**Status:** Phase Complete
+**Phase:** 6 of 6 - Frontend UI & Interactive Data Cards
+**Plan:** 2 of 12 plans complete
+**Status:** In Progress
 
 **Progress Bar:**
 ```
-[████████████████████] 70% (30/42 requirements completed)
+[██████████████████░░] 73% (32/42 requirements completed)
 
 Phase 1: [██████████] 3/3 plans COMPLETE (database + auth + password reset)
 Phase 2: [██████████] 2/2 plans COMPLETE (file service + API routers)
 Phase 3: [██████████] 5/5 plans COMPLETE (foundation + onboarding + validation + coding + integration)
 Phase 4: [██████████] 2/2 plans COMPLETE (SSE events + streaming endpoint + atomic persistence)
 Phase 5: [██████████] 2/2 plans COMPLETE (SandboxRuntime Protocol + E2B execution integration)
-Phase 6: [░░░░░░░░░░] 0/12 requirements
+Phase 6: [██░░░░░░░░] 2/12 requirements (Next.js scaffold + profile/password API)
 ```
 
-**Last activity:** 2026-02-03 - Completed 05-02: E2B Sandbox Execution Integration
+**Last activity:** 2026-02-04 - Completed 06-02: User Profile & Password Management API
 
 **Next Action:**
-Begin Phase 6: Frontend UI Implementation (chat interface + data card visualization + settings page)
+Continue Phase 6 implementation (remaining: auth UI, file management UI, chat interface, data cards, settings page)
 
 ---
 
@@ -63,6 +63,9 @@ Begin Phase 6: Frontend UI Implementation (chat interface + data card visualizat
 
 | Date | Decision | Impact |
 |------|----------|--------|
+| 2026-02-04 | ProfileUpdateRequest requires at least one field | model_post_init validation ensures either first_name or last_name provided; prevents empty PATCH requests. Implemented in 06-02. |
+| 2026-02-04 | change_password returns boolean not exception | Service layer returns False on wrong password, router controls HTTP 401; cleaner separation of concerns. Implemented in 06-02. |
+| 2026-02-04 | CurrentUser dependency on profile endpoints | Both PATCH /auth/me and POST /auth/change-password require authentication; consistent with existing auth patterns. Implemented in 06-02. |
 | 2026-02-03 | asyncio.to_thread wraps E2B calls | E2B SDK is synchronous; wrapping execute() in asyncio.to_thread() prevents blocking LangGraph's async event loop during sandbox execution. Pattern established in 05-02. |
 | 2026-02-03 | Code display before execution | code_display event emitted with message "Code validated, preparing execution..." BEFORE execution starts. Satisfies EXEC-05 requirement. Implemented in 05-02. |
 | 2026-02-03 | File reading error handling | FileNotFoundError and IOError caught and routed to halt with user-friendly messages ("Re-upload your file and try again"). Prevents unhandled exceptions. Implemented in 05-02. |
@@ -180,9 +183,10 @@ Begin Phase 6: Frontend UI Implementation (chat interface + data card visualizat
 13. **phases/04-streaming-infrastructure/04-02-SUMMARY.md** - SSE Endpoint & Atomic Persistence
 14. **phases/05-sandbox-security---code-execution/05-01-SUMMARY.md** - SandboxRuntime Protocol & E2B Implementation
 15. **phases/05-sandbox-security---code-execution/05-02-SUMMARY.md** - E2B Sandbox Execution Integration
+16. **phases/06-frontend-ui-interactive-data-cards/06-02-SUMMARY.md** - User Profile & Password Management API
 
-**Last session:** 2026-02-03T20:11:49Z
-**Stopped at:** Completed 05-02: E2B Sandbox Execution Integration
+**Last session:** 2026-02-04T00:19:37Z
+**Stopped at:** Completed 06-02: User Profile & Password Management API
 **Resume file:** None
 
 **Current session status:**
@@ -221,7 +225,19 @@ Begin Phase 6: Frontend UI Implementation (chat interface + data card visualizat
     - File reading errors handled gracefully with user-friendly messages
     - halt_node provides tailored messages for different failure types
     - Requirements covered: EXEC-01, EXEC-02, EXEC-03, EXEC-04, EXEC-05, AGENT-09
-- Next: Begin Phase 6 (Frontend UI Implementation)
+- Phase 6 IN PROGRESS: 2/12 plans executed (2/12 requirements met)
+  - Plan 06-01: Next.js 16 Scaffold with Design System (not tracked) COMPLETE
+    - Next.js 16 project with TypeScript, Tailwind CSS, App Router
+    - TanStack Query, TanStack Table, Zustand, react-dropzone, papaparse
+    - shadcn/ui with button, input, label, card, sonner components
+    - TypeScript types mirroring backend schemas (auth, file, chat)
+    - Next.js API proxy to backend (/api/* → http://localhost:8000)
+  - Plan 06-02: User Profile & Password Management API (3min) COMPLETE
+    - PATCH /auth/me endpoint for profile updates (first_name, last_name)
+    - POST /auth/change-password endpoint with current password verification
+    - ProfileUpdateRequest and ChangePasswordRequest schemas
+    - update_user_profile and change_password service functions
+    - Requirements covered: SETT-01, SETT-03
 
 ---
 
