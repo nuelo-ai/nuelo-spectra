@@ -73,7 +73,7 @@ export function useSSEStream() {
           headers["Authorization"] = `Bearer ${accessToken}`;
         }
 
-        const response = await fetch(`/api/chat/${fileId}/stream`, {
+        const response = await fetch(`http://localhost:8000/chat/${fileId}/stream`, {
           method: "POST",
           headers,
           body: JSON.stringify({ content: message }),

@@ -61,7 +61,7 @@ async function refreshAccessToken(): Promise<boolean> {
   }
 
   try {
-    const response = await fetch("/api/auth/refresh", {
+    const response = await fetch("http://localhost:8000/auth/refresh", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -103,7 +103,7 @@ async function fetchWithAuth(
     options.headers["Authorization"] = `Bearer ${accessToken}`;
   }
 
-  let response = await fetch(`/api${path}`, options);
+  let response = await fetch(`http://localhost:8000${path}`, options);
 
   // If 401 Unauthorized, attempt token refresh
   if (response.status === 401) {
@@ -115,7 +115,7 @@ async function fetchWithAuth(
       if (newAccessToken) {
         options.headers["Authorization"] = `Bearer ${newAccessToken}`;
       }
-      response = await fetch(`/api${path}`, options);
+      response = await fetch(`http://localhost:8000${path}`, options);
     } else {
       // Refresh failed, redirect to login
       if (typeof window !== "undefined") {
@@ -193,7 +193,7 @@ export const apiClient = {
       headers["Authorization"] = `Bearer ${accessToken}`;
     }
 
-    let response = await fetch(`/api${path}`, {
+    let response = await fetch(`http://localhost:8000${path}`, {
       method: "POST",
       headers,
       body: formData,
