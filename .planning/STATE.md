@@ -22,25 +22,25 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 ## Current Position
 
 **Phase:** 6 of 6 - Frontend UI & Interactive Data Cards
-**Plan:** 5 of 12 plans complete
+**Plan:** 6 of 12 plans complete
 **Status:** In Progress
 
 **Progress Bar:**
 ```
-[████████████████████░] 83% (36/42 requirements completed)
+[█████████████████████] 88% (37/42 requirements completed)
 
 Phase 1: [██████████] 3/3 plans COMPLETE (database + auth + password reset)
 Phase 2: [██████████] 2/2 plans COMPLETE (file service + API routers)
 Phase 3: [██████████] 5/5 plans COMPLETE (foundation + onboarding + validation + coding + integration)
 Phase 4: [██████████] 2/2 plans COMPLETE (SSE events + streaming endpoint + atomic persistence)
 Phase 5: [██████████] 2/2 plans COMPLETE (SandboxRuntime Protocol + E2B execution integration)
-Phase 6: [█████░░░░░] 5/12 plans (foundation + auth + file management + chat + data cards)
+Phase 6: [██████░░░░] 6/12 plans (foundation + auth + files + chat + cards + downloads)
 ```
 
-**Last activity:** 2026-02-04 - Completed 06-05: Interactive Data Cards with TanStack Table
+**Last activity:** 2026-02-04 - Completed 06-06: Download Buttons & Code Display
 
 **Next Action:**
-Continue Phase 6 implementation: download functionality, code display, settings page
+Continue Phase 6 implementation: settings page, visual polish, final integration
 
 ---
 
@@ -63,6 +63,10 @@ Continue Phase 6 implementation: download functionality, code display, settings 
 
 | Date | Decision | Impact |
 |------|----------|--------|
+| 2026-02-04 | Filename generation from query brief slug | User-friendly download filenames that match query context; slugified (lowercase, hyphens, 50 char max) instead of generic timestamps. Implemented in 06-06. |
+| 2026-02-04 | Downloads only render after streaming completes | Prevents incomplete data exports during progressive rendering; CSV/Markdown buttons appear only when !isStreaming and data is final. Implemented in 06-06. |
+| 2026-02-04 | Code display starts collapsed with toggle | Reduces visual clutter in Data Cards; users opt-in to view Python code; "View code" / "Hide code" button with smooth expand/collapse animation. Implemented in 06-06. |
+| 2026-02-04 | Line numbers for code > 3 lines | Improves readability for multi-line code blocks; two-column layout with select-none prevents numbers from being copied. Implemented in 06-06. |
 | 2026-02-04 | Collapsible component for card expand/collapse | Prevents visual clutter with multiple result cards; auto-collapse previous cards when new card completes; manual toggle via header click. Implemented in 06-05. |
 | 2026-02-04 | Parse execution_result as JSON for table data | Backend returns execution results as JSON strings; ChatMessage handles parsing and passes structured data to DataCard with columns/rows. Implemented in 06-05. |
 | 2026-02-04 | Progressive rendering via streaming events | DataCard shows sections as data becomes available (brief -> table -> explanation); receives isStreaming prop and shows loading states for pending sections. Implemented in 06-05. |
@@ -156,7 +160,8 @@ Continue Phase 6 implementation: download functionality, code display, settings 
 - [x] Zustand tab store and file manager hooks - completed in 06-03
 - [x] Chat interface with SSE streaming - completed in 06-04
 - [x] Data Cards visualization with progressive rendering - completed in 06-05
-- [ ] Execute remaining Phase 6 plans: download functionality, code display, settings page
+- [x] Download buttons and code display - completed in 06-06
+- [ ] Execute remaining Phase 6 plans: settings page, visual polish
 
 **Phase 6 Progress:**
 - [x] Frontend foundation (Next.js 16, TypeScript, Tailwind CSS 4, shadcn/ui) - 06-01 complete
@@ -166,7 +171,7 @@ Continue Phase 6 implementation: download functionality, code display, settings 
 - [x] Zustand tab store for multi-tab file management - 06-03 complete
 - [x] Chat interface with SSE streaming, typing indicator, auto-scroll - 06-04 complete
 - [x] Data Cards visualization with progressive rendering - 06-05 complete
-- [ ] Download functionality (CSV/JSON/PNG export) - 06-06 planned
+- [x] CSV/Markdown downloads and Python code display - 06-06 complete
 - [ ] Settings page - 06-07 planned
 
 **Phase 3 Enhancements (Backlog):**
@@ -212,10 +217,13 @@ Continue Phase 6 implementation: download functionality, code display, settings 
 15. **phases/05-sandbox-security---code-execution/05-02-SUMMARY.md** - E2B Sandbox Execution Integration
 16. **phases/06-frontend-ui-interactive-data-cards/06-01-SUMMARY.md** - Next.js Frontend Foundation & Authentication
 17. **phases/06-frontend-ui-interactive-data-cards/06-03-SUMMARY.md** - File Management UI with Multi-Tab Interface
-18. **phases/06-frontend-ui-interactive-data-cards/06-07-SUMMARY.md** - Settings Page with Profile & Password Management
+18. **phases/06-frontend-ui-interactive-data-cards/06-04-SUMMARY.md** - Chat Interface with SSE Streaming
+19. **phases/06-frontend-ui-interactive-data-cards/06-05-SUMMARY.md** - Interactive Data Cards with TanStack Table
+20. **phases/06-frontend-ui-interactive-data-cards/06-06-SUMMARY.md** - Download Buttons & Code Display
+21. **phases/06-frontend-ui-interactive-data-cards/06-07-SUMMARY.md** - Settings Page with Profile & Password Management
 
-**Last session:** 2026-02-04T00:38:06Z
-**Stopped at:** Completed 06-07: Settings Page with Profile & Password Management
+**Last session:** 2026-02-04T00:44:14Z
+**Stopped at:** Completed 06-06: Download Buttons & Code Display
 **Resume file:** None
 
 **Current session status:**
@@ -254,7 +262,7 @@ Continue Phase 6 implementation: download functionality, code display, settings 
     - File reading errors handled gracefully with user-friendly messages
     - halt_node provides tailored messages for different failure types
     - Requirements covered: EXEC-01, EXEC-02, EXEC-03, EXEC-04, EXEC-05, AGENT-09
-- Phase 6 IN PROGRESS: 5/12 plans executed (6/12 requirements met)
+- Phase 6 IN PROGRESS: 6/12 plans executed (8/12 requirements met)
   - Plan 06-01: Next.js Frontend Foundation & Authentication (7min) COMPLETE
     - Next.js 16 project with TypeScript, Tailwind CSS 4, App Router, shadcn/ui
     - API client with automatic JWT token injection and 401 refresh handling
@@ -288,6 +296,16 @@ Continue Phase 6 implementation: download functionality, code display, settings 
     - DataTable: TanStack Table v8 with sorting (click headers), filtering (global search), pagination (10 rows/page)
     - DataCard: progressive rendering (Query Brief -> Data Table -> AI Explanation)
     - Collapsible behavior: auto-collapse previous cards when new card completes
+    - ChatMessage detects structured data in metadata_json and renders DataCard
+    - Requirements covered: CARD-01, CARD-02, CARD-03, CARD-04
+  - Plan 06-06: Download Buttons & Code Display (10min) COMPLETE
+    - CSVDownloadButton: papaparse converts table data to CSV, Blob API for client-side download
+    - MarkdownDownloadButton: generates formatted report with query, analysis, and table
+    - CodeDisplay: collapsible Python code viewer with copy-to-clipboard, line numbers (>3 lines)
+    - Integrated into DataCard: code after Brief, CSV below Table, Markdown below Explanation
+    - Downloads only render after streaming completes (!isStreaming)
+    - Filenames generated from slugified query brief
+    - Requirements covered: CARD-06, CARD-07, CARD-08
     - ChatMessage integration: renders DataCard for structured data (metadata_json with generated_code/execution_result)
     - ChatInterface: manages collapse state, parses streaming events for progressive DataCard rendering
     - shadcn/ui: table, collapsible, badge components
