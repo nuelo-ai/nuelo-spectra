@@ -98,3 +98,87 @@ async def get_user_by_id(db: AsyncSession, user_id: UUID) -> User | None:
         select(User).where(User.id == user_id)
     )
     return result.scalar_one_or_none()
+
+
+async def update_user_profile(
+    db: AsyncSession,
+    user_id: UUID,
+    first_name: str | None,
+    last_name: str | None
+) -> User:
+    """Update user profile fields.
+
+    Args:
+        db: Database session
+        user_id: User UUID
+        first_name: New first name (if provided)
+        last_name: New last name (if provided)
+
+    Returns:
+        Updated user instance
+
+    Raises:
+        ValueError: If user not found
+    """
+    # Query user by id
+    result = await db.execute(
+        select(User).where(User.id == user_id)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise ValueError(f"User {user_id} not found")
+
+    # Update only provided fields
+    if first_name is not None:
+        user.first_name = first_name
+    if last_name is not None:
+        user.last_name = last_name
+
+    # Commit and refresh
+    await db.commit()
+    await db.refresh(user)
+
+    return user
+
+
+async def change_password(
+    db: AsyncSession,
+    user_id: UUID,
+    current_password: str,
+    new_password: str
+) -> bool:
+    """Change user password after verifying current password.
+
+    Args:
+        db: Database session
+        user_id: User UUID
+        current_password: Current password for verification
+        new_password: New password to set
+
+    Returns:
+        True if password changed successfully, False if current password invalid
+
+    Raises:
+        ValueError: If user not found
+    """
+    # Query user by id
+    result = await db.execute(
+        select(User).where(User.id == user_id)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise ValueError(f"User {user_id} not found")
+
+    # Verify current password
+    if not verify_password(current_password, user.hashed_password):
+        return False
+
+    # Hash and update new password
+    user.hashed_password = hash_password(new_password)
+
+    # Commit
+    await db.commit()
+
+    return True

@@ -10,9 +10,11 @@ from app.config import Settings, get_settings
 from app.database import get_db
 from app.dependencies import CurrentUser
 from app.schemas.auth import (
+    ChangePasswordRequest,
     ForgotPasswordRequest,
     LoginRequest,
     MessageResponse,
+    ProfileUpdateRequest,
     RefreshRequest,
     ResetPasswordRequest,
     SignupRequest,
@@ -260,3 +262,79 @@ async def reset_password(
     await db.commit()
 
     return MessageResponse(message="Password reset successful")
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_profile(
+    profile_data: ProfileUpdateRequest,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)]
+) -> UserResponse:
+    """Update current user profile information.
+
+    Args:
+        profile_data: Profile update request (first_name and/or last_name)
+        current_user: Authenticated user from JWT token
+        db: Database session
+
+    Returns:
+        Updated user profile information
+
+    Raises:
+        HTTPException: 500 if user not found (should never happen for authenticated user)
+    """
+    try:
+        updated_user = await auth_service.update_user_profile(
+            db,
+            current_user.id,
+            profile_data.first_name,
+            profile_data.last_name
+        )
+        return UserResponse.model_validate(updated_user)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+@router.post("/change-password", response_model=MessageResponse)
+async def change_password_endpoint(
+    password_data: ChangePasswordRequest,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)]
+) -> MessageResponse:
+    """Change current user password.
+
+    Args:
+        password_data: Password change request (current and new password)
+        current_user: Authenticated user from JWT token
+        db: Database session
+
+    Returns:
+        Success message
+
+    Raises:
+        HTTPException: 401 if current password is incorrect
+        HTTPException: 500 if user not found (should never happen for authenticated user)
+    """
+    try:
+        success = await auth_service.change_password(
+            db,
+            current_user.id,
+            password_data.current_password,
+            password_data.new_password
+        )
+
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Current password is incorrect"
+            )
+
+        return MessageResponse(message="Password changed successfully")
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
