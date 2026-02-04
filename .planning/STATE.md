@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-02-04
 **Milestone:** v1.0 MVP
-**Status:** Phase 6 In Progress
+**Status:** Phase 6 In Progress - Frontend Foundation Complete
 
 ---
 
@@ -12,7 +12,7 @@
 Accurate data analysis through correct, safe Python code generation. If the code is wrong or the sandbox isn't secure, the entire product fails.
 
 **Current Focus:**
-Phase 6 in progress. Backend MVP complete. Building frontend UI: Next.js 16 with TypeScript, Tailwind CSS, TanStack Query, shadcn/ui. Profile and password management API endpoints ready for settings page.
+Phase 6 in progress. Next.js 16 frontend foundation complete with JWT auth flow, API client, shadcn/ui, and TanStack Query. Ready for file upload UI and chat interface implementation.
 
 **Key Constraint:**
 Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolation) is non-negotiable for production.
@@ -22,25 +22,25 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 ## Current Position
 
 **Phase:** 6 of 6 - Frontend UI & Interactive Data Cards
-**Plan:** 2 of 12 plans complete
+**Plan:** 1 of 12 plans complete
 **Status:** In Progress
 
 **Progress Bar:**
 ```
-[██████████████████░░] 73% (32/42 requirements completed)
+[██████████████████░░] 76% (33/42 requirements completed)
 
 Phase 1: [██████████] 3/3 plans COMPLETE (database + auth + password reset)
 Phase 2: [██████████] 2/2 plans COMPLETE (file service + API routers)
 Phase 3: [██████████] 5/5 plans COMPLETE (foundation + onboarding + validation + coding + integration)
 Phase 4: [██████████] 2/2 plans COMPLETE (SSE events + streaming endpoint + atomic persistence)
 Phase 5: [██████████] 2/2 plans COMPLETE (SandboxRuntime Protocol + E2B execution integration)
-Phase 6: [██░░░░░░░░] 2/12 requirements (Next.js scaffold + profile/password API)
+Phase 6: [███░░░░░░░] 3/12 requirements (frontend foundation + auth UI)
 ```
 
-**Last activity:** 2026-02-04 - Completed 06-02: User Profile & Password Management API
+**Last activity:** 2026-02-04 - Completed 06-01: Next.js Frontend Foundation & Authentication
 
 **Next Action:**
-Continue Phase 6 implementation (remaining: auth UI, file management UI, chat interface, data cards, settings page)
+Continue Phase 6 implementation: file upload UI, sidebar, multi-tab chat interface, data card visualization, settings page
 
 ---
 
@@ -63,6 +63,13 @@ Continue Phase 6 implementation (remaining: auth UI, file management UI, chat in
 
 | Date | Decision | Impact |
 |------|----------|--------|
+| 2026-02-04 | React Context for auth state | Auth state managed via React Context (not Zustand); changes infrequently so Context is sufficient. Auth accessed via useAuth() hook throughout app. Implemented in 06-01. |
+| 2026-02-04 | localStorage for JWT token storage | Tokens stored in localStorage with spectra_ prefix; simple persistence across sessions. Vulnerable to XSS but acceptable for v1.0 MVP. Implemented in 06-01. |
+| 2026-02-04 | Turbopack requires .tsx for JSX | Files with JSX must use .tsx extension, not .ts. Turbopack parser fails on JSX in .ts files. Renamed useAuth.ts → useAuth.tsx. Implemented in 06-01. |
+| 2026-02-04 | API proxy via Next.js rewrites | Frontend /api/* requests proxied to localhost:8000 via Next.js rewrites; avoids CORS configuration. Simple fetch('/api/...') calls. Implemented in 06-01. |
+| 2026-02-04 | Automatic token refresh on 401 | API client intercepts 401 errors, calls /auth/refresh, retries original request with new token; seamless UX. Implemented in 06-01. |
+| 2026-02-04 | TypeScript types mirror backend schemas | Frontend types in src/types/ exactly match backend Pydantic schemas; ensures type safety across API boundary. Implemented in 06-01. |
+| 2026-02-04 | shadcn/ui with default style | shadcn/ui initialized with default style, slate base color, CSS variables; modern accessible component library. Implemented in 06-01. |
 | 2026-02-04 | ProfileUpdateRequest requires at least one field | model_post_init validation ensures either first_name or last_name provided; prevents empty PATCH requests. Implemented in 06-02. |
 | 2026-02-04 | change_password returns boolean not exception | Service layer returns False on wrong password, router controls HTTP 401; cleaner separation of concerns. Implemented in 06-02. |
 | 2026-02-04 | CurrentUser dependency on profile endpoints | Both PATCH /auth/me and POST /auth/change-password require authentication; consistent with existing auth patterns. Implemented in 06-02. |
@@ -183,10 +190,10 @@ Continue Phase 6 implementation (remaining: auth UI, file management UI, chat in
 13. **phases/04-streaming-infrastructure/04-02-SUMMARY.md** - SSE Endpoint & Atomic Persistence
 14. **phases/05-sandbox-security---code-execution/05-01-SUMMARY.md** - SandboxRuntime Protocol & E2B Implementation
 15. **phases/05-sandbox-security---code-execution/05-02-SUMMARY.md** - E2B Sandbox Execution Integration
-16. **phases/06-frontend-ui-interactive-data-cards/06-02-SUMMARY.md** - User Profile & Password Management API
+16. **phases/06-frontend-ui-interactive-data-cards/06-01-SUMMARY.md** - Next.js Frontend Foundation & Authentication
 
-**Last session:** 2026-02-04T00:19:37Z
-**Stopped at:** Completed 06-02: User Profile & Password Management API
+**Last session:** 2026-02-04T00:22:39Z
+**Stopped at:** Completed 06-01: Next.js Frontend Foundation & Authentication
 **Resume file:** None
 
 **Current session status:**
@@ -225,19 +232,17 @@ Continue Phase 6 implementation (remaining: auth UI, file management UI, chat in
     - File reading errors handled gracefully with user-friendly messages
     - halt_node provides tailored messages for different failure types
     - Requirements covered: EXEC-01, EXEC-02, EXEC-03, EXEC-04, EXEC-05, AGENT-09
-- Phase 6 IN PROGRESS: 2/12 plans executed (2/12 requirements met)
-  - Plan 06-01: Next.js 16 Scaffold with Design System (not tracked) COMPLETE
-    - Next.js 16 project with TypeScript, Tailwind CSS, App Router
-    - TanStack Query, TanStack Table, Zustand, react-dropzone, papaparse
-    - shadcn/ui with button, input, label, card, sonner components
-    - TypeScript types mirroring backend schemas (auth, file, chat)
-    - Next.js API proxy to backend (/api/* → http://localhost:8000)
-  - Plan 06-02: User Profile & Password Management API (3min) COMPLETE
-    - PATCH /auth/me endpoint for profile updates (first_name, last_name)
-    - POST /auth/change-password endpoint with current password verification
-    - ProfileUpdateRequest and ChangePasswordRequest schemas
-    - update_user_profile and change_password service functions
-    - Requirements covered: SETT-01, SETT-03
+- Phase 6 IN PROGRESS: 1/12 plans executed (3/12 requirements met)
+  - Plan 06-01: Next.js Frontend Foundation & Authentication (7min) COMPLETE
+    - Next.js 16 project with TypeScript, Tailwind CSS 4, App Router, shadcn/ui
+    - API client with automatic JWT token injection and 401 refresh handling
+    - useAuth hook with React Context for global auth state
+    - Login, register, forgot-password, reset-password pages with modern vibrant styling
+    - Protected dashboard layout redirects unauthenticated users
+    - TypeScript types mirror all backend Pydantic schemas (auth, file, chat)
+    - TanStack Query configured with 60s staleTime
+    - Next.js rewrites proxy /api/* to localhost:8000
+    - Requirements covered: UI-01, UI-02, UI-03
 
 ---
 
