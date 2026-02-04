@@ -432,14 +432,32 @@ def build_chat_graph(postgres_url: str):
         ...     config={"configurable": {"thread_id": "user123_file456"}}
         ... )
     """
-    # Initialize PostgreSQL checkpointer
-    # from_conn_string() returns a context manager; we enter it manually
-    # since the graph is cached globally and the checkpointer must persist
-    # Convert SQLAlchemy async URL format to psycopg format
-    psycopg_url = postgres_url.replace("postgresql+asyncpg://", "postgresql://")
-    checkpointer_ctx = PostgresSaver.from_conn_string(psycopg_url)
-    checkpointer = checkpointer_ctx.__enter__()
-    checkpointer.setup()
+    # TEMPORARY: Disable PostgreSQL checkpointing due to async compatibility issue
+    # PostgresSaver.aget_tuple() raises NotImplementedError when used with async streaming
+    # TODO: Investigate AsyncPostgresSaver or upgrade langgraph-checkpoint-postgres
+    # For now, graph runs without persistence (each query starts fresh)
+    checkpointer = None
+
+    # Create StateGraph
+    graph = StateGraph(ChatAgentState)
+
+    # Add nodes
+    graph.add_node("coding_agent", coding_agent)
+    graph.add_node("code_checker", code_checker_node)
+    graph.add_node("execute", execute_in_sandbox)
+    graph.add_node("data_analysis", data_analysis_agent)
+    graph.add_node("halt", halt_node)
+
+    # Add edges
+    graph.set_entry_point("coding_agent")
+    graph.add_edge("coding_agent", "code_checker")
+    # code_checker returns Command, so routing is automatic (no add_conditional_edges needed)
+    graph.add_edge("execute", "data_analysis")
+    graph.set_finish_point("data_analysis")
+    graph.set_finish_point("halt")
+
+    # Compile WITHOUT checkpointer for now
+    compiled = graph.compile(checkpointer=checkpointer)
 
     # Create StateGraph
     graph = StateGraph(ChatAgentState)
