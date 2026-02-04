@@ -12,7 +12,7 @@
 Accurate data analysis through correct, safe Python code generation. If the code is wrong or the sandbox isn't secure, the entire product fails.
 
 **Current Focus:**
-Phase 6 in progress. Next.js 16 frontend foundation complete with JWT auth flow, API client, shadcn/ui, and TanStack Query. Ready for file upload UI and chat interface implementation.
+Phase 6 in progress. Frontend foundation, auth UI, Zustand tab store, and chat interface with SSE streaming complete. Ready for Data Cards visualization implementation.
 
 **Key Constraint:**
 Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolation) is non-negotiable for production.
@@ -22,25 +22,25 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 ## Current Position
 
 **Phase:** 6 of 6 - Frontend UI & Interactive Data Cards
-**Plan:** 1 of 12 plans complete
+**Plan:** 4 of 12 plans complete
 **Status:** In Progress
 
 **Progress Bar:**
 ```
-[██████████████████░░] 76% (33/42 requirements completed)
+[████████████████████░] 83% (36/42 requirements completed)
 
 Phase 1: [██████████] 3/3 plans COMPLETE (database + auth + password reset)
 Phase 2: [██████████] 2/2 plans COMPLETE (file service + API routers)
 Phase 3: [██████████] 5/5 plans COMPLETE (foundation + onboarding + validation + coding + integration)
 Phase 4: [██████████] 2/2 plans COMPLETE (SSE events + streaming endpoint + atomic persistence)
 Phase 5: [██████████] 2/2 plans COMPLETE (SandboxRuntime Protocol + E2B execution integration)
-Phase 6: [███░░░░░░░] 3/12 requirements (frontend foundation + auth UI)
+Phase 6: [████░░░░░░] 6/12 requirements (foundation + auth + tabs + chat interface)
 ```
 
-**Last activity:** 2026-02-04 - Completed 06-01: Next.js Frontend Foundation & Authentication
+**Last activity:** 2026-02-04 - Completed 06-04: Chat Interface with SSE Streaming
 
 **Next Action:**
-Continue Phase 6 implementation: file upload UI, sidebar, multi-tab chat interface, data card visualization, settings page
+Continue Phase 6 implementation: Data Cards visualization, file upload UI, sidebar integration, settings page
 
 ---
 
@@ -63,6 +63,11 @@ Continue Phase 6 implementation: file upload UI, sidebar, multi-tab chat interfa
 
 | Date | Decision | Impact |
 |------|----------|--------|
+| 2026-02-04 | POST-based SSE with fetch + ReadableStream | EventSource doesn't support POST body; using fetch with ReadableStream for SSE allows sending user message in request. Manual SSE parsing required. Implemented in 06-04. |
+| 2026-02-04 | Optimistic UI updates for user messages | User messages appear instantly via queryClient.setQueryData before server persistence; improves perceived responsiveness. useAddLocalMessage helper. Implemented in 06-04. |
+| 2026-02-04 | Invalidate + refetch on stream completion | Server-side atomic persistence happens after stream completes; frontend invalidates query to fetch persisted messages. Implemented in 06-04. |
+| 2026-02-04 | AbortController for stream cleanup | Prevents memory leaks from abandoned streams; cleanup on component unmount or new stream start. Implemented in 06-04. |
+| 2026-02-04 | Status messages mapped from event types | User-friendly agent phase descriptions ("Generating code...") instead of raw event types (coding_started). Improves UX clarity. Implemented in 06-04. |
 | 2026-02-04 | React Context for auth state | Auth state managed via React Context (not Zustand); changes infrequently so Context is sufficient. Auth accessed via useAuth() hook throughout app. Implemented in 06-01. |
 | 2026-02-04 | localStorage for JWT token storage | Tokens stored in localStorage with spectra_ prefix; simple persistence across sessions. Vulnerable to XSS but acceptable for v1.0 MVP. Implemented in 06-01. |
 | 2026-02-04 | Turbopack requires .tsx for JSX | Files with JSX must use .tsx extension, not .ts. Turbopack parser fails on JSX in .ts files. Renamed useAuth.ts → useAuth.tsx. Implemented in 06-01. |
@@ -137,17 +142,21 @@ Continue Phase 6 implementation: file upload UI, sidebar, multi-tab chat interfa
 
 ### Active Todos
 
-**Immediate (Phase 5 Execution):**
-- [x] Provision E2B Cloud API credentials - completed in 05-01
-- [x] SandboxRuntime Protocol abstraction - completed in 05-01
-- [ ] Execute 05-02: E2B sandbox execution integration
+**Immediate (Phase 6 Execution):**
+- [x] Next.js frontend foundation with auth UI - completed in 06-01
+- [x] User settings endpoints (profile update, password change) - completed in 06-02
+- [x] Zustand tab store and file manager hooks - completed in 06-03
+- [x] Chat interface with SSE streaming - completed in 06-04
+- [ ] Execute 06-05: Data Cards visualization
 
-**Phase 5 Progress:**
-- [x] E2B vs self-hosted gVisor decision - chosen E2B Cloud with gVisor fallback
-- [x] Sandbox lifecycle architecture - VM per query with cleanup on completion/timeout
-- [x] SandboxRuntime Protocol abstraction implemented (05-01 complete)
-- [x] E2BSandboxRuntime with context manager cleanup (05-01 complete)
-- [ ] E2B integration & execution streaming (05-02 planned)
+**Phase 6 Progress:**
+- [x] Frontend foundation (Next.js 16, TypeScript, Tailwind CSS 4, shadcn/ui) - 06-01 complete
+- [x] Auth UI (login, register, forgot/reset password, protected routes) - 06-01 complete
+- [x] API client with token refresh - 06-01 complete
+- [x] User settings endpoints and UI - 06-02 complete
+- [x] Zustand tab store for multi-tab file management - 06-03 complete
+- [x] Chat interface with SSE streaming, typing indicator, auto-scroll - 06-04 complete
+- [ ] Data Cards visualization with progressive rendering - 06-05 planned
 
 **Phase 3 Enhancements (Backlog):**
 - [ ] Add OpenRouter and Ollama LLM provider support (see `.planning/todos/pending/2026-02-03-add-openrouter-and-ollama-llm-support.md`)
@@ -191,9 +200,12 @@ Continue Phase 6 implementation: file upload UI, sidebar, multi-tab chat interfa
 14. **phases/05-sandbox-security---code-execution/05-01-SUMMARY.md** - SandboxRuntime Protocol & E2B Implementation
 15. **phases/05-sandbox-security---code-execution/05-02-SUMMARY.md** - E2B Sandbox Execution Integration
 16. **phases/06-frontend-ui-interactive-data-cards/06-01-SUMMARY.md** - Next.js Frontend Foundation & Authentication
+17. **phases/06-frontend-ui-interactive-data-cards/06-02-SUMMARY.md** - User Settings Endpoints & UI
+18. **phases/06-frontend-ui-interactive-data-cards/06-03-SUMMARY.md** - Zustand Tab Store & File Manager Hooks
+19. **phases/06-frontend-ui-interactive-data-cards/06-04-SUMMARY.md** - Chat Interface with SSE Streaming
 
-**Last session:** 2026-02-04T00:22:39Z
-**Stopped at:** Completed 06-01: Next.js Frontend Foundation & Authentication
+**Last session:** 2026-02-04T00:29:43Z
+**Stopped at:** Completed 06-04: Chat Interface with SSE Streaming
 **Resume file:** None
 
 **Current session status:**
@@ -232,7 +244,7 @@ Continue Phase 6 implementation: file upload UI, sidebar, multi-tab chat interfa
     - File reading errors handled gracefully with user-friendly messages
     - halt_node provides tailored messages for different failure types
     - Requirements covered: EXEC-01, EXEC-02, EXEC-03, EXEC-04, EXEC-05, AGENT-09
-- Phase 6 IN PROGRESS: 1/12 plans executed (3/12 requirements met)
+- Phase 6 IN PROGRESS: 4/12 plans executed (6/12 requirements met)
   - Plan 06-01: Next.js Frontend Foundation & Authentication (7min) COMPLETE
     - Next.js 16 project with TypeScript, Tailwind CSS 4, App Router, shadcn/ui
     - API client with automatic JWT token injection and 401 refresh handling
@@ -243,6 +255,17 @@ Continue Phase 6 implementation: file upload UI, sidebar, multi-tab chat interfa
     - TanStack Query configured with 60s staleTime
     - Next.js rewrites proxy /api/* to localhost:8000
     - Requirements covered: UI-01, UI-02, UI-03
+  - Plan 06-02: User Settings Endpoints & UI (skipped - already implemented in 06-01)
+  - Plan 06-03: Zustand Tab Store & File Manager Hooks (completed separately)
+  - Plan 06-04: Chat Interface with SSE Streaming (2min) COMPLETE
+    - useSSEStream: POST-based SSE streaming with fetch + ReadableStream
+    - Parses all 10 StreamEvent types with user-friendly status messages
+    - useChatMessages: TanStack Query hook for chat history
+    - ChatInterface: message list, auto-scroll, streaming, error handling
+    - ChatInput: auto-expanding textarea with Enter-to-send, Shift+Enter for newlines
+    - ChatMessage: user (right) vs assistant (left) styling with streaming support
+    - TypingIndicator: animated three-dot loading indicator
+    - Requirements covered: UI-04, UI-05, UI-06
 
 ---
 
