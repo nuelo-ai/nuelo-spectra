@@ -51,8 +51,8 @@ export function useUploadFile() {
       return response.json();
     },
     onSuccess: () => {
-      // Refetch files list to trigger immediate update
-      queryClient.refetchQueries({ queryKey: ["files"] });
+      // Sidebar update handled by Continue to Chat button's explicit refetch
+      // Do NOT refetch here -- premature refetch conflicts with button's awaited refetch
     },
   });
 }

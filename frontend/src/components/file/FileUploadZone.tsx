@@ -8,6 +8,7 @@ import { useTabStore } from "@/stores/tabStore";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import ReactMarkdown from "react-markdown";
 
 interface FileUploadZoneProps {
   onUploadComplete?: () => void;
@@ -27,6 +28,7 @@ export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
   const [progress, setProgress] = useState(0);
   const [uploadedFileId, setUploadedFileId] = useState<string | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string>("");
+  const [analysisText, setAnalysisText] = useState<string | null>(null);
 
   // Poll for file summary when in analyzing stage
   const { data: summary } = useFileSummary(
@@ -40,6 +42,7 @@ export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
   useEffect(() => {
     if (uploadStage === "analyzing" && summary?.data_summary && !hasTransitioned.current) {
       hasTransitioned.current = true;
+      setAnalysisText(summary.data_summary);
       setUploadStage("ready");
       setProgress(100);
     }
@@ -196,10 +199,12 @@ export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
           )}
 
           {/* Analysis result display when ready */}
-          {uploadStage === "ready" && summary?.data_summary && (
+          {uploadStage === "ready" && analysisText && (
             <div className="space-y-4">
-              <div className="max-h-48 overflow-y-auto bg-accent/50 rounded-lg p-4">
-                <p className="text-sm whitespace-pre-wrap">{summary.data_summary}</p>
+              <div className="max-h-[60vh] overflow-y-auto bg-accent/50 rounded-lg p-4">
+                <div className="prose prose-sm max-w-none dark:prose-invert">
+                  <ReactMarkdown>{analysisText}</ReactMarkdown>
+                </div>
               </div>
               <div className="flex justify-center">
                 <button
@@ -223,6 +228,7 @@ export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
                     setProgress(0);
                     setUploadedFileId(null);
                     setUploadedFileName("");
+                    setAnalysisText(null);
                     hasTransitioned.current = false;
                   }}
                   className="bg-primary text-primary-foreground rounded py-2 px-6 hover:opacity-90 transition-opacity"

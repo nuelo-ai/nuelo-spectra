@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
 interface FileInfoModalProps {
   fileId: string;
@@ -26,7 +27,7 @@ export function FileInfoModal({ fileId, onClose }: FileInfoModalProps) {
 
   return (
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{file?.original_filename || "File Information"}</DialogTitle>
         </DialogHeader>
@@ -43,10 +44,10 @@ export function FileInfoModal({ fileId, onClose }: FileInfoModalProps) {
                 <p className="text-sm text-muted-foreground">Loading analysis...</p>
               </div>
             ) : summary?.data_summary ? (
-              <div className="prose prose-sm max-w-none">
-                <pre className="whitespace-pre-wrap text-sm bg-accent/50 p-4 rounded-lg">
-                  {summary.data_summary}
-                </pre>
+              <div className="bg-accent/50 p-4 rounded-lg">
+                <div className="prose prose-sm max-w-none dark:prose-invert">
+                  <ReactMarkdown>{summary.data_summary}</ReactMarkdown>
+                </div>
               </div>
             ) : (
               <div className="flex items-center gap-2 py-8 justify-center">
