@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/data/DataTable";
 import { TypingIndicator } from "./TypingIndicator";
 import { ChevronDown } from "lucide-react";
+import { CSVDownloadButton, MarkdownDownloadButton } from "@/components/data/DownloadButtons";
+import { CodeDisplay } from "@/components/data/CodeDisplay";
 
 interface DataCardProps {
   queryBrief?: string; // Section 1: user's query summary
@@ -95,11 +97,28 @@ export function DataCard({
 
       {/* Section 2 & 3: Data Table and AI Explanation */}
       <CollapsibleContent className="px-6 pb-6 space-y-6">
+        {/* Code Display (after Brief, before Table) */}
+        {generatedCode && !isStreaming && (
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-muted-foreground">Generated Code</h4>
+            <CodeDisplay code={generatedCode} language="python" />
+          </div>
+        )}
+
         {/* Section 2: Data Table */}
         {displayTableData ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <h4 className="text-sm font-medium text-muted-foreground">Data Results</h4>
             <DataTable columns={displayTableData.columns} data={displayTableData.rows} />
+            {/* CSV Download below table */}
+            {!isStreaming && (
+              <div className="flex justify-end">
+                <CSVDownloadButton
+                  data={displayTableData}
+                  filename={queryBrief ? `${queryBrief.toLowerCase().replace(/\s+/g, "-").slice(0, 50)}.csv` : undefined}
+                />
+              </div>
+            )}
           </div>
         ) : isStreaming ? (
           <div className="space-y-2">
@@ -113,19 +132,24 @@ export function DataCard({
           </div>
         ) : null}
 
-        {/* Download buttons placeholder (Plan 06) */}
-        {/* Download buttons added by Plan 06 */}
-
-        {/* Code display placeholder (Plan 06) */}
-        {/* Code display added by Plan 06 */}
-
         {/* Section 3: AI Explanation */}
         {explanation ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <h4 className="text-sm font-medium text-muted-foreground">Analysis</h4>
             <div className="rounded-lg bg-muted/30 p-4">
               <p className="text-sm whitespace-pre-wrap break-words">{explanation}</p>
             </div>
+            {/* Markdown Download below explanation */}
+            {!isStreaming && (
+              <div className="flex justify-end">
+                <MarkdownDownloadButton
+                  queryBrief={queryBrief || "Analysis"}
+                  explanation={explanation}
+                  tableData={displayTableData || undefined}
+                  filename={queryBrief ? `${queryBrief.toLowerCase().replace(/\s+/g, "-").slice(0, 50)}-analysis.md` : undefined}
+                />
+              </div>
+            )}
           </div>
         ) : isStreaming ? (
           <div className="space-y-2">
