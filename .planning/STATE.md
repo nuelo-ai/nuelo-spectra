@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-02-04
 **Milestone:** v1.0 MVP
-**Status:** Milestone Complete - All 6 Phases Verified (42/42 requirements) + All UAT Gap Closures Complete (Plans 06-10, 06-11, 06-12, 06-14, 06-15, 06-17, 06-18)
+**Status:** UAT Round 3 Complete - 3 fixes confirmed (markdown, button handler, error state) + 3 new gaps diagnosed (stale dev server, scroll UX, sidebar errors)
 
 ---
 
@@ -12,7 +12,7 @@
 Accurate data analysis through correct, safe Python code generation. If the code is wrong or the sandbox isn't secure, the entire product fails.
 
 **Current Focus:**
-All UAT gap closures complete. Plan 06-17 (markdown rendering + dialog sizing) and 06-18 (button handler resilience) COMPLETE. Phase 6 fully verified with 20/20 must-haves passed.
+UAT round 3 complete (plan 06-19). Plans 06-17 and 06-18 partially verified: markdown rendering confirmed working, button handler confirmed resilient, but dialog width and sidebar still broken due to stale dev server. Scroll UX needs redesign. Frontend dev server restart required before next round of testing.
 
 **Key Constraint:**
 Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolation) is non-negotiable for production.
@@ -22,8 +22,8 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 ## Current Position
 
 **Phase:** 6 of 6 - Frontend UI & Interactive Data Cards
-**Plan:** 17 plans complete (15 core + 06-17, 06-18 gap closures)
-**Status:** Phase 6 VERIFIED - All UAT Gap Closures Complete (20/20 must-haves passed)
+**Plan:** 18 plans complete (15 core + 06-17, 06-18 gap closures + 06-19 UAT retest)
+**Status:** UAT Round 3 diagnosed -- 3 fixes confirmed, 3 new gaps identified (dev server restart + scroll UX + sidebar errors)
 
 **Progress Bar:**
 ```
@@ -34,13 +34,15 @@ Phase 2: [██████████] 2/2 plans COMPLETE (file service + API
 Phase 3: [██████████] 5/5 plans COMPLETE (foundation + onboarding + validation + coding + integration)
 Phase 4: [██████████] 2/2 plans COMPLETE (SSE events + streaming endpoint + atomic persistence)
 Phase 5: [██████████] 2/2 plans COMPLETE (SandboxRuntime Protocol + E2B execution integration)
-Phase 6: [██████████] 17 plans COMPLETE (all UAT gaps closed; 20/20 must-haves verified)
+Phase 6: [█████████░] 18 plans (UAT round 3: 3 fixes confirmed, 3 gaps remain)
 ```
 
-**Last activity:** 2026-02-04 - Completed plan 06-17: Markdown rendering + dialog sizing (typography plugin, remark-gfm, viewport containment)
+**Last activity:** 2026-02-04 - Completed plan 06-19: UAT retest round 3 (3 fixes confirmed, 3 new gaps diagnosed)
 
 **Next Action:**
-All 6 phases complete and verified. Remaining gap closure plan 06-19 may still be needed. Ready for milestone audit (/gsd:audit-milestone) before archiving v1.0.
+1. Restart frontend dev server (`npm run dev`) to apply Tailwind v4 @plugin changes and updated React code
+2. Fix scroll UX: move overflow-y-auto from DialogContent to analysis text container only
+3. Run UAT round 4 to verify dialog width, sidebar, and scroll behavior after restart
 
 ---
 
@@ -63,6 +65,7 @@ All 6 phases complete and verified. Remaining gap closure plan 06-19 may still b
 
 | Date | Decision | Impact |
 |------|----------|--------|
+| 2026-02-04 | UAT round 3: 3 confirmed fixes, 3 new gaps, primary root cause is stale dev server | Plans 06-17 and 06-18 code changes verified correct in source. Markdown rendering works (remark-gfm + typography). Button handler resilient (try/catch/finally). Sidebar error state honest (isError). But dialog width, sidebar population, and scroll UX still broken because frontend dev server not restarted after Tailwind v4 @plugin changes. Diagnosed in 06-19. |
 | 2026-02-04 | try/catch/finally for guaranteed dialog close | Continue to Chat button handler uses finally block to always close dialog and reset state, regardless of errors in context POST, refetch, or tab open. User can never get stuck in a dialog that won't close. Implemented in 06-18. |
 | 2026-02-04 | refetchInterval 10s as independent sidebar fallback | useFiles query polls every 10 seconds as safety net. Primary path (button handler explicit refetch) is instant; this ensures sidebar discovers files even if button handler fails. Implemented in 06-18. |
 | 2026-02-04 | Error state replaces misleading empty state in sidebar | FileSidebar shows "Failed to load files" + "Retrying automatically..." when query errors, instead of misleading "No files yet". Honest error feedback with automatic recovery via refetchInterval. Implemented in 06-18. |
@@ -215,7 +218,10 @@ All 6 phases complete and verified. Remaining gap closure plan 06-19 may still b
 
 ### Blockers
 
-**None currently.**
+**3 UAT gaps remain after round 3 (plan 06-19):**
+1. **Gap 5 (operational):** Frontend dev server needs restart to apply Tailwind v4 @plugin changes -- dialog width and sidebar both depend on this
+2. **Gap 6 (design):** Scroll UX needs redesign -- move overflow-y-auto from DialogContent to analysis text area only
+3. **Gap 7 (operational):** Sidebar file list errors traced to stale compiled code -- dev server restart should resolve
 
 **Mitigations in Place:**
 - Phase 5: E2B Cloud architecture documented with self-hosted gVisor fallback option
@@ -259,9 +265,10 @@ All 6 phases complete and verified. Remaining gap closure plan 06-19 may still b
 29. **phases/06-frontend-ui-interactive-data-cards/06-15-SUMMARY.md** - Upload Flow UI Fixes (markdown rendering, FILE-05, FILE-06)
 30. **phases/06-frontend-ui-interactive-data-cards/06-17-SUMMARY.md** - Markdown Rendering & Dialog Sizing (typography plugin, remark-gfm, viewport containment)
 31. **phases/06-frontend-ui-interactive-data-cards/06-18-SUMMARY.md** - Button Handler Resilience & Sidebar Fallback Refresh (try/catch/finally, refetchInterval, error state)
+32. **phases/06-frontend-ui-interactive-data-cards/06-19-SUMMARY.md** - UAT Retest Round 3 (3 fixes confirmed, 3 new gaps diagnosed)
 
-**Last session:** 2026-02-04T20:03:58Z
-**Stopped at:** Completed 06-18: Button handler resilience + sidebar fallback refresh
+**Last session:** 2026-02-04T20:24:15Z
+**Stopped at:** Completed 06-19: UAT retest round 3 -- partial success, 3 new gaps diagnosed
 **Resume file:** None
 
 **Current session status:**
@@ -435,6 +442,14 @@ All 6 phases complete and verified. Remaining gap closure plan 06-19 may still b
     - Added refetchInterval: 10000 to useFiles for independent 10s sidebar refresh
     - Added isError state to FileSidebar with "Failed to load files" error UI
     - Error state replaces misleading "No files yet" when query fails
+  - Plan 06-19: UAT Retest Round 3 (3min) COMPLETE
+    - Verified markdown rendering working (remark-gfm + @tailwindcss/typography confirmed by user)
+    - Verified button handler resilience working (try/catch/finally confirmed by user)
+    - Verified sidebar error state working (isError toast confirmed by user)
+    - Diagnosed: dialog width not visible (stale dev server, code correct in source)
+    - Diagnosed: scroll UX wrong (whole dialog scrolls, should be analysis area only)
+    - Diagnosed: sidebar empty with error toast (stale frontend code, needs dev server restart)
+    - Updated 06-UAT-RETEST.md with round 3 results and 7 gap entries
 
 ---
 
