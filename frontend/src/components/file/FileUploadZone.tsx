@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
+import { apiClient } from "@/lib/api-client";
 
 interface FileUploadZoneProps {
   onUploadComplete?: () => void;
@@ -29,6 +30,7 @@ export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
   const [uploadedFileId, setUploadedFileId] = useState<string | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string>("");
   const [analysisText, setAnalysisText] = useState<string | null>(null);
+  const [userContextInput, setUserContextInput] = useState<string>("");
 
   // Poll for file summary when in analyzing stage
   const { data: summary } = useFileSummary(
@@ -206,9 +208,40 @@ export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
                   <ReactMarkdown>{analysisText}</ReactMarkdown>
                 </div>
               </div>
+
+              {/* Optional user context (FILE-05) */}
+              <div className="space-y-2">
+                <label htmlFor="user-context" className="text-sm font-medium text-muted-foreground">
+                  Add context about your data (optional)
+                </label>
+                <textarea
+                  id="user-context"
+                  value={userContextInput}
+                  onChange={(e) => setUserContextInput(e.target.value)}
+                  placeholder="e.g., This is Q4 2025 sales data. The 'region' column maps to our sales territories..."
+                  className="w-full min-h-[80px] rounded-lg border border-border bg-background p-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-y"
+                  rows={3}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Help the AI understand your data better for more accurate analysis.
+                </p>
+              </div>
+
               <div className="flex justify-center">
                 <button
                   onClick={async () => {
+                    // Send user context if provided (FILE-05)
+                    if (userContextInput.trim() && uploadedFileId) {
+                      try {
+                        await apiClient.post(`/files/${uploadedFileId}/context`, {
+                          context: userContextInput,
+                        });
+                      } catch (error) {
+                        toast.error("Failed to save context");
+                        return;
+                      }
+                    }
+
                     // Invalidate and refetch file list to ensure sidebar updates
                     queryClient.invalidateQueries({ queryKey: ["files"] });
                     await queryClient.refetchQueries({ queryKey: ["files"] });
@@ -229,6 +262,7 @@ export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
                     setUploadedFileId(null);
                     setUploadedFileName("");
                     setAnalysisText(null);
+                    setUserContextInput("");
                     hasTransitioned.current = false;
                   }}
                   className="bg-primary text-primary-foreground rounded py-2 px-6 hover:opacity-90 transition-opacity"

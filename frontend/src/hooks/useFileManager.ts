@@ -4,6 +4,7 @@ import {
   FileListItem,
   FileUploadResponse,
   FileSummaryResponse,
+  FileDetailResponse,
 } from "@/types/file";
 
 /**
@@ -99,6 +100,37 @@ export function useFileSummary(fileId: string | null) {
     refetchInterval: (query) => {
       const data = query.state.data as FileSummaryResponse | undefined;
       return data?.data_summary ? false : 3000;
+    },
+  });
+}
+
+/**
+ * TanStack Query mutation for updating file context (FILE-06)
+ */
+export function useUpdateFileContext() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      fileId,
+      context,
+    }: {
+      fileId: string;
+      context: string;
+    }): Promise<FileDetailResponse> => {
+      const response = await apiClient.post(`/files/${fileId}/context`, {
+        context,
+      });
+      if (!response.ok) {
+        throw new Error("Failed to update file context");
+      }
+      return response.json();
+    },
+    onSuccess: (_data, variables) => {
+      // Invalidate summary to show updated user_context
+      queryClient.invalidateQueries({
+        queryKey: ["files", "summary", variables.fileId],
+      });
     },
   });
 }
