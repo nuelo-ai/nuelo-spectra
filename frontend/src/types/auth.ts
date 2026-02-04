@@ -42,3 +42,13 @@ export interface UserResponse {
   is_active: boolean;
   created_at: string;
 }
+
+export interface ProfileUpdateRequest {
+  first_name?: string;
+  last_name?: string;
+}
+
+export interface ChangePasswordRequest {
+  current_password: string;
+  new_password: string;
+}
