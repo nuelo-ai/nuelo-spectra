@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-02-04
 **Milestone:** v1.0 MVP
-**Status:** Milestone Complete - All 6 Phases Verified (42/42 requirements)
+**Status:** Milestone Complete - All 6 Phases Verified (42/42 requirements) + Phase 1 Gap Closure
 
 ---
 
@@ -12,7 +12,7 @@
 Accurate data analysis through correct, safe Python code generation. If the code is wrong or the sandbox isn't secure, the entire product fails.
 
 **Current Focus:**
-Phase 6 COMPLETE. All 42 v1.0 MVP requirements delivered. Full-stack application ready for end-to-end verification and deployment.
+Phase 1 gap closure COMPLETE. Fixed password reset dev mode detection. UAT Tests 7 & 8 now pass. All 6 phases verified.
 
 **Key Constraint:**
 Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolation) is non-negotiable for production.
@@ -29,7 +29,7 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 ```
 [██████████████████████] 100% (42/42 requirements completed)
 
-Phase 1: [██████████] 3/3 plans COMPLETE (database + auth + password reset)
+Phase 1: [██████████] 4/4 plans COMPLETE (database + auth + password reset + dev mode fix)
 Phase 2: [██████████] 2/2 plans COMPLETE (file service + API routers)
 Phase 3: [██████████] 5/5 plans COMPLETE (foundation + onboarding + validation + coding + integration)
 Phase 4: [██████████] 2/2 plans COMPLETE (SSE events + streaming endpoint + atomic persistence)
@@ -37,10 +37,10 @@ Phase 5: [██████████] 2/2 plans COMPLETE (SandboxRuntime Pro
 Phase 6: [██████████] 9/9 plans COMPLETE (gap closure complete; all requirements verified)
 ```
 
-**Last activity:** 2026-02-04 - Completed 06-09: ChatInterface Wiring (Gap Closure)
+**Last activity:** 2026-02-04 - Completed 01-04: Password Reset Dev Mode Fix (Gap Closure)
 
 **Next Action:**
-Milestone complete (42/42 requirements verified across all 6 phases). Ready for milestone audit to verify cross-phase integration and E2E flows.
+Milestone complete (42/42 requirements verified across all 6 phases). Phase 1 gap closed (UAT Tests 7 & 8 pass). Ready for comprehensive E2E verification and deployment.
 
 ---
 
@@ -63,6 +63,8 @@ Milestone complete (42/42 requirements verified across all 6 phases). Ready for 
 
 | Date | Decision | Impact |
 |------|----------|--------|
+| 2026-02-04 | Explicit placeholder detection for dev mode email service | Original falsy check was fragile - truthy placeholder values like "dev-api-key" triggered production mode. Added _DEV_PLACEHOLDERS set with common placeholder strings; dev mode now detects both empty and placeholder API keys. Implemented in 01-04. |
+| 2026-02-04 | Empty EMAIL_SERVICE_API_KEY for dev mode | Most reliable dev mode signal is empty value not placeholder string. Changed from "dev-api-key" to empty in .env for robust dev mode detection. Implemented in 01-04. |
 | 2026-02-04 | Deferred verification checkpoint to post-Phase 6 | User requested to skip 06-08 checkpoint and verify all of Phase 1-6 together; plan completes without human verification. Full testing deferred to comprehensive end-to-end session. Implemented in 06-08. |
 | 2026-02-04 | Fixed nested button with div + role="button" | Hydration errors break functionality; div with accessibility attributes (role, tabIndex, onKeyDown, aria-label) maintains full UX and keyboard navigation. Implemented in 06-08. |
 | 2026-02-04 | Tailwind CSS custom animations for visual polish | fadeIn, slideUp, slideRight, pulse-gentle, shimmer animations provide smooth transitions across all components; modern vibrant gradient aesthetic with .gradient-primary, .gradient-bg utilities. Implemented in 06-08. |
@@ -214,30 +216,31 @@ Milestone complete (42/42 requirements verified across all 6 phases). Ready for 
 4. **phases/01-backend-foundation-a-authentication/01-01-SUMMARY.md** - Database foundation
 5. **phases/01-backend-foundation-a-authentication/01-02-SUMMARY.md** - JWT authentication
 6. **phases/01-backend-foundation-a-authentication/01-03-SUMMARY.md** - Password reset & API completion
-7. **phases/02-file-upload-management/02-01-SUMMARY.md** - File service foundation
-8. **phases/02-file-upload-management/02-02-SUMMARY.md** - File & Chat API Routers
-9. **phases/03-ai-agents---orchestration/03-01-SUMMARY.md** - Agent Foundation & Config
-10. **phases/03-ai-agents---orchestration/03-02-SUMMARY.md** - Onboarding Agent
-11. **phases/03-ai-agents---orchestration/03-03-SUMMARY.md** - AST-Based Code Validation (TDD)
-12. **phases/04-streaming-infrastructure/04-01-SUMMARY.md** - SSE Events & Stream Writer Integration
-13. **phases/04-streaming-infrastructure/04-02-SUMMARY.md** - SSE Endpoint & Atomic Persistence
-14. **phases/05-sandbox-security---code-execution/05-01-SUMMARY.md** - SandboxRuntime Protocol & E2B Implementation
-15. **phases/05-sandbox-security---code-execution/05-02-SUMMARY.md** - E2B Sandbox Execution Integration
-16. **phases/06-frontend-ui-interactive-data-cards/06-01-SUMMARY.md** - Next.js Frontend Foundation & Authentication
-17. **phases/06-frontend-ui-interactive-data-cards/06-03-SUMMARY.md** - File Management UI with Multi-Tab Interface
-18. **phases/06-frontend-ui-interactive-data-cards/06-04-SUMMARY.md** - Chat Interface with SSE Streaming
-19. **phases/06-frontend-ui-interactive-data-cards/06-05-SUMMARY.md** - Interactive Data Cards with TanStack Table
-20. **phases/06-frontend-ui-interactive-data-cards/06-06-SUMMARY.md** - Download Buttons & Code Display
-21. **phases/06-frontend-ui-interactive-data-cards/06-07-SUMMARY.md** - Settings Page with Profile & Password Management
-22. **phases/06-frontend-ui-interactive-data-cards/06-08-SUMMARY.md** - Visual Polish & Animations
-23. **phases/06-frontend-ui-interactive-data-cards/06-09-SUMMARY.md** - ChatInterface Wiring (Gap Closure)
+7. **phases/01-backend-foundation-a-authentication/01-04-SUMMARY.md** - Password reset dev mode fix
+8. **phases/02-file-upload-management/02-01-SUMMARY.md** - File service foundation
+9. **phases/02-file-upload-management/02-02-SUMMARY.md** - File & Chat API Routers
+10. **phases/03-ai-agents---orchestration/03-01-SUMMARY.md** - Agent Foundation & Config
+11. **phases/03-ai-agents---orchestration/03-02-SUMMARY.md** - Onboarding Agent
+12. **phases/03-ai-agents---orchestration/03-03-SUMMARY.md** - AST-Based Code Validation (TDD)
+13. **phases/04-streaming-infrastructure/04-01-SUMMARY.md** - SSE Events & Stream Writer Integration
+14. **phases/04-streaming-infrastructure/04-02-SUMMARY.md** - SSE Endpoint & Atomic Persistence
+15. **phases/05-sandbox-security---code-execution/05-01-SUMMARY.md** - SandboxRuntime Protocol & E2B Implementation
+16. **phases/05-sandbox-security---code-execution/05-02-SUMMARY.md** - E2B Sandbox Execution Integration
+17. **phases/06-frontend-ui-interactive-data-cards/06-01-SUMMARY.md** - Next.js Frontend Foundation & Authentication
+18. **phases/06-frontend-ui-interactive-data-cards/06-03-SUMMARY.md** - File Management UI with Multi-Tab Interface
+19. **phases/06-frontend-ui-interactive-data-cards/06-04-SUMMARY.md** - Chat Interface with SSE Streaming
+20. **phases/06-frontend-ui-interactive-data-cards/06-05-SUMMARY.md** - Interactive Data Cards with TanStack Table
+21. **phases/06-frontend-ui-interactive-data-cards/06-06-SUMMARY.md** - Download Buttons & Code Display
+22. **phases/06-frontend-ui-interactive-data-cards/06-07-SUMMARY.md** - Settings Page with Profile & Password Management
+23. **phases/06-frontend-ui-interactive-data-cards/06-08-SUMMARY.md** - Visual Polish & Animations
+24. **phases/06-frontend-ui-interactive-data-cards/06-09-SUMMARY.md** - ChatInterface Wiring (Gap Closure)
 
-**Last session:** 2026-02-04T02:38:58Z
-**Stopped at:** Completed 06-09: ChatInterface Wiring - Phase 6 Gap Closure Complete
+**Last session:** 2026-02-04T12:44:06Z
+**Stopped at:** Completed 01-04: Password Reset Dev Mode Fix - Phase 1 Gap Closure Complete
 **Resume file:** None
 
 **Current session status:**
-- Phase 1 COMPLETE: All 3 plans executed successfully
+- Phase 1 COMPLETE: All 4 plans executed successfully (added 01-04 gap closure for dev mode fix)
 - Phase 2 COMPLETE: All 2 plans executed and verified (19/19 must-haves passed)
 - Phase 3 COMPLETE: Plans 03-01, 03-02, 03-03, 03-04, and 03-05 executed (11/11 requirements met)
 - Phase 4 COMPLETE: Plans 04-01 and 04-02 executed (3/3 requirements met)
