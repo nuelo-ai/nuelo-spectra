@@ -65,6 +65,8 @@ All UAT gap closure plans complete (06-10, 06-11, 06-12). Phase 6 finished. Read
 |------|----------|--------|
 | 2026-02-04 | React Context updates via callback injection | TanStack Query mutations (useUpdateProfile) use callback injection pattern (onProfileUpdated parameter) instead of calling other hooks directly (React hooks rules). Enables profile updates to propagate immediately to AuthProvider's React Context, which then triggers top navigation re-render. Implemented in 06-12. |
 | 2026-02-04 | Removed dead useQueryClient invalidation code | useUpdateProfile was invalidating TanStack Query ["user"] that doesn't exist. User data is managed in React Context (AuthProvider useState) not via TanStack Query. Deleted queryClient.invalidateQueries call and useQueryClient import. Implemented in 06-12. |
+| 2026-02-04 | useEffect with hasTransitioned ref for upload state transition | FileUploadZone analysis completion logic moved from component body to useEffect hook with ref guard. Prevents race condition from multiple renders creating duplicate setTimeout callbacks. Ensures one-time state transition. Implemented in 06-11. |
+| 2026-02-04 | Display analysis before dialog close with user-triggered continue | Upload dialog now shows data_summary in scrollable container when ready. User clicks "Continue to Chat" button which awaits queryClient.refetchQueries() before closing. Guarantees sidebar file list updates complete. Replaced auto-close setTimeout pattern. Implemented in 06-11. |
 | 2026-02-04 | Manual context manager entry for PostgresSaver | Since the graph is cached globally via get_or_create_graph() and reused across requests, using standard `with` block would close connection prematurely. Manual __enter__() keeps checkpointer alive for application lifetime. Implemented in 06-10. |
 | 2026-02-04 | Convert SQLAlchemy async URL to psycopg format | settings.database_url uses SQLAlchemy format (postgresql+asyncpg://) but PostgresSaver expects psycopg format (postgresql://). Simple string replacement converts between formats. Implemented in 06-10. |
 | 2026-02-04 | Logging configured as first import in main.py | Placed logging.basicConfig() as very first lines in main.py before any other imports to ensure all subsequent logger.getLogger() calls inherit INFO level configuration. Implemented in 06-10. |
@@ -240,7 +242,8 @@ All UAT gap closure plans complete (06-10, 06-11, 06-12). Phase 6 finished. Read
 23. **phases/06-frontend-ui-interactive-data-cards/06-08-SUMMARY.md** - Visual Polish & Animations
 24. **phases/06-frontend-ui-interactive-data-cards/06-09-SUMMARY.md** - ChatInterface Wiring (Gap Closure)
 25. **phases/06-frontend-ui-interactive-data-cards/06-10-SUMMARY.md** - Backend Logging & PostgresSaver Fix (UAT Gap Closure)
-26. **phases/06-frontend-ui-interactive-data-cards/06-12-SUMMARY.md** - Profile Update Navigation Refresh (UAT Gap Closure Final Plan)
+26. **phases/06-frontend-ui-interactive-data-cards/06-11-SUMMARY.md** - FileUploadZone Race Condition Fix (UAT Gap Closure)
+27. **phases/06-frontend-ui-interactive-data-cards/06-12-SUMMARY.md** - Profile Update Navigation Refresh (UAT Gap Closure Final Plan)
 
 **Last session:** 2026-02-04T22:03:18Z
 **Stopped at:** Completed 06-12: Profile Update Navigation Refresh - UAT Gap Closure Complete
@@ -365,6 +368,14 @@ All UAT gap closure plans complete (06-10, 06-11, 06-12). Phase 6 finished. Read
     - Unblocked UAT Test 3 (password reset console link now visible)
     - Unblocked UAT Tests 12-21 (AI chat functionality now works)
     - Fixes: logging configuration, LangGraph PostgreSQL checkpointing
+  - Plan 06-11: FileUploadZone Race Condition Fix (UAT Gap Closure) (2min) COMPLETE
+    - Replaced component body side-effect code with useEffect hook for analysis completion
+    - Added hasTransitioned ref to prevent duplicate state transitions
+    - Display analysis result (data_summary) in scrollable container when upload completes
+    - Added "Continue to Chat" button that awaits queryClient.refetchQueries() before closing
+    - Eliminated auto-close setTimeout pattern ensuring sidebar file list populates reliably
+    - Unblocks UAT Tests 4-6 (file upload analysis visibility, sidebar file list, file tab opening)
+    - Fixes: race condition, analysis visibility, sidebar file list population
   - Plan 06-12: Profile Update Navigation Refresh (UAT Gap Closure) (1min) COMPLETE
     - Added updateUser method to AuthProvider (React Context state update)
     - Changed useUpdateProfile to accept onProfileUpdated callback parameter
