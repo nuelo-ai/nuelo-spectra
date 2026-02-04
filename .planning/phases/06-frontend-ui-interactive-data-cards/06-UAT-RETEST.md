@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 06-frontend-ui-interactive-data-cards
 source:
   - 06-10-SUMMARY.md
@@ -90,17 +90,30 @@ skipped: 8
   reason: "User reported: fail. I uploaded the file. the upload process was good with progress bar showing. At the end of the process, the bar shows 100% and it shows \"Ready\". However, nothing happened after that. I closed the dialog and it brought me back to the dashboard without showing any Analysis result. The left bar does not show the file list and there is no tab opened as well"
   severity: major
   test: 2
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "useFileSummary query disables when uploadStage transitions to 'ready', causing React Query to clear summary data before UI can render it"
+  artifacts:
+    - path: "frontend/src/components/file/FileUploadZone.tsx"
+      line: 32
+      issue: "Hook passes null fileId when uploadStage !== 'analyzing', disabling query and clearing data"
+  missing:
+    - "Keep useFileSummary query enabled in ready state"
+    - "Change condition to: uploadStage === 'analyzing' || uploadStage === 'ready' ? uploadedFileId : null"
+  debug_session: ".planning/debug/file-upload-analysis-visibility-uat.md"
 
 - truth: "After uploading file and clicking Continue to Chat, sidebar file list populates with uploaded file"
   status: failed
   reason: "User reported: fail. No file listed on the sidebar"
   severity: major
   test: 3
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "TanStack Query invalidateQueries() doesn't trigger automatic refetch for already-mounted components - FileSidebar won't update until next mount or explicit refetchQueries() call"
+  artifacts:
+    - path: "frontend/src/hooks/useFileManager.ts"
+      line: 55
+      issue: "useUploadFile mutation's onSuccess only calls invalidateQueries() instead of refetchQueries()"
+    - path: "frontend/src/components/file/FileUploadZone.tsx"
+      line: 79
+      issue: "Redundant manual invalidation (already done by mutation)"
+  missing:
+    - "Change useUploadFile mutation onSuccess to call refetchQueries() instead of invalidateQueries()"
+    - "Remove redundant manual invalidation from FileUploadZone.tsx line 79"
+  debug_session: ".planning/debug/sidebar-file-list-not-populating.md"
