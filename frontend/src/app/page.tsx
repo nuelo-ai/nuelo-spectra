@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 
 /**
- * Root page - redirects to login.
- * Users will be redirected to dashboard after authentication.
+ * Root page - redirects to dashboard.
+ * Auth check happens in dashboard layout.
  */
 export default function Home() {
-  redirect("/login");
+  redirect("/dashboard");
 }

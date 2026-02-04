@@ -3,11 +3,13 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { FileSidebar } from "@/components/file/FileSidebar";
 
 /**
  * Dashboard layout - protected route that requires authentication.
  * Shows loading spinner while checking auth state.
  * Redirects to login if not authenticated.
+ * Layout: FileSidebar (left) + main content (right)
  */
 export default function DashboardLayout({
   children,
@@ -37,5 +39,10 @@ export default function DashboardLayout({
     return null;
   }
 
-  return <div className="min-h-screen">{children}</div>;
+  return (
+    <div className="flex h-screen overflow-hidden">
+      <FileSidebar />
+      <main className="flex-1 overflow-y-auto">{children}</main>
+    </div>
+  );
 }
