@@ -37,12 +37,21 @@ export default function DashboardPage() {
               {tabs.map((tab) => {
                 const isActive = tab.fileId === currentTabId;
                 return (
-                  <button
+                  <div
                     key={tab.fileId}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => switchTab(tab.fileId)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        switchTab(tab.fileId);
+                      }
+                    }}
                     className={`
                       group flex items-center gap-2 px-4 py-2 rounded-t-lg
                       transition-all duration-200 min-w-[180px] max-w-[220px]
+                      cursor-pointer
                       ${
                         isActive
                           ? "bg-background text-foreground border-b-2 border-primary"
@@ -60,10 +69,11 @@ export default function DashboardPage() {
                         closeTab(tab.fileId);
                       }}
                       className="opacity-0 group-hover:opacity-100 hover:bg-accent rounded p-0.5 transition-opacity"
+                      aria-label={`Close ${tab.fileName}`}
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
-                  </button>
+                  </div>
                 );
               })}
             </div>
