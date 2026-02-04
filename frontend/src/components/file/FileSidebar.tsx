@@ -85,19 +85,26 @@ export function FileSidebar() {
         {/* File list */}
         <ScrollArea className="flex-1 px-2 py-2">
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <div className="space-y-2 p-2">
+              {/* Skeleton loader for files */}
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="skeleton h-12 rounded-lg" />
+              ))}
             </div>
           ) : files && files.length > 0 ? (
             <div className="space-y-1">
-              {files.map((file) => {
+              {files.map((file, index) => {
                 const isActive = currentTabId === file.id;
                 return (
                   <div
                     key={file.id}
+                    style={{
+                      animation: "var(--animate-slideRight)",
+                      animationDelay: `${index * 50}ms`,
+                    }}
                     className={`
-                      group rounded-lg p-2 transition-colors
-                      ${isActive ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"}
+                      group rounded-lg p-2 transition-all duration-200 ease-in-out
+                      ${isActive ? "bg-accent text-accent-foreground border-l-2 border-l-primary" : "hover:bg-accent/50"}
                     `}
                   >
                     <div className="flex items-center gap-2">
@@ -109,7 +116,7 @@ export function FileSidebar() {
                       >
                         {truncateFilename(file.original_filename)}
                       </button>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 ease-in-out">
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -151,9 +158,10 @@ export function FileSidebar() {
               })}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center opacity-60">
               <FileSpreadsheet className="h-12 w-12 text-muted-foreground mb-3" />
-              <p className="text-sm text-muted-foreground">No files yet</p>
+              <p className="text-sm text-muted-foreground font-medium">No files yet</p>
+              <p className="text-xs text-muted-foreground mt-1">Upload your first file to get started</p>
             </div>
           )}
         </ScrollArea>

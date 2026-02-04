@@ -123,6 +123,7 @@ export function ChatMessage({
 
   return (
     <div
+      style={{ animation: "var(--animate-fadeIn)" }}
       className={`flex gap-3 p-4 ${
         isUser ? "flex-row-reverse" : "flex-row"
       }`}
@@ -132,7 +133,7 @@ export function ChatMessage({
         <AvatarFallback
           className={
             isUser
-              ? "bg-gradient-to-br from-blue-500 to-purple-600 text-white"
+              ? "gradient-primary text-white"
               : "bg-muted text-muted-foreground"
           }
         >
@@ -147,12 +148,12 @@ export function ChatMessage({
         }`}
       >
         <div
-          className={`rounded-lg px-4 py-2 ${
+          className={`rounded-2xl px-4 py-2.5 transition-all duration-200 ${
             isUser
-              ? "bg-gradient-to-br from-blue-500 to-purple-600 text-white"
+              ? "gradient-primary text-white shadow-sm"
               : isError
-              ? "bg-red-50 border border-red-200 text-red-900"
-              : "bg-muted text-foreground"
+              ? "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-900 dark:text-red-300"
+              : "bg-muted text-foreground border-l-2 border-l-primary/30"
           }`}
         >
           {/* Error icon */}
@@ -164,7 +165,7 @@ export function ChatMessage({
           )}
 
           {/* Message text */}
-          <p className="text-sm whitespace-pre-wrap break-words">
+          <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
             {displayContent}
           </p>
 

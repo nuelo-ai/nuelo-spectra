@@ -143,14 +143,37 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
       </div>
 
       {/* Messages area */}
-      <ScrollArea className="flex-1">
-        <div ref={scrollRef} className="min-h-full">
+      <ScrollArea className="flex-1 smooth-scrollbar">
+        <div ref={scrollRef} className="min-h-full" style={{ scrollBehavior: "smooth" }}>
+          {/* Loading state */}
+          {isLoading && (
+            <div className="space-y-4 p-4">
+              {/* Skeleton chat messages */}
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex gap-3">
+                  <div className="skeleton h-8 w-8 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <div className="skeleton h-16 w-2/3 rounded-lg" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Empty state */}
           {showEmptyState && (
             <div className="flex items-center justify-center h-full p-8 text-center">
-              <div className="max-w-md">
-                <p className="text-muted-foreground">
+              <div className="max-w-md opacity-60" style={{ animation: "var(--animate-fadeIn)" }}>
+                <div className="mb-4">
+                  <div className="h-16 w-16 rounded-full gradient-primary mx-auto mb-3 flex items-center justify-center">
+                    <span className="text-2xl text-white">💬</span>
+                  </div>
+                </div>
+                <p className="text-muted-foreground font-medium">
                   Ask a question about your data to get started
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Your AI assistant will analyze your data and provide insights
                 </p>
               </div>
             </div>
@@ -234,8 +257,15 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
 
       {/* Status indicator */}
       {currentStatus && (
-        <div className="px-4 py-2 border-t bg-muted/50">
-          <p className="text-xs text-muted-foreground">{currentStatus}</p>
+        <div className="px-4 py-2 border-t bg-muted/50" style={{ animation: "var(--animate-slideUp)" }}>
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1">
+              <div className="h-1.5 w-1.5 rounded-full bg-primary" style={{ animation: "var(--animate-pulse-gentle)", animationDelay: "0ms" }} />
+              <div className="h-1.5 w-1.5 rounded-full bg-primary" style={{ animation: "var(--animate-pulse-gentle)", animationDelay: "200ms" }} />
+              <div className="h-1.5 w-1.5 rounded-full bg-primary" style={{ animation: "var(--animate-pulse-gentle)", animationDelay: "400ms" }} />
+            </div>
+            <p className="text-xs text-muted-foreground">{currentStatus}</p>
+          </div>
         </div>
       )}
 

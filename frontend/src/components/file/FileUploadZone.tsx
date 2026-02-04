@@ -139,11 +139,11 @@ export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
           {...getRootProps()}
           className={`
             border-2 border-dashed rounded-lg p-12 text-center cursor-pointer
-            transition-all duration-200
+            transition-all duration-200 ease-in-out
             ${
               isDragActive
-                ? "border-primary bg-primary/5"
-                : "border-border hover:border-primary/50 hover:bg-accent/50"
+                ? "border-primary bg-primary/5 scale-[1.02]"
+                : "border-border hover:border-primary/50 hover:bg-accent/50 scale-100"
             }
           `}
         >
@@ -168,27 +168,29 @@ export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
           {/* File icon and stage indicator */}
           <div className="flex flex-col items-center gap-3">
             {uploadStage === "ready" ? (
-              <div className="rounded-full p-3 bg-green-500/10">
-                <CheckCircle2 className="h-12 w-12 text-green-500" />
+              <div className="rounded-full p-3 bg-green-500/10" style={{ animation: "var(--animate-fadeIn)" }}>
+                <CheckCircle2 className="h-12 w-12 text-green-500" style={{ animation: "var(--animate-slideUp)" }} />
               </div>
             ) : (
               <div className="rounded-full p-3 bg-primary/10">
-                <FileSpreadsheet className="h-12 w-12 text-primary animate-pulse" />
+                <FileSpreadsheet className="h-12 w-12 text-primary" style={{ animation: "var(--animate-pulse-gentle)" }} />
               </div>
             )}
-            <p className="font-medium text-lg">{getStageText()}</p>
+            <p className="font-medium text-lg transition-opacity duration-300">{getStageText()}</p>
           </div>
 
           {/* Progress bar with gradient */}
           <div className="space-y-2">
-            <Progress
-              value={progress}
-              className="h-2"
-            />
+            <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full gradient-primary transition-all duration-300 ease-out"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
             <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Uploading</span>
-              <span>Analyzing</span>
-              <span>Ready</span>
+              <span className={uploadStage === "uploading" ? "font-medium text-primary" : ""}>Uploading</span>
+              <span className={uploadStage === "analyzing" ? "font-medium text-primary" : ""}>Analyzing</span>
+              <span className={uploadStage === "ready" ? "font-medium text-green-500" : ""}>Ready</span>
             </div>
           </div>
 

@@ -76,10 +76,11 @@ export function DataCard({
     <Collapsible
       open={!collapsed}
       onOpenChange={toggleCollapse}
-      className="rounded-lg border bg-card shadow-sm"
+      style={{ animation: "var(--animate-slideUp)" }}
+      className="rounded-lg border bg-card shadow-sm border-l-4 border-l-primary/40"
     >
       {/* Section 1: Query Brief (always visible in header) */}
-      <CollapsibleTrigger className="w-full px-6 py-4 flex items-start gap-3 hover:bg-muted/50 transition-colors">
+      <CollapsibleTrigger className="w-full px-6 py-4 flex items-start gap-3 hover:bg-muted/50 transition-all duration-200 ease-in-out">
         <div className="flex-1 text-left">
           <div className="flex items-center gap-2 mb-1">
             <Badge variant="secondary" className="text-xs">
@@ -89,7 +90,7 @@ export function DataCard({
           <h3 className="font-medium text-sm">{queryBrief || "Query in progress..."}</h3>
         </div>
         <ChevronDown
-          className={`h-5 w-5 text-muted-foreground shrink-0 transition-transform ${
+          className={`h-5 w-5 text-muted-foreground shrink-0 transition-transform duration-300 ease-in-out ${
             collapsed ? "-rotate-90" : ""
           }`}
         />
@@ -123,11 +124,11 @@ export function DataCard({
         ) : isStreaming ? (
           <div className="space-y-2">
             <h4 className="text-sm font-medium text-muted-foreground">Data Results</h4>
-            <div className="flex items-center justify-center p-8 border rounded-lg bg-muted/20">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                Loading data...
-              </div>
+            <div className="space-y-2 p-4 border rounded-lg bg-muted/20">
+              {/* Skeleton loader for table */}
+              <div className="skeleton h-8 w-full rounded" />
+              <div className="skeleton h-6 w-full rounded" />
+              <div className="skeleton h-6 w-3/4 rounded" />
             </div>
           </div>
         ) : null}
@@ -154,8 +155,11 @@ export function DataCard({
         ) : isStreaming ? (
           <div className="space-y-2">
             <h4 className="text-sm font-medium text-muted-foreground">Analysis</h4>
-            <div className="rounded-lg bg-muted/30 p-4">
-              <TypingIndicator />
+            <div className="rounded-lg bg-muted/30 p-4 space-y-2">
+              {/* Skeleton loader for explanation */}
+              <div className="skeleton h-4 w-full rounded" />
+              <div className="skeleton h-4 w-5/6 rounded" />
+              <div className="skeleton h-4 w-4/5 rounded" />
             </div>
           </div>
         ) : null}
