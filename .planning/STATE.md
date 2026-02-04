@@ -22,25 +22,25 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 ## Current Position
 
 **Phase:** 6 of 6 - Frontend UI & Interactive Data Cards
-**Plan:** 7 of 12 plans complete
+**Plan:** 5 of 12 plans complete
 **Status:** In Progress
 
 **Progress Bar:**
 ```
-[████████████████████░] 81% (35/42 requirements completed)
+[████████████████████░] 83% (36/42 requirements completed)
 
 Phase 1: [██████████] 3/3 plans COMPLETE (database + auth + password reset)
 Phase 2: [██████████] 2/2 plans COMPLETE (file service + API routers)
 Phase 3: [██████████] 5/5 plans COMPLETE (foundation + onboarding + validation + coding + integration)
 Phase 4: [██████████] 2/2 plans COMPLETE (SSE events + streaming endpoint + atomic persistence)
 Phase 5: [██████████] 2/2 plans COMPLETE (SandboxRuntime Protocol + E2B execution integration)
-Phase 6: [███████░░░] 7/12 plans (foundation + auth + file management + chat + settings)
+Phase 6: [█████░░░░░] 5/12 plans (foundation + auth + file management + chat + data cards)
 ```
 
-**Last activity:** 2026-02-04 - Completed 06-07: Settings Page with Profile & Password Management
+**Last activity:** 2026-02-04 - Completed 06-05: Interactive Data Cards with TanStack Table
 
 **Next Action:**
-Continue Phase 6 implementation: Data Cards visualization
+Continue Phase 6 implementation: download functionality, code display, settings page
 
 ---
 
@@ -63,6 +63,10 @@ Continue Phase 6 implementation: Data Cards visualization
 
 | Date | Decision | Impact |
 |------|----------|--------|
+| 2026-02-04 | Collapsible component for card expand/collapse | Prevents visual clutter with multiple result cards; auto-collapse previous cards when new card completes; manual toggle via header click. Implemented in 06-05. |
+| 2026-02-04 | Parse execution_result as JSON for table data | Backend returns execution results as JSON strings; ChatMessage handles parsing and passes structured data to DataCard with columns/rows. Implemented in 06-05. |
+| 2026-02-04 | Progressive rendering via streaming events | DataCard shows sections as data becomes available (brief -> table -> explanation); receives isStreaming prop and shows loading states for pending sections. Implemented in 06-05. |
+| 2026-02-04 | TanStack Table v8 for data tables | Industry standard headless table library with built-in sorting/filtering/pagination; DataTable component fully interactive without custom state management. Implemented in 06-05. |
 | 2026-02-04 | TanStack Query invalidates user query on profile update | useUpdateProfile invalidates ["user"] query key after success; triggers automatic refetch to update UI everywhere; cleaner than manual state updates. Implemented in 06-07. |
 | 2026-02-04 | Top navigation bar with user menu | Added header above sidebar/content for persistent access to Settings and Logout; user avatar shows initials from first/last name with email fallback. Implemented in 06-07. |
 | 2026-02-04 | Client-side password validation with backend verification | Client validates min 8 chars and confirm match; backend verifies current password (401 on failure); inline error messages for immediate feedback. Implemented in 06-07. |
@@ -151,8 +155,8 @@ Continue Phase 6 implementation: Data Cards visualization
 - [x] User settings endpoints (profile update, password change) - completed in 06-02
 - [x] Zustand tab store and file manager hooks - completed in 06-03
 - [x] Chat interface with SSE streaming - completed in 06-04
-- [x] Settings page with profile/password management - completed in 06-07
-- [ ] Execute 06-05: Data Cards visualization
+- [x] Data Cards visualization with progressive rendering - completed in 06-05
+- [ ] Execute remaining Phase 6 plans: download functionality, code display, settings page
 
 **Phase 6 Progress:**
 - [x] Frontend foundation (Next.js 16, TypeScript, Tailwind CSS 4, shadcn/ui) - 06-01 complete
@@ -161,8 +165,9 @@ Continue Phase 6 implementation: Data Cards visualization
 - [x] User settings endpoints and UI - 06-02 complete
 - [x] Zustand tab store for multi-tab file management - 06-03 complete
 - [x] Chat interface with SSE streaming, typing indicator, auto-scroll - 06-04 complete
-- [x] Settings page with profile editing, password change, account info - 06-07 complete
-- [ ] Data Cards visualization with progressive rendering - 06-05 planned
+- [x] Data Cards visualization with progressive rendering - 06-05 complete
+- [ ] Download functionality (CSV/JSON/PNG export) - 06-06 planned
+- [ ] Settings page - 06-07 planned
 
 **Phase 3 Enhancements (Backlog):**
 - [ ] Add OpenRouter and Ollama LLM provider support (see `.planning/todos/pending/2026-02-03-add-openrouter-and-ollama-llm-support.md`)
@@ -249,7 +254,7 @@ Continue Phase 6 implementation: Data Cards visualization
     - File reading errors handled gracefully with user-friendly messages
     - halt_node provides tailored messages for different failure types
     - Requirements covered: EXEC-01, EXEC-02, EXEC-03, EXEC-04, EXEC-05, AGENT-09
-- Phase 6 IN PROGRESS: 2/12 plans executed (4/12 requirements met)
+- Phase 6 IN PROGRESS: 5/12 plans executed (6/12 requirements met)
   - Plan 06-01: Next.js Frontend Foundation & Authentication (7min) COMPLETE
     - Next.js 16 project with TypeScript, Tailwind CSS 4, App Router, shadcn/ui
     - API client with automatic JWT token injection and 401 refresh handling
@@ -271,6 +276,22 @@ Continue Phase 6 implementation: Data Cards visualization
     - Auto-poll file summary every 3s until onboarding completes
     - shadcn/ui: dialog, progress, alert-dialog, scroll-area, tooltip
     - Requirement covered: UI-04 (file upload and management UI)
+  - Plan 06-04: Chat Interface with SSE Streaming (2min) COMPLETE
+    - useSSEStream hook: POST-based SSE with fetch + ReadableStream
+    - useChatMessages hooks: TanStack Query for history, optimistic UI updates
+    - ChatInterface: auto-scroll, status indicator, empty state
+    - ChatInput: auto-expanding textarea, Enter to send, Shift+Enter newline
+    - ChatMessage: user/assistant styling, streaming cursor, relative timestamps
+    - TypingIndicator: animated dots while waiting for AI response
+    - Requirements covered: UI-05 (chat interface)
+  - Plan 06-05: Interactive Data Cards with TanStack Table (4min) COMPLETE
+    - DataTable: TanStack Table v8 with sorting (click headers), filtering (global search), pagination (10 rows/page)
+    - DataCard: progressive rendering (Query Brief -> Data Table -> AI Explanation)
+    - Collapsible behavior: auto-collapse previous cards when new card completes
+    - ChatMessage integration: renders DataCard for structured data (metadata_json with generated_code/execution_result)
+    - ChatInterface: manages collapse state, parses streaming events for progressive DataCard rendering
+    - shadcn/ui: table, collapsible, badge components
+    - Requirements covered: CARD-01, CARD-02, CARD-03, CARD-04
 
 ---
 
