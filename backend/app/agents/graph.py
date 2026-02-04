@@ -292,9 +292,37 @@ async def execute_in_sandbox(
     # Create E2B runtime and execute in thread pool (SDK is synchronous)
     runtime = E2BSandboxRuntime(timeout_seconds=settings.sandbox_timeout_seconds)
 
+    # Prepend file loading code if data file exists
+    generated_code = state.get("generated_code", "")
+    if data_file and data_filename:
+        # Inject pandas import and file loading before generated code
+        # Detect file type by extension and use appropriate reader
+        file_ext = os.path.splitext(data_filename)[1].lower()
+        if file_ext in ['.xlsx', '.xls']:
+            # Excel file - use read_excel
+            file_loading_code = f"""import pandas as pd
+df = pd.read_excel('/home/user/{data_filename}')
+
+"""
+        else:
+            # CSV file - use read_csv with encoding fallback
+            file_loading_code = f"""import pandas as pd
+try:
+    df = pd.read_csv('/home/user/{data_filename}', encoding='utf-8')
+except UnicodeDecodeError:
+    try:
+        df = pd.read_csv('/home/user/{data_filename}', encoding='latin-1')
+    except UnicodeDecodeError:
+        df = pd.read_csv('/home/user/{data_filename}', encoding='cp1252')
+
+"""
+        full_code = file_loading_code + generated_code
+    else:
+        full_code = generated_code
+
     result: ExecutionResult = await asyncio.to_thread(
         runtime.execute,
-        code=state.get("generated_code", ""),
+        code=full_code,
         timeout=float(settings.sandbox_timeout_seconds),
         data_file=data_file,
         data_filename=data_filename,
@@ -302,9 +330,27 @@ async def execute_in_sandbox(
 
     # Handle execution result
     if result.success:
-        # Success: build execution_result string from stdout
+        # Success: parse JSON output from stdout
+        import json
+        execution_result = None
+
         if result.stdout:
-            execution_result = "\n".join(result.stdout)
+            # Try to parse JSON from last line of stdout (where print(json.dumps()) outputs)
+            stdout_text = "\n".join(result.stdout)
+            try:
+                # Look for JSON in stdout
+                for line in reversed(result.stdout):
+                    if line.strip().startswith('{') and line.strip().endswith('}'):
+                        parsed = json.loads(line.strip())
+                        if "result" in parsed:
+                            execution_result = json.dumps(parsed["result"])
+                            break
+                # If no JSON found, use raw stdout
+                if execution_result is None:
+                    execution_result = stdout_text
+            except json.JSONDecodeError:
+                # Fallback: use raw stdout if JSON parsing fails
+                execution_result = stdout_text
         elif result.results:
             # Fallback: use results list if no stdout
             execution_result = str(result.results)

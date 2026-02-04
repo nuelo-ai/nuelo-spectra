@@ -51,6 +51,9 @@ class ChatAgentState(TypedDict):
     data_summary: str
     """Data summary from Onboarding Agent (loaded into chat context)."""
 
+    data_profile: str
+    """Structured JSON data profile with column names, types, and sample data."""
+
     user_context: str
     """Accumulated user context and refinements."""
 

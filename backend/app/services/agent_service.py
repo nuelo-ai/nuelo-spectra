@@ -279,6 +279,21 @@ async def run_chat_query_stream(
         }
         return
 
+    # Generate data profile JSON for coding agent (quick operation, only reads 5 rows)
+    from app.agents.onboarding import OnboardingAgent
+    agent = OnboardingAgent()
+    try:
+        data_profile = await agent.profile_data(
+            file_path=file_record.file_path,
+            file_type=file_record.file_type
+        )
+        # Serialize to JSON string for prompt
+        import json
+        data_profile_json = json.dumps(data_profile, indent=2)
+    except Exception as e:
+        logger.error(f"Failed to generate data profile: {e}")
+        data_profile_json = "{}"
+
     # Get or create compiled graph
     graph = get_or_create_graph()
 
@@ -292,6 +307,7 @@ async def run_chat_query_stream(
         "user_id": str(user_id),
         "user_query": user_query,
         "data_summary": file_record.data_summary,
+        "data_profile": data_profile_json,  # Add structured data profile
         "user_context": file_record.user_context or "",
         "file_path": file_record.file_path,
         "generated_code": "",

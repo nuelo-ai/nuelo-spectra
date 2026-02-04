@@ -56,8 +56,11 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
     if (completedData) {
       // Invalidate and refetch messages from server
       invalidateMessages(fileId);
-      // Reset stream state
-      resetStream();
+
+      // Reset stream state after a delay to allow messages to load
+      const timer = setTimeout(() => {
+        resetStream();
+      }, 500);
 
       // Auto-collapse previous cards when new card completes
       if (chatData?.messages) {
@@ -74,6 +77,8 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
         });
         setCollapsedCards(newCollapsed);
       }
+
+      return () => clearTimeout(timer);
     }
   }, [completedData, fileId, invalidateMessages, resetStream, chatData?.messages]);
 
@@ -125,8 +130,12 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
       }
     }
 
-    // Explanation is the streamed text
-    const explanation = streamedText || undefined;
+    // Extract analysis/explanation from data_analysis node
+    let explanation = streamedText || undefined;
+    const analysisEvent = events.find((e) => e.type === "node_complete" && e.node === "data_analysis");
+    if (analysisEvent?.data?.analysis) {
+      explanation = analysisEvent.data.analysis;
+    }
 
     return { queryBrief, tableData, explanation };
   };
@@ -203,7 +212,7 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
                   events.some(
                     (e) =>
                       e.type === "node_complete" &&
-                      (e.node === "execute" || e.node === "coding")
+                      (e.node === "execute" || e.node === "coding" || e.node === "data_analysis")
                   ) ? (
                     // Render as DataCard for structured response
                     <div className="p-4">

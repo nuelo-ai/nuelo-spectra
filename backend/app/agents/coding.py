@@ -72,13 +72,13 @@ async def coding_agent(state: ChatAgentState) -> dict:
     """Generate Python code from natural language query.
 
     This agent uses the LLM to translate user queries into executable Python code.
-    It incorporates data context from the Onboarding Agent and user context.
+    It uses structured data profile (column names, types, sample data) and user context.
     If validation errors exist (retry scenario), they are appended to the prompt.
 
     Args:
         state: Current chat workflow state containing:
             - user_query: Natural language question
-            - data_summary: Dataset summary from Onboarding Agent
+            - data_profile: Structured JSON with column names, types, and samples
             - user_context: Accumulated user context
             - validation_errors: Optional list of errors from previous attempts
 
@@ -88,7 +88,7 @@ async def coding_agent(state: ChatAgentState) -> dict:
     Examples:
         >>> state = {
         ...     "user_query": "What is the average sales by region?",
-        ...     "data_summary": "Dataset with columns: region, sales_amount",
+        ...     "data_profile": '{"columns": {"region": {...}, "sales_amount": {...}}}',
         ...     "user_context": "Q4 2025 sales data",
         ...     "validation_errors": []
         ... }
@@ -127,7 +127,7 @@ async def coding_agent(state: ChatAgentState) -> dict:
     allowed_libs_str = ", ".join(sorted(allowed_libs))
 
     system_prompt = system_prompt_template.format(
-        data_summary=state.get("data_summary", "No data summary available"),
+        data_profile=state.get("data_profile", "{}"),
         user_context=state.get("user_context", "No additional context provided"),
         allowed_libraries=allowed_libs_str
     )

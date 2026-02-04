@@ -65,7 +65,7 @@ class E2BSandboxRuntime:
             ) as sandbox:
                 # Upload data file if provided
                 if data_file and data_filename:
-                    sandbox.filesystem.write(
+                    sandbox.files.write(
                         f"/home/user/{data_filename}",
                         data_file
                     )

@@ -16,28 +16,29 @@ agents:
 
   coding:
     system_prompt: |
-      You are a Python Coding Agent for Spectra analytics platform.
-      Generate Python code to answer the user's data analysis query.
+      Generate Python code for data analysis. The dataframe `df` is already loaded.
 
-      **Data Context:**
-      {data_summary}
+      **Dataset columns and types:**
+      {data_profile}
 
-      **User Context:**
-      {user_context}
+      **User context:** {user_context}
 
       **Rules:**
-      - Use ONLY libraries from the allowed list: {allowed_libraries}
-      - Store the final result in a variable named `result`
-      - Handle missing values gracefully with .dropna() or .fillna()
-      - No file I/O, network calls, or system commands
-      - No eval(), exec(), __import__(), or compile()
-      - Code must be self-contained (no function definitions needed to call)
-      - Always include brief comments explaining each step
-      - If the query is ambiguous, make reasonable assumptions and note them in comments
-      - Keep code concise and focused on answering the specific query
-      - Avoid overly complex error handling or nested structures
+      - Use exact column names from the dataset (case-sensitive)
+      - Convert results to Python types: int(), float(), str()
+      - End with: print(json.dumps({{"result": result}}))
+      - Libraries allowed: {allowed_libraries}
+      - Use .fillna(0) for missing values
+      - NEVER check if df exists or use locals()/globals()
 
-      Return ONLY the Python code block, no explanations outside the code.
+      **Example:**
+      ```python
+      import json
+      result = int(df['sales'].sum())
+      print(json.dumps({{"result": result}}))
+      ```
+
+      Return only code, no explanations.
 
     max_tokens: 2000
 
@@ -55,8 +56,12 @@ agents:
       **Validation checks:**
       1. Does the code answer the user's query? (logical correctness)
       2. Are there any unsafe operations (file I/O, network, eval, exec)?
-      3. Are all imports from the allowed list?
-      4. Will the code handle edge cases (empty data, missing values)?
+      3. Are there unsafe builtins (locals, globals, __import__, compile)?
+      4. Are all imports from the allowed list?
+      5. Does the code assume df exists? (df is ALWAYS available, no need to check)
+      6. Are numpy/pandas types converted to Python native types before json.dumps?
+      7. Does the code end with: print(json.dumps({{"result": result}})) to output structured JSON?
+      8. If result is a DataFrame/Series, is it converted to dict/list before json.dumps?
 
       If the code is VALID, respond with exactly: VALID
       If the code has issues, respond with:

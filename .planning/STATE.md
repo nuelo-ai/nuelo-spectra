@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-02-04
 **Milestone:** v1.0 MVP
-**Status:** Critical Fixes Verified - All 4 ad-hoc fixes tested and working (proxy bypass, dialog widths, overflow). Ready for UAT round 4 or phase verification.
+**Status:** Backend Chat Fully Functional - 9 critical backend fixes complete. Chat queries execute successfully with structured JSON output. Frontend streaming display needs fix (messages load after refresh). Ready for formal UAT Round 4.
 
 ---
 
@@ -12,7 +12,7 @@
 Accurate data analysis through correct, safe Python code generation. If the code is wrong or the sandbox isn't secure, the entire product fails.
 
 **Current Focus:**
-Critical fixes verified after UAT round 3. Bypassed broken Next.js proxy (307 redirects dropping auth headers), fixed dialog width CSS specificity for both upload and info modals, resolved viewport overflow. All functionality tested and working: sidebar populates, upload flow complete, dialogs properly sized.
+Completed 9 critical backend fixes to make chat functionality work end-to-end. Chat queries now execute in E2B sandbox, return structured JSON results, use exact column names from data profile. Backend proven working with test query returning ₹31,494,190 for bag category sales. Frontend streaming display pending fix.
 
 **Key Constraint:**
 Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolation) is non-negotiable for production.
@@ -22,8 +22,8 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 ## Current Position
 
 **Phase:** 6 of 6 - Frontend UI & Interactive Data Cards
-**Plan:** 18 plans complete + 4 ad-hoc fixes verified (proxy bypass, 2x dialog width, overflow)
-**Status:** All critical gaps resolved - sidebar auth working, dialogs properly sized, upload flow complete
+**Plan:** 18 plans complete + 9 critical backend fixes + frontend streaming pending
+**Status:** Backend chat fully functional - queries execute, results return. Frontend needs streaming display fix.
 
 **Progress Bar:**
 ```
@@ -34,15 +34,15 @@ Phase 2: [██████████] 2/2 plans COMPLETE (file service + API
 Phase 3: [██████████] 5/5 plans COMPLETE (foundation + onboarding + validation + coding + integration)
 Phase 4: [██████████] 2/2 plans COMPLETE (SSE events + streaming endpoint + atomic persistence)
 Phase 5: [██████████] 2/2 plans COMPLETE (SandboxRuntime Protocol + E2B execution integration)
-Phase 6: [██████████] 18 plans + 4 critical fixes VERIFIED (proxy bypass, dialog widths, overflow)
+Phase 6: [██████████] 18 plans + 9 backend fixes COMPLETE (chat execution working)
 ```
 
-**Last activity:** 2026-02-04 - Verified 4 critical fixes after UAT round 3: proxy bypass, upload dialog width, info modal width, overflow fix. User tested and confirmed all working.
+**Last activity:** 2026-02-04 - Completed 9 critical backend fixes for chat functionality. Successfully tested query execution returning structured JSON results. Frontend streaming display needs fix before formal UAT.
 
 **Next Action:**
-1. Run comprehensive UAT round 4 to verify all 23+ tests pass
-2. OR skip formal UAT and proceed to Phase 6 verification
-3. OR consider Phase 6 complete and plan next milestone
+1. Fix frontend streaming display (messages not showing in real-time, only after refresh)
+2. Run formal UAT Round 4 with all fixes in place
+3. Complete Phase 6 verification
 
 ---
 
@@ -65,6 +65,12 @@ Phase 6: [██████████] 18 plans + 4 critical fixes VERIFIED (
 
 | Date | Decision | Impact |
 |------|----------|--------|
+| 2026-02-04 | **9 Critical Backend Chat Fixes (Session 2)** | Completed comprehensive debugging session fixing all chat execution issues: (1) Disabled PostgreSQL checkpointing (async incompatibility), (2) Increased token limit 800→2000, (3) E2B API key explicit pass, (4) E2B filesystem API fix (sandbox.files.write), (5) Excel file loading (pd.read_excel), (6) Auto-load DataFrame with file data, (7) Data profile with exact column names, (8) Structured JSON output format, (9) Numpy/pandas type conversion. Chat queries now execute successfully returning structured results. Proven with test query: ₹31,494,190 bag category sales. |
+| 2026-02-04 | Structured JSON output for all code execution | Changed coding agent to REQUIRE print(json.dumps({"result": result})) at end of all generated code. Execute function parses JSON from stdout and extracts result value. Ensures consistent data format for data analysis agent. Eliminates "no output" errors. |
+| 2026-02-04 | Data profile JSON replaces data summary for coding agent | Coding agent now receives structured JSON with exact column names, types, and sample data instead of human-readable summary. Eliminates column name guessing and case sensitivity issues. Agent uses exact columns from profile. |
+| 2026-02-04 | File type detection for pandas reader selection | Execute function detects .xlsx/.xls vs .csv by extension and uses appropriate pandas reader (read_excel vs read_csv with encoding fallback). Fixes UnicodeDecodeError when trying to read Excel files as CSV. |
+| 2026-02-04 | DataFrame auto-injection before generated code | Execute function prepends file loading code (import pandas + read file into df) before executing generated code. Ensures df is always available. Coding agent instructed to NEVER check if df exists or use locals()/globals(). |
+| 2026-02-04 | E2B sandbox.files.write() API correction | Changed from sandbox.filesystem.write() (doesn't exist) to sandbox.files.write(). Fixes AttributeError during file upload to sandbox. File data now uploads successfully before code execution. |
 | 2026-02-04 | UAT round 3: 3 confirmed fixes, 3 new gaps, primary root cause is stale dev server | Plans 06-17 and 06-18 code changes verified correct in source. Markdown rendering works (remark-gfm + typography). Button handler resilient (try/catch/finally). Sidebar error state honest (isError). But dialog width, sidebar population, and scroll UX still broken because frontend dev server not restarted after Tailwind v4 @plugin changes. Diagnosed in 06-19. |
 | 2026-02-04 | try/catch/finally for guaranteed dialog close | Continue to Chat button handler uses finally block to always close dialog and reset state, regardless of errors in context POST, refetch, or tab open. User can never get stuck in a dialog that won't close. Implemented in 06-18. |
 | 2026-02-04 | refetchInterval 10s as independent sidebar fallback | useFiles query polls every 10 seconds as safety net. Primary path (button handler explicit refetch) is instant; this ensures sidebar discovers files even if button handler fails. Implemented in 06-18. |
@@ -267,9 +273,35 @@ Phase 6: [██████████] 18 plans + 4 critical fixes VERIFIED (
 31. **phases/06-frontend-ui-interactive-data-cards/06-18-SUMMARY.md** - Button Handler Resilience & Sidebar Fallback Refresh (try/catch/finally, refetchInterval, error state)
 32. **phases/06-frontend-ui-interactive-data-cards/06-19-SUMMARY.md** - UAT Retest Round 3 (3 fixes confirmed, 3 new gaps diagnosed)
 
-**Last session:** 2026-02-04T20:24:15Z
-**Stopped at:** Completed 06-19: UAT retest round 3 -- partial success, 3 new gaps diagnosed
+**Last session:** 2026-02-04T23:45:00Z
+**Stopped at:** Completed 9 critical backend chat fixes - chat execution fully functional. Backend proven working with test queries returning structured JSON results. Frontend streaming display pending fix (messages only show after page refresh). Ready for formal UAT Round 4.
 **Resume file:** None
+
+**Backend Fixes Completed (Session 2):**
+1. Disabled PostgreSQL checkpointing (async incompatibility resolved)
+2. Increased coding agent token limit from 800 to 2000
+3. E2B API key passed explicitly to Sandbox.create()
+4. Fixed E2B filesystem API (sandbox.files.write not sandbox.filesystem.write)
+5. Auto-detect Excel vs CSV files and use appropriate pandas reader
+6. Auto-inject DataFrame loading code before generated code execution
+7. Pass data_profile JSON with exact column names to coding agent
+8. Require structured JSON output: print(json.dumps({"result": result}))
+9. Convert numpy/pandas types to Python native types for JSON serialization
+
+**Test Results:**
+- Query: "total sales for category bag"
+- Result: ₹31,494,190 (correct, structured JSON)
+- Execution: Successful in E2B sandbox
+- Code: Used exact column names from data profile
+
+**Known Issues:**
+- Frontend: Streaming messages not displaying in real-time (only after page refresh)
+- Frontend: Data Cards only visible after closing/reopening tab
+
+**Next Steps:**
+1. Fix frontend streaming display issues
+2. Run formal UAT Round 4 with all backend fixes verified
+3. Complete Phase 6 verification
 
 **Current session status:**
 - Phase 1 COMPLETE: All 4 plans executed successfully (added 01-04 gap closure for dev mode fix)
