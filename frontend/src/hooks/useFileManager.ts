@@ -16,7 +16,14 @@ export function useFiles() {
     queryFn: async (): Promise<FileListItem[]> => {
       const response = await apiClient.get("/files/");
       if (!response.ok) {
-        throw new Error("Failed to fetch files");
+        const errorText = await response.text();
+        console.error("GET /files/ failed:", {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText,
+          url: response.url
+        });
+        throw new Error(`Failed to fetch files: ${response.status} ${errorText}`);
       }
       return response.json();
     },
