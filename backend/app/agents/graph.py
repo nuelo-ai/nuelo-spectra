@@ -433,7 +433,12 @@ def build_chat_graph(postgres_url: str):
         ... )
     """
     # Initialize PostgreSQL checkpointer
-    checkpointer = PostgresSaver.from_conn_string(postgres_url)
+    # from_conn_string() returns a context manager; we enter it manually
+    # since the graph is cached globally and the checkpointer must persist
+    # Convert SQLAlchemy async URL format to psycopg format
+    psycopg_url = postgres_url.replace("postgresql+asyncpg://", "postgresql://")
+    checkpointer_ctx = PostgresSaver.from_conn_string(psycopg_url)
+    checkpointer = checkpointer_ctx.__enter__()
     checkpointer.setup()
 
     # Create StateGraph
