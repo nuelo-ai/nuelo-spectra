@@ -1,5 +1,5 @@
 ---
-status: testing
+status: diagnosed
 phase: 06-frontend-ui-interactive-data-cards
 source:
   - 06-UAT.md (original testing - 6 issues found)
@@ -7,7 +7,7 @@ source:
   - Gap closure plan: 06-14 (useFileSummary query fix + refetchQueries fix)
   - Gap closure plan: 06-15 (markdown rendering, modal sizing, FILE-05/06, sidebar refetch fix)
 started: 2026-02-04T13:35:00Z
-updated: 2026-02-04T19:26:31Z
+updated: 2026-02-04T19:44:55Z
 ---
 
 ## Current Test
@@ -183,27 +183,83 @@ skipped: 15
   reason: "User reported: not passed. Feedback: 1. analysis not rendered as Markdown. Still showing raw output, especially when displaying table. See attached. 2. Modal taller but looks so bad... you shouldn't make it tall like tthat. It also overlaps the screen. Keep it nice box/rectangle size in the middle. Use UI design skill. Search and install. This looks so bad! 3. It is visible and i can enter the text. But when I click \"Continue to chat\" nothing happens. 4. File still not showing in the sidebar so no 'i' button to click on"
   severity: blocker
   test: 2
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Four failures: missing @tailwindcss/typography makes prose classes inert (no markdown styling), missing remark-gfm prevents table parsing, parent dialog max-w-lg too narrow causing overflow, and Continue to Chat button returns early on optional context POST failure blocking dialog close and sidebar refetch"
+  artifacts:
+    - path: "frontend/package.json"
+      line: "11-29"
+      issue: "Missing @tailwindcss/typography and remark-gfm dependencies - prose classes are inert and tables never parse"
+    - path: "frontend/src/app/globals.css"
+      line: "1-2"
+      issue: "Missing @import '@tailwindcss/typography' required for Tailwind v4 prose class support"
+    - path: "frontend/src/components/file/FileUploadZone.tsx"
+      line: "208"
+      issue: "ReactMarkdown lacks remarkPlugins={[remarkGfm]} prop - tables render as plain text"
+    - path: "frontend/src/components/file/FileUploadZone.tsx"
+      line: "239-241"
+      issue: "catch block has 'return' that blocks ALL subsequent actions (dialog close, tab open, sidebar refetch) when optional context POST fails"
+    - path: "frontend/src/components/file/FileInfoModal.tsx"
+      line: "72"
+      issue: "ReactMarkdown lacks remarkPlugins={[remarkGfm]} prop"
+    - path: "frontend/src/components/file/FileSidebar.tsx"
+      line: "184"
+      issue: "DialogContent className='max-w-lg' (512px) too narrow for analysis + textarea + button content, causing tall narrow modal that overlaps screen"
+  missing:
+    - "Install @tailwindcss/typography: npm install @tailwindcss/typography"
+    - "Install remark-gfm: npm install remark-gfm"
+    - "Add @import '@tailwindcss/typography' to globals.css (after @import 'tailwindcss')"
+    - "Add remarkPlugins={[remarkGfm]} to ReactMarkdown in FileUploadZone.tsx and FileInfoModal.tsx"
+    - "Widen upload dialog in FileSidebar.tsx from max-w-lg to max-w-2xl or max-w-3xl with max-h-[85vh] overflow-y-auto"
+    - "Remove early return from context POST catch block in FileUploadZone.tsx - make context save non-blocking (fire-and-forget with toast warning, then proceed with dialog close/tab open/sidebar refetch)"
+  debug_session: ".planning/debug/test-2-upload-flow-broken.md"
 
 - truth: "Sidebar file list shows uploaded files after clicking Continue to Chat"
   status: failed
   reason: "User reported: fail - sidebar has no files"
   severity: blocker
   test: 3
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "The 'Continue to Chat' button's async onClick handler silently fails (no try/catch on steps 2-6), and FileSidebar has no independent refresh mechanism (no refetchInterval, no error display) -- making the sidebar entirely dependent on a single brittle code path that aborts on any unhandled error."
+  artifacts:
+    - path: "frontend/src/components/file/FileUploadZone.tsx"
+      line: "232-267"
+      issue: "Async onClick handler has no global try/catch. Steps 2-6 (invalidate, refetch, openTab, close dialog, reset) abort silently on any error. Unhandled promise rejections are invisible to user."
+    - path: "frontend/src/components/file/FileSidebar.tsx"
+      line: "35"
+      issue: "Destructures only { data, isLoading } from useFiles(). Does not check isError. Query errors display as 'No files yet' empty state with no error indication."
+    - path: "frontend/src/hooks/useFileManager.ts"
+      line: "13-25"
+      issue: "useFiles query has no refetchInterval. Sidebar relies entirely on manual refetch from button handler. staleTime of 60s keeps initial empty result cached."
+    - path: "frontend/src/lib/query-client.ts"
+      line: "12"
+      issue: "Global staleTime of 60s means sidebar shows cached empty array for a full minute after page load, with no automatic refresh."
+  missing:
+    - "Wrap entire button handler in try/catch/finally -- finally block MUST always close dialog and reset state regardless of errors"
+    - "Add refetchInterval (5-10s) to useFiles query as independent sidebar refresh fallback"
+    - "Add isError/error handling in FileSidebar with user-visible error state"
+    - "Use exact: true in invalidateQueries/refetchQueries to avoid refetching unrelated summary query"
+    - "Add console.error or toast in the button handler's catch block for debugging"
+  debug_session: ".planning/debug/test-3-sidebar-files-missing.md"
 
 - truth: "Continue to Chat button is clickable and triggers dialog close + tab opening"
   status: failed
   reason: "User reported: fail - button can't be clicked"
   severity: blocker
   test: 4
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Dialog has no max-height/overflow-y-auto; the FILE-05 textarea addition pushed total content height (~504px + 60vh) past the viewport, making the 'Continue to Chat' button unreachable below the visible area"
+  artifacts:
+    - path: "frontend/src/components/file/FileUploadZone.tsx"
+      line: "204-274"
+      issue: "The 'ready' stage content block (analysis max-h-[60vh] + textarea ~140px + button + padding) exceeds viewport height inside an unconstrained dialog"
+    - path: "frontend/src/components/ui/dialog.tsx"
+      line: "64"
+      issue: "DialogContent base CSS has no max-height or overflow-y-auto, allowing unbounded vertical growth"
+    - path: "frontend/src/components/file/FileSidebar.tsx"
+      line: "184"
+      issue: "Dialog instantiation passes max-w-lg but no height constraint override"
+    - path: "frontend/src/components/file/FileUploadZone.tsx"
+      line: "239-242"
+      issue: "Secondary: try/catch with early return on context save error silently blocks dialog closure"
+  missing:
+    - "Add max-h-[85vh] overflow-y-auto to DialogContent in FileSidebar.tsx line 184 so dialog scrolls when content exceeds viewport"
+    - "Reduce analysis text max-h from 60vh to 30vh in FileUploadZone.tsx line 206 to leave room for textarea and button within viewport"
+    - "Remove early return from catch block (line 241) or make context save fire-and-forget so dialog closure is never blocked by context save failure"
+  debug_session: ".planning/debug/test-4-button-not-clickable.md"
