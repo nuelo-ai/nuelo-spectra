@@ -1,13 +1,17 @@
 """Service layer for agent invocation and orchestration."""
 
+import logging
 import os
 import time
 import json
+import traceback
 from uuid import UUID
 from typing import AsyncGenerator
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from app.agents.graph import get_or_create_graph
 from app.agents.onboarding import OnboardingAgent
@@ -258,9 +262,12 @@ async def run_chat_query_stream(
     Raises:
         Yields error event dict (does not raise exceptions)
     """
+    logger.info(f"Starting chat stream for file_id={file_id}, user_id={user_id}, query={user_query[:50]}...")
+
     # Load file record with access control (uses injected db for quick read)
     file_record = await FileService.get_user_file(db, file_id, user_id)
     if not file_record:
+        logger.error(f"File not found: file_id={file_id}, user_id={user_id}")
         yield {"type": "error", "message": "File not found"}
         return
 
@@ -371,7 +378,10 @@ async def run_chat_query_stream(
     except Exception as e:
         # On failure, yield error event and save nothing to database
         # (clean failure state per CONTEXT.md decision)
+        error_msg = str(e) if str(e) else f"{type(e).__name__}: {repr(e)}"
+        logger.error(f"Stream error for file_id={file_id}: {error_msg}")
+        logger.error(f"Full traceback:\n{traceback.format_exc()}")
         yield {
             "type": "error",
-            "message": str(e)
+            "message": error_msg
         }
