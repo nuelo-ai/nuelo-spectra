@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 06-frontend-ui-interactive-data-cards
 source:
   - 06-01-SUMMARY.md
@@ -181,57 +181,86 @@ skipped: 14
   reason: "User reported: failed. reset link not showns in console although it has been set as dev mode"
   severity: major
   test: 3
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Python's logging module is not configured in main.py - default WARNING level suppresses INFO level messages where console output is logged"
+  artifacts:
+    - path: "backend/app/main.py"
+      issue: "Missing logging.basicConfig() configuration"
+    - path: "backend/app/services/email.py"
+      issue: "Uses logger.info() for dev mode console output (lines 35-40)"
+  missing:
+    - "Add logging.basicConfig(level=logging.INFO) to main.py"
+    - "Configure logging format for better readability"
+  debug_session: ".planning/debug/password-reset-console.md"
 
 - truth: "After file upload completes, user can see onboarding analysis result as defined in REQUIREMENTS.md FILE-03 through FILE-06"
   status: failed
   reason: "User reported: partially pass. User can click the upload, a modal shown, user can select the file or drag the file to upload, the progress bar show from 0 to 100%, it shows ready at the end, the new tab opens, however, user should be able to see the analysis result as defined in the Requirements.md file section File Management (File 03 untiil file-06)"
   severity: major
   test: 4
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "FileUploadZone auto-closes dialog without displaying analysis result - analysis is hidden behind info icon with no discoverability"
+  artifacts:
+    - path: "frontend/src/components/file/FileUploadZone.tsx"
+      issue: "Lines 35-53 close dialog immediately after detecting analysis completion"
+    - path: "frontend/src/components/file/FileInfoModal.tsx"
+      issue: "Analysis viewer exists but not discoverable by users"
+  missing:
+    - "Display analysis in upload dialog before auto-closing OR auto-open FileInfoModal OR show analysis in ChatInterface"
+    - "Add visual indicator that analysis is available"
+  debug_session: ".planning/debug/file-upload-analysis-visibility.md"
 
 - truth: "Uploaded files appear in sidebar file list after upload completes"
   status: failed
   reason: "User reported: partially pass. User can click the upload, a modal shown, user can select the file, the progress bar show from 0 to 100%, it shows ready at the end, the new tab opens, however, user should be able to see the analysis result as defined in the Requirements.md file section File Management (File 03 untiil file-06). Uploaded files are not listed on the sidebar"
   severity: major
   test: 5
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Side effect code in FileUploadZone (lines 34-53) runs directly in component body instead of useEffect - causes race conditions with multiple setTimeout calls and dialog closes before query refetch completes"
+  artifacts:
+    - path: "frontend/src/components/file/FileUploadZone.tsx"
+      issue: "Lines 34-53 not wrapped in useEffect - triggers on every render creating race conditions"
+  missing:
+    - "Wrap analysis completion logic (lines 34-53) in useEffect with proper dependency array"
+    - "Ensure dialog waits for query refetch before closing"
+  debug_session: ".planning/debug/sidebar-file-list-not-showing.md"
 
 - truth: "Clicking file in sidebar opens tab and shows ChatInterface with empty state"
   status: failed
   reason: "User reported: fail. no files listed on the left sidebar although some files have been uploaded"
   severity: major
   test: 6
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Same as Test 5 - sidebar file list not populating due to FileUploadZone race condition"
+  artifacts:
+    - path: "frontend/src/components/file/FileUploadZone.tsx"
+      issue: "Same root cause as Test 5"
+  missing:
+    - "Fix Test 5 issue - will resolve this test"
+  debug_session: ".planning/debug/sidebar-file-list-not-showing.md"
 
 - truth: "After sending chat message, AI response streams character-by-character with typing indicator"
   status: failed
   reason: "User reported: fail. received error message \"something went wrong, please try again\""
   severity: major
   test: 12
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "PostgresSaver.from_conn_string() returns context manager but code treats it as direct object - calling .setup() on context manager raises AttributeError causing graph initialization to fail"
+  artifacts:
+    - path: "backend/app/agents/graph.py"
+      issue: "Lines 436-437 misuse PostgresSaver.from_conn_string() - should be used with context manager"
+  missing:
+    - "Wrap PostgresSaver.from_conn_string() usage in 'with' statement"
+    - "Use context manager pattern: with PostgresSaver.from_conn_string(url) as checkpointer:"
+  debug_session: ".planning/debug/ai-response-error.md"
 
 - truth: "After profile update, changes appear in top navigation immediately"
   status: failed
   reason: "User reported: partially pass, change name was succefully but it didn't appear in top nav immdediately"
   severity: minor
   test: 23
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "AuthProvider uses React Context with useState (never updates after mount) while useUpdateProfile invalidates TanStack Query [\"user\"] which doesn't exist - two incompatible data management approaches"
+  artifacts:
+    - path: "frontend/src/hooks/useAuth.tsx"
+      issue: "AuthProvider state loaded only on mount, never updates"
+    - path: "frontend/src/hooks/useSettings.ts"
+      issue: "useUpdateProfile invalidates non-existent query"
+  missing:
+    - "Either: Add user refetch method to AuthProvider and call from mutation OR convert user data to TanStack Query"
+    - "Make AuthProvider and profile update use same data management pattern"
+  debug_session: ".planning/debug/profile-update-nav-refresh.md"
