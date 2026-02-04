@@ -29,7 +29,9 @@ export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
   const [uploadedFileName, setUploadedFileName] = useState<string>("");
 
   // Poll for file summary when in analyzing stage
-  const { data: summary } = useFileSummary(uploadStage === "analyzing" ? uploadedFileId : null);
+  const { data: summary } = useFileSummary(
+    uploadStage === "analyzing" || uploadStage === "ready" ? uploadedFileId : null
+  );
 
   // Track if we've already transitioned to ready state to prevent duplicate transitions
   const hasTransitioned = useRef(false);
@@ -74,9 +76,6 @@ export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
             setProgress(50);
             setUploadedFileId(data.id);
             setUploadedFileName(data.original_filename);
-
-            // Invalidate file list to trigger refresh
-            queryClient.invalidateQueries({ queryKey: ["files"] });
 
             // Move to analyzing stage
             setUploadStage("analyzing");

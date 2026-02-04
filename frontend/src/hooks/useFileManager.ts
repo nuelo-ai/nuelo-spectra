@@ -51,8 +51,8 @@ export function useUploadFile() {
       return response.json();
     },
     onSuccess: () => {
-      // Invalidate files list to trigger refetch
-      queryClient.invalidateQueries({ queryKey: ["files"] });
+      // Refetch files list to trigger immediate update
+      queryClient.refetchQueries({ queryKey: ["files"] });
     },
   });
 }
