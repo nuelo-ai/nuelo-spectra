@@ -14,7 +14,7 @@ import asyncio
 import os
 
 from langgraph.graph import StateGraph
-from langgraph.checkpoint.postgres import PostgresSaver
+# from langgraph.checkpoint.postgres import PostgresSaver  # Temporarily disabled
 from langgraph.types import Command
 from langgraph.config import get_stream_writer
 
@@ -409,7 +409,7 @@ async def halt_node(state: ChatAgentState) -> dict:
     }
 
 
-def build_chat_graph(postgres_url: str):
+def build_chat_graph():
     """Build and compile the chat analysis LangGraph workflow.
 
     Creates a StateGraph with the following flow:
@@ -418,9 +418,6 @@ def build_chat_graph(postgres_url: str):
     3. execute: Run code in restricted namespace (stub)
     4. data_analysis: Interpret results and generate explanation
     5. halt: Error handler for max retries exceeded
-
-    Args:
-        postgres_url: PostgreSQL connection URL for checkpointing
 
     Returns:
         Compiled LangGraph workflow
@@ -499,7 +496,6 @@ def get_or_create_graph():
     global _cached_graph
 
     if _cached_graph is None:
-        settings = get_settings()
-        _cached_graph = build_chat_graph(settings.database_url)
+        _cached_graph = build_chat_graph()
 
     return _cached_graph
