@@ -3,28 +3,111 @@
 import { ChatMessageResponse } from "@/types/chat";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { AlertCircle } from "lucide-react";
+import { DataCard } from "./DataCard";
 
 interface ChatMessageProps {
   message: ChatMessageResponse;
   isStreaming?: boolean;
   streamedText?: string;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 /**
  * Individual chat message component.
  * Supports user messages (right-aligned) and assistant messages (left-aligned).
  * Handles streaming text and error states.
+ * Renders DataCard for assistant messages with structured data.
  */
 export function ChatMessage({
   message,
   isStreaming = false,
   streamedText = "",
+  isCollapsed = false,
+  onToggleCollapse,
 }: ChatMessageProps) {
   const isUser = message.role === "user";
   const isError = message.message_type === "error";
 
   // For streaming assistant messages, use streamedText
   const displayContent = isStreaming ? streamedText : message.content;
+
+  // Check if this is a structured data message (has metadata with code/execution/analysis)
+  const hasStructuredData =
+    !isUser &&
+    !isError &&
+    message.metadata_json &&
+    (message.metadata_json.generated_code ||
+      message.metadata_json.execution_result ||
+      message.content);
+
+  // Parse execution result for table data
+  const parseExecutionResult = (result: any) => {
+    if (!result) return null;
+
+    // If result is a string, try to parse as JSON
+    if (typeof result === "string") {
+      try {
+        const parsed = JSON.parse(result);
+        // Check if it has tabular structure
+        if (Array.isArray(parsed)) {
+          // Array of objects -> extract columns and rows
+          if (parsed.length > 0 && typeof parsed[0] === "object") {
+            return {
+              columns: Object.keys(parsed[0]),
+              rows: parsed,
+            };
+          }
+        } else if (parsed.columns && Array.isArray(parsed.columns)) {
+          // Already has columns/rows structure
+          return {
+            columns: parsed.columns,
+            rows: parsed.rows || parsed.data || [],
+          };
+        }
+      } catch {
+        // Not valid JSON, return null
+        return null;
+      }
+    }
+
+    // If result is already an array
+    if (Array.isArray(result) && result.length > 0 && typeof result[0] === "object") {
+      return {
+        columns: Object.keys(result[0]),
+        rows: result,
+      };
+    }
+
+    // If result is already structured
+    if (result.columns && Array.isArray(result.columns)) {
+      return {
+        columns: result.columns,
+        rows: result.rows || result.data || [],
+      };
+    }
+
+    return null;
+  };
+
+  // If this is a structured data message, render DataCard
+  if (hasStructuredData) {
+    const tableData = parseExecutionResult(message.metadata_json?.execution_result);
+
+    return (
+      <div className="p-4">
+        <DataCard
+          queryBrief={message.content.split("\n")[0]} // First line as brief
+          tableData={tableData || undefined}
+          explanation={message.content}
+          generatedCode={message.metadata_json?.generated_code}
+          isStreaming={isStreaming}
+          isCollapsed={isCollapsed}
+          onToggleCollapse={onToggleCollapse}
+        />
+      </div>
+    );
+  }
 
   // Calculate relative time
   const getRelativeTime = (timestamp: string): string => {
