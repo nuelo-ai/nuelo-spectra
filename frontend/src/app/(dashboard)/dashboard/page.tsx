@@ -84,12 +84,14 @@ export default function DashboardPage() {
       )}
 
       {/* Content area */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {currentTab ? (
-          <ChatInterface
-            fileId={currentTab.fileId}
-            fileName={currentTab.fileName}
-          />
+          <div className="h-full">
+            <ChatInterface
+              fileId={currentTab.fileId}
+              fileName={currentTab.fileName}
+            />
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full px-8">
             <div className="max-w-md text-center space-y-4">
