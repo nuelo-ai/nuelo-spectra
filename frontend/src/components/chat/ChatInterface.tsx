@@ -11,7 +11,6 @@ import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { TypingIndicator } from "./TypingIndicator";
 import { DataCard } from "./DataCard";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
 interface ChatInterfaceProps {
@@ -189,7 +188,7 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
       </div>
 
       {/* Messages area - scrollable */}
-      <ScrollArea ref={scrollAreaRef} className="flex-1">
+      <div ref={scrollAreaRef} className="flex-1 overflow-y-auto">
         <div className="w-full py-4">
           {/* Loading state */}
           {isLoading && (
@@ -315,7 +314,7 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
           {/* Bottom marker for auto-scroll */}
           <div ref={bottomRef} className="h-1" />
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Status indicator - fixed at bottom */}
       {currentStatus && (
