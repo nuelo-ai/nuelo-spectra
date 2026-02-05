@@ -49,7 +49,19 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [chatData?.messages, streamedText, isStreaming]);
+  }, [chatData?.messages, streamedText, isStreaming, events]);
+
+  // Initial scroll to bottom on mount
+  useEffect(() => {
+    if (scrollRef.current && chatData?.messages && chatData.messages.length > 0) {
+      // Use setTimeout to ensure DOM is fully rendered
+      setTimeout(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+      }, 100);
+    }
+  }, [chatData?.messages]);
 
   // Handle stream completion - detect transition from streaming to not streaming
   useEffect(() => {
@@ -166,31 +178,35 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-4 py-3 border-b">
-        <h2 className="text-lg font-semibold truncate">{fileName}</h2>
+      <div className="px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-lg font-semibold truncate">{fileName}</h2>
+        </div>
       </div>
 
-      {/* Messages area */}
-      <ScrollArea className="flex-1 smooth-scrollbar">
-        <div ref={scrollRef} className="min-h-full" style={{ scrollBehavior: "smooth" }}>
+      {/* Messages area - scrollable */}
+      <ScrollArea className="flex-1">
+        <div ref={scrollRef} className="w-full py-4" style={{ scrollBehavior: "smooth" }}>
           {/* Loading state */}
           {isLoading && (
-            <div className="space-y-4 p-4">
-              {/* Skeleton chat messages */}
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex gap-3">
-                  <div className="skeleton h-8 w-8 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <div className="skeleton h-16 w-2/3 rounded-lg" />
+            <div className="max-w-3xl mx-auto px-4">
+              <div className="space-y-6">
+                {/* Skeleton chat messages */}
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex gap-3">
+                    <div className="skeleton h-8 w-8 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <div className="skeleton h-16 w-2/3 rounded-lg" />
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
 
           {/* Empty state */}
           {showEmptyState && (
-            <div className="flex items-center justify-center h-full p-8 text-center">
+            <div className="flex items-center justify-center min-h-[60vh] p-8 text-center">
               <div className="max-w-md opacity-60" style={{ animation: "var(--animate-fadeIn)" }}>
                 <div className="mb-4">
                   <div className="h-16 w-16 rounded-full gradient-primary mx-auto mb-3 flex items-center justify-center">
@@ -209,7 +225,7 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
 
           {/* Message list */}
           {hasMessages && (
-            <div className="divide-y">
+            <div className="max-w-3xl mx-auto px-4 space-y-6">
               {messages.map((message) => (
                 <ChatMessage
                   key={message.id}
@@ -223,8 +239,7 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
 
           {/* Streaming message */}
           {isStreaming && (
-            <>
-              {hasMessages && <Separator />}
+            <div className="max-w-3xl mx-auto px-4 mt-6">
               <div className="animate-in fade-in duration-200">
                 {(() => {
                   const hasNodeComplete = events.some((e) => e.type === "node_complete");
@@ -249,12 +264,10 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
                       (e.node === "execute" || e.node === "coding" || e.node === "data_analysis")
                   ) ? (
                     // Render as DataCard for structured response
-                    <div className="p-4">
-                      <DataCard
-                        {...getStreamingDataCard()!}
-                        isStreaming={true}
-                      />
-                    </div>
+                    <DataCard
+                      {...getStreamingDataCard()!}
+                      isStreaming={true}
+                    />
                   ) : (
                     // Render as regular message
                     <ChatMessage
@@ -275,13 +288,12 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
                   <TypingIndicator />
                 )}
               </div>
-            </>
+            </div>
           )}
 
           {/* Stream error */}
           {streamError && (
-            <>
-              {(hasMessages || isStreaming) && <Separator />}
+            <div className="max-w-3xl mx-auto px-4 mt-6">
               <ChatMessage
                 message={{
                   id: "error",
@@ -293,27 +305,33 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
                   created_at: new Date().toISOString(),
                 }}
               />
-            </>
+            </div>
           )}
         </div>
       </ScrollArea>
 
-      {/* Status indicator */}
+      {/* Status indicator - fixed at bottom */}
       {currentStatus && (
-        <div className="px-4 py-2 border-t bg-muted/50" style={{ animation: "var(--animate-slideUp)" }}>
-          <div className="flex items-center gap-2">
-            <div className="flex gap-1">
-              <div className="h-1.5 w-1.5 rounded-full bg-primary" style={{ animation: "var(--animate-pulse-gentle)", animationDelay: "0ms" }} />
-              <div className="h-1.5 w-1.5 rounded-full bg-primary" style={{ animation: "var(--animate-pulse-gentle)", animationDelay: "200ms" }} />
-              <div className="h-1.5 w-1.5 rounded-full bg-primary" style={{ animation: "var(--animate-pulse-gentle)", animationDelay: "400ms" }} />
+        <div className="border-t bg-muted/50 py-2" style={{ animation: "var(--animate-slideUp)" }}>
+          <div className="max-w-3xl mx-auto px-4">
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1">
+                <div className="h-1.5 w-1.5 rounded-full bg-primary" style={{ animation: "var(--animate-pulse-gentle)", animationDelay: "0ms" }} />
+                <div className="h-1.5 w-1.5 rounded-full bg-primary" style={{ animation: "var(--animate-pulse-gentle)", animationDelay: "200ms" }} />
+                <div className="h-1.5 w-1.5 rounded-full bg-primary" style={{ animation: "var(--animate-pulse-gentle)", animationDelay: "400ms" }} />
+              </div>
+              <p className="text-xs text-muted-foreground">{currentStatus}</p>
             </div>
-            <p className="text-xs text-muted-foreground">{currentStatus}</p>
           </div>
         </div>
       )}
 
-      {/* Chat input */}
-      <ChatInput onSend={handleSend} disabled={isStreaming || isLoading} />
+      {/* Chat input - fixed at bottom */}
+      <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="max-w-3xl mx-auto px-4 py-4">
+          <ChatInput onSend={handleSend} disabled={isStreaming || isLoading} />
+        </div>
+      </div>
     </div>
   );
 }
