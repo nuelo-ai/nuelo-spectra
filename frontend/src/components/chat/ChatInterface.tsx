@@ -113,12 +113,15 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
   const getStreamingDataCard = () => {
     if (!isStreaming) return null;
 
+    console.log('[ChatInterface] getStreamingDataCard called, events:', events.length, 'isStreaming:', isStreaming);
+
     // Extract query brief from first user message in stream
     const queryBrief = "Analyzing your request...";
 
     // Check if we have execution result in node_complete events
     let tableData: { columns: string[]; rows: Record<string, any>[] } | undefined = undefined;
     const executionEvent = events.find((e) => e.type === "node_complete" && e.node === "execute");
+    console.log('[ChatInterface] executionEvent:', executionEvent ? 'found' : 'not found');
     if (executionEvent?.data?.execution_result) {
       // Parse execution result for table
       const result = executionEvent.data.execution_result;
@@ -214,6 +217,21 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
             <>
               {hasMessages && <Separator />}
               <div className="animate-in fade-in duration-200">
+                {(() => {
+                  const hasNodeComplete = events.some((e) => e.type === "node_complete");
+                  const hasStructuredNode = events.some(
+                    (e) =>
+                      e.type === "node_complete" &&
+                      (e.node === "execute" || e.node === "coding" || e.node === "data_analysis")
+                  );
+                  console.log('[ChatInterface] Render check:', {
+                    streamedText: !!streamedText,
+                    hasNodeComplete,
+                    hasStructuredNode,
+                    eventsCount: events.length
+                  });
+                  return null;
+                })()}
                 {streamedText || events.some((e) => e.type === "node_complete") ? (
                   // If we have streaming data, check if it's structured data
                   events.some(
