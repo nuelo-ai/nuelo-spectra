@@ -99,12 +99,22 @@ export function DataCard({
       {/* Section 2 & 3: Data Table and AI Explanation */}
       <CollapsibleContent className="px-6 pb-6 space-y-6">
         {/* Code Display (after Brief, before Table) */}
-        {generatedCode && !isStreaming && (
+        {generatedCode ? (
           <div className="space-y-2">
             <h4 className="text-sm font-medium text-muted-foreground">Generated Code</h4>
             <CodeDisplay code={generatedCode} language="python" />
           </div>
-        )}
+        ) : isStreaming ? (
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-muted-foreground">Generated Code</h4>
+            <div className="space-y-2 p-4 border rounded-lg bg-muted/20">
+              {/* Skeleton loader for code */}
+              <div className="skeleton h-4 w-full rounded" />
+              <div className="skeleton h-4 w-5/6 rounded" />
+              <div className="skeleton h-4 w-4/5 rounded" />
+            </div>
+          </div>
+        ) : null}
 
         {/* Section 2: Data Table */}
         {displayTableData ? (

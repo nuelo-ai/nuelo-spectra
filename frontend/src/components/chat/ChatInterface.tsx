@@ -140,14 +140,23 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
       }
     }
 
+    // Extract generated code from coding_agent node
+    let generatedCode: string | undefined = undefined;
+    const codingEvent = events.find((e) => e.type === "node_complete" && e.node === "coding_agent");
+    if (codingEvent?.data?.generated_code) {
+      generatedCode = codingEvent.data.generated_code;
+    }
+    console.log('[ChatInterface] generatedCode:', generatedCode ? 'found' : 'not found');
+
     // Extract analysis/explanation from data_analysis node
     let explanation = streamedText || undefined;
     const analysisEvent = events.find((e) => e.type === "node_complete" && e.node === "data_analysis");
     if (analysisEvent?.data?.analysis) {
       explanation = analysisEvent.data.analysis;
     }
+    console.log('[ChatInterface] explanation:', explanation ? 'found' : 'not found');
 
-    return { queryBrief, tableData, explanation };
+    return { queryBrief, tableData, explanation, generatedCode };
   };
 
   const messages = chatData?.messages || [];
