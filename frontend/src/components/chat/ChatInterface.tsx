@@ -39,6 +39,7 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
   } = useSSEStream();
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const prevStreamingRef = useRef(isStreaming);
 
   // Track which cards are collapsed (by message ID)
   const [collapsedCards, setCollapsedCards] = useState<Set<string>>(new Set());
@@ -50,14 +51,18 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
     }
   }, [chatData?.messages, streamedText, isStreaming]);
 
-  // Handle stream completion
+  // Handle stream completion - detect transition from streaming to not streaming
   useEffect(() => {
-    if (completedData) {
+    // Check if streaming just completed (was true, now false)
+    const streamJustCompleted = prevStreamingRef.current && !isStreaming && !streamError;
+
+    if (streamJustCompleted) {
+      console.log('[ChatInterface] Stream completed, refetching messages...');
+
       // Immediately refetch messages from server and wait for completion
       (async () => {
-        console.log('[ChatInterface] Stream completed, refetching messages...');
-        await refetch();
-        console.log('[ChatInterface] Messages refetched successfully');
+        const result = await refetch();
+        console.log('[ChatInterface] Messages refetched successfully:', result);
 
         // Reset stream state only after messages are loaded
         resetStream();
@@ -79,7 +84,10 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
         }
       })();
     }
-  }, [completedData, refetch, resetStream, chatData?.messages]);
+
+    // Update ref for next render
+    prevStreamingRef.current = isStreaming;
+  }, [isStreaming, streamError, refetch, resetStream, chatData?.messages]);
 
   const handleSend = async (message: string) => {
     // Optimistically add user message
