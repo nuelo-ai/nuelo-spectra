@@ -89,7 +89,7 @@ export function DataCard({
               Data Card
             </Badge>
           </div>
-          <div className="font-medium text-sm prose prose-sm dark:prose-invert max-w-none [&>*]:inline [&>*]:m-0">
+          <div className="font-bold text-sm prose prose-sm dark:prose-invert max-w-none [&>*]:inline [&>*]:m-0">
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
               p: ({node, ...props}) => <span {...props} />,
               h1: ({node, ...props}) => <span {...props} />,
