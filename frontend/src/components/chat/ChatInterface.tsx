@@ -24,9 +24,8 @@ interface ChatInterfaceProps {
  * Manages message history, streaming, and user input.
  */
 export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
-  const { data: chatData, isLoading } = useChatMessages(fileId);
+  const { data: chatData, isLoading, refetch } = useChatMessages(fileId);
   const addLocalMessage = useAddLocalMessage();
-  const invalidateMessages = useInvalidateChatMessages();
 
   const {
     isStreaming,
@@ -56,7 +55,9 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
     if (completedData) {
       // Immediately refetch messages from server and wait for completion
       (async () => {
-        await invalidateMessages(fileId);
+        console.log('[ChatInterface] Stream completed, refetching messages...');
+        await refetch();
+        console.log('[ChatInterface] Messages refetched successfully');
 
         // Reset stream state only after messages are loaded
         resetStream();
@@ -78,7 +79,7 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
         }
       })();
     }
-  }, [completedData, fileId, invalidateMessages, resetStream, chatData?.messages]);
+  }, [completedData, refetch, resetStream, chatData?.messages]);
 
   const handleSend = async (message: string) => {
     // Optimistically add user message
