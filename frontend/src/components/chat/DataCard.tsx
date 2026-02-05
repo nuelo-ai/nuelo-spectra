@@ -12,6 +12,8 @@ import { TypingIndicator } from "./TypingIndicator";
 import { ChevronDown } from "lucide-react";
 import { CSVDownloadButton, MarkdownDownloadButton } from "@/components/data/DownloadButtons";
 import { CodeDisplay } from "@/components/data/CodeDisplay";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface DataCardProps {
   queryBrief?: string; // Section 1: user's query summary
@@ -148,7 +150,9 @@ export function DataCard({
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-muted-foreground">Analysis</h4>
             <div className="rounded-lg bg-muted/30 p-4">
-              <p className="text-sm whitespace-pre-wrap break-words">{explanation}</p>
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{explanation}</ReactMarkdown>
+              </div>
             </div>
             {/* Markdown Download below explanation */}
             {!isStreaming && (
