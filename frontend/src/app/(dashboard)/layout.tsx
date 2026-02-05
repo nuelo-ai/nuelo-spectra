@@ -122,7 +122,7 @@ export default function DashboardLayout({
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
         <FileSidebar />
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main className="flex-1 overflow-hidden">{children}</main>
       </div>
     </div>
   );
