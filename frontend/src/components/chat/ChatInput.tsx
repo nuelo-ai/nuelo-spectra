@@ -40,24 +40,24 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
   const isEmpty = !message.trim();
 
   return (
-    <div className="flex items-end gap-2 p-4 border-t bg-background">
+    <div className="flex items-end gap-3">
       <TextareaAutosize
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         onKeyDown={handleKeyDown}
         disabled={disabled}
         placeholder="Ask about your data..."
-        minRows={1}
-        maxRows={6}
-        className="flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        minRows={3}
+        maxRows={10}
+        className="flex-1 resize-none rounded-xl border border-input bg-background px-4 py-3 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm"
       />
       <Button
         onClick={handleSend}
         disabled={disabled || isEmpty}
         size="icon"
-        className="shrink-0 h-10 w-10"
+        className="shrink-0 h-12 w-12 rounded-xl"
       >
-        <Send className="h-4 w-4" />
+        <Send className="h-5 w-5" />
       </Button>
     </div>
   );
