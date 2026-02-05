@@ -38,30 +38,34 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
     resetStream,
   } = useSSEStream();
 
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
   const prevStreamingRef = useRef(isStreaming);
 
   // Track which cards are collapsed (by message ID)
   const [collapsedCards, setCollapsedCards] = useState<Set<string>>(new Set());
 
+  // Scroll to bottom helper
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior, block: 'end' });
+    }
+  };
+
   // Auto-scroll to bottom when messages change or streaming updates
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    scrollToBottom('auto');
   }, [chatData?.messages, streamedText, isStreaming, events]);
 
   // Initial scroll to bottom on mount
   useEffect(() => {
-    if (scrollRef.current && chatData?.messages && chatData.messages.length > 0) {
+    if (chatData?.messages && chatData.messages.length > 0) {
       // Use setTimeout to ensure DOM is fully rendered
       setTimeout(() => {
-        if (scrollRef.current) {
-          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
+        scrollToBottom('auto');
       }, 100);
     }
-  }, [chatData?.messages]);
+  }, []);
 
   // Handle stream completion - detect transition from streaming to not streaming
   useEffect(() => {
@@ -185,8 +189,8 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
       </div>
 
       {/* Messages area - scrollable */}
-      <ScrollArea className="flex-1">
-        <div ref={scrollRef} className="w-full py-4" style={{ scrollBehavior: "smooth" }}>
+      <ScrollArea ref={scrollAreaRef} className="flex-1">
+        <div className="w-full py-4">
           {/* Loading state */}
           {isLoading && (
             <div className="max-w-3xl mx-auto px-4">
@@ -307,6 +311,9 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
               />
             </div>
           )}
+
+          {/* Bottom marker for auto-scroll */}
+          <div ref={bottomRef} className="h-1" />
         </div>
       </ScrollArea>
 
