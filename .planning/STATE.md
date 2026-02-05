@@ -211,8 +211,10 @@ Phase 6: [██████████] 18 plans + 9 backend fixes COMPLETE (c
 - [x] CARD-07: Markdown download for analysis reports
 - [x] CARD-08: Python code display with syntax highlighting
 
-**Phase 3 Enhancements (Backlog):**
+**Pending Todos (4):**
+- [ ] Agent memory persistence and context size research (see `.planning/todos/pending/2026-02-04-agent-memory-persistence-and-context-size-research.md`)
 - [ ] Add OpenRouter and Ollama LLM provider support (see `.planning/todos/pending/2026-02-03-add-openrouter-and-ollama-llm-support.md`)
+- [ ] Additional pending todos in `.planning/todos/pending/`
 
 **Completed:**
 - [x] Make agent LLM provider configurable - integrated into Phase 3 plans (03-01, 03-02, 03-04)
