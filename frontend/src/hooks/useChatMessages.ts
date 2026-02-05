@@ -63,15 +63,16 @@ export function useAddLocalMessage() {
 }
 
 /**
- * Helper hook to invalidate chat messages after stream completes.
- * Forces refetch from server to get persisted messages.
+ * Helper hook to refetch chat messages after stream completes.
+ * Forces immediate refetch from server to get persisted messages.
  */
 export function useInvalidateChatMessages() {
   const queryClient = useQueryClient();
 
-  return (fileId: string) => {
-    queryClient.invalidateQueries({
+  return async (fileId: string) => {
+    await queryClient.refetchQueries({
       queryKey: ["chat", "messages", fileId],
+      exact: true,
     });
   };
 }

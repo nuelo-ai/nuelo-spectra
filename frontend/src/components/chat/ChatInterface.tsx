@@ -54,31 +54,29 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
   // Handle stream completion
   useEffect(() => {
     if (completedData) {
-      // Invalidate and refetch messages from server
-      invalidateMessages(fileId);
+      // Immediately refetch messages from server and wait for completion
+      (async () => {
+        await invalidateMessages(fileId);
 
-      // Reset stream state after a delay to allow messages to load
-      const timer = setTimeout(() => {
+        // Reset stream state only after messages are loaded
         resetStream();
-      }, 500);
 
-      // Auto-collapse previous cards when new card completes
-      if (chatData?.messages) {
-        const newCollapsed = new Set<string>();
-        chatData.messages.forEach((msg) => {
-          // Collapse all previous assistant messages with structured data
-          if (
-            msg.role === "assistant" &&
-            msg.metadata_json &&
-            (msg.metadata_json.generated_code || msg.metadata_json.execution_result)
-          ) {
-            newCollapsed.add(msg.id);
-          }
-        });
-        setCollapsedCards(newCollapsed);
-      }
-
-      return () => clearTimeout(timer);
+        // Auto-collapse previous cards when new card completes
+        if (chatData?.messages) {
+          const newCollapsed = new Set<string>();
+          chatData.messages.forEach((msg) => {
+            // Collapse all previous assistant messages with structured data
+            if (
+              msg.role === "assistant" &&
+              msg.metadata_json &&
+              (msg.metadata_json.generated_code || msg.metadata_json.execution_result)
+            ) {
+              newCollapsed.add(msg.id);
+            }
+          });
+          setCollapsedCards(newCollapsed);
+        }
+      })();
     }
   }, [completedData, fileId, invalidateMessages, resetStream, chatData?.messages]);
 
