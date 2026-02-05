@@ -89,7 +89,19 @@ export function DataCard({
               Data Card
             </Badge>
           </div>
-          <h3 className="font-medium text-sm">{queryBrief || "Query in progress..."}</h3>
+          <div className="font-medium text-sm prose prose-sm dark:prose-invert max-w-none [&>*]:inline [&>*]:m-0">
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
+              p: ({node, ...props}) => <span {...props} />,
+              h1: ({node, ...props}) => <span {...props} />,
+              h2: ({node, ...props}) => <span {...props} />,
+              h3: ({node, ...props}) => <span {...props} />,
+              h4: ({node, ...props}) => <span {...props} />,
+              h5: ({node, ...props}) => <span {...props} />,
+              h6: ({node, ...props}) => <span {...props} />,
+            }}>
+              {queryBrief || "Query in progress..."}
+            </ReactMarkdown>
+          </div>
         </div>
         <ChevronDown
           className={`h-5 w-5 text-muted-foreground shrink-0 transition-transform duration-300 ease-in-out ${
