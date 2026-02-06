@@ -87,13 +87,45 @@ All agents use YAML-configured system prompts for easy tuning without code chang
 
 ### Installation
 
-1. Clone the repository:
+#### 1. Clone the repository
 ```bash
 git clone https://github.com/marwazihs/nuelo-spectra.git
 cd nuelo-spectra
 ```
 
-2. Set up the backend:
+#### 2. Set up PostgreSQL
+
+**macOS (using Homebrew):**
+```bash
+brew install postgresql@16
+brew services start postgresql@16
+createdb spectra
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo apt update
+sudo apt install postgresql-16
+sudo systemctl start postgresql
+sudo -u postgres createdb spectra
+sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
+```
+
+**Windows:**
+```bash
+# Download PostgreSQL 16 from https://www.postgresql.org/download/windows/
+# Run the installer and set password during installation
+# Open SQL Shell (psql) and run:
+CREATE DATABASE spectra;
+```
+
+**Verify PostgreSQL is running:**
+```bash
+psql -U postgres -d spectra -c "SELECT version();"
+# Should show PostgreSQL 16.x version info
+```
+
+#### 3. Set up the backend
 ```bash
 cd backend
 
@@ -107,36 +139,91 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -e .
 ```
 
-3. Configure environment variables:
+#### 4. Configure environment variables
 ```bash
 cp .env.example .env
-# Edit .env with your configuration:
-# - DATABASE_URL (PostgreSQL connection string)
-# - E2B_API_KEY (for code sandbox)
-# - AGENT_LLM_PROVIDER (openai/anthropic/google)
-# - OPENAI_API_KEY or ANTHROPIC_API_KEY or GOOGLE_API_KEY
-# - JWT_SECRET_KEY (generate with: openssl rand -hex 32)
-# - EMAIL_SERVICE_API_KEY (optional, for password reset emails)
+# Edit .env with your configuration
 ```
 
-4. Run database migrations:
+**Required environment variables:**
 ```bash
+# Database
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/spectra
+
+# JWT (generate a secure secret key)
+SECRET_KEY=$(openssl rand -hex 32)
+
+# E2B Sandbox (sign up at https://e2b.dev for API key)
+E2B_API_KEY=your-e2b-api-key
+
+# LLM Provider (choose one: anthropic, openai, or google)
+LLM_PROVIDER=anthropic
+ANTHROPIC_API_KEY=your-anthropic-api-key
+# OR
+# OPENAI_API_KEY=your-openai-api-key
+# OR
+# GOOGLE_API_KEY=your-google-api-key
+```
+
+**Optional environment variables:**
+```bash
+# Email Service (for password reset emails - Mailgun)
+EMAIL_SERVICE_API_KEY=your-mailgun-api-key
+
+# LangSmith (for agent debugging and tracing)
+LANGSMITH_API_KEY=your-langsmith-api-key
+LANGSMITH_TRACING=true
+
+# Frontend URL (if different from default)
+FRONTEND_URL=http://localhost:3000
+```
+
+#### 5. Run database migrations
+```bash
+# Make sure you're in the backend directory
 alembic upgrade head
 ```
 
-5. Start the backend server:
+#### 6. Start the backend server
 ```bash
 uvicorn app.main:app --reload
+# Backend will run at http://localhost:8000
+# API docs available at http://localhost:8000/docs
 ```
 
-6. Set up the frontend (in a new terminal):
+#### 7. Set up the frontend (in a new terminal)
 ```bash
 cd frontend
 npm install
 npm run dev
+# Frontend will run at http://localhost:3000
 ```
 
-7. Access the application at `http://localhost:3000`
+#### 8. Verify the installation
+
+1. **Backend health check**: Visit http://localhost:8000/health (should return `{"status": "healthy"}`)
+2. **Frontend**: Open http://localhost:3000 in your browser
+3. **Create an account**: Click "Sign Up" and create your first account
+4. **Upload a file**: Upload a CSV or Excel file to test the AI analysis
+
+### Troubleshooting
+
+**Database connection errors:**
+- Verify PostgreSQL is running: `brew services list` (macOS) or `sudo systemctl status postgresql` (Linux)
+- Check DATABASE_URL in .env matches your PostgreSQL credentials
+- Ensure database `spectra` exists: `psql -U postgres -l`
+
+**E2B sandbox errors:**
+- Verify E2B_API_KEY is set correctly in .env
+- Check your E2B account has available credits at https://e2b.dev/dashboard
+
+**LLM API errors:**
+- Ensure you've set the correct API key for your chosen LLM_PROVIDER
+- Verify your API key has sufficient credits/quota
+
+**Import errors:**
+- Make sure you've installed dependencies: `uv sync` or `pip install -e .`
+- Activate virtual environment: `source .venv/bin/activate`
 
 ## Current Status (v0.1 Beta)
 
