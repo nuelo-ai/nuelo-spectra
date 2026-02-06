@@ -41,52 +41,93 @@ export function ChatMessage({
       message.metadata_json.execution_result ||
       message.content);
 
-  // Parse execution result for table data
-  const parseExecutionResult = (result: any) => {
+  // Parse execution result for table data - handles multiple pandas output formats
+  const parseExecutionResult = (result: any): { columns: string[]; rows: Record<string, any>[] } | null => {
     if (!result) return null;
 
     // If result is a string, try to parse as JSON
+    let parsed = result;
     if (typeof result === "string") {
       try {
-        const parsed = JSON.parse(result);
-        // Check if it has tabular structure
-        if (Array.isArray(parsed)) {
-          // Array of objects -> extract columns and rows
-          if (parsed.length > 0 && typeof parsed[0] === "object") {
-            return {
-              columns: Object.keys(parsed[0]),
-              rows: parsed,
-            };
-          }
-        } else if (parsed.columns && Array.isArray(parsed.columns)) {
-          // Already has columns/rows structure
-          return {
-            columns: parsed.columns,
-            rows: parsed.rows || parsed.data || [],
-          };
-        }
+        parsed = JSON.parse(result);
       } catch {
         // Not valid JSON, return null
         return null;
       }
     }
 
-    // If result is already an array
-    if (Array.isArray(result) && result.length > 0 && typeof result[0] === "object") {
-      return {
-        columns: Object.keys(result[0]),
-        rows: result,
-      };
+    // Format 1: Array of objects (df.to_dict('records') - preferred format)
+    // Example: [{"col1": "a", "col2": 1}, {"col1": "b", "col2": 2}]
+    if (Array.isArray(parsed)) {
+      // Handle empty array - show empty table
+      if (parsed.length === 0) {
+        return { columns: [], rows: [] };
+      }
+      // Array of objects
+      if (typeof parsed[0] === "object" && parsed[0] !== null) {
+        return {
+          columns: Object.keys(parsed[0]),
+          rows: parsed,
+        };
+      }
+      // Array of scalars - not tabular data
+      return null;
     }
 
-    // If result is already structured
-    if (result.columns && Array.isArray(result.columns)) {
-      return {
-        columns: result.columns,
-        rows: result.rows || result.data || [],
-      };
+    // Format 2: Object with columns and rows/data keys (df.to_dict('split') or custom)
+    // Example: {columns: ["col1", "col2"], data: [["a", 1], ["b", 2]]}
+    // Example: {columns: ["col1", "col2"], rows: [{col1: "a"}, {col2: "b"}]}
+    if (parsed && typeof parsed === "object") {
+      if (Array.isArray(parsed.columns)) {
+        // If rows is array of objects, use directly
+        if (Array.isArray(parsed.rows)) {
+          return {
+            columns: parsed.columns,
+            rows: parsed.rows,
+          };
+        }
+        // If data is array of arrays (split format), convert to array of objects
+        if (Array.isArray(parsed.data)) {
+          const rows = parsed.data.map((row: any[]) => {
+            const obj: Record<string, any> = {};
+            parsed.columns.forEach((col: string, i: number) => {
+              obj[col] = row[i];
+            });
+            return obj;
+          });
+          return { columns: parsed.columns, rows };
+        }
+      }
+
+      // Format 3: df.to_dict() default format: {column: {index: value}}
+      // Example: {"col1": {"0": "a", "1": "b"}, "col2": {"0": 1, "1": 2}}
+      // Detect by checking if all values are objects with numeric string keys
+      const keys = Object.keys(parsed);
+      if (keys.length > 0) {
+        const firstValue = parsed[keys[0]];
+        if (firstValue && typeof firstValue === "object" && !Array.isArray(firstValue)) {
+          // Check if keys of nested object look like indices (numeric strings)
+          const indexKeys = Object.keys(firstValue);
+          const looksLikeDefaultFormat = indexKeys.length > 0 &&
+            indexKeys.every(k => /^\d+$/.test(k));
+
+          if (looksLikeDefaultFormat) {
+            // Convert {col: {idx: val}} to [{col: val}, ...]
+            const rows: Record<string, any>[] = [];
+            indexKeys.forEach(idx => {
+              const row: Record<string, any> = {};
+              keys.forEach(col => {
+                row[col] = parsed[col][idx];
+              });
+              rows.push(row);
+            });
+            return { columns: keys, rows };
+          }
+        }
+      }
     }
 
+    // Not a recognized tabular format
     return null;
   };
 
