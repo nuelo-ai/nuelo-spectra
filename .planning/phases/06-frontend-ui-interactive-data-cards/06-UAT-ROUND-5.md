@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 06-frontend-ui-interactive-data-cards
 source:
   - All Phase 6 SUMMARY files (06-01 through 06-19)
@@ -115,17 +115,39 @@ skipped: 1
   reason: "User reported: three dots appears but status updates not showing at the bottom. Only showing static 'analyzing result' text"
   severity: minor
   test: 8
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Backend emits status events with nested structure {type: 'status', event: 'coding_started'} but frontend expects flat structure {type: 'coding_started'}. Frontend switch statement checks event.type directly, which never matches when type='status'."
+  artifacts:
+    - path: "backend/app/agents/coding.py"
+      issue: "lines 104-118: emits {type: 'status', event: 'coding_started'}"
+    - path: "backend/app/agents/graph.py"
+      issue: "lines 80-86, 284-290: emits {type: 'status', event: 'validation_started'} and {type: 'status', event: 'execution_started'}"
+    - path: "backend/app/agents/data_analysis.py"
+      issue: "lines 60-66: emits {type: 'status', event: 'analysis_started'}"
+    - path: "frontend/src/hooks/useSSEStream.ts"
+      issue: "lines 117-123: expects flat structure, checks event.type directly"
+  missing:
+    - "Change backend agents to emit flat structure {type: 'coding_started', message: '...'}"
+    - "Remove nested event field from all 4 backend agent status emissions"
+  debug_session: ".planning/debug/status-updates-not-showing.md"
 
 - truth: "Data Card always displays interactive sortable/filterable table with download capability"
   status: failed
   reason: "User reported: it does show, however, how the presentation of the table is not consistent. It sometimes display a table with a nice scrollable and button to download, and sometimes it only shows simple markdown table that is static. This needs to be set consistently using the table that can be downloaded"
   severity: major
   test: 10
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "ChatMessage parseExecutionResult only recognizes array-of-objects or {columns, rows} formats, but fails when pandas df.to_dict() uses default format {column: {index: value}} without 'columns' key, or when result is empty array, causing inconsistent rendering."
+  artifacts:
+    - path: "frontend/src/components/chat/ChatMessage.tsx"
+      issue: "lines 45-91: parseExecutionResult missing df.to_dict() default format handler and empty array handler"
+    - path: "frontend/src/components/chat/ChatMessage.tsx"
+      issue: "lines 53-60: strict validation rejects empty arrays instead of showing empty table"
+    - path: "frontend/src/components/chat/DataCard.tsx"
+      issue: "lines 52-75: dead code parseTableData never called due to line 75 logic error"
+    - path: "backend/app/config/prompts.yaml"
+      issue: "lines 18-43: coding agent prompt doesn't specify DataFrame conversion format"
+  missing:
+    - "Update parseExecutionResult to handle df.to_dict() default format {col: {idx: val}}"
+    - "Update parseExecutionResult to handle empty arrays by returning {columns: [], rows: []}"
+    - "Fix or remove DataCard parseTableData dead code at line 75"
+    - "Update coding prompt to instruct .to_dict('records') for consistent format"
+  debug_session: ".planning/debug/data-card-table-inconsistent.md"
