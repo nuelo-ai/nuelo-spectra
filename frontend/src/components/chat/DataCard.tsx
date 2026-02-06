@@ -48,31 +48,7 @@ export function DataCard({
   const collapsed = onToggleCollapse ? isCollapsed : internalCollapsed;
   const toggleCollapse = onToggleCollapse || (() => setInternalCollapsed(!internalCollapsed));
 
-  // Parse execution_result if it's a JSON string with tabular data
-  const parseTableData = (result: any) => {
-    if (!result) return null;
-
-    // If result is already structured
-    if (result.columns && result.rows) {
-      return { columns: result.columns, rows: result.rows };
-    }
-
-    // If result is a string, try to parse it
-    if (typeof result === "string") {
-      try {
-        const parsed = JSON.parse(result);
-        if (parsed.columns && parsed.rows) {
-          return { columns: parsed.columns, rows: parsed.rows };
-        }
-      } catch {
-        // Not JSON, ignore
-      }
-    }
-
-    return null;
-  };
-
-  const displayTableData = tableData || parseTableData(tableData);
+  const displayTableData = tableData;
 
   return (
     <Collapsible
