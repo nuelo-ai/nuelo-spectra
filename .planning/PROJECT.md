@@ -8,6 +8,13 @@ Spectra is an AI-powered data analytics platform that transforms how users inter
 
 Accurate data analysis. The AI must generate correct, safe Python code that produces reliable results. If the code is wrong or the sandbox isn't secure, the entire product fails. Everything else—polish, features, exports—depends on users trusting the analysis is accurate.
 
+## Repository
+
+**GitHub:** https://github.com/marwazihs/nuelo-spectra.git (private)
+**Remote:** origin
+**Branch:** master
+**Latest Tag:** v0.1 (2026-02-06)
+
 ## Current State
 
 **Shipped:** v0.1 Beta MVP (2026-02-06)
