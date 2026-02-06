@@ -1,8 +1,8 @@
 # Project State: Spectra v1.0 MVP
 
-**Last Updated:** 2026-02-05
+**Last Updated:** 2026-02-06
 **Milestone:** v1.0 MVP
-**Status:** Chat Fully Functional - Backend execution + Frontend streaming display verified working. Streaming cursor bug fixed. Ready for formal UAT Round 4.
+**Status:** Chat Fully Functional - Backend execution + Frontend streaming display verified working. Status event structure fixed for UAT Round 5.
 
 ---
 
@@ -12,7 +12,7 @@
 Accurate data analysis through correct, safe Python code generation. If the code is wrong or the sandbox isn't secure, the entire product fails.
 
 **Current Focus:**
-Chat functionality complete end-to-end. Backend executes queries in E2B sandbox with structured JSON output. Frontend displays streaming messages in real-time with immediate persistence. System ready for formal UAT Round 4.
+Chat functionality complete end-to-end. Backend executes queries in E2B sandbox with structured JSON output. Frontend displays streaming messages in real-time with immediate persistence. Backend status events now use flat structure matching frontend expectations. Ready for UAT Round 5 Test 8 validation.
 
 **Key Constraint:**
 Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolation) is non-negotiable for production.
@@ -22,7 +22,7 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 ## Current Position
 
 **Phase:** 6 of 6 - Frontend UI & Interactive Data Cards
-**Plan:** 18 plans complete + 9 critical backend fixes + streaming display fix
+**Plan:** 18 plans complete + 9 critical backend fixes + streaming display fix + status event structure fix
 **Status:** Chat fully functional - backend execution + frontend real-time display both working.
 
 **Progress Bar:**
@@ -37,12 +37,13 @@ Phase 5: [██████████] 2/2 plans COMPLETE (SandboxRuntime Pro
 Phase 6: [██████████] 18 plans + 9 backend fixes COMPLETE (chat execution working)
 ```
 
-**Last activity:** 2026-02-05 - Streaming display tested and verified working. Fixed streaming cursor bug (empty message showing "|" character). Messages now appear immediately with proper typing indicator → text transition.
+**Last activity:** 2026-02-06 - Completed 06-20-PLAN.md fixing backend status event structure. Backend now emits flat events matching frontend switch statement expectations.
 
 **Next Action:**
 1. ✓ Test the streaming display fix - VERIFIED WORKING
-2. Run formal UAT Round 4 with all fixes in place
-3. Complete Phase 6 verification
+2. ✓ Fix status event structure - COMPLETE
+3. Run UAT Round 5 Test 8 to verify status updates display correctly
+4. Close remaining UAT Round 5 gaps (Test 16: data card table inconsistency)
 
 ---
 
@@ -65,6 +66,7 @@ Phase 6: [██████████] 18 plans + 9 backend fixes COMPLETE (c
 
 | Date | Decision | Impact |
 |------|----------|--------|
+| 2026-02-06 | **Backend Status Event Structure Fix (06-20)** | Changed all backend agent status emissions from nested structure {type: "status", event: "X_started"} to flat structure {type: "X_started"} matching frontend switch statement expectations. Fixed in coding.py (coding_started), graph.py (validation_started, execution_started), and data_analysis.py (analysis_started). Status updates will now display correctly at bottom of chat during streaming. |
 | 2026-02-05 | **Streaming Cursor Bug Fix (Session 4)** | Fixed ChatInterface rendering logic to only show streaming ChatMessage when streamedText has content. Previously, when node events arrived before text was streamed, it rendered empty message with just cursor ("|" character). Now keeps showing TypingIndicator until actual text arrives, then transitions smoothly to ChatMessage. Fixes: Clean typing indicator → text transition, no phantom cursor. |
 | 2026-02-04 | **Frontend Streaming Display Fix (Session 3)** | Changed invalidateQueries to refetchQueries with await in ChatInterface to force immediate message reload after stream completes. Previously, messages only appeared after page refresh due to lazy invalidation. Now messages display in real-time as streaming completes. Removed 500ms setTimeout delay - refetch is synchronous. Added exact: true to prevent over-refetching. Fixes: Real-time message display, seamless chat UX. |
 | 2026-02-04 | **9 Critical Backend Chat Fixes (Session 2)** | Completed comprehensive debugging session fixing all chat execution issues: (1) Disabled PostgreSQL checkpointing (async incompatibility), (2) Increased token limit 800→2000, (3) E2B API key explicit pass, (4) E2B filesystem API fix (sandbox.files.write), (5) Excel file loading (pd.read_excel), (6) Auto-load DataFrame with file data, (7) Data profile with exact column names, (8) Structured JSON output format, (9) Numpy/pandas type conversion. Chat queries now execute successfully returning structured results. Proven with test query: ₹31,494,190 bag category sales. |
