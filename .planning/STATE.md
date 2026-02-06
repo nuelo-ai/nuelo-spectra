@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-02-06
 **Milestone:** v1.0 MVP
-**Status:** Chat Fully Functional - Backend execution + Frontend streaming display verified working. Status event structure fixed for UAT Round 5.
+**Status:** Chat Fully Functional - Backend execution + Frontend streaming display verified working. Data Card table rendering consistency fixed for UAT Round 5.
 
 ---
 
@@ -12,7 +12,7 @@
 Accurate data analysis through correct, safe Python code generation. If the code is wrong or the sandbox isn't secure, the entire product fails.
 
 **Current Focus:**
-Chat functionality complete end-to-end. Backend executes queries in E2B sandbox with structured JSON output. Frontend displays streaming messages in real-time with immediate persistence. Backend status events now use flat structure matching frontend expectations. Ready for UAT Round 5 Test 8 validation.
+Chat functionality complete end-to-end. Backend executes queries in E2B sandbox with structured JSON output. Frontend displays streaming messages in real-time with immediate persistence. Data Card table rendering now consistent - robust parsing handles all pandas output formats (records/split/default) and empty arrays. Ready for UAT Round 5 Test 10 validation.
 
 **Key Constraint:**
 Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolation) is non-negotiable for production.
@@ -22,8 +22,8 @@ Timeline: 2-4 weeks for MVP delivery. Single developer. Security (sandbox isolat
 ## Current Position
 
 **Phase:** 6 of 6 - Frontend UI & Interactive Data Cards
-**Plan:** 18 plans complete + 9 critical backend fixes + streaming display fix + status event structure fix
-**Status:** Chat fully functional - backend execution + frontend real-time display both working.
+**Plan:** 18 plans complete + 11 UAT Round 5 gap closures
+**Status:** Chat fully functional - backend execution + frontend real-time display both working. UAT Round 5 gaps being closed.
 
 **Progress Bar:**
 ```
@@ -37,13 +37,14 @@ Phase 5: [██████████] 2/2 plans COMPLETE (SandboxRuntime Pro
 Phase 6: [██████████] 18 plans + 9 backend fixes COMPLETE (chat execution working)
 ```
 
-**Last activity:** 2026-02-06 - Completed 06-20-PLAN.md fixing backend status event structure. Backend now emits flat events matching frontend switch statement expectations.
+**Last activity:** 2026-02-06 - Completed 06-21-PLAN.md fixing Data Card table consistency. Enhanced parseExecutionResult to handle all pandas output formats, ensuring interactive tables always render.
 
 **Next Action:**
 1. ✓ Test the streaming display fix - VERIFIED WORKING
 2. ✓ Fix status event structure - COMPLETE
-3. Run UAT Round 5 Test 8 to verify status updates display correctly
-4. Close remaining UAT Round 5 gaps (Test 16: data card table inconsistency)
+3. ✓ Fix data card table consistency - COMPLETE
+4. Run UAT Round 5 Test 10 to verify interactive tables always render
+5. Close remaining UAT Round 5 gap (Test 8: status updates not showing)
 
 ---
 
@@ -66,6 +67,7 @@ Phase 6: [██████████] 18 plans + 9 backend fixes COMPLETE (c
 
 | Date | Decision | Impact |
 |------|----------|--------|
+| 2026-02-06 | **Multi-Format Table Parsing (06-21)** | Enhanced parseExecutionResult to handle all pandas output formats: df.to_dict('records') [{"col": val}], df.to_dict('split') {columns, data}, df.to_dict() default {col: {idx: val}}, and empty arrays. Backend coding agent prompt now instructs LLM to use .to_dict('records') for consistency, with robust frontend fallback. Eliminates static markdown table rendering - Data Card always shows interactive TanStack table with sort/filter/pagination/CSV download. |
 | 2026-02-06 | **Backend Status Event Structure Fix (06-20)** | Changed all backend agent status emissions from nested structure {type: "status", event: "X_started"} to flat structure {type: "X_started"} matching frontend switch statement expectations. Fixed in coding.py (coding_started), graph.py (validation_started, execution_started), and data_analysis.py (analysis_started). Status updates will now display correctly at bottom of chat during streaming. |
 | 2026-02-05 | **Streaming Cursor Bug Fix (Session 4)** | Fixed ChatInterface rendering logic to only show streaming ChatMessage when streamedText has content. Previously, when node events arrived before text was streamed, it rendered empty message with just cursor ("|" character). Now keeps showing TypingIndicator until actual text arrives, then transitions smoothly to ChatMessage. Fixes: Clean typing indicator → text transition, no phantom cursor. |
 | 2026-02-04 | **Frontend Streaming Display Fix (Session 3)** | Changed invalidateQueries to refetchQueries with await in ChatInterface to force immediate message reload after stream completes. Previously, messages only appeared after page refresh due to lazy invalidation. Now messages display in real-time as streaming completes. Removed 500ms setTimeout delay - refetch is synchronous. Added exact: true to prevent over-refetching. Fixes: Real-time message display, seamless chat UX. |
