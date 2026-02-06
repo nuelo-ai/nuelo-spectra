@@ -242,8 +242,8 @@ Plans:
 - [x] 06-17-PLAN.md -- Gap closure: Install @tailwindcss/typography + remark-gfm, fix dialog sizing to max-w-3xl with max-h-[85vh]
 - [x] 06-18-PLAN.md -- Gap closure: Rewrite button handler with try/catch/finally, add refetchInterval and error state to sidebar
 - [x] 06-19-PLAN.md -- UAT retest: Verify markdown rendering, dialog sizing, button handler, and sidebar refresh
-- [ ] 06-20-PLAN.md -- Gap closure: Fix backend status event structure (nested to flat format)
-- [ ] 06-21-PLAN.md -- Gap closure: Fix Data Card table consistency (handle all pandas output formats)
+- [x] 06-20-PLAN.md -- Gap closure: Fix backend status event structure (nested to flat format)
+- [x] 06-21-PLAN.md -- Gap closure: Fix Data Card table consistency (handle all pandas output formats)
 
 **Success Criteria:**
 1. Query results display as Data Cards with streaming responses appearing progressively
@@ -291,9 +291,9 @@ Plans:
 | **3 - AI Agents & Orchestration** | Complete | 8/8 | 100% |
 | **4 - Streaming Infrastructure** | Complete | 3/3 | 100% |
 | **5 - Sandbox Security & Code Execution** | Complete | 8/8 | 100% |
-| **6 - Frontend UI & Interactive Data Cards** | UAT Gap Closure | 12/12 | 97% (2 UAT gaps: status updates, Data Card table consistency) |
+| **6 - Frontend UI & Interactive Data Cards** | Complete | 12/12 | 100% |
 
-**Overall Progress:** 100% requirements coded (42/42) - UAT Round 5 gap closure in progress
+**Overall Progress:** 100% requirements complete (42/42) - All phases verified
 
 ---
 
@@ -340,5 +340,5 @@ Phase 6: Frontend UI & Interactive Data Cards
 
 ---
 
-*Last updated: 2026-02-05 - Phase 6 UAT Round 5 gap closure: Plans 06-20 (status event format fix) and 06-21 (Data Card table consistency) created to address 2 remaining gaps*
-*Next step: Execute 06-20 and 06-21 (Wave 1, parallel), then run UAT Round 6*
+*Last updated: 2026-02-06 - Phase 6 complete: Plans 06-20 and 06-21 executed successfully, all 22 must-haves verified*
+*Next step: Milestone audit or manual UAT Round 6 acceptance testing*
