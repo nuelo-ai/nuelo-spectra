@@ -26,6 +26,7 @@ agents:
       **Rules:**
       - Use exact column names from the dataset (case-sensitive)
       - Convert results to Python types: int(), float(), str()
+      - For DataFrame/Series results: use .to_dict('records') to get list of row dicts
       - End with: print(json.dumps({{"result": result}}))
       - Libraries allowed: {allowed_libraries}
       - Use .fillna(0) for missing values
@@ -38,9 +39,16 @@ agents:
       print(json.dumps({{"result": result}}))
       ```
 
+      **Example with DataFrame result:**
+      ```python
+      import json
+      result = df.groupby('category')['sales'].sum().reset_index().to_dict('records')
+      print(json.dumps({{"result": result}}))
+      ```
+
       Return only code, no explanations.
 
-    max_tokens: 2000
+    max_tokens: 10000
 
   code_checker:
     system_prompt: |
@@ -93,4 +101,4 @@ agents:
       Be concise and conversational. Use numbers from the actual result.
       Format for readability with markdown.
 
-    max_tokens: 1000
+    max_tokens: 2000
