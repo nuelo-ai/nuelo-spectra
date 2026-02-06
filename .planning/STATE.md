@@ -216,7 +216,8 @@ Phase 6: [██████████] 21/21 plans COMPLETE (all requirements
 - [x] CARD-07: Markdown download for analysis reports
 - [x] CARD-08: Python code display with syntax highlighting
 
-**Pending Todos (4):**
+**Pending Todos (5):**
+- [ ] Migrate email service from Mailgun API to standard SMTP (see `.planning/todos/pending/2026-02-06-migrate-email-service-from-mailgun-api-to-smtp.md`)
 - [ ] Agent memory persistence and context size research (see `.planning/todos/pending/2026-02-04-agent-memory-persistence-and-context-size-research.md`)
 - [ ] Add OpenRouter and Ollama LLM provider support (see `.planning/todos/pending/2026-02-03-add-openrouter-and-ollama-llm-support.md`)
 - [ ] Additional pending todos in `.planning/todos/pending/`
