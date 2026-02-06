@@ -78,8 +78,7 @@ async def code_checker_node(
     """
     writer = get_stream_writer()
     writer({
-        "type": "status",
-        "event": "validation_started",
+        "type": "validation_started",
         "message": "Validating...",
         "step": 2,
         "total_steps": 4
@@ -282,8 +281,7 @@ async def execute_in_sandbox(
 
     # Emit execution started status
     writer({
-        "type": "status",
-        "event": "execution_started",
+        "type": "execution_started",
         "message": "Executing...",
         "step": 3,
         "total_steps": 4

@@ -58,8 +58,7 @@ async def data_analysis_agent(state: ChatAgentState) -> dict:
     """
     writer = get_stream_writer()
     writer({
-        "type": "status",
-        "event": "analysis_started",
+        "type": "analysis_started",
         "message": "Analyzing...",
         "step": 4,
         "total_steps": 4

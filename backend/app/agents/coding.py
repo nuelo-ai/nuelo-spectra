@@ -102,16 +102,14 @@ async def coding_agent(state: ChatAgentState) -> dict:
     error_count = state.get("error_count", 0)
     if error_count > 0:
         writer({
-            "type": "status",
-            "event": "coding_started",
+            "type": "coding_started",
             "message": f"Regenerating code (attempt {error_count + 1}/{state.get('max_steps', 3)})...",
             "step": 1,
             "total_steps": 4
         })
     else:
         writer({
-            "type": "status",
-            "event": "coding_started",
+            "type": "coding_started",
             "message": "Generating code...",
             "step": 1,
             "total_steps": 4
