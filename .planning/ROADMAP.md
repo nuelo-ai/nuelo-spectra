@@ -220,7 +220,7 @@ Plans:
 
 **Requirements:** CARD-01, CARD-02, CARD-03, CARD-04, CARD-05, CARD-06, CARD-07, CARD-08, SETT-01, SETT-02, SETT-03
 
-**Plans:** 19 plans
+**Plans:** 21 plans
 
 Plans:
 - [x] 06-01-PLAN.md -- Scaffold Next.js 16 project, install dependencies, shadcn/ui init, auth pages, API client, TypeScript types
@@ -239,9 +239,11 @@ Plans:
 - [x] 06-14-PLAN.md -- Gap closure: Fix useFileSummary query disabling + file list refetch
 - [x] 06-15-PLAN.md -- Gap closure: Markdown rendering, modal sizing, FILE-05/FILE-06 UI, sidebar double-refetch fix
 - [x] 06-16-PLAN.md -- UAT retest: Verify all upload flow fixes and FILE-05/FILE-06 implementation
-- [ ] 06-17-PLAN.md -- Gap closure: Install @tailwindcss/typography + remark-gfm, fix dialog sizing to max-w-3xl with max-h-[85vh]
-- [ ] 06-18-PLAN.md -- Gap closure: Rewrite button handler with try/catch/finally, add refetchInterval and error state to sidebar
-- [ ] 06-19-PLAN.md -- UAT retest: Verify markdown rendering, dialog sizing, button handler, and sidebar refresh
+- [x] 06-17-PLAN.md -- Gap closure: Install @tailwindcss/typography + remark-gfm, fix dialog sizing to max-w-3xl with max-h-[85vh]
+- [x] 06-18-PLAN.md -- Gap closure: Rewrite button handler with try/catch/finally, add refetchInterval and error state to sidebar
+- [x] 06-19-PLAN.md -- UAT retest: Verify markdown rendering, dialog sizing, button handler, and sidebar refresh
+- [ ] 06-20-PLAN.md -- Gap closure: Fix backend status event structure (nested to flat format)
+- [ ] 06-21-PLAN.md -- Gap closure: Fix Data Card table consistency (handle all pandas output formats)
 
 **Success Criteria:**
 1. Query results display as Data Cards with streaming responses appearing progressively
@@ -289,9 +291,9 @@ Plans:
 | **3 - AI Agents & Orchestration** | Complete | 8/8 | 100% |
 | **4 - Streaming Infrastructure** | Complete | 3/3 | 100% |
 | **5 - Sandbox Security & Code Execution** | Complete | 8/8 | 100% |
-| **6 - Frontend UI & Interactive Data Cards** | UAT Gap Closure | 12/12 | 95% (upload flow UAT gaps: markdown rendering, dialog sizing, button handler, sidebar refresh) |
+| **6 - Frontend UI & Interactive Data Cards** | UAT Gap Closure | 12/12 | 97% (2 UAT gaps: status updates, Data Card table consistency) |
 
-**Overall Progress:** 100% requirements coded (42/42) - UAT gap closure in progress for upload flow display + button handler resilience
+**Overall Progress:** 100% requirements coded (42/42) - UAT Round 5 gap closure in progress
 
 ---
 
@@ -338,5 +340,5 @@ Phase 6: Frontend UI & Interactive Data Cards
 
 ---
 
-*Last updated: 2026-02-04 - Phase 6 UAT gap closure: Plans 06-17, 06-18, 06-19 created to fix diagnosed root causes (@tailwindcss/typography, remark-gfm, dialog sizing, button handler try/catch/finally, sidebar refetchInterval)*
-*Next step: Execute 06-17 and 06-18 (Wave 1, parallel), then 06-19 (Wave 2, UAT retest)*
+*Last updated: 2026-02-05 - Phase 6 UAT Round 5 gap closure: Plans 06-20 (status event format fix) and 06-21 (Data Card table consistency) created to address 2 remaining gaps*
+*Next step: Execute 06-20 and 06-21 (Wave 1, parallel), then run UAT Round 6*
