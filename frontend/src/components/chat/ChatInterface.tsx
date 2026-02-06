@@ -271,8 +271,8 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
                       {...getStreamingDataCard()!}
                       isStreaming={true}
                     />
-                  ) : (
-                    // Render as regular message
+                  ) : streamedText ? (
+                    // Only render as regular message if we have text
                     <ChatMessage
                       message={{
                         id: "streaming",
@@ -286,6 +286,9 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
                       isStreaming={true}
                       streamedText={streamedText}
                     />
+                  ) : (
+                    // Show typing indicator if no text yet
+                    <TypingIndicator />
                   )
                 ) : (
                   <TypingIndicator />
