@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 8 of 11 (Session Memory with PostgreSQL Checkpointing)
-Plan: 1 of 4 complete
-Status: In progress - PostgreSQL checkpointing infrastructure complete
+Plan: 2 of 4 complete
+Status: In progress - Token counting and context management complete
 Branch: develop (v0.2 development branch)
-Last activity: 2026-02-07 — Completed 08-01-PLAN.md (PostgreSQL Checkpointing Infrastructure)
+Last activity: 2026-02-07 — Completed 08-02-PLAN.md (Token Counting & Context Management)
 
-Progress: [█████████████████░░░░░░░░░░░] 62% (41/66 total plans)
+Progress: [█████████████████░░░░░░░░░░░] 64% (42/66 total plans)
 
 ## Performance Metrics
 
@@ -40,7 +40,7 @@ Progress: [█████████████████░░░░░░
 | Phase | Plans | Status |
 |-------|-------|--------|
 | 7. Multi-LLM Provider Infrastructure | 4/4 | Complete |
-| 8. Session Memory with PostgreSQL Checkpointing | 1/4 | In progress |
+| 8. Session Memory with PostgreSQL Checkpointing | 2/4 | In progress |
 
 **Recent Trend:**
 - v0.1 completed in 5 days with aggressive execution
@@ -49,7 +49,8 @@ Progress: [█████████████████░░░░░░
 - v0.2 Phase 7 Plan 3: 2 min execution (validation & observability)
 - v0.2 Phase 7 Plan 4: 5 min execution (test scenarios - 34 tests, all 5 providers)
 - v0.2 Phase 8 Plan 1: 4 min execution (PostgreSQL checkpointing infrastructure)
-- Trend: Stable, high velocity maintained (Phase 7 complete in ~12 min, Phase 8 started)
+- v0.2 Phase 8 Plan 2: 3 min execution (token counting & context management)
+- Trend: Stable, high velocity maintained (Phase 7 complete in ~12 min, Phase 8 in progress ~7 min so far)
 
 ## Accumulated Context
 
@@ -76,6 +77,7 @@ Recent decisions affecting v0.2 work:
 - **Phase 7 Plan 3 (2026-02-07):** Fail-fast startup validation with connectivity tests (5-second timeout per provider), 60-second cached health checks, structured JSON logging for LLM calls (metadata only, not full content)
 - **Phase 7 Plan 4 (2026-02-07):** 34 comprehensive test scenarios covering all 5 providers (Anthropic, OpenAI, Google, Ollama, OpenRouter) with factory, config, validation, error classification, health endpoint, and invoke logging tests. All tests fully mocked - zero live API keys required (LLM-06 satisfied)
 - **Phase 8 Plan 1 (2026-02-07):** AsyncPostgresSaver initialized in FastAPI lifespan with connection pooling, add_messages reducer for message accumulation, thread-based conversation isolation per file tab. AsyncPostgresSaver is NOT an async context manager (use direct instantiation). Database URL conversion required (postgresql+asyncpg → postgresql for psycopg). Messages initialized as [HumanMessage(content=user_query)] for proper reducer behavior. Context window defaults: 12000 tokens, 85% warning threshold.
+- **Phase 8 Plan 2 (2026-02-07):** Tiktoken-based token counting with provider-specific scaling factors (1.1x Anthropic, 1.05x Google, 1.0x OpenAI/others) for fast UI updates without expensive API calls. Two-phase trimming flow: check → user confirmation → trim to 90% of limit. Context usage displayed in ChatInterface header ("X / 12,000 tokens" with orange warning at 85%, red at exceeded). Browser tab close warning via beforeunload when hasContext (>2 messages). GET /context-usage and POST /trim-context endpoints for frontend integration.
 
 ### Pending Todos
 
@@ -103,6 +105,6 @@ Recent decisions affecting v0.2 work:
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed Phase 8 Plan 1 (08-01-PLAN.md) - PostgreSQL Checkpointing Infrastructure. AsyncPostgresSaver enabled with add_messages reducer, checkpointer wired through agent service and router.
-Resume with: `/gsd:execute-plan` for 08-02 (Token Counting & Context Management) or continue with remaining Phase 8 plans
-Resume file: .planning/phases/08-session-memory-with-postgresql-checkpointing/08-01-SUMMARY.md
+Stopped at: Completed Phase 8 Plan 2 (08-02-PLAN.md) - Token Counting & Context Management. Tiktoken-based counting with provider scaling, context usage display in ChatInterface header, trim confirmation dialog, and browser tab close warning.
+Resume with: `/gsd:execute-plan` for 08-03 (next Phase 8 plan) or continue with remaining Phase 8 plans
+Resume file: .planning/phases/08-session-memory-with-postgresql-checkpointing/08-02-SUMMARY.md
