@@ -3,32 +3,17 @@
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.config import get_stream_writer
 
-from app.agents.config import get_agent_prompt, get_agent_max_tokens
+from app.agents.config import (
+    get_agent_prompt,
+    get_agent_max_tokens,
+    get_agent_provider,
+    get_agent_model,
+    get_agent_temperature,
+    get_api_key_for_provider,
+)
 from app.agents.llm_factory import get_llm
 from app.agents.state import ChatAgentState
 from app.config import get_settings
-
-
-def _get_api_key(settings) -> str:
-    """Get API key based on configured LLM provider.
-
-    Args:
-        settings: Application settings instance
-
-    Returns:
-        str: API key for the configured provider
-
-    Raises:
-        ValueError: If provider is unknown
-    """
-    if settings.llm_provider == "anthropic":
-        return settings.anthropic_api_key
-    elif settings.llm_provider == "openai":
-        return settings.openai_api_key
-    elif settings.llm_provider == "google":
-        return settings.google_api_key
-    else:
-        raise ValueError(f"Unknown provider: {settings.llm_provider}")
 
 
 async def data_analysis_agent(state: ChatAgentState) -> dict:
@@ -76,15 +61,19 @@ async def data_analysis_agent(state: ChatAgentState) -> dict:
         execution_result=state.get("execution_result", "No result available")
     )
 
-    # Initialize LLM using factory
-    api_key = _get_api_key(settings)
+    # Initialize LLM using per-agent config
+    provider = get_agent_provider("data_analysis")
+    model = get_agent_model("data_analysis")
+    temperature = get_agent_temperature("data_analysis")
+    api_key = get_api_key_for_provider(provider, settings)
     max_tokens = get_agent_max_tokens("data_analysis")
-    llm = get_llm(
-        provider=settings.llm_provider,
-        model=settings.agent_model,
-        api_key=api_key,
-        max_tokens=max_tokens
-    )
+
+    # Build kwargs for provider-specific options
+    kwargs = {"max_tokens": max_tokens, "temperature": temperature}
+    if provider == "ollama":
+        kwargs["base_url"] = settings.ollama_base_url
+
+    llm = get_llm(provider=provider, model=model, api_key=api_key, **kwargs)
 
     # Build messages
     messages = [

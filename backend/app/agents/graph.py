@@ -22,7 +22,14 @@ from app.agents.state import ChatAgentState
 from app.agents.coding import coding_agent
 from app.agents.code_checker import validate_code
 from app.agents.data_analysis import data_analysis_agent
-from app.agents.config import get_agent_prompt, get_agent_max_tokens
+from app.agents.config import (
+    get_agent_prompt,
+    get_agent_max_tokens,
+    get_agent_provider,
+    get_agent_model,
+    get_agent_temperature,
+    get_api_key_for_provider,
+)
 from app.agents.llm_factory import get_llm
 from app.config import get_settings
 from app.services.sandbox import E2BSandboxRuntime, ExecutionResult
@@ -32,28 +39,6 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 # Module-level cached graph instance
 _cached_graph = None
-
-
-def _get_api_key(settings) -> str:
-    """Get API key based on configured LLM provider.
-
-    Args:
-        settings: Application settings instance
-
-    Returns:
-        str: API key for the configured provider
-
-    Raises:
-        ValueError: If provider is unknown
-    """
-    if settings.llm_provider == "anthropic":
-        return settings.anthropic_api_key
-    elif settings.llm_provider == "openai":
-        return settings.openai_api_key
-    elif settings.llm_provider == "google":
-        return settings.google_api_key
-    else:
-        raise ValueError(f"Unknown provider: {settings.llm_provider}")
 
 
 async def code_checker_node(
@@ -132,15 +117,19 @@ async def code_checker_node(
         user_query=state["user_query"], generated_code=generated_code
     )
 
-    # Initialize LLM
-    api_key = _get_api_key(settings)
+    # Initialize LLM using per-agent config
+    provider = get_agent_provider("code_checker")
+    model = get_agent_model("code_checker")
+    temperature = get_agent_temperature("code_checker")
+    api_key = get_api_key_for_provider(provider, settings)
     max_tokens = get_agent_max_tokens("code_checker")
-    llm = get_llm(
-        provider=settings.llm_provider,
-        model=settings.agent_model,
-        api_key=api_key,
-        max_tokens=max_tokens,
-    )
+
+    # Build kwargs for provider-specific options
+    kwargs = {"max_tokens": max_tokens, "temperature": temperature}
+    if provider == "ollama":
+        kwargs["base_url"] = settings.ollama_base_url
+
+    llm = get_llm(provider=provider, model=model, api_key=api_key, **kwargs)
 
     # Invoke LLM for logical validation
     messages = [
