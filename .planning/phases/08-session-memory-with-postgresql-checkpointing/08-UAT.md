@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 08-session-memory-with-postgresql-checkpointing
 source: [08-01-SUMMARY.md, 08-02-SUMMARY.md]
 started: 2026-02-07T21:00:00Z
-updated: 2026-02-07T21:10:00Z
+updated: 2026-02-07T21:20:00Z
 ---
 
 ## Current Test
@@ -66,31 +66,43 @@ skipped: 5
 ## Gaps
 
 - truth: "Follow-up queries should use conversation memory without re-calling Coding Agent for context that already exists"
-  status: failed
+  status: fixed
   reason: "User reported: I can't tell if the answer came from memory because the agent coder was called again. This needs to be further investigated and might need some changes on how the AI agents were called."
   severity: major
   test: 1
-  root_cause: ""
-  artifacts: []
+  root_cause: "Initial state with messages: [HumanMessage(...)] overrides checkpointed state. LangGraph reducers only apply during graph execution, not when merging initial state passed to ainvoke(). Every query starts with single message, losing conversation history."
+  artifacts:
+    - path: "backend/app/services/agent_service.py"
+      issue: "Lines 177-181 and 318-322 - retrieve existing state, append new message, pass accumulated messages"
+      fix: "Retrieve existing state using graph.aget_state(config), append new HumanMessage to existing messages, pass updated_messages in initial_state"
   missing: []
-  debug_session: ""
+  debug_session: ".planning/debug/memory-not-persisting.md"
+  fix_commit: "e4fa3ce"
 
 - truth: "Browser shows 'Leave site?' warning dialog when closing chat tab with active conversation (>2 messages)"
-  status: failed
+  status: fixed
   reason: "User reported: fail - no warning was shown"
   severity: major
   test: 3
-  root_cause: ""
-  artifacts: []
+  root_cause: "event.returnValue set to empty string ('') which is falsy. Modern browsers require truthy returnValue to trigger beforeunload confirmation dialog."
+  artifacts:
+    - path: "frontend/src/hooks/useTabCloseWarning.ts"
+      issue: "Line 19 - event.returnValue = '' (falsy value)"
+      fix: "Changed to event.returnValue = true as any"
   missing: []
-  debug_session: ""
+  debug_session: ".planning/debug/resolved/tab-close-warning-not-showing.md"
+  fix_commit: "e4fa3ce"
 
 - truth: "Chat interface header displays current context usage as 'X / 12,000 tokens' next to file name"
-  status: failed
+  status: fixed
   reason: "User reported: fail - no context was shown"
   severity: major
   test: 4
-  root_cause: ""
-  artifacts: []
+  root_cause: "Same as Gap 1 - messages being replaced instead of accumulated causes context-usage endpoint to read empty state from checkpointer, returning message_count = 0 which causes ContextUsage component to return null."
+  artifacts:
+    - path: "backend/app/services/agent_service.py"
+      issue: "Lines 177-181 and 318-322 - initial_state replaces checkpointed messages"
+      fix: "Retrieve existing state, append new message, pass accumulated messages"
   missing: []
-  debug_session: ""
+  debug_session: ".planning/debug/resolved/context-usage-display-not-showing.md"
+  fix_commit: "e4fa3ce"
