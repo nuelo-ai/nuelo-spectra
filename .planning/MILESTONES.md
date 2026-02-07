@@ -35,7 +35,7 @@
 
 **Testing:** UAT Round 6 passed (3/3 tests) - All E2E flows verified
 
-**What's next:** v0.2 will focus on UI/UX polish, additional export features, and performance optimizations
+**What's next:** v0.2 will focus on enhancing AI agents with memory persistence and additional LLM providers (Ollama and OpenRouter)
 
 ---
 

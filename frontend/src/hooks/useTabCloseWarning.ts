@@ -15,8 +15,9 @@ export function useTabCloseWarning(hasContext: boolean) {
 
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
-      // Modern browsers require returnValue to be set (spec requirement)
-      event.returnValue = '';
+      // Modern browsers require returnValue to be truthy (not empty string)
+      // Setting to true triggers the generic "Leave site?" dialog
+      event.returnValue = true as any; // Type cast needed as spec requires string but browsers accept boolean
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
