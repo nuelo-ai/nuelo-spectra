@@ -103,26 +103,35 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 ### Active
 
-(None — define requirements for next milestone using `/gsd:new-milestone`)
+## Current Milestone: v0.2 Intelligence & Integration
 
-**Chat with Data:**
-- [ ] User can ask questions about their data in natural language
-- [ ] System streams AI responses in real-time (show thinking process)
-- [ ] Coding Agent generates Python scripts based on user queries
-- [ ] Code Checker Agent validates generated code for safety and correctness
-- [ ] Python code executes in secure sandbox environment
-- [ ] Data Analysis Agent interprets results and generates explanations
+**Goal:** Enhance AI agent capabilities with memory persistence and multi-provider LLM support, add intelligent query suggestions, and complete production email infrastructure.
 
-**Interactive Data Cards:**
-- [ ] Results display as Data Cards with streaming responses
-- [ ] Data Cards show: Query Brief, Data Table, AI Explanation
-- [ ] Data tables are sortable and filterable
-- [ ] Visual polish: smooth animations, loading states, transitions
+**Target features:**
+- AI agent memory persistence with configurable context windows
+- Multi-LLM provider support (Ollama, OpenRouter) with per-agent configuration
+- Web search tool integration (Serper.dev) for Analyst agent
+- Smart query suggestions based on initial data analysis
+- Production-ready SMTP email service and forgot password flow
 
-**Settings:**
-- [ ] User can view and edit profile (first name, last name)
-- [ ] User can view account details (email, creation date)
-- [ ] User can change password
+**Active Requirements for v0.2:**
+- [ ] User can maintain chat context across sessions within same tab
+- [ ] User receives warning before closing tab (context loss)
+- [ ] Context window size is configurable
+- [ ] System warns when context limit reached with option to continue
+- [ ] System supports Ollama LLM provider (local or remote)
+- [ ] System supports OpenRouter LLM provider
+- [ ] Each agent can use different LLM provider and model
+- [ ] Agent LLM configuration is externalized to config file
+- [ ] Analyst agent can search web via Serper.dev tool
+- [ ] Web search tool is configurable (API key, enabled/disabled)
+- [ ] New chat tabs display 5-6 smart query suggestions
+- [ ] Suggestions grouped: general analysis, benchmarking, predictive
+- [ ] User can click suggestion to start chat with that query
+- [ ] Email service uses standard SMTP (not Mailgun API)
+- [ ] SMTP configuration in settings (host, port, username, password, TLS)
+- [ ] Password reset emails sent via SMTP (no dev mode console logs)
+- [ ] Dev mode disabled when SMTP is configured
 
 ### Out of Scope
 
@@ -189,4 +198,4 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | Explore AG-UI for Data Cards | Mentioned in architecture requirements for dynamic AI-generated components. Worth researching but not a hard requirement—any solution achieving interactive, polished Data Cards works. | — Pending |
 
 ---
-*Last updated: 2026-02-06 after v0.1 Beta MVP milestone completion*
+*Last updated: 2026-02-06 after starting v0.2 Intelligence & Integration milestone*
