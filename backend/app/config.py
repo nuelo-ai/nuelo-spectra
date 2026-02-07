@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     openai_api_key: str = ""
     google_api_key: str = ""
+    ollama_base_url: str = "http://localhost:11434"
+    openrouter_api_key: str = ""
     agent_model: str = "claude-sonnet-4-20250514"
     agent_max_retries: int = 3
 
