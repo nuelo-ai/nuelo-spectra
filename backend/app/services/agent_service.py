@@ -171,16 +171,10 @@ async def run_chat_query(
     thread_id = f"file_{file_id}_user_{user_id}"
     config = {"configurable": {"thread_id": thread_id}}
 
-    # Retrieve existing state to preserve message history
+    # Build initial state (metadata only - no messages field)
+    # The messages field is omitted here because it's managed via checkpoint
     from langchain_core.messages import HumanMessage
 
-    existing_state = await graph.aget_state(config)
-    existing_messages = existing_state.values.get("messages", []) if existing_state.values else []
-
-    # Append new user message to existing history
-    updated_messages = existing_messages + [HumanMessage(content=user_query)]
-
-    # Build initial state with accumulated messages
     initial_state = {
         "file_id": str(file_id),
         "user_id": str(user_id),
@@ -195,12 +189,21 @@ async def run_chat_query(
         "max_steps": settings.agent_max_retries,
         "execution_result": "",
         "analysis": "",
-        "messages": updated_messages,
         "final_response": "",
-        "error": ""
+        "error": "",
+        "messages": []  # Initialize empty - will be populated from checkpoint or updated below
     }
 
-    # Invoke graph
+    # Add new user message to checkpoint using aupdate_state
+    # This preserves existing messages and appends the new one via add_messages reducer
+    # On first call (no checkpoint), creates checkpoint with this message
+    # On subsequent calls, appends to existing checkpointed messages
+    await graph.aupdate_state(config, {"messages": [HumanMessage(content=user_query)]})
+
+    # Remove messages from initial_state before invoke so checkpoint takes precedence
+    initial_state.pop("messages")
+
+    # Invoke graph - it will load checkpointed state with accumulated messages
     result = await graph.ainvoke(initial_state, config)
 
     # Save user message to chat history
@@ -312,16 +315,10 @@ async def run_chat_query_stream(
     thread_id = f"file_{file_id}_user_{user_id}"
     config = {"configurable": {"thread_id": thread_id}}
 
-    # Retrieve existing state to preserve message history
+    # Build initial state (metadata only - no messages field)
+    # The messages field is omitted here because it's managed via checkpoint
     from langchain_core.messages import HumanMessage
 
-    existing_state = await graph.aget_state(config)
-    existing_messages = existing_state.values.get("messages", []) if existing_state.values else []
-
-    # Append new user message to existing history
-    updated_messages = existing_messages + [HumanMessage(content=user_query)]
-
-    # Build initial state with accumulated messages
     initial_state = {
         "file_id": str(file_id),
         "user_id": str(user_id),
@@ -337,10 +334,19 @@ async def run_chat_query_stream(
         "max_steps": settings.agent_max_retries,
         "execution_result": "",
         "analysis": "",
-        "messages": updated_messages,
         "final_response": "",
-        "error": ""
+        "error": "",
+        "messages": []  # Initialize empty - will be populated from checkpoint or updated below
     }
+
+    # Add new user message to checkpoint using aupdate_state
+    # This preserves existing messages and appends the new one via add_messages reducer
+    # On first call (no checkpoint), creates checkpoint with this message
+    # On subsequent calls, appends to existing checkpointed messages
+    await graph.aupdate_state(config, {"messages": [HumanMessage(content=user_query)]})
+
+    # Remove messages from initial_state before invoke so checkpoint takes precedence
+    initial_state.pop("messages")
 
     # Start timing for stream metadata
     start_time = time.monotonic()
