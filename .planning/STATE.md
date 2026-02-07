@@ -12,7 +12,8 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 Phase: 7 of 11 (Multi-LLM Provider Infrastructure)
 Plan: Ready to plan Phase 7
 Status: Ready to plan
-Last activity: 2026-02-06 — v0.2 roadmap created, 43/43 requirements mapped to phases 7-11
+Branch: develop (v0.2 development branch)
+Last activity: 2026-02-06 — v0.2 roadmap created, 43/43 requirements mapped to phases 7-11. Created `develop` branch for v0.2 work (master remains stable at v0.1).
 
 Progress: [████████████████░░░░░░░░░░░░] 55% (36/66 total plans from v0.1 complete)
 
@@ -46,6 +47,14 @@ Progress: [████████████████░░░░░░░
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
+
+**Git Branching Strategy (2026-02-06):**
+- Using development branch workflow for v0.2+ (see .planning/VERSIONING.md)
+- `master` branch: stable releases only (v0.1, v0.2, etc.)
+- `develop` branch: active development for current milestone
+- All Phase 7-11 commits go to `develop` branch
+- When v0.2 complete: merge develop → master, tag v0.2, optionally delete develop
+
 Recent decisions affecting v0.2 work:
 
 - v0.1: 4-agent architecture validated (Onboarding, Coding, Code Checker, Data Analysis)
