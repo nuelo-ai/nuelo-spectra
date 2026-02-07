@@ -18,6 +18,7 @@ from app.schemas.chat import (
 from app.services import agent_service
 from app.services.chat import ChatService
 from app.services.file import FileService
+from app.agents.graph import get_or_create_graph
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
@@ -230,3 +231,116 @@ async def stream_query(
             "X-Accel-Buffering": "no",  # Disable Nginx buffering
         },
     )
+
+
+@router.get("/{file_id}/context-usage")
+async def get_context_usage(
+    file_id: UUID,
+    current_user: CurrentUser,
+    db: DbSession,
+    request: Request,
+):
+    """Get current context window usage for a file tab.
+
+    Returns token count, max tokens, percentage, and warning flag.
+    Used by frontend to display context usage indicator.
+    """
+    from app.agents.memory.token_counter import get_token_counter
+    from app.agents.config import get_agent_provider, get_agent_model
+
+    # Verify file ownership
+    file = await FileService.get_user_file(db, file_id, current_user.id)
+    if file is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+
+    settings = get_settings()
+    checkpointer = request.app.state.checkpointer
+    graph = get_or_create_graph(checkpointer)
+
+    # Get current state from checkpointer
+    thread_id = f"file_{file_id}_user_{current_user.id}"
+    config = {"configurable": {"thread_id": thread_id}}
+    state = await graph.aget_state(config)
+
+    messages = state.values.get("messages", []) if state.values else []
+
+    # Count tokens using first agent's provider config (coding agent is primary)
+    provider = get_agent_provider("coding")
+    model = get_agent_model("coding")
+    counter = get_token_counter(provider, model)
+
+    current_tokens = counter.count_messages(messages) if messages else 0
+    max_tokens = settings.context_window_tokens
+    percentage = round((current_tokens / max_tokens * 100), 1) if max_tokens > 0 else 0
+
+    return {
+        "current_tokens": current_tokens,
+        "max_tokens": max_tokens,
+        "percentage": percentage,
+        "message_count": len(messages),
+        "is_warning": percentage >= (settings.context_warning_threshold * 100),
+        "is_limit_exceeded": current_tokens > max_tokens,
+    }
+
+
+@router.post("/{file_id}/trim-context")
+async def trim_context(
+    file_id: UUID,
+    current_user: CurrentUser,
+    db: DbSession,
+    request: Request,
+):
+    """Trim oldest messages from context when limit exceeded.
+
+    Called after user confirms pruning via frontend dialog.
+    Trims to 90% of context window to leave headroom.
+    Returns updated context usage after trimming.
+    """
+    from app.agents.memory.token_counter import get_token_counter
+    from app.agents.memory.trimmer import trim_if_needed
+    from app.agents.config import get_agent_provider, get_agent_model
+
+    # Verify file ownership
+    file = await FileService.get_user_file(db, file_id, current_user.id)
+    if file is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+
+    settings = get_settings()
+    checkpointer = request.app.state.checkpointer
+    graph = get_or_create_graph(checkpointer)
+
+    # Get current state
+    thread_id = f"file_{file_id}_user_{current_user.id}"
+    config = {"configurable": {"thread_id": thread_id}}
+    state = await graph.aget_state(config)
+
+    messages = state.values.get("messages", []) if state.values else []
+    if not messages:
+        return {"trimmed": False, "message": "No messages to trim"}
+
+    # Trim messages
+    provider = get_agent_provider("coding")
+    model = get_agent_model("coding")
+    counter = get_token_counter(provider, model)
+
+    trimmed_messages, _ = await trim_if_needed(
+        messages,
+        max_tokens=settings.context_window_tokens,
+        token_counter=counter,
+        user_confirmed=True
+    )
+
+    # Update state with trimmed messages via graph
+    # Use graph.aupdate_state to replace messages in checkpoint
+    await graph.aupdate_state(config, {"messages": trimmed_messages})
+
+    # Return updated stats
+    new_tokens = counter.count_messages(trimmed_messages)
+    return {
+        "trimmed": True,
+        "previous_count": len(messages),
+        "new_count": len(trimmed_messages),
+        "current_tokens": new_tokens,
+        "max_tokens": settings.context_window_tokens,
+        "percentage": round((new_tokens / settings.context_window_tokens * 100), 1),
+    }
