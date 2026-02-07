@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 08-session-memory-with-postgresql-checkpointing
 source: [08-01-SUMMARY.md, 08-02-SUMMARY.md]
 started: 2026-02-07T21:00:00Z
-updated: 2026-02-07T21:50:00Z
+updated: 2026-02-07T22:00:00Z
 round: 2
 ---
 
@@ -66,32 +66,34 @@ skipped: 5
 ## Gaps
 
 - truth: "Follow-up queries should use conversation memory to understand context without needing user to re-explain"
-  status: failed
+  status: fixed
   reason: "User reported: I can see that the memory was not invoked. LangChain shows that for my second query the AI agent invoked the LLM again instead of pulling the information from memory"
   severity: major
   test: 1
-  root_cause: "Initial state with messages: [HumanMessage(...)] overrides checkpointed state. LangGraph reducers only apply during graph execution, not when merging initial state passed to ainvoke(). Every query starts with single message, losing conversation history."
+  root_cause: "Previous fix (e4fa3ce) was flawed - passing messages in initial_state overrides checkpoint even after manual concatenation. LangGraph reducers only work for updates WITHIN graph execution, not for initial_state merge. Solution: Use aupdate_state() to append messages (uses reducer), then remove messages from initial_state before ainvoke() so checkpoint takes precedence."
   artifacts:
     - path: "backend/app/services/agent_service.py"
-      issue: "Lines 177-181 and 318-322 - retrieve existing state, append new message, pass accumulated messages"
-      fix: "Retrieve existing state using graph.aget_state(config), append new HumanMessage to existing messages, pass updated_messages in initial_state"
+      issue: "Lines 177-181 and 318-322 - incorrect use of initial_state to pass messages"
+      fix: "Use graph.aupdate_state(config, messages) to append via reducer, then pop messages from initial_state before ainvoke"
   missing: []
-  debug_session: ".planning/debug/memory-not-persisting.md"
-  fix_commit: "e4fa3ce"
+  debug_session: ".planning/debug/resolved/memory-not-persisting-round-2.md"
+  fix_commit: "f5b3975"
+  note: "LLM WILL be invoked on every query (correct behavior). Memory means LLM receives previous conversation in context, not that LLM calls are skipped."
 
 - truth: "Browser shows 'Leave site?' warning dialog when closing chat tab with active conversation (>2 messages)"
-  status: failed
+  status: fixed
   reason: "User reported: no warning shown"
   severity: major
   test: 3
-  root_cause: "event.returnValue set to empty string ('') which is falsy. Modern browsers require truthy returnValue to trigger beforeunload confirmation dialog."
+  root_cause: "event.returnValue was set to boolean true (in e4fa3ce fix), but W3C spec requires NON-EMPTY STRING. Modern browsers trigger dialog via preventDefault() OR non-empty string returnValue. Previous fix used boolean instead of string."
   artifacts:
     - path: "frontend/src/hooks/useTabCloseWarning.ts"
-      issue: "Line 19 - event.returnValue = '' (falsy value)"
-      fix: "Changed to event.returnValue = true as any"
+      issue: "Line 22 - event.returnValue = true as any (boolean, not string)"
+      fix: "Changed to event.returnValue = 'true' (non-empty string)"
   missing: []
-  debug_session: ".planning/debug/resolved/tab-close-warning-not-showing.md"
-  fix_commit: "e4fa3ce"
+  debug_session: ".planning/debug/resolved/tab-close-warning-round-2.md"
+  fix_commit: "3f8f2fb"
+  note: "Requires user interaction (typing/clicking) before warning appears (browser security feature)"
 
 - truth: "Chat interface header displays current context usage as 'X / 12,000 tokens' next to file name"
   status: fixed
