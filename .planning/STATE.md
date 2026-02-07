@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 8 of 11 (Session Memory with PostgreSQL Checkpointing)
-Plan: Ready to plan Phase 8
-Status: Phase 7 complete, verified. Ready for Phase 8 planning.
+Plan: 1 of 4 complete
+Status: In progress - PostgreSQL checkpointing infrastructure complete
 Branch: develop (v0.2 development branch)
-Last activity: 2026-02-07 — Phase 7 complete: Multi-LLM Provider Infrastructure (4/4 plans, 34 tests, all requirements satisfied, verification passed 5/5)
+Last activity: 2026-02-07 — Completed 08-01-PLAN.md (PostgreSQL Checkpointing Infrastructure)
 
-Progress: [█████████████████░░░░░░░░░░░] 61% (40/66 total plans)
+Progress: [█████████████████░░░░░░░░░░░] 62% (41/66 total plans)
 
 ## Performance Metrics
 
@@ -40,6 +40,7 @@ Progress: [█████████████████░░░░░░
 | Phase | Plans | Status |
 |-------|-------|--------|
 | 7. Multi-LLM Provider Infrastructure | 4/4 | Complete |
+| 8. Session Memory with PostgreSQL Checkpointing | 1/4 | In progress |
 
 **Recent Trend:**
 - v0.1 completed in 5 days with aggressive execution
@@ -47,7 +48,8 @@ Progress: [█████████████████░░░░░░
 - v0.2 Phase 7 Plan 2: 2 min execution (agent wiring migration)
 - v0.2 Phase 7 Plan 3: 2 min execution (validation & observability)
 - v0.2 Phase 7 Plan 4: 5 min execution (test scenarios - 34 tests, all 5 providers)
-- Trend: Stable, high velocity maintained (Phase 7 complete in ~12 minutes total)
+- v0.2 Phase 8 Plan 1: 4 min execution (PostgreSQL checkpointing infrastructure)
+- Trend: Stable, high velocity maintained (Phase 7 complete in ~12 min, Phase 8 started)
 
 ## Accumulated Context
 
@@ -73,6 +75,7 @@ Recent decisions affecting v0.2 work:
 - **Phase 7 Plan 2 (2026-02-07):** Shared get_api_key_for_provider() helper in agents/config.py for centralized API key resolution, temperature passed via kwargs to get_llm() for all agents
 - **Phase 7 Plan 3 (2026-02-07):** Fail-fast startup validation with connectivity tests (5-second timeout per provider), 60-second cached health checks, structured JSON logging for LLM calls (metadata only, not full content)
 - **Phase 7 Plan 4 (2026-02-07):** 34 comprehensive test scenarios covering all 5 providers (Anthropic, OpenAI, Google, Ollama, OpenRouter) with factory, config, validation, error classification, health endpoint, and invoke logging tests. All tests fully mocked - zero live API keys required (LLM-06 satisfied)
+- **Phase 8 Plan 1 (2026-02-07):** AsyncPostgresSaver initialized in FastAPI lifespan with connection pooling, add_messages reducer for message accumulation, thread-based conversation isolation per file tab. AsyncPostgresSaver is NOT an async context manager (use direct instantiation). Database URL conversion required (postgresql+asyncpg → postgresql for psycopg). Messages initialized as [HumanMessage(content=user_query)] for proper reducer behavior. Context window defaults: 12000 tokens, 85% warning threshold.
 
 ### Pending Todos
 
@@ -88,7 +91,7 @@ Recent decisions affecting v0.2 work:
 ### Blockers/Concerns
 
 **From v0.1 known limitations (to be fixed in v0.2):**
-- PostgreSQL checkpointing was disabled due to async issues — Phase 8 will fix with AsyncPostgresSaver v3.0.4+
+- ~~PostgreSQL checkpointing was disabled due to async issues~~ — **FIXED in Phase 8 Plan 1:** AsyncPostgresSaver now enabled with proper lifecycle management
 - E2B sandboxes created per-execution (no warm pools) — acceptable for v0.2, optimization deferred to v0.3+
 
 **v0.2 phase dependencies:**
@@ -100,6 +103,6 @@ Recent decisions affecting v0.2 work:
 ## Session Continuity
 
 Last session: 2026-02-07
-Stopped at: Completed Phase 7 Plan 4 (07-04-PLAN.md) - Test Scenarios (34 test scenarios covering all 5 providers, fully mocked). **Phase 7 complete with comprehensive testing.**
-Resume with: `/gsd:plan-phase 8` to start Session Memory & PostgreSQL Checkpointing planning
-Resume file: .planning/phases/07-multi-llm-provider-infrastructure/07-04-SUMMARY.md
+Stopped at: Completed Phase 8 Plan 1 (08-01-PLAN.md) - PostgreSQL Checkpointing Infrastructure. AsyncPostgresSaver enabled with add_messages reducer, checkpointer wired through agent service and router.
+Resume with: `/gsd:execute-plan` for 08-02 (Token Counting & Context Management) or continue with remaining Phase 8 plans
+Resume file: .planning/phases/08-session-memory-with-postgresql-checkpointing/08-01-SUMMARY.md
