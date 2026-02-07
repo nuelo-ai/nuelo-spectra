@@ -2,6 +2,109 @@
 
 from langchain_core.language_models import BaseChatModel
 from typing import Any
+import logging
+import json
+import time
+
+logger = logging.getLogger("spectra.llm")
+
+
+def classify_llm_error(error: Exception, provider: str) -> str:
+    """Classify LLM error into error categories.
+
+    Args:
+        error: Exception raised during LLM call
+        provider: Provider name (for context-specific classification)
+
+    Returns:
+        str: Error classification (network_error, auth_error, rate_limit,
+             model_not_found, provider_error)
+    """
+    error_msg = str(error).lower()
+    error_type = type(error).__name__.lower()
+
+    # Network/connection errors
+    if any(x in error_type for x in ["connecterror", "timeout", "connectionerror"]):
+        return "network_error"
+
+    # Authentication errors
+    if any(x in error_msg for x in ["401", "403", "unauthorized", "invalid api key", "authentication"]):
+        return "auth_error"
+
+    # Rate limit errors
+    if any(x in error_msg for x in ["429", "rate limit", "quota", "too many requests"]):
+        return "rate_limit"
+
+    # Model not found errors
+    if any(x in error_msg for x in ["404", "model not found", "not found", "model_not_found"]):
+        return "model_not_found"
+
+    # Default to provider error
+    return "provider_error"
+
+
+async def invoke_with_logging(
+    llm: BaseChatModel,
+    messages: list,
+    agent_name: str,
+    provider: str,
+    model: str,
+):
+    """Invoke LLM with structured metadata logging.
+
+    Logs: timestamp, provider, model, agent, latency, status.
+    Does NOT log: full prompts or responses (LangSmith handles that).
+
+    Args:
+        llm: LangChain chat model instance
+        messages: List of messages to send
+        agent_name: Name of the calling agent (for logging context)
+        provider: Provider name (for logging)
+        model: Model name (for logging)
+
+    Returns:
+        LLM response
+
+    Raises:
+        Exception: Re-raises any exception from LLM call after logging
+    """
+    start_time = time.time()
+
+    try:
+        response = await llm.ainvoke(messages)
+        latency = time.time() - start_time
+
+        # Log successful call metadata (NOT full content)
+        logger.info(json.dumps({
+            "event": "llm_call",
+            "agent": agent_name,
+            "provider": provider,
+            "model": model,
+            "status": "success",
+            "latency_seconds": round(latency, 3),
+        }))
+
+        return response
+
+    except Exception as e:
+        latency = time.time() - start_time
+
+        # Classify error type
+        error_class = classify_llm_error(e, provider)
+
+        # Log error metadata
+        logger.error(json.dumps({
+            "event": "llm_call",
+            "agent": agent_name,
+            "provider": provider,
+            "model": model,
+            "status": "error",
+            "error_type": type(e).__name__,
+            "error_class": error_class,
+            "latency_seconds": round(latency, 3),
+        }))
+
+        raise
 
 
 def get_llm(
