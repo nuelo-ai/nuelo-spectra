@@ -109,7 +109,8 @@ async def query_with_ai(
     file_id: UUID,
     body: ChatQueryRequest,
     current_user: CurrentUser,
-    db: DbSession
+    db: DbSession,
+    request: Request
 ) -> ChatAgentResponse:
     """Run AI-powered query through the complete agent pipeline.
 
@@ -138,7 +139,8 @@ async def query_with_ai(
     # Verify file ownership (done inside agent_service.run_chat_query)
     # Run chat query through agent pipeline
     result = await agent_service.run_chat_query(
-        db, file_id, current_user.id, body.content
+        db, file_id, current_user.id, body.content,
+        checkpointer=request.app.state.checkpointer
     )
 
     return ChatAgentResponse(**result)
@@ -194,7 +196,8 @@ async def stream_query(
         nonlocal event_counter
         try:
             async for event in agent_service.run_chat_query_stream(
-                db, file_id, current_user.id, body.content
+                db, file_id, current_user.id, body.content,
+                checkpointer=request.app.state.checkpointer
             ):
                 # Check for client disconnect
                 if await request.is_disconnected():

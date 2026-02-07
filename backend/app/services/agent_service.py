@@ -125,7 +125,8 @@ async def run_chat_query(
     db: AsyncSession,
     file_id: UUID,
     user_id: UUID,
-    user_query: str
+    user_query: str,
+    checkpointer=None
 ) -> dict:
     """Run chat query through the full agent pipeline.
 
@@ -163,14 +164,16 @@ async def run_chat_query(
             detail="File has not been analyzed yet. Please wait for onboarding to complete."
         )
 
-    # Get or create compiled graph
-    graph = get_or_create_graph()
+    # Get or create compiled graph with checkpointer
+    graph = get_or_create_graph(checkpointer)
 
     # Build thread ID for per-file per-user memory isolation
     thread_id = f"file_{file_id}_user_{user_id}"
     config = {"configurable": {"thread_id": thread_id}}
 
     # Build initial state
+    from langchain_core.messages import HumanMessage
+
     initial_state = {
         "file_id": str(file_id),
         "user_id": str(user_id),
@@ -185,7 +188,7 @@ async def run_chat_query(
         "max_steps": settings.agent_max_retries,
         "execution_result": "",
         "analysis": "",
-        "messages": [],
+        "messages": [HumanMessage(content=user_query)],
         "final_response": "",
         "error": ""
     }
@@ -234,7 +237,8 @@ async def run_chat_query_stream(
     db: AsyncSession,
     file_id: UUID,
     user_id: UUID,
-    user_query: str
+    user_query: str,
+    checkpointer=None
 ) -> AsyncGenerator[dict, None]:
     """Run chat query through agent pipeline and yield SSE events.
 
@@ -294,14 +298,16 @@ async def run_chat_query_stream(
         logger.error(f"Failed to generate data profile: {e}")
         data_profile_json = "{}"
 
-    # Get or create compiled graph
-    graph = get_or_create_graph()
+    # Get or create compiled graph with checkpointer
+    graph = get_or_create_graph(checkpointer)
 
     # Build thread ID for per-file per-user memory isolation
     thread_id = f"file_{file_id}_user_{user_id}"
     config = {"configurable": {"thread_id": thread_id}}
 
     # Build initial state (identical to run_chat_query)
+    from langchain_core.messages import HumanMessage
+
     initial_state = {
         "file_id": str(file_id),
         "user_id": str(user_id),
@@ -317,7 +323,7 @@ async def run_chat_query_stream(
         "max_steps": settings.agent_max_retries,
         "execution_result": "",
         "analysis": "",
-        "messages": [],
+        "messages": [HumanMessage(content=user_query)],
         "final_response": "",
         "error": ""
     }

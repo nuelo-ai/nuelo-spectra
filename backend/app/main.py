@@ -227,12 +227,12 @@ async def lifespan(app: FastAPI):
         max_size=10,
         kwargs={"autocommit": True, "row_factory": dict_row}
     ) as pool:
-        async with AsyncPostgresSaver(pool) as checkpointer:
-            await checkpointer.setup()  # Idempotent - creates tables if needed
-            app.state.checkpointer = checkpointer
-            logging.getLogger("spectra").info("PostgreSQL checkpointer initialized")
+        checkpointer = AsyncPostgresSaver(pool)
+        await checkpointer.setup()  # Idempotent - creates tables if needed
+        app.state.checkpointer = checkpointer
+        logging.getLogger("spectra").info("PostgreSQL checkpointer initialized")
 
-            yield
+        yield
 
     # Shutdown: dispose of database engine
     await engine.dispose()
