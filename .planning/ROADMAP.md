@@ -130,11 +130,11 @@ Plans:
 4. User sees current context usage displayed in chat interface (e.g., "8,543 / 12,000 tokens used")
 5. User receives warning when context reaches 85% of token limit with option to continue
 
-**Plans:** TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 08-01: TBD
-- [ ] 08-02: TBD
+- [ ] 08-01-PLAN.md — Enable AsyncPostgresSaver checkpointing, add_messages reducer, graph wiring, context window config
+- [ ] 08-02-PLAN.md — Token counting, context management endpoints, frontend tab close warning and context usage display
 
 ---
 
@@ -221,7 +221,7 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11
 | 5. Secure Code Execution & E2B | v0.1 | 6/6 | Complete | 2026-02-06 |
 | 6. Interactive Data Cards | v0.1 | 6/6 | Complete | 2026-02-06 |
 | 7. Multi-LLM Infrastructure | v0.2 | 4/4 | Complete | 2026-02-07 |
-| 8. Session Memory | v0.2 | 0/TBD | Not started | - |
+| 8. Session Memory | v0.2 | 0/2 | Planned | - |
 | 9. Smart Query Suggestions | v0.2 | 0/TBD | Not started | - |
 | 10. Web Search Integration | v0.2 | 0/TBD | Not started | - |
 | 11. Production Email | v0.2 | 0/TBD | Not started | - |
