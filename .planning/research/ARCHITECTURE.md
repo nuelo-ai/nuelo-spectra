@@ -1,822 +1,1297 @@
-# Architecture Research
+# Architecture Research: LangGraph Memory, Multi-LLM, and Tool Integration
 
-**Domain:** AI-Powered Data Analytics Platform
-**Researched:** 2026-02-02
-**Confidence:** HIGH
+**Domain:** LangGraph agent system enhancement
+**Researched:** 2026-02-06
+**Confidence:** MEDIUM-HIGH
 
-## Standard Architecture
+## Executive Summary
+
+This research focuses on integrating three capabilities into Spectra's existing 4-agent LangGraph system:
+1. **Memory persistence** using AsyncPostgresSaver (fixing v0.1's disabled checkpointing)
+2. **Multi-LLM support** for Ollama and OpenRouter (extending existing Anthropic/OpenAI/Google)
+3. **Tool integration** for web search (Tavily/Serper.dev)
+
+Key finding: All three features integrate cleanly with existing architecture through well-defined LangGraph extension points. The async PostgreSQL checkpointing issue from v0.1 is resolved in current LangGraph versions with AsyncPostgresSaver from `langgraph-checkpoint-postgres`.
+
+## Current Architecture (v0.1)
 
 ### System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           Frontend (Next.js)                                │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
-│  │ File Upload  │  │ File Tabs    │  │ Chat UI      │  │ Data Cards   │   │
-│  │ Component    │  │ Management   │  │ (Streaming)  │  │ (Interactive)│   │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘   │
-│         │                 │                 │                 │            │
-│         └─────────────────┴─────────────────┴─────────────────┘            │
-│                                     │                                       │
-│                          SSE (Server-Sent Events)                           │
-│                                     │                                       │
-├─────────────────────────────────────┼───────────────────────────────────────┤
-│                         Backend API (FastAPI)                               │
-│  ┌───────────────────────────────────────────────────────────────────────┐ │
-│  │                    API Layer (Route Handlers)                         │ │
-│  │  /upload  /chat/stream  /files  /auth  /settings                      │ │
-│  └───────────────────────┬───────────────────────────────────────────────┘ │
-│                          │                                                  │
-│  ┌───────────────────────┴───────────────────────────────────────────────┐ │
-│  │                  AI Agent Orchestration (LangGraph)                    │ │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐              │ │
-│  │  │Onboarding│→ │  Coding  │→ │   Code   │→ │   Data   │              │ │
-│  │  │  Agent   │  │  Agent   │  │ Checker  │  │ Analysis │              │ │
-│  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘              │ │
-│  └───────────────────────┬───────────────────────────────────────────────┘ │
-│                          │                                                  │
-│  ┌───────────────────────┴───────────────────────────────────────────────┐ │
-│  │                    Sandbox Execution Layer                            │ │
-│  │              Docker Container + gVisor + RestrictedPython             │ │
-│  └───────────────────────┬───────────────────────────────────────────────┘ │
-│                          │                                                  │
-├──────────────────────────┼──────────────────────────────────────────────────┤
-│                    Data & Storage Layer                                     │
-│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐               │
-│  │  PostgreSQL    │  │  File Storage  │  │  LangSmith     │               │
-│  │  (asyncpg)     │  │  (Local FS)    │  │  (Tracing)     │               │
-│  │                │  │                │  │                │               │
-│  │ • Users        │  │ /uploads/      │  │ • Agent traces │               │
-│  │ • Files Meta   │  │   user_id/     │  │ • Token usage  │               │
-│  │ • Chat History │  │     file_id/   │  │ • Debugging    │               │
-│  └────────────────┘  └────────────────┘  └────────────────┘               │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                     FastAPI Endpoints                        │
+│  (chat stream endpoint with SSE, file upload, auth)          │
+├─────────────────────────────────────────────────────────────┤
+│                      LangGraph Workflow                      │
+│  ┌─────────┐   ┌──────────┐   ┌─────────┐   ┌──────────┐   │
+│  │Onboarding│→ │  Coding  │ → │  Code   │ → │  Data    │   │
+│  │  Agent  │   │  Agent   │   │ Checker │   │ Analysis │   │
+│  └─────────┘   └──────────┘   └─────────┘   └──────────┘   │
+│       ↓              ↓             ↓              ↓          │
+│                  Shared State (TypedDict)                    │
+│  { user_query, generated_code, execution_result, ... }      │
+├─────────────────────────────────────────────────────────────┤
+│                     Supporting Services                      │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    │
+│  │LLM Factory│  │YAML Config│  │E2B Sandbox│  │PostgreSQL│   │
+│  │get_llm()  │  │(prompts)  │  │(execute) │  │(data)    │   │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘    │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Component Responsibilities
+### Component Inventory
 
-| Component | Responsibility | Typical Implementation |
-|-----------|----------------|------------------------|
-| **Next.js Frontend** | User interface, SSE streaming client, file upload UI, Data Cards rendering | React components, App Router, Route Handlers for SSE proxy |
-| **FastAPI Backend** | API endpoints, authentication, file handling, agent orchestration, SSE streaming | Python async endpoints, StreamingResponse, LangChain integration |
-| **AI Agent Orchestrator** | Multi-agent workflow coordination, state management, agent handoffs | LangGraph with shared state, supervisor or handoff pattern |
-| **Onboarding Agent** | Analyzes uploaded file structure, generates metadata, suggests initial queries | LLM + pandas schema inspection, writes to PostgreSQL |
-| **Coding Agent** | Generates Python code from natural language queries | LLM + prompt template, outputs executable Python scripts |
-| **Code Checker Agent** | Validates generated code for safety and correctness | RestrictedPython AST validation + custom rules, rejects unsafe code |
-| **Data Analysis Agent** | Interprets execution results, generates natural language explanations | LLM + execution results, produces Data Card content |
-| **Sandbox Executor** | Secure Python code execution in isolated environment | Docker container with gVisor runtime, resource limits, network isolation |
-| **PostgreSQL Database** | Persistent storage for users, file metadata, chat history per file | asyncpg driver, SQLAlchemy ORM (optional), relational schema |
-| **Local File Storage** | Uploaded file persistence, organized by user and file ID | Filesystem at `/uploads/user_id/file_id/`, segregated by user |
-| **LangSmith** | Agent execution tracing, debugging, token usage monitoring | Automatic tracing via environment variable, no code changes |
+| Component | Current Implementation | File Location |
+|-----------|------------------------|---------------|
+| Graph definition | StateGraph with 5 nodes (4 agents + halt) | `backend/app/agents/graph.py` |
+| State schema | ChatAgentState TypedDict (13 keys) | `backend/app/agents/state.py` |
+| LLM factory | Supports Anthropic, OpenAI, Google | `backend/app/agents/llm_factory.py` |
+| Config loader | YAML prompts with max_tokens per agent | `backend/app/agents/config.py` |
+| Checkpointing | **Disabled** (lines 476-480 in graph.py) | None (was PostgresSaver) |
+| Tool calling | **Not implemented** | N/A |
+| Message history | State key exists but unused | `state["messages"]` |
 
-## Recommended Project Structure
+### Current Limitations (v0.1)
+
+1. **No memory**: `checkpointer=None` in graph compilation (line 501)
+2. **Single LLM provider**: Global setting, all agents use same provider/model
+3. **No tool integration**: Agents cannot call external services
+4. **Fresh state per request**: No conversation context across queries
+5. **Async incompatibility**: Comment at line 476 mentions `NotImplementedError` with async streaming
+
+## Integration Architecture (v0.2)
+
+### System Overview with Enhancements
 
 ```
-spectra-project/
-├── frontend/                    # Next.js application
-│   ├── app/                     # App Router
-│   │   ├── api/                 # API routes (SSE proxy)
-│   │   │   └── chat/
-│   │   │       └── route.ts     # SSE streaming endpoint
-│   │   ├── auth/                # Authentication pages
-│   │   ├── dashboard/           # Main app pages
-│   │   └── layout.tsx           # Root layout
-│   ├── components/              # React components
-│   │   ├── FileUpload.tsx       # File upload component
-│   │   ├── FileTabs.tsx         # Tabbed file interface
-│   │   ├── ChatInterface.tsx    # Chat UI with streaming
-│   │   └── DataCard.tsx         # Interactive Data Card
-│   └── package.json
-│
-├── backend/                     # FastAPI application
-│   ├── main.py                  # FastAPI app entry point
-│   ├── routers/                 # API route handlers
-│   │   ├── auth.py              # Authentication endpoints
-│   │   ├── files.py             # File upload/management
-│   │   ├── chat.py              # Chat streaming endpoint
-│   │   └── settings.py          # User settings
-│   ├── agents/                  # AI agent implementations
-│   │   ├── orchestrator.py      # LangGraph multi-agent workflow
-│   │   ├── onboarding.py        # Onboarding Agent
-│   │   ├── coding.py            # Coding Agent
-│   │   ├── code_checker.py      # Code Checker Agent
-│   │   └── data_analysis.py     # Data Analysis Agent
-│   ├── sandbox/                 # Code execution sandbox
-│   │   ├── executor.py          # Sandbox interface
-│   │   └── validator.py         # RestrictedPython validation
-│   ├── database/                # Database layer
-│   │   ├── models.py            # SQLAlchemy models
-│   │   ├── database.py          # Database connection
-│   │   └── schemas.py           # Pydantic schemas
-│   ├── storage/                 # File storage handling
-│   │   └── file_manager.py      # Upload/download logic
-│   └── requirements.txt
-│
-├── docker/                      # Docker configurations
-│   ├── Dockerfile.frontend      # Next.js container
-│   ├── Dockerfile.backend       # FastAPI container
-│   ├── Dockerfile.sandbox       # Sandbox runtime container
-│   └── gvisor-runtime.json      # gVisor runtime config
-│
-├── docker-compose.yml           # Multi-service orchestration
-├── .env                         # Environment variables
-└── README.md
+┌───────────────────────────────────────────────────────────────────┐
+│                     FastAPI Lifespan & Endpoints                  │
+│  (connection pool init, SSE streaming with thread_id)             │
+├───────────────────────────────────────────────────────────────────┤
+│                    LangGraph with Memory                          │
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌──────────┐    │
+│  │ Onboarding │  │   Coding   │  │    Code    │  │   Data   │    │
+│  │   Agent    │→ │   Agent    │→ │  Checker   │→ │ Analysis │    │
+│  │ (Claude)   │  │ (OpenRouter│  │  (Claude)  │  │ (Ollama) │    │
+│  └────────────┘  └────────────┘  └────────────┘  └──────────┘    │
+│        ↓               ↓                ↓               ↓          │
+│                    Shared State (TypedDict)                        │
+│  { messages: Annotated[list, add_messages], ... }                 │
+│        ↓                                                           │
+│  ┌─────────────────────────────────────────────────────────┐      │
+│  │         AsyncPostgresSaver (checkpointer)               │      │
+│  │  thread_id: user_{user_id}_file_{file_id}              │      │
+│  │  checkpoint: JSONB state after each node               │      │
+│  └─────────────────────────────────────────────────────────┘      │
+├───────────────────────────────────────────────────────────────────┤
+│                      Enhanced Services                            │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────┐ │
+│  │Multi-LLM │  │ Agent    │  │ToolNode  │  │Connection│  │SMTP│ │
+│  │ Factory  │  │Config    │  │(web      │  │  Pool    │  │Svc │ │
+│  │(6 provs) │  │(per-agent│  │ search)  │  │(async)   │  │    │ │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  └────┘ │
+└───────────────────────────────────────────────────────────────────┘
 ```
 
-### Structure Rationale
+## 1. Memory Persistence Integration
 
-- **frontend/** - Separate Next.js application for clear frontend/backend separation, enables independent deployment to Vercel
-- **backend/** - Python FastAPI application with domain-driven structure (agents, sandbox, database, storage as separate concerns)
-- **routers/** - API endpoint handlers organized by feature, follows FastAPI best practices
-- **agents/** - AI agent logic isolated from API layer, enables testing and reuse
-- **sandbox/** - Security-critical code execution isolated in dedicated module
-- **docker/** - Containerization configs separate from application code, supports multi-stage builds
-- **docker-compose.yml** - Single-command local development environment (frontend + backend + PostgreSQL + sandbox)
+### AsyncPostgresSaver Setup
 
-## Architectural Patterns
+**Implementation pattern:** FastAPI lifespan function manages connection pool lifecycle.
 
-### Pattern 1: Multi-Agent Orchestration with LangGraph
-
-**What:** Coordinate multiple specialized AI agents (Onboarding, Coding, Code Checker, Data Analysis) using LangGraph's graph-based workflow orchestration with shared state.
-
-**When to use:** When tasks require multiple specialized agents with sequential dependencies and state management.
-
-**Trade-offs:**
-- **Pros:** Type-safe state management, flexible routing (handoffs, supervision), built-in streaming support, production-ready patterns
-- **Cons:** More complex than single-agent, requires careful state design, potential for coordination overhead
-
-**Example:**
 ```python
-# backend/agents/orchestrator.py
-from langgraph.graph import StateGraph, END
+# backend/app/main.py or graph.py
+from contextlib import asynccontextmanager
+from psycopg_pool import AsyncConnectionPool
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage shared resources across application lifetime."""
+    settings = get_settings()
+
+    # Initialize async connection pool
+    pool = AsyncConnectionPool(
+        conninfo=settings.database_url,
+        min_size=2,
+        max_size=10,
+        timeout=30.0,
+        kwargs={
+            "autocommit": True,
+            "row_factory": dict_row,
+        }
+    )
+    await pool.open()
+
+    # Initialize checkpointer and setup tables
+    checkpointer = AsyncPostgresSaver(pool)
+    await checkpointer.setup()
+
+    # Store in app state for endpoint access
+    app.state.checkpointer = checkpointer
+
+    yield
+
+    # Cleanup
+    await pool.close()
+
+app = FastAPI(lifespan=lifespan)
+```
+
+### Graph Compilation with Memory
+
+```python
+# backend/app/agents/graph.py
+def build_chat_graph(checkpointer=None):
+    """Build and compile the chat analysis LangGraph workflow.
+
+    Args:
+        checkpointer: Optional AsyncPostgresSaver for state persistence
+    """
+    graph = StateGraph(ChatAgentState)
+
+    # Add nodes (same as v0.1)
+    graph.add_node("coding_agent", coding_agent)
+    graph.add_node("code_checker", code_checker_node)
+    graph.add_node("execute", execute_in_sandbox)
+    graph.add_node("data_analysis", data_analysis_agent)
+    graph.add_node("halt", halt_node)
+
+    # Add edges (same as v0.1)
+    graph.set_entry_point("coding_agent")
+    graph.add_edge("coding_agent", "code_checker")
+    graph.add_edge("execute", "data_analysis")
+    graph.set_finish_point("data_analysis")
+    graph.set_finish_point("halt")
+
+    # Compile WITH checkpointer
+    compiled = graph.compile(checkpointer=checkpointer)
+
+    return compiled
+```
+
+### State Schema Enhancement for Messages
+
+**Change:** Add `add_messages` reducer for message history.
+
+```python
+# backend/app/agents/state.py
+from typing import TypedDict, Annotated
+from langgraph.graph.message import add_messages
 from langchain_core.messages import BaseMessage
-from typing import TypedDict, Sequence
 
-class AgentState(TypedDict):
-    messages: Sequence[BaseMessage]
-    file_metadata: dict
+class ChatAgentState(TypedDict):
+    """State for the Chat Agent workflow."""
+
+    # Add reducer for message history
+    messages: Annotated[list[BaseMessage], add_messages]
+
+    # Existing fields (unchanged)
+    file_id: str
+    user_id: str
+    user_query: str
+    data_summary: str
+    data_profile: str
+    user_context: str
+    file_path: str
     generated_code: str
-    validation_result: dict
-    execution_result: dict
+    validation_result: str
+    validation_errors: list[str]
+    error_count: int
+    max_steps: int
+    execution_result: str
     analysis: str
-
-# Define workflow graph
-workflow = StateGraph(AgentState)
-
-# Add agent nodes
-workflow.add_node("onboarding", onboarding_agent)
-workflow.add_node("coding", coding_agent)
-workflow.add_node("code_checker", code_checker_agent)
-workflow.add_node("data_analysis", data_analysis_agent)
-
-# Define sequential workflow
-workflow.set_entry_point("onboarding")
-workflow.add_edge("onboarding", "coding")
-workflow.add_edge("coding", "code_checker")
-
-# Conditional edge: code_checker decides if code is safe
-workflow.add_conditional_edges(
-    "code_checker",
-    lambda state: "execute" if state["validation_result"]["safe"] else "regenerate",
-    {
-        "execute": "data_analysis",
-        "regenerate": "coding"  # Loop back to regenerate code
-    }
-)
-
-workflow.add_edge("data_analysis", END)
-
-app = workflow.compile()
+    final_response: str
+    error: str
 ```
 
-**Recommended for Spectra:** Use **Handoffs Pattern** initially (linear: Onboarding → Coding → Code Checker → Data Analysis), then add conditional edges for code regeneration loops.
+### Endpoint Integration with thread_id
 
-### Pattern 2: Server-Sent Events (SSE) Streaming
-
-**What:** Stream AI agent responses from FastAPI backend through Next.js API route to frontend using SSE, allowing users to see real-time agent progress.
-
-**When to use:** When users need to see incremental AI responses (code generation, analysis streaming) rather than waiting for complete results.
-
-**Trade-offs:**
-- **Pros:** Native browser support (no WebSocket complexity), unidirectional (simpler than bidirectional), works through Next.js API routes
-- **Cons:** One-way only (frontend → backend requires separate POST), reconnection logic needed for reliability
-
-**Example:**
 ```python
-# backend/routers/chat.py
-from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
-import json
+# backend/app/api/endpoints/chat.py
+@router.post("/stream")
+async def stream_chat(
+    request: ChatRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Stream chat responses with memory persistence."""
 
-async def stream_agent_response(query: str, file_id: str, user_id: str):
-    """Stream agent workflow execution with intermediate steps."""
-    async for chunk in agent_workflow.astream(
-        {
-            "messages": [{"role": "user", "content": query}],
-            "file_id": file_id,
-            "user_id": user_id
+    # Get checkpointer from app state
+    checkpointer = request.app.state.checkpointer
+
+    # Build graph with checkpointer
+    graph = build_chat_graph(checkpointer=checkpointer)
+
+    # Construct thread_id for conversation isolation
+    thread_id = f"user_{current_user.id}_file_{request.file_id}"
+
+    # Invoke graph with config
+    config = {
+        "configurable": {
+            "thread_id": thread_id,
         }
-    ):
-        # Stream each agent step as SSE event
-        if "onboarding" in chunk:
-            yield f"data: {json.dumps({'type': 'onboarding', 'content': chunk['onboarding']})}\n\n"
-        elif "coding" in chunk:
-            yield f"data: {json.dumps({'type': 'code', 'content': chunk['generated_code']})}\n\n"
-        elif "data_analysis" in chunk:
-            yield f"data: {json.dumps({'type': 'analysis', 'content': chunk['analysis']})}\n\n"
+    }
 
-    yield f"data: {json.dumps({'type': 'done'})}\n\n"
+    # Initial state (first message or continuing conversation)
+    initial_state = {
+        "user_query": request.message,
+        "file_id": request.file_id,
+        "user_id": str(current_user.id),
+        # ... other state fields
+    }
 
-@app.post("/chat/stream")
-async def chat_stream(request: ChatRequest):
-    return StreamingResponse(
-        stream_agent_response(request.query, request.file_id, request.user_id),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-        }
+    # Stream with memory
+    async for chunk in graph.astream(initial_state, config=config):
+        # Stream SSE events to client
+        yield format_sse_event(chunk)
+```
+
+### Database Schema (Auto-created by AsyncPostgresSaver)
+
+When `checkpointer.setup()` runs, LangGraph creates two tables:
+
+| Table | Schema | Purpose |
+|-------|--------|---------|
+| `checkpoints` | `(thread_id TEXT, checkpoint_id UUID, checkpoint JSONB, metadata JSONB)` | Main state snapshots after each node |
+| `checkpoint_blobs` | `(thread_id TEXT, checkpoint_id UUID, channel TEXT, data BYTEA)` | Large objects (serialized messages) |
+
+### Configuration Options
+
+```yaml
+# backend/app/config/memory.yaml (new file)
+memory:
+  enabled: true
+
+  # Context window configuration
+  max_messages: 50  # Maximum messages to keep in history
+  context_window_tokens: 8000  # Approximate token limit
+
+  # Checkpoint settings
+  checkpoint_frequency: "per_node"  # Options: per_node, per_edge, manual
+
+  # Cleanup policy
+  ttl_days: 30  # Delete checkpoints older than 30 days
+  auto_cleanup: true
+```
+
+### Context Window Management
+
+**Pattern:** Implement message trimming in agent nodes.
+
+```python
+# backend/app/agents/utils.py
+from langchain_core.messages import trim_messages
+
+def get_context_window_messages(state: ChatAgentState, max_messages: int = 50) -> list:
+    """Trim message history to fit context window.
+
+    Args:
+        state: Current graph state
+        max_messages: Maximum messages to keep
+
+    Returns:
+        Trimmed message list
+    """
+    messages = state.get("messages", [])
+
+    # Keep system messages, trim rest
+    return trim_messages(
+        messages,
+        max_tokens=8000,
+        strategy="last",
+        token_counter=len,  # Replace with actual token counter
+        include_system=True,
     )
 ```
 
-```typescript
-// frontend/app/api/chat/route.ts
-export const dynamic = 'force-dynamic';
+## 2. Multi-LLM Provider Integration
 
-export async function POST(req: Request) {
-  const body = await req.json();
+### Extended LLM Factory
 
-  const backendResponse = await fetch('http://backend:8000/chat/stream', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
+**New providers:** Ollama (local), OpenRouter (gateway)
 
-  // Proxy SSE stream to frontend
-  return new Response(backendResponse.body, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive'
+```python
+# backend/app/agents/llm_factory.py
+from langchain_core.language_models import BaseChatModel
+
+def get_llm(
+    provider: str,
+    model: str,
+    api_key: str,
+    **kwargs
+) -> BaseChatModel:
+    """Create LLM instance based on provider.
+
+    Supported providers:
+        - anthropic: Claude models
+        - openai: GPT models
+        - google: Gemini models
+        - ollama: Local Ollama models
+        - openrouter: Multi-model gateway
+        - groq: Fast inference (optional)
+    """
+    provider = provider.lower()
+
+    # Existing providers
+    if provider == "anthropic":
+        from langchain_anthropic import ChatAnthropic
+        return ChatAnthropic(model=model, api_key=api_key, **kwargs)
+
+    elif provider == "openai":
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(model=model, api_key=api_key, **kwargs)
+
+    elif provider == "google":
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        return ChatGoogleGenerativeAI(model=model, google_api_key=api_key, **kwargs)
+
+    # New providers for v0.2
+    elif provider == "ollama":
+        from langchain_ollama import ChatOllama
+        return ChatOllama(
+            model=model,
+            base_url=kwargs.get("base_url", "http://localhost:11434"),
+            # Note: Ollama doesn't use API keys for local deployment
+            **{k: v for k, v in kwargs.items() if k != "base_url"}
+        )
+
+    elif provider == "openrouter":
+        from langchain_openai import ChatOpenAI
+        # OpenRouter uses OpenAI-compatible API
+        return ChatOpenAI(
+            model=model,
+            api_key=api_key,
+            base_url="https://openrouter.ai/api/v1",
+            **kwargs
+        )
+
+    elif provider == "groq":
+        from langchain_groq import ChatGroq
+        return ChatGroq(model=model, api_key=api_key, **kwargs)
+
+    else:
+        raise ValueError(
+            f"Unsupported LLM provider: {provider}. "
+            f"Supported: anthropic, openai, google, ollama, openrouter, groq"
+        )
+```
+
+### Per-Agent LLM Configuration
+
+**Pattern:** Extend YAML config to include provider and model per agent.
+
+```yaml
+# backend/app/config/prompts.yaml (enhanced)
+agents:
+  onboarding:
+    system_prompt: |
+      You are a Data Onboarding Agent...
+    max_tokens: 1500
+
+    # New: per-agent LLM configuration
+    llm:
+      provider: "anthropic"
+      model: "claude-sonnet-4-20250514"
+      temperature: 0.7
+
+  coding:
+    system_prompt: |
+      Generate Python code for data analysis...
+    max_tokens: 10000
+
+    llm:
+      provider: "openrouter"
+      model: "anthropic/claude-3.7-sonnet"  # OpenRouter model path
+      temperature: 0.0  # Deterministic for code
+
+  code_checker:
+    system_prompt: |
+      You are a Code Checker Agent...
+    max_tokens: 500
+
+    llm:
+      provider: "anthropic"
+      model: "claude-sonnet-4-20250514"
+      temperature: 0.0
+
+  data_analysis:
+    system_prompt: |
+      You are a Data Analysis Agent...
+    max_tokens: 2000
+
+    llm:
+      provider: "ollama"
+      model: "llama3.2:latest"  # Local Ollama model
+      temperature: 0.5
+      base_url: "http://localhost:11434"  # Configurable Ollama endpoint
+```
+
+### Enhanced Config Loader
+
+```python
+# backend/app/agents/config.py (enhanced)
+def get_agent_llm_config(agent_name: str) -> dict:
+    """Get LLM configuration for a specific agent.
+
+    Args:
+        agent_name: Name of the agent
+
+    Returns:
+        dict: LLM config with keys: provider, model, temperature, etc.
+    """
+    prompts = load_prompts()
+
+    # Get agent config
+    agent_config = prompts["agents"].get(agent_name, {})
+
+    # Return LLM config with defaults
+    llm_config = agent_config.get("llm", {})
+
+    return {
+        "provider": llm_config.get("provider", "anthropic"),
+        "model": llm_config.get("model", "claude-sonnet-4-20250514"),
+        "temperature": llm_config.get("temperature", 0.7),
+        "base_url": llm_config.get("base_url"),  # For Ollama
+        "max_tokens": agent_config.get("max_tokens", 2000),
     }
-  });
+```
+
+### Agent Node with Per-Node LLM
+
+```python
+# backend/app/agents/coding.py (example pattern)
+async def coding_agent(state: ChatAgentState) -> dict:
+    """Coding agent with per-agent LLM configuration."""
+
+    # Load agent-specific LLM config
+    llm_config = get_agent_llm_config("coding")
+
+    # Get API key for provider
+    settings = get_settings()
+    api_key = get_api_key_for_provider(llm_config["provider"], settings)
+
+    # Initialize LLM for this agent
+    llm = get_llm(
+        provider=llm_config["provider"],
+        model=llm_config["model"],
+        api_key=api_key,
+        temperature=llm_config["temperature"],
+        max_tokens=llm_config["max_tokens"],
+        base_url=llm_config.get("base_url"),  # For Ollama
+    )
+
+    # Load system prompt
+    system_prompt_template = get_agent_prompt("coding")
+    system_prompt = system_prompt_template.format(
+        data_profile=state["data_profile"],
+        user_context=state["user_context"],
+        allowed_libraries=", ".join(get_allowed_libraries()),
+    )
+
+    # Invoke LLM
+    messages = [
+        SystemMessage(content=system_prompt),
+        HumanMessage(content=state["user_query"]),
+    ]
+
+    response = await llm.ainvoke(messages)
+
+    return {
+        "generated_code": response.content,
+    }
+```
+
+### API Key Management
+
+```python
+# backend/app/agents/utils.py
+def get_api_key_for_provider(provider: str, settings: Settings) -> str:
+    """Get API key for the specified provider.
+
+    Args:
+        provider: Provider name (anthropic, openai, google, openrouter, groq)
+        settings: Application settings
+
+    Returns:
+        API key string (or None for Ollama)
+
+    Raises:
+        ValueError: If provider requires API key but none configured
+    """
+    # Ollama doesn't need API key for local deployment
+    if provider == "ollama":
+        return None
+
+    key_map = {
+        "anthropic": settings.anthropic_api_key,
+        "openai": settings.openai_api_key,
+        "google": settings.google_api_key,
+        "openrouter": settings.openrouter_api_key,
+        "groq": settings.groq_api_key,
+    }
+
+    api_key = key_map.get(provider)
+
+    if not api_key:
+        raise ValueError(
+            f"No API key configured for provider: {provider}. "
+            f"Set environment variable: {provider.upper()}_API_KEY"
+        )
+
+    return api_key
+```
+
+### Environment Variables
+
+```bash
+# .env (enhanced)
+# Existing providers
+ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-...
+GOOGLE_API_KEY=...
+
+# New providers for v0.2
+OPENROUTER_API_KEY=sk-or-...
+GROQ_API_KEY=gsk_...
+OLLAMA_BASE_URL=http://localhost:11434  # Optional override
+```
+
+## 3. Tool Integration (Web Search)
+
+### Tool Definition
+
+```python
+# backend/app/agents/tools.py (new file)
+from langchain_community.tools import TavilySearchResults
+from langchain_community.tools import DuckDuckGoSearchResults
+from typing import Literal
+
+def get_web_search_tool(provider: Literal["tavily", "serper", "duckduckgo"] = "tavily"):
+    """Get web search tool instance.
+
+    Args:
+        provider: Search provider (tavily, serper, duckduckgo)
+
+    Returns:
+        LangChain tool instance
+    """
+    settings = get_settings()
+
+    if provider == "tavily":
+        return TavilySearchResults(
+            api_key=settings.tavily_api_key,
+            max_results=5,
+            search_depth="advanced",
+        )
+
+    elif provider == "serper":
+        from langchain_community.utilities import GoogleSerperAPIWrapper
+        from langchain_core.tools import Tool
+
+        search = GoogleSerperAPIWrapper(
+            serper_api_key=settings.serper_api_key,
+            k=5,
+        )
+
+        return Tool(
+            name="web_search",
+            description="Search the web for current information",
+            func=search.run,
+        )
+
+    elif provider == "duckduckgo":
+        return DuckDuckGoSearchResults(
+            max_results=5,
+            # No API key needed
+        )
+
+    else:
+        raise ValueError(f"Unsupported search provider: {provider}")
+```
+
+### ToolNode Integration
+
+**Pattern:** Add ToolNode to graph for agents that need tool calling.
+
+```python
+# backend/app/agents/graph.py (enhanced)
+from langgraph.prebuilt import ToolNode
+from app.agents.tools import get_web_search_tool
+
+def build_chat_graph(checkpointer=None):
+    """Build and compile the chat analysis LangGraph workflow."""
+
+    # Initialize tools
+    search_tool = get_web_search_tool("tavily")
+    tools = [search_tool]
+    tool_node = ToolNode(tools)
+
+    graph = StateGraph(ChatAgentState)
+
+    # Add nodes
+    graph.add_node("coding_agent", coding_agent)
+    graph.add_node("code_checker", code_checker_node)
+    graph.add_node("execute", execute_in_sandbox)
+    graph.add_node("data_analysis", data_analysis_agent)
+    graph.add_node("halt", halt_node)
+
+    # Add tool node for data analysis agent
+    graph.add_node("tools", tool_node)
+
+    # Add edges
+    graph.set_entry_point("coding_agent")
+    graph.add_edge("coding_agent", "code_checker")
+    graph.add_edge("execute", "data_analysis")
+
+    # Add conditional edge for tool calling
+    graph.add_conditional_edges(
+        "data_analysis",
+        should_call_tools,  # Routing function
+        {
+            "tools": "tools",
+            "finish": END,
+        }
+    )
+    graph.add_edge("tools", "data_analysis")  # Return to agent after tool use
+
+    graph.set_finish_point("data_analysis")
+    graph.set_finish_point("halt")
+
+    compiled = graph.compile(checkpointer=checkpointer)
+
+    return compiled
+
+def should_call_tools(state: ChatAgentState) -> Literal["tools", "finish"]:
+    """Determine if agent needs to call tools.
+
+    Checks if last message has tool_calls.
+    """
+    messages = state.get("messages", [])
+
+    if not messages:
+        return "finish"
+
+    last_message = messages[-1]
+
+    # Check if LLM requested tool calls
+    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
+        return "tools"
+
+    return "finish"
+```
+
+### Agent with Tool Binding
+
+```python
+# backend/app/agents/data_analysis.py (enhanced)
+async def data_analysis_agent(state: ChatAgentState) -> dict:
+    """Data Analysis agent with web search tool."""
+
+    # Load LLM config
+    llm_config = get_agent_llm_config("data_analysis")
+    api_key = get_api_key_for_provider(llm_config["provider"], settings)
+
+    llm = get_llm(
+        provider=llm_config["provider"],
+        model=llm_config["model"],
+        api_key=api_key,
+        temperature=llm_config["temperature"],
+    )
+
+    # Bind tools to LLM
+    tools = [get_web_search_tool("tavily")]
+    llm_with_tools = llm.bind_tools(tools)
+
+    # Load system prompt
+    system_prompt_template = get_agent_prompt("data_analysis")
+    system_prompt = system_prompt_template.format(
+        user_query=state["user_query"],
+        executed_code=state["generated_code"],
+        execution_result=state["execution_result"],
+    )
+
+    # Build messages with context
+    messages = [
+        SystemMessage(content=system_prompt),
+    ]
+
+    # Add conversation history if available
+    if state.get("messages"):
+        messages.extend(state["messages"])
+
+    # Add current query
+    messages.append(HumanMessage(content="Analyze the results and provide insights."))
+
+    # Invoke LLM (may return tool calls)
+    response = await llm_with_tools.ainvoke(messages)
+
+    # Update state with new message
+    return {
+        "analysis": response.content if response.content else "",
+        "messages": [response],  # Will be appended by add_messages reducer
+    }
+```
+
+### Tool Configuration
+
+```yaml
+# backend/app/config/tools.yaml (new file)
+tools:
+  web_search:
+    enabled: true
+    provider: "tavily"  # Options: tavily, serper, duckduckgo
+
+    # Provider-specific settings
+    tavily:
+      api_key_env: "TAVILY_API_KEY"
+      max_results: 5
+      search_depth: "advanced"
+
+    serper:
+      api_key_env: "SERPER_API_KEY"
+      max_results: 5
+
+    duckduckgo:
+      max_results: 5
+      # No API key needed
+
+  # Future tools
+  calculator:
+    enabled: false
+
+  python_repl:
+    enabled: false
+```
+
+## 4. SMTP Email Service Integration
+
+### Async SMTP Service
+
+**Library:** `aiosmtplib` for async email sending (replacing Mailgun API)
+
+```python
+# backend/app/services/email.py (rewritten)
+import logging
+from typing import Optional
+import aiosmtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+from app.config import Settings
+
+logger = logging.getLogger(__name__)
+
+async def send_password_reset_email(
+    to_email: str,
+    reset_link: str,
+    settings: Settings
+) -> bool:
+    """Send password reset email via SMTP.
+
+    Args:
+        to_email: Recipient email address
+        reset_link: Password reset URL with token
+        settings: Application settings
+
+    Returns:
+        True if email sent successfully, False otherwise
+    """
+    # Check if SMTP is configured
+    if not settings.smtp_host or not settings.smtp_username:
+        logger.warning(
+            f"SMTP not configured. Would send reset link to {to_email}: {reset_link}"
+        )
+        return True
+
+    try:
+        # Compose email
+        message = MIMEMultipart("alternative")
+        message["Subject"] = "Spectra - Password Reset Request"
+        message["From"] = settings.email_from
+        message["To"] = to_email
+
+        # HTML body
+        html_body = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <h2>Password Reset Request</h2>
+            <p>You requested to reset your password for your Spectra account.</p>
+            <p>Click the link below to reset your password:</p>
+            <p>
+                <a href="{reset_link}"
+                   style="display: inline-block; padding: 10px 20px;
+                          background-color: #007bff; color: white;
+                          text-decoration: none; border-radius: 5px;">
+                    Reset Password
+                </a>
+            </p>
+            <p>Or copy and paste this link into your browser:</p>
+            <p style="word-break: break-all;">{reset_link}</p>
+            <p><strong>This link will expire in 10 minutes.</strong></p>
+            <p>If you did not request this password reset, please ignore this email.</p>
+            <hr>
+            <p style="color: #666; font-size: 12px;">
+                This is an automated email from Spectra. Please do not reply.
+            </p>
+        </body>
+        </html>
+        """
+
+        # Attach HTML part
+        html_part = MIMEText(html_body, "html")
+        message.attach(html_part)
+
+        # Send via aiosmtplib
+        await aiosmtplib.send(
+            message,
+            hostname=settings.smtp_host,
+            port=settings.smtp_port,
+            username=settings.smtp_username,
+            password=settings.smtp_password,
+            use_tls=settings.smtp_use_tls,
+            start_tls=settings.smtp_start_tls,
+        )
+
+        logger.info(f"Password reset email sent to {to_email} via SMTP")
+        return True
+
+    except Exception as e:
+        logger.error(f"Error sending password reset email via SMTP: {e}")
+        return False
+```
+
+### SMTP Configuration
+
+```python
+# backend/app/config.py (add SMTP settings)
+class Settings(BaseSettings):
+    # ... existing settings ...
+
+    # SMTP settings (new for v0.2)
+    smtp_host: str = Field(default="", env="SMTP_HOST")
+    smtp_port: int = Field(default=587, env="SMTP_PORT")
+    smtp_username: str = Field(default="", env="SMTP_USERNAME")
+    smtp_password: str = Field(default="", env="SMTP_PASSWORD")
+    smtp_use_tls: bool = Field(default=True, env="SMTP_USE_TLS")
+    smtp_start_tls: bool = Field(default=True, env="SMTP_START_TLS")
+    email_from: str = Field(default="noreply@spectra.com", env="EMAIL_FROM")
+```
+
+### Environment Variables
+
+```bash
+# .env (SMTP settings)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+SMTP_USE_TLS=true
+SMTP_START_TLS=true
+EMAIL_FROM=noreply@spectra.com
+```
+
+## Data Flow Changes
+
+### Request Flow with Memory
+
+```
+[User sends query via SSE endpoint]
+    ↓
+[Endpoint constructs thread_id: user_{id}_file_{file_id}]
+    ↓
+[Graph.astream(initial_state, config={"configurable": {"thread_id": ...}})]
+    ↓
+[AsyncPostgresSaver loads checkpoint for thread_id]
+    ↓
+[Graph executes nodes with restored state + new query]
+    ↓
+    ┌──────────────────────────────────────┐
+    │ Node 1: coding_agent                 │
+    │ - Loads agent-specific LLM (YAML)   │
+    │ - Invokes LLM with context           │
+    │ - Returns {generated_code: "..."}   │
+    └──────────────────────────────────────┘
+    ↓ [AsyncPostgresSaver saves checkpoint]
+    ┌──────────────────────────────────────┐
+    │ Node 2: code_checker                 │
+    │ - Loads agent-specific LLM (YAML)   │
+    │ - Validates code                     │
+    │ - Returns routing Command            │
+    └──────────────────────────────────────┘
+    ↓ [AsyncPostgresSaver saves checkpoint]
+    ┌──────────────────────────────────────┐
+    │ Node 3: execute                      │
+    │ - Runs code in E2B sandbox           │
+    │ - Returns {execution_result: "..."}  │
+    └──────────────────────────────────────┘
+    ↓ [AsyncPostgresSaver saves checkpoint]
+    ┌──────────────────────────────────────┐
+    │ Node 4: data_analysis                │
+    │ - Loads agent-specific LLM (YAML)   │
+    │ - Binds web search tool              │
+    │ - Invokes LLM (may call tool)        │
+    │ - Returns {analysis: "...", messages}│
+    └──────────────────────────────────────┘
+    ↓ [AsyncPostgresSaver saves final checkpoint]
+[SSE stream completes]
+    ↓
+[Next query loads checkpoint and continues conversation]
+```
+
+### State Management with Reducers
+
+**Key insight:** `add_messages` reducer enables message appending instead of overwriting.
+
+```python
+# State update example
+state_before = {
+    "messages": [
+        SystemMessage("You are an analyst"),
+        HumanMessage("What is the average?"),
+        AIMessage("The average is 42"),
+    ],
+    "user_query": "What is the average?",
+}
+
+# Node returns new message
+node_output = {
+    "messages": [HumanMessage("Now show the max")],
+    "user_query": "Now show the max",
+}
+
+# With add_messages reducer, messages are appended
+state_after = {
+    "messages": [
+        SystemMessage("You are an analyst"),
+        HumanMessage("What is the average?"),
+        AIMessage("The average is 42"),
+        HumanMessage("Now show the max"),  # Appended, not replaced
+    ],
+    "user_query": "Now show the max",  # Overwritten (no reducer)
 }
 ```
 
-### Pattern 3: Multi-Layer Sandbox Security
+## Integration Points
 
-**What:** Implement defense-in-depth for code execution using multiple isolation layers: AST validation (RestrictedPython) → Docker containers → gVisor user-space kernel → resource limits.
+### New Components
 
-**When to use:** When executing untrusted AI-generated code that processes user data. Essential for Spectra's security requirements.
+| Component | Purpose | Dependencies | File Location |
+|-----------|---------|--------------|---------------|
+| AsyncPostgresSaver | Memory persistence | psycopg-pool, langgraph-checkpoint-postgres | `app/main.py` (lifespan) |
+| AsyncConnectionPool | DB connection pooling | psycopg-pool | `app/main.py` (lifespan) |
+| Enhanced LLM factory | Multi-provider support | langchain-ollama, langchain-openai (for OpenRouter) | `app/agents/llm_factory.py` |
+| Per-agent config loader | Load LLM config from YAML | PyYAML | `app/agents/config.py` |
+| Tool definitions | Web search tools | langchain-community | `app/agents/tools.py` (new) |
+| ToolNode | Execute tools in graph | langgraph.prebuilt | `app/agents/graph.py` |
+| Async SMTP service | Email sending | aiosmtplib | `app/services/email.py` |
+| Context window trimmer | Message history management | langchain-core | `app/agents/utils.py` (new) |
 
-**Trade-offs:**
-- **Pros:** Defense-in-depth prevents single-point failures, gVisor provides VM-like isolation with container-like performance, production-proven (used by Google)
-- **Cons:** Linux-only, adds syscall overhead, Docker + gVisor setup complexity
+### Modified Components
 
-**Example:**
+| Component | Change | Reason |
+|-----------|--------|--------|
+| `graph.py` | Add checkpointer parameter to build_chat_graph() | Enable memory |
+| `graph.py` | Add ToolNode and conditional edges | Enable tool calling |
+| `state.py` | Add `Annotated[list, add_messages]` to messages field | Enable message appending |
+| `config.py` | Add get_agent_llm_config() function | Per-agent LLM config |
+| `prompts.yaml` | Add llm section per agent | Per-agent provider/model |
+| Agent nodes | Load LLM from config, not global settings | Per-agent LLM support |
+| Agent nodes | Add tool binding for relevant agents | Tool integration |
+| `main.py` | Add lifespan function for connection pool | Memory initialization |
+| Chat endpoint | Pass checkpointer to build_chat_graph(), add thread_id to config | Memory persistence |
+| `email.py` | Replace Mailgun API with aiosmtplib | SMTP integration |
+
+## Build Order (Dependency-Aware)
+
+### Phase 1: Memory Foundation
+1. **Install dependencies**: `langgraph-checkpoint-postgres`, `psycopg-pool`
+2. **Add state reducer**: Modify `state.py` to add `Annotated[list, add_messages]`
+3. **Create lifespan function**: Initialize AsyncConnectionPool and AsyncPostgresSaver
+4. **Update graph compilation**: Pass checkpointer to `build_chat_graph()`
+5. **Update endpoints**: Add thread_id to config, pass checkpointer
+6. **Test**: Verify checkpoints are created in PostgreSQL
+
+### Phase 2: Multi-LLM Support
+1. **Install dependencies**: `langchain-ollama`
+2. **Extend LLM factory**: Add Ollama and OpenRouter providers
+3. **Enhance YAML config**: Add llm section per agent in `prompts.yaml`
+4. **Create config loader**: Add `get_agent_llm_config()` function
+5. **Update agent nodes**: Load LLM from config instead of global settings
+6. **Add environment variables**: `OPENROUTER_API_KEY`, `OLLAMA_BASE_URL`
+7. **Test**: Verify each agent uses configured provider
+
+### Phase 3: Tool Integration
+1. **Install dependencies**: `langchain-community`, `tavily-python` (or `google-search-results`)
+2. **Create tool definitions**: Add `tools.py` with web search tool
+3. **Add ToolNode to graph**: Import and initialize ToolNode
+4. **Add conditional routing**: Add should_call_tools() function
+5. **Bind tools to agents**: Update data_analysis agent to bind tools
+6. **Add tool config**: Create `tools.yaml` with provider settings
+7. **Test**: Verify agent can call web search tool
+
+### Phase 4: SMTP Email
+1. **Install dependencies**: `aiosmtplib`
+2. **Rewrite email service**: Replace Mailgun API with aiosmtplib
+3. **Add SMTP settings**: Update `config.py` with SMTP fields
+4. **Update environment**: Add SMTP variables to `.env`
+5. **Test**: Send test email via SMTP
+
+### Phase 5: Context Window Management
+1. **Create utils module**: Add `trim_messages()` wrapper
+2. **Add context window config**: Create `memory.yaml` with limits
+3. **Update agent nodes**: Call trim_messages() before LLM invocation
+4. **Test**: Verify message history is trimmed
+
+## Migration Strategy
+
+### Backward Compatibility
+
+**Goal:** v0.2 changes should not break v0.1 functionality.
+
+| Feature | v0.1 Behavior | v0.2 Behavior | Compatibility Strategy |
+|---------|---------------|---------------|------------------------|
+| Memory | Disabled (checkpointer=None) | Enabled (AsyncPostgresSaver) | Graceful: graph works with or without checkpointer |
+| LLM provider | Global setting (all agents use same) | Per-agent config (YAML) | Default: if no llm config in YAML, fall back to global |
+| Tools | Not used | data_analysis agent has tools | Additive: other agents unchanged |
+| Email | Mailgun API (dev mode logs) | SMTP (aiosmtplib) | Config-based: if no SMTP settings, log to console |
+
+### Rollout Plan
+
+1. **Deploy memory first**: Enables conversation context (high value)
+2. **Deploy multi-LLM second**: Enables cost optimization and experimentation
+3. **Deploy tools third**: Enables web search (additive feature)
+4. **Deploy SMTP last**: Production email (replaces dev mode)
+
+## Architectural Patterns to Follow
+
+### Pattern 1: Agent-Agnostic Tool Binding
+
+**What:** Bind tools at graph-level, not hard-coded in agent nodes.
+
+**Why:** Makes it easy to add/remove tools without changing agent code.
+
+**Implementation:**
 ```python
-# backend/sandbox/validator.py
-from RestrictedPython import compile_restricted
-from RestrictedPython.Guards import safe_builtins
+# Good: tools configured at graph level
+tools = [get_web_search_tool("tavily")]
+llm_with_tools = llm.bind_tools(tools)
 
-ALLOWED_IMPORTS = {'pandas', 'numpy', 'matplotlib', 'seaborn', 'plotly'}
-FORBIDDEN_PATTERNS = [
-    'os.', 'sys.', 'subprocess', 'eval', 'exec', 'open',
-    '__import__', 'importlib', 'dropna', 'drop', 'to_sql'
-]
-
-def validate_code(code: str) -> tuple[bool, str]:
-    """AST-level validation before execution."""
-    # Check for forbidden patterns
-    for pattern in FORBIDDEN_PATTERNS:
-        if pattern in code:
-            return False, f"Forbidden operation: {pattern}"
-
-    # Compile with RestrictedPython
-    byte_code = compile_restricted(code, '<user_code>', 'exec')
-    if byte_code.errors:
-        return False, f"Validation failed: {byte_code.errors}"
-
-    return True, "Code validated"
-
-# backend/sandbox/executor.py
-import docker
-import asyncio
-
-async def execute_in_sandbox(code: str, data_path: str, timeout: int = 30) -> dict:
-    """Execute code in gVisor-secured Docker container."""
-    client = docker.from_env()
-
-    # Layer 1: Validate code
-    is_valid, message = validate_code(code)
-    if not is_valid:
-        return {"success": False, "error": message}
-
-    try:
-        # Layer 2-3: Docker + gVisor execution
-        container = client.containers.run(
-            image="python:3.10-slim",
-            command=["python", "-c", code],
-            runtime="runsc",  # gVisor runtime
-            volumes={data_path: {"bind": "/data", "mode": "ro"}},
-            mem_limit="512m",  # Layer 4: Resource limits
-            cpu_quota=50000,
-            network_mode="none",  # Layer 5: Network isolation
-            detach=True,
-            remove=True
-        )
-
-        # Wait for completion with timeout
-        result = container.wait(timeout=timeout)
-        logs = container.logs().decode('utf-8')
-
-        return {
-            "success": result["StatusCode"] == 0,
-            "output": logs,
-            "exit_code": result["StatusCode"]
-        }
-    except docker.errors.ContainerError as e:
-        return {"success": False, "error": str(e)}
-    except asyncio.TimeoutError:
-        return {"success": False, "error": "Execution timeout"}
+# Bad: hard-coded tool binding in agent
+llm_with_tools = llm.bind_tools([TavilySearchResults(api_key="...")])
 ```
 
-**Docker Compose gVisor configuration:**
-```yaml
-# docker-compose.yml
-services:
-  sandbox:
-    image: python:3.10-slim
-    runtime: runsc  # gVisor runtime
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-    read_only: true
-    tmpfs:
-      - /tmp
-    networks:
-      - isolated
-```
+### Pattern 2: Config-Driven LLM Selection
 
-### Pattern 4: Per-File Chat History
+**What:** LLM provider and model come from YAML, not code.
 
-**What:** Store chat messages with references to both user and file, enabling independent chat contexts per uploaded file.
+**Why:** Enables experimentation without code changes.
 
-**When to use:** When users interact with multiple files simultaneously and need separate conversation contexts for each.
-
-**Trade-offs:**
-- **Pros:** Clean separation of concerns, enables tabbed interface, natural multi-file workflow
-- **Cons:** More complex queries (joins on user + file), higher storage if users have many files
-
-**Example:**
+**Implementation:**
 ```python
-# backend/database/models.py
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
-from sqlalchemy.orm import relationship
+# Good: config-driven
+llm_config = get_agent_llm_config("coding")
+llm = get_llm(provider=llm_config["provider"], model=llm_config["model"], ...)
 
-class User(Base):
-    __tablename__ = "users"
-    id = Column(Integer, primary_key=True)
-    email = Column(String, unique=True, nullable=False)
-    files = relationship("File", back_populates="user")
-
-class File(Base):
-    __tablename__ = "files"
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    filename = Column(String, nullable=False)
-    file_path = Column(String, nullable=False)
-    metadata = Column(JSON)  # AI-generated metadata from Onboarding Agent
-    uploaded_at = Column(DateTime, default=datetime.utcnow)
-
-    user = relationship("User", back_populates="files")
-    messages = relationship("ChatMessage", back_populates="file")
-
-class ChatMessage(Base):
-    __tablename__ = "chat_messages"
-    id = Column(Integer, primary_key=True)
-    file_id = Column(Integer, ForeignKey("files.id"), nullable=False)
-    role = Column(String, nullable=False)  # 'user' or 'assistant'
-    content = Column(Text, nullable=False)
-    agent_type = Column(String)  # 'onboarding', 'coding', 'data_analysis'
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    file = relationship("File", back_populates="messages")
-
-# Query chat history for a specific file
-async def get_file_chat_history(file_id: int, user_id: int):
-    """Retrieve chat messages for a file, ensuring user owns the file."""
-    result = await db.execute(
-        select(ChatMessage)
-        .join(File)
-        .where(File.id == file_id, File.user_id == user_id)
-        .order_by(ChatMessage.created_at)
-    )
-    return result.scalars().all()
+# Bad: hard-coded provider
+llm = ChatAnthropic(model="claude-sonnet-4-20250514", ...)
 ```
 
-## Data Flow
+### Pattern 3: Lifespan Resource Management
 
-### Request Flow: File Upload → AI Interpretation
+**What:** Initialize connection pools in FastAPI lifespan, not per-request.
 
-```
-User uploads file (Excel/CSV)
-    ↓
-[Next.js FileUpload Component]
-    ↓ (POST /files/upload with multipart form-data)
-[FastAPI /files/upload endpoint]
-    ↓
-1. Validate file format and size
-2. Generate unique file_id
-3. Save to /uploads/user_id/file_id/filename
-4. Create File record in PostgreSQL
-    ↓
-[Trigger Onboarding Agent]
-    ↓
-1. Load file with pandas
-2. Analyze schema (columns, types, sample data)
-3. Generate metadata (LLM call)
-4. Update File.metadata in PostgreSQL
-    ↓
-[Return file metadata to frontend]
-    ↓
-[Frontend creates new file tab, displays metadata]
+**Why:** Connection pooling is expensive; should be shared across requests.
+
+**Implementation:**
+```python
+# Good: lifespan manages pool
+@asynccontextmanager
+async def lifespan(app):
+    pool = AsyncConnectionPool(...)
+    await pool.open()
+    app.state.pool = pool
+    yield
+    await pool.close()
+
+# Bad: per-request pool creation
+async def endpoint():
+    pool = AsyncConnectionPool(...)  # Creates new pool every request
 ```
 
-### Request Flow: Chat Query → AI Code Generation → Sandbox Execution → Results
+### Pattern 4: Graceful Degradation
 
-```
-User types query in chat
-    ↓
-[Next.js ChatInterface Component]
-    ↓ (POST /api/chat → SSE stream)
-[Next.js API Route /api/chat/route.ts]
-    ↓ (Proxy to backend)
-[FastAPI /chat/stream endpoint]
-    ↓
-[LangGraph Agent Workflow starts streaming]
-    ↓
-┌─────────────────────────────────────────────────┐
-│ Step 1: Coding Agent                            │
-│ - Receives query + file metadata + chat history │
-│ - Generates Python code (LLM call)              │
-│ - Streams: {"type": "code", "content": "..."}   │
-└─────────────────┬───────────────────────────────┘
-                  ↓
-┌─────────────────────────────────────────────────┐
-│ Step 2: Code Checker Agent                      │
-│ - Validates code with RestrictedPython          │
-│ - Checks for forbidden operations               │
-│ - If invalid: loop back to Coding Agent         │
-│ - Streams: {"type": "validation", "safe": true} │
-└─────────────────┬───────────────────────────────┘
-                  ↓
-┌─────────────────────────────────────────────────┐
-│ Step 3: Sandbox Executor                        │
-│ - Execute code in Docker + gVisor container     │
-│ - Load user's data file (read-only mount)       │
-│ - Capture output (DataFrame, plots, errors)     │
-│ - Streams: {"type": "execution", "status": "..."│
-└─────────────────┬───────────────────────────────┘
-                  ↓
-┌─────────────────────────────────────────────────┐
-│ Step 4: Data Analysis Agent                     │
-│ - Interprets execution results                  │
-│ - Generates natural language explanation (LLM)  │
-│ - Streams: {"type": "analysis", "content": "..."│
-└─────────────────┬───────────────────────────────┘
-                  ↓
-[Save ChatMessage to PostgreSQL]
-    ↓
-[Stream final event: {"type": "done"}]
-    ↓
-[Next.js receives stream, updates UI incrementally]
-    ↓
-[Render Data Card with results]
+**What:** Features work even if optional components are missing.
+
+**Why:** Makes deployment flexible and testing easier.
+
+**Implementation:**
+```python
+# Good: graceful fallback
+if not settings.smtp_host:
+    logger.warning("SMTP not configured, logging to console")
+    return True
+
+# Bad: crash if not configured
+await aiosmtplib.send(...)  # Crashes if SMTP not configured
 ```
 
-### State Management in Multi-Agent Workflow
+## Anti-Patterns to Avoid
 
+### Anti-Pattern 1: Synchronous DB Operations in Async Context
+
+**What:** Using PostgresSaver (sync) instead of AsyncPostgresSaver in async FastAPI.
+
+**Why:** Blocks event loop, causes poor performance and potential deadlocks.
+
+**Instead:**
+```python
+# Good: async checkpointer
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+checkpointer = AsyncPostgresSaver(async_pool)
+
+# Bad: sync checkpointer in async app
+from langgraph.checkpoint.postgres import PostgresSaver
+checkpointer = PostgresSaver(sync_conn)  # Blocks event loop
 ```
-LangGraph Shared State (AgentState)
-    ↓ (all agents read/write)
-┌──────────────────────────────────────┐
-│ messages: [user query, agent replies]│  ← Chat history context
-│ file_id: 123                         │  ← Which file to analyze
-│ file_metadata: {columns, types, ...} │  ← From Onboarding Agent
-│ generated_code: "import pandas..."  │  ← From Coding Agent
-│ validation_result: {safe: true, ...}│  ← From Code Checker
-│ execution_result: {output, plots}   │  ← From Sandbox
-│ analysis: "The data shows..."       │  ← From Data Analysis Agent
-└──────────────────────────────────────┘
+
+### Anti-Pattern 2: Unbounded Message History
+
+**What:** Storing all messages without trimming, causing context overflow.
+
+**Why:** Exceeds model context limits, increases latency and cost.
+
+**Instead:**
+```python
+# Good: trim messages
+from langchain_core.messages import trim_messages
+messages = trim_messages(state["messages"], max_tokens=8000)
+
+# Bad: pass all messages
+messages = state["messages"]  # Can exceed context limit
 ```
 
-### Key Data Flows
+### Anti-Pattern 3: API Keys in Code
 
-1. **File Upload Flow:** Frontend → FastAPI → Local Storage → PostgreSQL → Onboarding Agent → LLM → PostgreSQL (metadata) → Frontend
-2. **Chat Query Flow:** Frontend SSE → FastAPI → LangGraph → Coding Agent → Code Checker → Sandbox → Data Analysis Agent → SSE stream → Frontend
-3. **Per-File Chat History:** Query includes file_id → PostgreSQL join (File + ChatMessage) → Agent receives context → New message saved with file_id reference
+**What:** Hard-coding API keys or putting them in YAML config files.
+
+**Why:** Security risk if code is committed to git.
+
+**Instead:**
+```python
+# Good: environment variables
+api_key = settings.tavily_api_key  # Loaded from .env
+
+# Bad: hard-coded in YAML
+tavily:
+  api_key: "tvly-abc123..."  # Committed to git
+```
+
+### Anti-Pattern 4: Global LLM Instance
+
+**What:** Creating single LLM instance shared by all agents.
+
+**Why:** Prevents per-agent configuration (provider, model, temperature).
+
+**Instead:**
+```python
+# Good: per-agent LLM
+async def coding_agent(state):
+    llm = get_llm(**get_agent_llm_config("coding"))
+    ...
+
+# Bad: global LLM
+LLM = ChatAnthropic(...)  # All agents use same LLM
+```
 
 ## Scaling Considerations
 
 | Scale | Architecture Adjustments |
 |-------|--------------------------|
-| **0-100 users (MVP)** | Monolith deployment: Single Docker Compose stack (Next.js, FastAPI, PostgreSQL, sandbox). Local file storage. Single backend server handles all agent orchestration. LangSmith for debugging. |
-| **100-1K users** | Separate frontend (Vercel) and backend (Railway/Render). Managed PostgreSQL (RDS/Cloud SQL). Optimize: Add Redis for session caching. Connection pooling (asyncpg). Add rate limiting per user. Consider managed sandbox (E2B Cloud) if Docker scaling becomes complex. |
-| **1K-10K users** | Horizontal scaling: Multiple FastAPI backend instances behind load balancer. Separate sandbox execution service (dedicated containers). Object storage (S3) for file uploads. Add background workers (Celery) for async tasks. PostgreSQL read replicas. Cache file metadata in Redis. |
-| **10K+ users** | Microservices: Split agent orchestration into separate service. Dedicated sandbox cluster (Kubernetes + Kata Containers). Event-driven architecture (Kafka) for agent communication. CDN for frontend. Multi-region deployment. Vector database for semantic search. Full observability stack (LangSmith + Prometheus + Grafana). |
+| 0-100 users | Single server, local Ollama optional, default PostgreSQL pool (min=2, max=10) |
+| 100-1k users | Increase pool size (max=50), add Redis for session caching, separate Ollama to dedicated server |
+| 1k-10k users | Add connection pooler (PgBouncer), horizontal scaling of FastAPI workers, CDN for static assets, consider managed Ollama (e.g., Replicate) |
+| 10k+ users | Multi-region deployment, read replicas for PostgreSQL, async task queue for tool calls, LLM gateway for rate limiting and caching |
 
-### Scaling Priorities
+### First Bottleneck: Database Connections
 
-1. **First bottleneck (100-1K users):** Database connections and LLM API rate limits. Fix: Connection pooling (asyncpg max_size=20), LLM response caching for common queries, batch LLM calls where possible.
-2. **Second bottleneck (1K-10K users):** Sandbox execution throughput and file storage I/O. Fix: Separate sandbox service with dedicated worker pool, migrate to S3 for file storage, implement queue for sandbox tasks.
-3. **Third bottleneck (10K+ users):** Agent orchestration overhead and real-time streaming connections. Fix: Dedicated agent service with horizontal scaling, use message queue (Kafka) for agent coordination, WebSocket connection management layer.
+**Symptom:** Connection pool exhaustion under load
 
-## Anti-Patterns
+**Solution:**
+1. Increase AsyncConnectionPool max_size
+2. Add PgBouncer for connection pooling
+3. Monitor `checkpoints` table size, implement TTL cleanup
 
-### Anti-Pattern 1: Single Shared State Across Users
+### Second Bottleneck: LLM API Rate Limits
 
-**What people do:** Use a global in-memory state for agent workflows, sharing LangGraph state objects across different users.
+**Symptom:** 429 errors from LLM providers
 
-**Why it's wrong:** Data leakage between users (User A sees User B's chat history), race conditions on shared state, impossible to scale horizontally (state tied to single process).
+**Solution:**
+1. Implement retry with exponential backoff
+2. Add LLM gateway (LiteLLM, OpenRouter) for fallback routing
+3. Cache LLM responses for identical queries
+4. Use faster models (Groq, OpenRouter) for non-critical agents
 
-**Do this instead:** Isolate state per request. Each agent workflow execution gets its own AgentState instance with user_id and file_id scoping. Use PostgreSQL for persistent state, not in-memory globals.
+## Dependencies
 
-```python
-# WRONG: Shared global state
-agent_state = AgentState()  # Global variable
+### New Packages for v0.2
 
-@app.post("/chat/stream")
-async def chat(request: ChatRequest):
-    agent_state["messages"].append(request.query)  # Race condition!
+```toml
+# pyproject.toml or requirements.txt
 
-# CORRECT: Per-request state
-@app.post("/chat/stream")
-async def chat(request: ChatRequest):
-    state = AgentState(  # Fresh state per request
-        messages=await get_chat_history(request.file_id, request.user_id),
-        file_id=request.file_id,
-        user_id=request.user_id
-    )
-    async for chunk in agent_workflow.astream(state):
-        yield chunk
+# Memory persistence
+langgraph-checkpoint-postgres = "^2.0"
+psycopg = {extras = ["pool"], version = "^3.2"}
+psycopg-pool = "^3.2"
+
+# Multi-LLM support
+langchain-ollama = "^0.2"
+# OpenRouter uses langchain-openai with custom base_url
+
+# Tool integration
+langchain-community = "^0.3"
+tavily-python = "^0.5"  # or google-search-results for Serper
+
+# SMTP email
+aiosmtplib = "^3.0"
 ```
-
-### Anti-Pattern 2: Mixing User Data in Sandbox
-
-**What people do:** Execute all users' code in the same sandbox instance, or mount entire uploads directory into sandbox.
-
-**Why it's wrong:** User A's code can access User B's data files, no isolation between tenants, violates data privacy requirements.
-
-**Do this instead:** Per-execution sandboxes with read-only mounts of ONLY the specific user's specific file. Use user_id and file_id to construct isolated paths.
-
-```python
-# WRONG: Mount entire uploads directory
-volumes={"/uploads": {"bind": "/data", "mode": "ro"}}
-
-# CORRECT: Mount only the specific file for this user
-volumes={
-    f"/uploads/{user_id}/{file_id}": {"bind": "/data", "mode": "ro"}
-}
-```
-
-### Anti-Pattern 3: Synchronous Agent Workflows
-
-**What people do:** Call agents sequentially with blocking calls, waiting for each LLM response before proceeding.
-
-**Why it's wrong:** High latency (30-60s for 4-agent workflow), poor user experience (no streaming feedback), can't scale to concurrent requests.
-
-**Do this instead:** Use async/await throughout, stream intermediate results via SSE, use LangGraph's async streaming (astream).
-
-```python
-# WRONG: Blocking sequential calls
-def execute_workflow(query):
-    code = coding_agent.invoke(query)  # Blocks 5-10s
-    validation = code_checker.invoke(code)  # Blocks 2-3s
-    result = execute_code(code)  # Blocks 10-20s
-    analysis = data_analysis.invoke(result)  # Blocks 5-10s
-    return analysis  # Total: 22-43s with no feedback
-
-# CORRECT: Async streaming
-async def execute_workflow(query):
-    async for chunk in agent_workflow.astream({"messages": [query]}):
-        if "coding" in chunk:
-            yield {"type": "code", "content": chunk["coding"]}  # Stream code as generated
-        elif "data_analysis" in chunk:
-            yield {"type": "analysis", "content": chunk["analysis"]}  # Stream analysis
-```
-
-### Anti-Pattern 4: Storing Chat History in Frontend State
-
-**What people do:** Keep chat messages only in React state, losing history on page refresh or tab close.
-
-**Why it's wrong:** Poor UX (chat history lost), can't support multi-device access, no audit trail, violates user expectations.
-
-**Do this instead:** Persist every message to PostgreSQL immediately, load from database on component mount, frontend state is ephemeral cache only.
-
-### Anti-Pattern 5: Unvalidated Code Execution
-
-**What people do:** Execute LLM-generated code directly without validation, trusting the LLM to be safe.
-
-**Why it's wrong:** LLMs can generate dangerous code (file deletion, infinite loops, network calls to exfiltrate data), prompt injection attacks can manipulate code generation.
-
-**Do this instead:** Multi-layer validation (AST validation → manual checks → sandbox isolation). Always assume generated code is untrusted.
-
-## Integration Points
-
-### External Services
-
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| **OpenAI/Anthropic LLM API** | Direct API calls via LangChain | Use langchain-openai or langchain-anthropic, set OPENAI_API_KEY in env, implement retry logic for rate limits |
-| **LangSmith** | Auto-tracing via env vars | Set LANGCHAIN_TRACING_V2=true, zero code changes, traces all agent calls |
-| **Docker Runtime (gVisor)** | Python docker SDK | Configure gVisor runtime in Docker daemon, use runtime="runsc" in container.run() |
-| **PostgreSQL** | asyncpg connection pool | Use SQLAlchemy async engine, pool_size=20, pool_recycle=3600, handle connection failures gracefully |
-
-### Internal Boundaries
-
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| **Frontend ↔ Backend** | HTTP/SSE (Next.js API routes proxy FastAPI) | CORS config for local dev, separate domains in prod (frontend.com → api.frontend.com) |
-| **API Layer ↔ Agent Orchestrator** | Direct async function calls | Keep thin: routers handle HTTP, agents handle business logic |
-| **Agent Orchestrator ↔ Individual Agents** | LangGraph shared state (dict-based) | Agents read/write to shared AgentState, no direct agent-to-agent calls |
-| **Backend ↔ Sandbox** | Docker SDK (async exec) | Backend creates containers, passes code + data path, waits for result with timeout |
-| **Backend ↔ Database** | asyncpg (connection pool) | All database access through single pool, use async context managers |
-| **Backend ↔ File Storage** | Direct filesystem I/O (async aiofiles) | User/file isolation via path structure: /uploads/{user_id}/{file_id}/ |
-
-## Deployment Architecture
-
-### Development (Local)
-
-```yaml
-# docker-compose.yml
-version: '3.8'
-
-services:
-  frontend:
-    build: ./frontend
-    ports:
-      - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_API_URL=http://backend:8000
-    depends_on:
-      - backend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-
-  backend:
-    build: ./backend
-    ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:password@db:5432/spectra
-      - LANGCHAIN_TRACING_V2=true
-      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-    depends_on:
-      - db
-      - sandbox
-    volumes:
-      - ./backend:/app
-      - ./uploads:/uploads
-
-  db:
-    image: postgres:15
-    environment:
-      - POSTGRES_DB=spectra
-      - POSTGRES_PASSWORD=password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-
-  sandbox:
-    image: python:3.10-slim
-    runtime: runsc  # gVisor runtime
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-    networks:
-      - isolated
-
-volumes:
-  postgres_data:
-
-networks:
-  isolated:
-    driver: bridge
-```
-
-**Run:** `docker-compose up`
-**Access:** Frontend at http://localhost:3000, Backend at http://localhost:8000
-
-### Production (MVP - Single Developer)
-
-**Recommended stack:**
-- **Frontend:** Vercel (automatic deployments from Git, global CDN, zero config)
-- **Backend:** Railway or Render (Dockerfile deployment, easy Docker support)
-- **Database:** Managed PostgreSQL (Railway/Render/RDS)
-- **Sandbox:** Run on same backend instance initially, migrate to E2B Cloud if scaling issues
-
-**Deployment steps:**
-1. Push frontend to Vercel (automatic build/deploy)
-2. Deploy backend to Railway with Dockerfile
-3. Configure environment variables (DATABASE_URL, LANGCHAIN_API_KEY, OPENAI_API_KEY)
-4. Set up gVisor runtime on Railway (if supported) or use E2B Cloud for sandboxing
-5. Configure CORS: Allow frontend domain in FastAPI middleware
-
-### Production (1K+ Users)
-
-**Architecture evolution:**
-```
-Users
-  ↓
-Cloudflare CDN (caching, DDoS protection)
-  ↓
-├─→ Frontend (Vercel) → Next.js SSR/SSG
-│
-└─→ Backend API (Railway/AWS)
-      ↓
-      ├─→ FastAPI instances (2-4 behind load balancer)
-      ├─→ Managed PostgreSQL (RDS with read replicas)
-      ├─→ Redis (session caching, rate limiting)
-      ├─→ S3 (file storage instead of local FS)
-      └─→ Sandbox service (E2B Cloud or Kubernetes + Kata Containers)
-```
-
-**Observability:**
-- LangSmith: Agent execution tracing
-- Prometheus + Grafana: Backend metrics
-- Sentry: Error tracking
-- Vercel Analytics: Frontend performance
-
-## Build Order & Dependencies
-
-### Phase 1: Foundation (Week 1)
-1. **Backend skeleton** - FastAPI app, database models, authentication
-2. **Frontend skeleton** - Next.js app, basic layout, authentication UI
-3. **Database setup** - PostgreSQL schema (Users, Files, ChatMessages)
-4. **File upload** - Backend endpoint + frontend component (no AI yet)
-
-**Dependencies:** PostgreSQL → Backend models → API endpoints → Frontend UI
-
-### Phase 2: AI Agents (Week 2)
-1. **Onboarding Agent** - Standalone function: file → metadata
-2. **Coding Agent** - Standalone function: query → Python code
-3. **Code Checker Agent** - Validation rules + RestrictedPython integration
-4. **LangGraph Orchestrator** - Wire agents together with shared state
-
-**Dependencies:** Individual agents → LangGraph workflow → Testing with mock data
-
-### Phase 3: Sandbox Security (Week 2-3)
-1. **Docker sandbox** - Basic container execution
-2. **gVisor integration** - Add runsc runtime configuration
-3. **Validation layer** - RestrictedPython + custom rules
-4. **Resource limits** - Memory, CPU, timeout enforcement
-
-**Dependencies:** Docker setup → gVisor runtime → RestrictedPython → Integration with Code Checker
-
-### Phase 4: Integration (Week 3)
-1. **Chat endpoint** - FastAPI SSE streaming endpoint
-2. **Agent workflow integration** - Connect chat → LangGraph → sandbox
-3. **Frontend streaming** - Next.js SSE client, Data Card rendering
-4. **Per-file chat history** - Database queries + frontend tabs
-
-**Dependencies:** Backend streaming → Frontend SSE → UI components → Database persistence
-
-### Phase 5: Polish & Deploy (Week 4)
-1. **Settings page** - Profile editing, password change
-2. **Error handling** - Graceful failures throughout pipeline
-3. **LangSmith integration** - Environment variables only
-4. **Deployment** - Docker Compose local → Vercel + Railway production
-
-**Parallel tasks:** Settings (independent), LangSmith (config only), Error handling (throughout)
 
 ## Sources
 
-### High Confidence (Official Documentation & Recent 2025-2026 Sources)
+**Memory Persistence:**
+- [Simple LangGraph Implementation with Memory AsyncSqliteSaver Checkpointer — FastAPI](https://medium.com/@devwithll/simple-langgraph-implementation-with-memory-asyncsqlitesaver-checkpointer-fastapi-54f4e4879a2e)
+- [langgraph-checkpoint-postgres · PyPI](https://pypi.org/project/langgraph-checkpoint-postgres/)
+- [Internals of Langgraph Postgres Checkpointer (AsyncPostgresSaver)](https://blog.lordpatil.com/posts/langgraph-postgres-checkpointer/)
+- [Understanding Memory Management in LangGraph: A Practical Guide](https://pub.towardsai.net/understanding-memory-management-in-langgraph-a-practical-guide-for-genai-students-b3642c9ea7e1)
+- [Mastering LangGraph Checkpointing: Best Practices for 2025](https://sparkco.ai/blog/mastering-langgraph-checkpointing-best-practices-for-2025)
 
-- [LangChain Multi-Agent Architecture Patterns](https://www.blog.langchain.com/choosing-the-right-multi-agent-architecture/) - Four core patterns: subagents, skills, handoffs, routers
-- [LangGraph Workflows and Agents Documentation](https://docs.langchain.com/oss/python/langgraph/workflows-agents) - Official workflow patterns
-- [4 Ways to Sandbox Untrusted Code in 2026](https://dev.to/mohameddiallo/4-ways-to-sandbox-untrusted-code-in-2026-1ffb) - Comparison of sandbox approaches
-- [Setting Up a Secure Python Sandbox for LLM Agents](https://dida.do/blog/setting-up-a-secure-python-sandbox-for-llm-agents) - gVisor architecture patterns
-- [gVisor Security Introduction](https://gvisor.dev/docs/architecture_guide/intro/) - Official gVisor documentation
-- [What's the Best Code Execution Sandbox for AI Agents in 2026?](https://northflank.com/blog/best-code-execution-sandbox-for-ai-agents) - Sandbox comparison
-- [How to Sandbox LLMs & AI Shell Tools](https://www.codeant.ai/blogs/agentic-rag-shell-sandboxing) - Docker, gVisor, Firecracker comparison
+**Multi-LLM Support:**
+- [Build a Multi-LLM AI Agent with Kong AI Gateway & LangGraph](https://konghq.com/blog/engineering/build-a-multi-llm-ai-agent-with-kong-ai-gateway-and-langgraph)
+- [LangGraph: Multi-Agent Workflows](https://blog.langchain.com/langgraph-multi-agent-workflows/)
+- [ChatOllama integration - Docs by LangChain](https://docs.langchain.com/oss/python/integrations/chat/ollama)
+- [LangChain Integration | OpenRouter SDK Support](https://openrouter.ai/docs/guides/community/langchain)
+- [OpenRouter with LangChain](https://medium.com/@arth2048/openrouter-with-langchain-0eab702b9977)
 
-### Medium Confidence (Multiple Community Sources)
+**State Management:**
+- [LangGraph Notes: State Management](https://medium.com/@omeryalcin48/langgraph-notes-state-management-62ea5b5a5cdd)
+- [Building AI Agents Using LangGraph: Part 8 — Understanding Reducers and State Updates](https://harshaselvi.medium.com/building-ai-agents-using-langgraph-part-8-understanding-reducers-and-state-updates-c8056963a42c)
+- [Mastering LangGraph State Management in 2025](https://sparkco.ai/blog/mastering-langgraph-state-management-in-2025)
 
-- [Building Multi-Agent Workflows with LangChain](https://www.ema.co/additional-blogs/addition-blogs/multi-agent-workflows-langchain-langgraph) - Practical implementation patterns
-- [Data Engineering Trends 2026 for AI-Driven Enterprises](https://www.trigyn.com/insights/data-engineering-trends-2026-building-foundation-ai-driven-enterprises) - Data architecture patterns
-- [AI-First Data Architecture: The Future of Enterprise Intelligence](https://www.altimetrik.com/blog/ai-first-data-architecture-enterprise-guide) - Architectural trends
-- [Next.js FastAPI Template](https://www.vintasoftware.com/blog/next-js-fastapi-template) - Architecture separation patterns
-- [Modern SPA Development with Next.js and FastAPI](https://blog.greeden.me/en/2025/06/16/modern-spa-development-with-next-js-and-fastapi-a-complete-guide-from-design-to-operation/) - Full-stack architecture guide
+**Tool Integration:**
+- [Building Tool Calling Agents with LangGraph: A Complete Guide](https://sangeethasaravanan.medium.com/building-tool-calling-agents-with-langgraph-a-complete-guide-ebdcdea8f475)
+- [Tavily search integration - Docs by LangChain](https://docs.langchain.com/oss/javascript/integrations/tools/tavily_search)
+- [Adding tools to your LangGraph Chatbots | Beginner's Guide](https://www.codersarts.com/post/adding-tools-to-your-langgraph-chatbots-beginner-s-guide)
+
+**SMTP Email:**
+- [aiosmtplib · PyPI](https://pypi.org/project/aiosmtplib/)
+- [GitHub - cole/aiosmtplib: asyncio smtplib implementation](https://github.com/cole/aiosmtplib)
+- [Sending Emails with Python FastAPI: A Quick Guide](https://mailmug.net/blog/fastapi-mail/)
+
+**Connection Pooling:**
+- [psycopg_pool – Connection pool implementations](https://www.psycopg.org/psycopg3/docs/api/pool.html)
+- [asyncpg Usage — asyncpg Documentation](https://magicstack.github.io/asyncpg/current/usage.html)
+- [Asynchronous Postgres with Python, FastAPI, and Psycopg 3](https://medium.com/@benshearlaw/asynchronous-postgres-with-python-fastapi-and-psycopg-3-fafa5faa2c08)
 
 ---
-
-**Architecture Research for:** AI-Powered Data Analytics Platform with Secure Code Execution
-**Researched:** 2026-02-02
-**Confidence:** HIGH - Architecture patterns verified with official LangChain/LangGraph documentation, gVisor security documentation, and multiple 2025-2026 production implementation guides
+*Architecture research for: Spectra v0.2 Intelligence & Integration*
+*Researched: 2026-02-06*

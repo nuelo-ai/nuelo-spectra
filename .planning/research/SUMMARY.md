@@ -1,265 +1,362 @@
 # Project Research Summary
 
-**Project:** Spectra - AI-powered data analytics platform
-**Domain:** AI agent orchestration + data analysis SaaS
-**Researched:** 2026-02-02
-**Confidence:** HIGH
+**Project:** Spectra v0.2 Intelligence & Integration
+**Domain:** AI-powered data analytics platform (LangGraph agent enhancements)
+**Researched:** 2026-02-06
+**Confidence:** MEDIUM-HIGH
 
 ## Executive Summary
 
-Spectra is a conversational data analytics platform targeting the gap between consumer tools (ChatGPT) and enterprise BI platforms (Tableau, ThoughtSpot). The product enables users to upload CSV/Excel files and analyze them through natural language chat, with AI generating and executing Python code to produce interactive visualizations. The core differentiators are code transparency (users see generated Python), multi-agent accuracy (4 specialized agents with validation), and production-grade security (multi-layer sandbox isolation).
+Spectra v0.2 builds on the validated v0.1 Beta MVP (shipped 2026-02-06, 42/42 requirements satisfied) by adding an intelligence layer that transforms stateless AI interactions into conversational analytics with cost control and flexibility. The research reveals three core architectural truths: (1) PostgreSQL checkpointing works reliably with AsyncPostgresSaver v3.0.4+ (v0.1's async issues are resolved), (2) multi-LLM flexibility (Ollama local + OpenRouter gateway) is the headline commercial differentiator vs. ChatGPT/Julius AI lock-in, and (3) web search integration (Serper.dev) enables benchmarking queries that pure code interpreters cannot handle.
 
-The recommended architecture uses modern async-first stack (FastAPI + Next.js 16) with LangGraph-based multi-agent orchestration and E2B/gVisor sandboxing for secure code execution. Critical technical decisions: LangGraph over vanilla LangChain for agent loops, gVisor + Docker multi-layer isolation (Python-level sandboxing like RestrictedPython is fundamentally insecure in 2026), SSE streaming for real-time responses, and PostgreSQL with per-file chat isolation. Timeline feasibility for single developer: 2-4 weeks is aggressive but achievable if scope discipline is maintained (defer OAuth, long-term memory, advanced export to v1.x).
+The recommended approach prioritizes multi-LLM infrastructure first (Phase 1), followed by session memory (Phase 2), then intelligence features (query suggestions Phase 3, web search Phase 4), and production SMTP last (Phase 5). This ordering reflects dependency chains discovered in architecture research: per-agent LLM configuration requires multi-LLM foundation, and session memory must work before context-aware suggestions make sense. All features integrate cleanly via well-defined LangGraph extension points without disrupting the existing 4-agent system.
 
-The primary risks are AI code hallucinations (56.2% fix accuracy for pandas-specific errors), sandbox escape vulnerabilities (CVE-2025-52881 demonstrated CVSS 9.8 severity), and uncontrolled LLM token costs (output tokens cost 3-10x input, multi-agent amplifies costs). Mitigation requires Code Checker Agent with AST validation, multi-layer sandbox defense, and token-aware rate limiting from day one. These are non-negotiable for MVP credibility and cannot be deferred.
+Key risk: PostgreSQL checkpointing complexity increases operational burden (connection pooling, cleanup policies, context window management). Mitigation: Use FastAPI lifespan for connection pool initialization, implement 85% context warnings with truncation strategy, and add TTL-based checkpoint cleanup (30 days). Secondary risk: Multi-LLM abstraction adds testing surface area (6 providers vs. 1). Mitigation: YAML-driven configuration with provider-agnostic LLM factory enables swapping models without code changes.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The stack prioritizes single-developer maintainability, 2-4 week timeline feasibility, and security for AI-generated code execution. Key architectural decision: async-first throughout (FastAPI + asyncpg + Next.js streaming) to support SSE-based real-time responses that are table stakes in 2026.
+**Summary:** All v0.2 additions are evolutionary upgrades to existing stack, not disruptive replacements. The core finding is that current LangGraph versions solve v0.1's async checkpointing problems, and multi-LLM support requires zero new database dependencies (just Python packages).
 
 **Core technologies:**
-- **FastAPI 0.115+**: Async-first ASGI framework with native Pydantic v2, 5-10x faster than Flask, ideal for AI streaming responses
-- **Next.js 16**: React 19 compatible with built-in streaming support, App Router for server components, excellent single-developer DX
-- **PostgreSQL 16+**: Robust relational database with JSON support for chat history, async SQLAlchemy 2.0 integration
-- **LangGraph 0.2.65+**: Graph-based agent orchestration with loops/branching (needed for Code Checker retry logic), production-ready state management
-- **E2B 1.0+**: Production-grade microVM isolation using Firecracker (~150ms boot), purpose-built for AI code execution (RestrictedPython alone is fundamentally insecure)
-- **Python 3.12+**: Latest stable with excellent async support, required for FastAPI/LangGraph ecosystem
-- **TypeScript 5.6+**: Type safety critical for AI streaming interfaces, reduces bugs in single-developer context
+- **langgraph-checkpoint-postgres v3.0.4+**: Async PostgreSQL checkpointing for conversation memory — v3.0.4 (Jan 2026) fixes v0.1's async issues. Uses psycopg3 with proper async/await. Enables session-scoped memory (thread_id = chat_tab_id).
+- **langchain-ollama v1.0.1+**: Official Ollama integration for local/remote LLM deployment — Enables cost-effective local models (DeepSeek, Llama, Qwen) and data privacy (no external API calls). ChatOllama provides native LangChain tool binding and streaming.
+- **OpenRouter via langchain-openai**: Multi-model gateway (100+ models) using existing OpenAI-compatible API — Access to Claude, GPT-4, Gemini, DeepSeek via single integration. No new dependencies (uses existing langchain-openai with custom base_url).
+- **langchain-community v0.4.1+**: GoogleSerperAPIWrapper for web search tool integration — Serper.dev = $0.001/search (vs. SerpAPI $0.002+), 2,500 free searches for testing. Enables benchmarking queries ("compare my CTR to industry average") that differentiate from ChatGPT Code Interpreter.
+- **aiosmtplib v5.1.0+**: Async SMTP client for production email — Replaces Mailgun API with standard SMTP (Gmail, SendGrid, AWS SES). Zero dependencies, production-stable (Jan 2026), native async/await for FastAPI.
+- **psycopg[binary] v3.3+**: PostgreSQL async driver for checkpointing — Required by langgraph-checkpoint-postgres. Binary wheels for performance. Coexists with existing asyncpg (used by SQLAlchemy).
 
-**Critical security update:** passlib (password hashing) and python-jose (JWT) are abandoned. Use pwdlib with Argon2 and PyJWT instead per FastAPI 2026 recommendations.
-
-**Development tooling:** uv (Python package manager) replaces pip/poetry per FastAPI team 2026 recommendation, Docker + gVisor for containerized sandbox, LangSmith for agent debugging (table stakes - agent debugging without tracing is nightmare fuel).
+**Critical version requirements:**
+- langgraph-checkpoint-postgres must be v3.0.4+ (v2.x has async bugs)
+- Python 3.10+ (aiosmtplib requirement, already satisfied by v0.1's >=3.12)
+- All LangChain packages require langchain-core>=0.3.0 (already installed in v0.1)
 
 ### Expected Features
 
-Conversational analytics is table stakes in 2026, not a differentiator. 65% of organizations use generative AI regularly - users expect ChatGPT-style streaming and code generation as baseline. Differentiation comes from execution quality (accuracy, transparency, security).
+**Summary:** Most table stakes features exist from v0.1 (NL queries, streaming, transparency, multi-agent orchestration). v0.2 adds missing intelligence layer (memory, suggestions, multi-LLM) and production email. Key competitive insight: Multi-LLM flexibility is the primary differentiator vs. ChatGPT (OpenAI lock-in) and Julius AI (single model), targeting prosumer/SMB segment wanting cost control and data privacy.
 
 **Must have (table stakes):**
-- Natural language query interface with real-time streaming (ChatGPT-style UX expected)
-- CSV/Excel file upload (<100MB) with automated data profiling
-- Code generation with explanation (transparency builds trust)
-- Sandboxed Python execution (security non-negotiable)
-- Interactive Data Cards (streaming, sortable results)
-- Conversation persistence (survives browser refresh)
-- User authentication with per-user data isolation
-- Basic export (CSV download for results)
+- **Session-scoped conversation memory** — Enables multi-turn conversations ("add a column" works without re-explaining). Maps thread_id to browser tab. Clears context on tab close with warning. Avoids ChatGPT's cross-session context pollution problem.
+- **Basic query suggestions (5-6 per dataset, grouped)** — Solves "blank page intimidation." Three categories: General Analysis (2), Benchmarking (2), Trend/Predictive (2). Generated by Onboarding Agent during profiling (extends v0.1 capability).
+- **Configurable context window size** — YAML config (e.g., max_tokens: 8000), 85% warning, truncation strategy. Governance-friendly for enterprise cost control.
+- **Tab-close context warning** — Browser dialog: "Closing tab clears conversation. Continue?" Prevents accidental context loss. Standard UX pattern.
 
-**Should have (competitive advantage):**
-- Multi-agent orchestration (Supervisor + 4 specialized agents for higher accuracy)
-- Streaming Data Cards (results appear progressively while AI processes)
-- Code transparency with edit capability (users verify and customize logic)
-- Inline error recovery (AI auto-fixes failed code and retries)
-- Two-layer memory (short-term conversation + long-term preferences with pgvector)
+**Should have (competitive differentiators):**
+- **Multi-LLM provider support (OpenRouter + Ollama)** — HEADLINE COMMERCIAL FEATURE. Enables cost optimization (cheap models for simple tasks, powerful for complex), data privacy (local Ollama = no data leaves premises), and vendor flexibility. Target: enterprises with LLM strategy and cost consciousness.
+- **Per-agent LLM configuration** — Different models per agent (Coding Agent: Claude Sonnet 4.5, Code Checker: GPT-4o-mini, Analyst: Ollama local). YAML-driven. Completes multi-LLM value proposition ("smart spending").
+- **Web search tool for Analyst agent** — Serper.dev integration enables benchmarking queries ("compare my TikTok CTR to industry average"). Shows query + sources via SSE. Key differentiator vs. ChatGPT Code Interpreter (code-only, no web search) and Julius AI (database connectors, not web search).
+- **Streaming web search transparency** — When AI searches web, show "Searching for '[query]'..." in real-time SSE. Display source links in Data Card citations. Builds trust through visibility.
+- **SMTP email service** — Production-ready password reset. Migrate from Mailgun API to standard SMTP (host/port/user/pass in config). Self-hosted friendly.
 
 **Defer (v2+):**
-- OAuth integration (Google, Microsoft) - trigger: >100 users complain about signup friction
-- Long-term memory with pgvector - trigger: users returning weekly+ want personalization
-- Advanced export (PDF reports, PNG charts) - trigger: users request formatted reports
-- SQL data sources - trigger: >10 users request database connections vs file upload
-- Real-time collaboration - defer until validated team use case (currently individual-focused)
-- Mobile apps - defer until mobile usage >20% of traffic (currently desktop workflow)
-
-**Anti-features to avoid:** Unlimited file sizes (memory exhaustion), support for all data sources (maintenance nightmare), real-time collaboration (10x complexity for rarely-used feature), AI training on user data (GDPR nightmare), unlimited query history (storage bloat).
+- **Data-aware smart suggestions** — Upgrade from generic to dataset-specific ("Compare TikTok campaign to benchmarks" because dataset has TikTok column). HIGH perceived value but HIGH complexity (domain intelligence). Fast follower for v0.2.1.
+- **Context summarization strategies** — LangChain ConversationSummaryBufferMemory hybrid. Truncation sufficient for v0.2.0 launch. Add v0.2.2 after observing usage patterns.
+- **Persistent cross-session memory** — Deferred until user research validates need. Risk: context pollution (ChatGPT users complain). Complexity: pgvector, semantic search, isolation. v2.0+ feature.
+- **Collections and saved Data Cards** — Search, organization, tagging. Requires storage/UI overhaul. v2.0+ after real-time workflow validated.
+- **Visualization Agent** — Auto-generate charts. Complexity: chart type selection, relevance. v2.0+ feature (focus v0.2 on intelligence, not presentation).
 
 ### Architecture Approach
 
-The architecture uses Next.js frontend with FastAPI backend connected via SSE streaming, LangGraph multi-agent workflow orchestration, and Docker + gVisor multi-layer sandbox for secure code execution. Per-file chat history enables tabbed multi-file workflow with independent conversation contexts.
+**Summary:** All v0.2 features integrate via well-defined LangGraph extension points without disrupting existing 4-agent system. Key architectural pattern: FastAPI lifespan manages connection pool lifecycle (shared across requests), per-agent LLM factory reads YAML config (enables experimentation without code changes), and ToolNode adds web search capability to Analyst agent only (isolated change). No database schema changes required (AsyncPostgresSaver auto-creates checkpoint tables).
 
 **Major components:**
 
-1. **Next.js Frontend** — User interface with SSE streaming client, file upload UI, interactive Data Cards, tabbed file management
-2. **FastAPI Backend API** — Authentication, file handling, agent orchestration, SSE streaming via StreamingResponse
-3. **LangGraph Multi-Agent Orchestrator** — Coordinates 4 specialized agents (Onboarding, Coding, Code Checker, Data Analysis) with shared state and conditional routing
-4. **Multi-Layer Sandbox Executor** — Defense-in-depth: RestrictedPython AST validation → Docker containers → gVisor user-space kernel → resource limits → network isolation
-5. **PostgreSQL Database** — Users, file metadata, per-file chat history (ChatMessage linked to both user_id and file_id)
-6. **Local File Storage** — User-isolated upload directories (/uploads/{user_uuid}/{random_filename})
+1. **AsyncPostgresSaver with connection pooling** — FastAPI lifespan function initializes AsyncConnectionPool (min_size=2, max_size=10) with autocommit=True and dict_row. Checkpointer setup creates two tables (checkpoints, checkpoint_blobs). Thread_id = user_{user_id}_file_{file_id} for session isolation. Graceful degradation: graph works with or without checkpointer.
 
-**Key architectural patterns:**
-- **SSE streaming**: Backend streams agent steps through Next.js API route to frontend EventSource client
-- **Per-file chat isolation**: ChatMessage table references both file_id and user_id for tabbed multi-file workflow
-- **Multi-agent handoffs**: LangGraph sequential workflow with conditional edges (Code Checker decides if code is safe → execute or regenerate)
-- **Async-first**: All I/O operations (database, LLM, file) use async/await to prevent blocking
+2. **Multi-LLM factory with YAML config** — Enhanced get_llm() supports 6 providers (anthropic, openai, google, ollama, openrouter, groq). Per-agent config in prompts.yaml adds llm section (provider, model, temperature, base_url). Each agent node loads config and instantiates LLM (not shared global instance). OpenRouter uses OpenAI-compatible API (no new package). Ollama doesn't need API key for local deployment.
 
-**Data flow:** User uploads file → Onboarding Agent analyzes structure → User asks question via chat → Coding Agent generates Python → Code Checker validates → Sandbox executes → Data Analysis Agent interprets results → Stream to frontend as Data Cards → Persist to PostgreSQL.
+3. **ToolNode integration for web search** — Add ToolNode to graph with conditional routing (should_call_tools checks last_message.tool_calls). Bind tools to Analyst agent only (llm.bind_tools([search_tool])). Tools configured via tools.yaml (provider: tavily/serper/duckduckgo). SSE streaming extended to show search queries and sources.
+
+4. **Async SMTP service** — Replace Mailgun API calls with aiosmtplib.send(). Jinja2 templates for HTML emails (backend/app/templates/emails/). SMTP config in settings (host, port, username, password, use_tls). Graceful degradation: if no SMTP configured, log to console (dev mode).
+
+5. **Context window management** — trim_messages() utility wraps LangChain function (max_tokens=8000, strategy="last", include_system=True). Agent nodes call before LLM invocation. Config in memory.yaml (max_messages: 50, context_window_tokens: 8000, ttl_days: 30).
 
 ### Critical Pitfalls
 
-1. **AI code hallucinations (56.2% fix accuracy)** — LLMs generate syntactically correct Python calling non-existent pandas functions (e.g., `df.advanced_stats()`). Mitigation: Code Checker Agent with AST validation against function allowlists, unit test generation, deterministic hallucination detection (77.0% fix accuracy with static analysis).
+Research identified 8 critical pitfalls from PITFALLS.md. Top 5 relevant to v0.2:
 
-2. **Sandbox escape via container vulnerabilities** — CVE-2025-52881 (CVSS 9.8) demonstrated critical container escapes. Single-layer Docker insufficient. Mitigation: Multi-layer defense (RestrictedPython + Docker + gVisor + resource limits + network isolation). E2B Cloud or self-hosted gVisor are only viable options. Python-level sandboxing (RestrictedPython alone) is fundamentally insecure per 2026 research.
+1. **PostgreSQL connection pool exhaustion under load** — FastAPI lifespan pattern prevents per-request pool creation. Set pool_size=20, max_overflow=10. Monitor with connection count queries. Add PgBouncer if scaling beyond 100 users. TTL cleanup for checkpoints (30 days) prevents table bloat. Symptom: "too many connections" errors at 50+ concurrent users.
 
-3. **Streaming connection failures without recovery** — SSE connections break during long queries (mobile networks, proxy timeouts), user sees infinite loading. Mitigation: Client-side auto-reconnect with EventSource, server disconnect detection (`await request.is_disconnected()`), checkpoint partial results in database, yield error events instead of raising exceptions.
+2. **Uncontrolled LLM token costs with multi-provider system** — Multi-LLM increases testing surface but also enables cost optimization. Implement token-aware rate limits (per user per hour), set max_tokens on LLM calls (cap output), cache similar queries (15-30% reduction). Track cost per provider in database. Symptom: Bill increases >2x week-over-week. Mitigation: Per-user token budgets, cost alerts ($50/day threshold).
 
-4. **Uncontrolled LLM token costs** — Output tokens cost 3-10x more than input, multi-agent systems multiply costs (4 agents = 4x API calls). Budget can explode from $100/month to $5,000/month. Mitigation: Token-aware rate limiting (per user, not just request count), max_tokens caps on outputs, caching layer for common queries (15-30% reduction), model routing (GPT-4o-mini for simple queries).
+3. **Streaming response connection failures without recovery** — EventSource auto-reconnects by default but needs server cooperation. Yield retry events ({"event": "retry", "data": "3000"}), check await request.is_disconnected(), checkpoint partial results. Yield progress events every 5s to keep connection alive. Symptom: Users report "stuck loading." Mitigation: Client reconnection + server-side checkpointing.
 
-5. **Multi-tenant data isolation failure (IDOR)** — User A accesses User B's files via predictable IDs or missing user_id filters in database queries. Legal liability (GDPR violations, T-Mobile paid $350M for 2021 breach). Mitigation: User-specific storage paths with UUIDs, database queries with mandatory `WHERE user_id = :current_user`, object-level permissions, penetration testing for IDOR vulnerabilities.
+4. **Multi-agent orchestration failures without observability** — LangSmith tracing is mandatory (single env variable LANGCHAIN_TRACING_V2=true, zero code changes). Enables debugging non-deterministic agent decisions. Add circuit breaker (max_retries=3 with exponential backoff) to prevent hallucination loops. Symptom: "Analysis failed" with no details. Mitigation: LangSmith traces + structured logging.
+
+5. **Context window overflow with conversation memory** — Unbounded message history exceeds model limits. Implement trim_messages (keep last 50 messages, 8000 tokens). Warn at 85% threshold. LangChain ConversationBufferWindowMemory pattern. Symptom: LLM errors about context length. Mitigation: Proactive trimming + user warning.
+
+**Anti-pattern specific to v0.2:** Using synchronous PostgresSaver in async FastAPI. v0.1 disabled checkpointing due to this issue. v0.2 must use AsyncPostgresSaver with async connection pool. Blocks event loop otherwise.
 
 ## Implications for Roadmap
 
-Based on research, recommended 5-phase structure for 2-4 week timeline:
+Based on research, suggested 5-phase structure optimizes for dependency chains and risk mitigation:
 
-### Phase 1: Backend Foundation + Authentication
-**Rationale:** User isolation must be designed from day one - retrofitting authorization after building features causes complete rewrites. All downstream features depend on authentication for security and multi-tenancy.
+### Phase 1: Multi-LLM Provider Infrastructure
 
-**Delivers:** FastAPI app skeleton, PostgreSQL database with Users/Files/ChatMessages models, JWT-based auth (email/password), file upload with user-isolated storage paths
+**Rationale:** Multi-LLM is the foundational capability that enables all per-agent configurations. Must come first because Phase 2+ features (memory, suggestions, web search) all depend on agents having LLM instances, and those instances need to support multiple providers. OpenRouter and Ollama integrations are independent (can be parallelized) but share common LLM factory abstraction.
 
-**Addresses:** Authentication (table stakes), per-user data isolation (critical security), file upload infrastructure
+**Delivers:**
+- OpenRouter integration (100+ models via gateway)
+- Ollama integration (local/remote deployment)
+- Enhanced LLM factory (6 providers: anthropic, openai, google, ollama, openrouter, groq)
+- Per-agent YAML configuration (prompts.yaml extended with llm section)
+- API key management (get_api_key_for_provider utility)
+- Environment variable setup (OPENROUTER_API_KEY, OLLAMA_BASE_URL)
 
-**Avoids:** Pitfall #5 (multi-tenant data isolation failure) - designing user_id filters and UUID-based file paths from start prevents IDOR vulnerabilities
+**Addresses (from FEATURES.md):**
+- Multi-LLM provider support (P1 competitive differentiator)
+- Per-agent LLM configuration (P1 completes multi-LLM value)
 
-**Tech stack:** FastAPI, SQLAlchemy 2.0 async, asyncpg, Alembic, PyJWT, pwdlib (Argon2)
+**Avoids (from PITFALLS.md):**
+- Global LLM instance anti-pattern (prevents per-agent optimization)
+- Hard-coded provider in agent code (prevents experimentation)
 
-**Research flag:** Standard patterns, skip research-phase (well-documented FastAPI auth)
+**Architecture components:** Enhanced LLM factory (llm_factory.py), per-agent config loader (config.py), agent node updates (coding.py, code_checker.py, data_analysis.py)
 
-### Phase 2: AI Agents + Orchestration
-**Rationale:** Core differentiation is multi-agent accuracy. Building agent infrastructure before UI ensures we can deliver on accuracy promise. Code Checker is non-negotiable for MVP - generates incorrect/unsafe code destroys trust.
+**Research flag:** Standard patterns (well-documented LangChain integrations). Skip research-phase.
 
-**Delivers:** LangGraph workflow orchestrating 4 agents (Onboarding, Coding, Code Checker, Data Analysis), LangSmith tracing for debugging, cost controls (token limits, max_tokens caps)
+---
 
-**Addresses:** Natural language queries, code generation with explanation, multi-agent orchestration (differentiator)
+### Phase 2: Session Memory with PostgreSQL Checkpointing
 
-**Avoids:** Pitfall #1 (AI hallucinations) via Code Checker Agent with AST validation, Pitfall #4 (token costs) via rate limiting and monitoring from day one, Pitfall #6 (orchestration failures) via LangSmith tracing
+**Rationale:** Memory is the second foundational capability that enables conversational intelligence. Must come after multi-LLM (because agents need working LLM instances before we can persist their conversations). Connection pooling setup is prerequisite for all subsequent phases (shared infrastructure). Session-scoped memory (vs. persistent cross-session) reduces complexity and avoids context pollution risks identified in research.
 
-**Tech stack:** LangGraph, LangChain, langchain-openai, LangSmith, pandas for data profiling
+**Delivers:**
+- AsyncPostgresSaver setup with connection pooling (FastAPI lifespan)
+- State schema enhancement (Annotated[list, add_messages] reducer)
+- Graph compilation with checkpointer parameter
+- Thread_id management (user_{user_id}_file_{file_id})
+- Tab-close warning dialog (browser API)
+- Configurable context window (memory.yaml)
+- Context trimming utility (trim_messages wrapper)
+- 85% context warning (client-side alert)
+- TTL-based checkpoint cleanup (30 days)
 
-**Research flag:** **Needs research-phase** - Complex LangGraph graph design with retry loops (Code Checker → Coding regeneration), agent prompt engineering, hallucination detection patterns
+**Addresses (from FEATURES.md):**
+- Session-scoped conversation memory (P1 table stakes)
+- Tab-close context warning (P1 UX)
+- Configurable context window size (P1 governance)
 
-### Phase 3: Streaming Infrastructure
-**Rationale:** SSE streaming is table stakes in 2026 (ChatGPT normalized token-by-token responses). Must be built before UI to test robustness (connection drops, long queries, error handling).
+**Avoids (from PITFALLS.md):**
+- Connection pool exhaustion (lifespan pattern)
+- Context window overflow (trim_messages + 85% warning)
+- Unbounded message history (context window limits)
 
-**Delivers:** FastAPI SSE streaming endpoint (/chat/stream), Next.js API route proxy, EventSource client with reconnection, database persistence during streaming
+**Architecture components:** AsyncConnectionPool initialization (main.py lifespan), checkpointer integration (graph.py), state schema update (state.py), endpoint config (chat.py thread_id)
 
-**Addresses:** Real-time streaming responses (table stakes), conversation persistence (survives browser refresh)
+**Research flag:** Standard patterns (official LangGraph docs, multiple tutorials). Skip research-phase.
 
-**Avoids:** Pitfall #3 (streaming connection failures) via auto-reconnect, disconnect detection, checkpoint partial results
+---
 
-**Tech stack:** sse-starlette, Next.js Route Handlers, EventSource API, PostgreSQL for chat persistence
+### Phase 3: Smart Query Suggestions
 
-**Research flag:** Standard SSE patterns, skip research-phase (well-documented streaming)
+**Rationale:** With memory and multi-LLM working, add intelligence features that enhance UX. Query suggestions come before web search because they're simpler (extend existing Onboarding Agent profiling) and have no external API dependencies. Basic (generic) suggestions ship in v0.2.0, data-aware suggestions deferred to v0.2.1 (HIGH complexity identified in research).
 
-### Phase 4: Sandbox Security + Code Execution
-**Rationale:** Must be completed before any user code execution. Sandbox escape destroys entire product and all user data. Multi-layer defense is non-negotiable (cannot defer gVisor to v2).
+**Delivers:**
+- Query suggestion generation in Onboarding Agent (during profiling)
+- Three suggestion categories (General Analysis 2, Benchmarking 2, Trend/Predictive 2)
+- Frontend UI for grouped suggestions (below file upload confirmation)
+- Suggestion persistence (database column in files table)
+- Click-to-populate suggestion into chat input
 
-**Delivers:** Docker containers with gVisor runtime, RestrictedPython AST validation in Code Checker, resource limits (memory, CPU, timeout), network isolation (`--network=none`), read-only filesystem
+**Addresses (from FEATURES.md):**
+- Basic query suggestions grouped by intent (P1 table stakes)
+- Reduces blank-page anxiety (user journey Stage 1: onboarding)
 
-**Addresses:** Sandboxed code execution (table stakes), security baseline for production
+**Avoids (from PITFALLS.md):**
+- Generic unhelpful suggestions (grouping by analysis type provides structure)
+- Overwhelming users with too many suggestions (limit 5-6 total)
 
-**Avoids:** Pitfall #2 (sandbox escape) via multi-layer defense (RestrictedPython + Docker + gVisor + resource limits)
+**Architecture components:** Onboarding Agent extension (onboarding.py), database schema update (files.suggestions column), frontend suggestion UI
 
-**Tech stack:** Docker, gVisor (runsc runtime), E2B (alternative if self-hosting fails), RestrictedPython
+**Research flag:** Basic version is standard pattern (many tools have query suggestions). Data-aware version (v0.2.1) likely needs research-phase for domain intelligence patterns.
 
-**Research flag:** **Needs research-phase** - gVisor setup complexity, E2B integration if self-hosting blocked, Docker security hardening, RestrictedPython allowlist patterns
+---
 
-### Phase 5: Frontend UI + Data Cards
-**Rationale:** Build UI last after proving backend works (streaming, agents, sandbox). Streaming Data Cards are complex (progressive rendering, SSE integration) - easier to build when backend is stable.
+### Phase 4: Web Search Tool Integration
 
-**Delivers:** File upload component with drag-and-drop, tabbed file interface, chat UI with streaming messages, interactive Data Cards (sortable tables, charts with Plotly), basic export (CSV download)
+**Rationale:** With memory + suggestions working, add external data capability. Web search is isolated change (only Analyst agent, ToolNode addition, Serper.dev API). Independent of previous phases (could parallelize with Phase 3) but benefits from memory (search results persist in conversation context). Serper.dev chosen over Tavily because cheaper ($0.001 vs. $0.003/search) and 2,500 free searches for testing.
 
-**Addresses:** Interactive Data Cards (table stakes), file upload UX, chat interface
+**Delivers:**
+- Serper.dev API integration (GoogleSerperAPIWrapper from langchain-community)
+- Tool definitions (tools.py with get_web_search_tool factory)
+- ToolNode addition to graph (conditional routing via should_call_tools)
+- Tool binding for Analyst agent only (llm.bind_tools([search_tool]))
+- SSE extension for search transparency (yield search query + sources)
+- Data Card citations section (display source links)
+- Tool configuration (tools.yaml with provider selection)
+- SERPER_API_KEY environment variable
 
-**Avoids:** Performance issues via streaming progressive rendering (UX pitfall: no progress indication during long analysis)
+**Addresses (from FEATURES.md):**
+- Web search tool for Analyst agent (P1 differentiator)
+- Streaming web search transparency (P2 trust-building, fast follower)
 
-**Tech stack:** Next.js 16, React 19, shadcn/ui components, TanStack Query for server state, zustand for client state, Plotly for visualizations
+**Avoids (from PITFALLS.md):**
+- Hard-coded tool in agent (tools configured at graph level)
+- No visibility into AI actions (SSE shows search queries)
 
-**Research flag:** Standard React patterns, skip research-phase (shadcn/ui well-documented)
+**Architecture components:** ToolNode integration (graph.py), tool definitions (tools.py), Analyst agent update (data_analysis.py), SSE streaming extension (chat.py)
+
+**Research flag:** Standard patterns (LangChain tool integration docs). Skip research-phase.
+
+---
+
+### Phase 5: Production SMTP Email
+
+**Rationale:** Last phase because it's independent of intelligence features (not user-facing in chat UX). Required for production but doesn't interact with agents/memory/tools. Can be developed in parallel with Phase 4 but prioritized last because it's hygiene (replacing Mailgun API) not core value.
+
+**Delivers:**
+- aiosmtplib integration (replace Mailgun API calls)
+- Jinja2 email templates (backend/app/templates/emails/reset_password.html)
+- SMTP configuration (settings.py with smtp_host, smtp_port, smtp_username, smtp_password, smtp_use_tls)
+- send_email helper function (services/email.py)
+- HTML email rendering (Jinja2 templates)
+- Graceful degradation (log to console if SMTP not configured)
+- SMTP environment variables (SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, EMAIL_FROM)
+
+**Addresses (from FEATURES.md):**
+- SMTP email service (P1 production requirement)
+
+**Avoids (from PITFALLS.md):**
+- Synchronous SMTP in async context (aiosmtplib native async/await)
+
+**Architecture components:** Email service rewrite (services/email.py), settings update (config.py), password reset endpoint update (auth.py)
+
+**Research flag:** Standard patterns (aiosmtplib docs). Skip research-phase.
+
+---
 
 ### Phase Ordering Rationale
 
-- **Authentication first (Phase 1):** All features require user context. Building auth later requires rewriting all endpoints to add authorization checks.
-- **Agents before UI (Phase 2):** Prove core value proposition (accurate AI analysis) before polishing UX. Agents are complex - need time for prompt engineering and debugging.
-- **Streaming before UI (Phase 3):** Test streaming robustness independently. Easier to debug SSE issues without UI complexity.
-- **Sandbox before production (Phase 4):** Non-negotiable security requirement. Cannot deploy user code execution without multi-layer isolation.
-- **UI last (Phase 5):** Leverage stable backend for efficient frontend development. Streaming Data Cards easier to build when backend reliably streams results.
+**Dependency-driven ordering:**
+1. Multi-LLM infrastructure must come first (per-agent config requires working LLM factory)
+2. Session memory second (connection pooling infrastructure used by subsequent phases)
+3. Query suggestions third (requires Onboarding Agent which requires LLM)
+4. Web search fourth (requires Analyst agent which requires LLM, benefits from memory)
+5. SMTP last (independent of intelligence features, pure production hygiene)
 
-**Dependency chain:** Authentication → File Upload → Agents → Streaming → Sandbox → UI
+**Risk mitigation sequencing:**
+- Phase 1 validates multi-provider abstraction before building features on top
+- Phase 2 validates memory before adding context-dependent features (suggestions)
+- Phase 3 and 4 can be parallelized (independent) but Phase 3 simpler (no external API)
+- Phase 5 isolated (no dependency risk, can slip without blocking v0.2 launch)
 
-**Parallel opportunities:** Phase 3 (streaming) and Phase 4 (sandbox) can partially overlap if different developer or clear separation of concerns.
+**Integration point clustering:**
+- Phases 1-2 are infrastructure (foundational capabilities)
+- Phases 3-4 are features (user-facing intelligence)
+- Phase 5 is operations (production readiness)
+
+**Architectural alignment:**
+- Phases follow LangGraph extension points: LLM factory (1) → checkpointer (2) → agent logic (3) → tools (4) → external services (5)
+- Each phase has clean boundaries (no cross-phase coupling beyond dependencies)
 
 ### Research Flags
 
-**Phases needing deeper research during planning:**
-- **Phase 2 (AI Agents):** Complex LangGraph workflow design with conditional edges, retry loop logic, hallucination detection patterns, prompt engineering for 4 specialized agents
-- **Phase 4 (Sandbox Security):** gVisor runtime configuration, E2B Cloud integration as fallback, RestrictedPython allowlist maintenance, Docker security hardening
-
 **Phases with standard patterns (skip research-phase):**
-- **Phase 1 (Backend Foundation):** FastAPI + SQLAlchemy + JWT auth is well-documented, established patterns
-- **Phase 3 (Streaming):** SSE with FastAPI is standard pattern, EventSource API is browser-native
-- **Phase 5 (Frontend):** Next.js + shadcn/ui + TanStack Query are mainstream stack with excellent docs
+- **Phase 1 (Multi-LLM):** Official LangChain provider packages (langchain-ollama, OpenRouter docs). Well-documented integration patterns.
+- **Phase 2 (Session Memory):** Official LangGraph checkpointing docs. Multiple tutorials on AsyncPostgresSaver. Connection pooling is standard FastAPI pattern.
+- **Phase 3 (Query Suggestions - basic):** Query suggestion patterns are common (ThoughtSpot, Julius AI examples). Generic templates sufficient for v0.2.0.
+- **Phase 4 (Web Search):** LangChain tool integration is well-documented. Serper.dev has official LangChain wrapper (GoogleSerperAPIWrapper).
+- **Phase 5 (SMTP):** aiosmtplib is mature (v5.x stable). Standard email patterns (Jinja2 templates, HTML rendering).
+
+**Phases needing deeper research (if scope expands):**
+- **Phase 3 (Data-aware suggestions - v0.2.1):** Domain intelligence patterns for extracting semantic meaning from column names/types. Requires research-phase if attempting in v0.2.1 fast follower.
+- **Context summarization (v0.2.2):** LangChain ConversationSummaryBufferMemory patterns well-documented but testing strategies for summarization quality need validation.
+
+**High-risk integration points (monitor during implementation):**
+- **Phase 2:** PostgreSQL connection pool under load (test with 50+ concurrent users before launch)
+- **Phase 4:** Serper.dev rate limits and response times (test with realistic query patterns)
+- **Cross-phase:** Multi-LLM cost tracking (ensure per-provider monitoring works across all phases)
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | **HIGH** | All critical components verified with official 2026 documentation (FastAPI, Next.js 16, LangGraph, E2B). Security decisions (gVisor, pwdlib, PyJWT) based on recent CVE alerts and framework updates. |
-| Features | **HIGH** | Cross-referenced 15+ sources from 2025-2026, validated against competitor analysis (ChatGPT, Tableau Pulse, ThoughtSpot). Feature prioritization aligns with user journey mapping. |
-| Architecture | **HIGH** | Patterns verified with official LangChain/LangGraph docs, gVisor security documentation, and multiple 2025-2026 production implementation guides. Multi-agent and sandbox patterns are production-proven. |
-| Pitfalls | **HIGH** | All critical failure modes verified with 2026 research sources and real-world incident data (CVE-2025-52881, T-Mobile $350M breach). Hallucination fix rates from peer-reviewed 2026 study. |
+| Stack | HIGH | All versions verified from official sources (PyPI, official docs). langgraph-checkpoint-postgres v3.0.4+ confirmed to fix v0.1 async issues. langchain-ollama v1.0.1+ is official package (Dec 2025). aiosmtplib v5.1.0 production-stable (Jan 2026). |
+| Features | MEDIUM-HIGH | Table stakes features validated via competitor analysis (ChatGPT, Julius AI, ThoughtSpot). Multi-LLM differentiator confirmed by market analysis (ChatGPT lock-in pain point). Web search benchmarking validated via user stories. Query suggestion patterns standard (ThoughtSpot Answer Explorer precedent). MEDIUM not HIGH because data-aware suggestions complexity needs validation. |
+| Architecture | MEDIUM-HIGH | All integration patterns verified with official LangGraph/LangChain docs. AsyncPostgresSaver architecture confirmed via multiple tutorials and official examples. Multi-LLM factory pattern is standard (config-driven LLM selection). ToolNode integration documented in LangGraph prebuilt components. MEDIUM not HIGH because connection pooling performance at scale (100+ users) needs load testing. |
+| Pitfalls | HIGH | All critical pitfalls verified with 2026 sources (CVE reports, incident post-mortems, research papers). PostgreSQL pool exhaustion is known scaling bottleneck. LLM token cost blowup validated via pricing analysis (output tokens 3-10x input cost). Context window overflow documented in LangChain memory management guides. Multi-agent observability gap validated by State of Agent Engineering report (32% cite quality as blocker, 89% use observability). |
 
-**Overall confidence:** **HIGH**
+**Overall confidence:** MEDIUM-HIGH
 
-Research based on authoritative sources (official documentation, peer-reviewed papers, recent CVE databases, production incident post-mortems). Technology choices reflect 2026 ecosystem state (FastAPI team recommendations, abandoned libraries flagged, container security updates).
+The research is comprehensive for v0.2.0 launch. Stack recommendations are HIGH confidence (official versions, verified compatibility). Architecture patterns are HIGH confidence (official docs, multiple examples). Feature prioritization is MEDIUM-HIGH (competitor analysis solid but data-aware suggestions complexity needs validation). Pitfall mitigation is HIGH confidence (real-world incident data, official security guidance).
 
 ### Gaps to Address
 
-**LangGraph multi-agent retry loops:** Research shows pattern exists (Code Checker validation → regenerate code), but implementation details need deeper dive during Phase 2 planning. Use `/gsd:research-phase` for LangGraph conditional edges and state management patterns.
+**Gap 1: Per-agent cost tracking granularity** — Research confirms per-provider cost tracking is essential, but optimal granularity (per-agent vs. per-user vs. per-query) unclear. MEDIUM confidence that database logging per agent call works, but aggregation queries and reporting UI need design during planning.
 
-**gVisor production deployment:** Research confirms gVisor provides VM-like isolation, but setup complexity for single developer unclear. May need to pivot to E2B Cloud if self-hosting gVisor proves too complex for 2-4 week timeline. Validate during Phase 4 planning.
+**Mitigation:** Start with per-user per-provider daily totals (simplest aggregation). Add per-agent breakdown in v0.2.1 after usage patterns observed. Alert on daily cost >$50 threshold (manual monitoring).
 
-**pandas memory optimization at scale:** Research shows chunking and dtype optimization work, but thresholds for when to apply (file size triggers) need validation with real user data patterns. Monitor in production, optimize if OOM issues emerge.
+---
 
-**Token cost modeling:** Research provides pricing (output tokens 3-10x input), but actual cost depends on prompt design and user query patterns. Implement monitoring from day one, tune rate limits based on real usage data.
+**Gap 2: Context summarization strategy** — Research identifies ConversationSummaryBufferMemory as standard pattern, but testing strategy for summarization quality unclear. LOW confidence that summarization preserves critical details (research cites "context poisoning" risk).
 
-**Streaming reconnection edge cases:** Browser behavior during network transitions (WiFi ↔ cellular) not fully documented. Test with real mobile networks during Phase 3 to validate EventSource auto-reconnect works as expected.
+**Mitigation:** Defer summarization to v0.2.2. Ship v0.2.0 with simple truncation + 85% warning (HIGH confidence this works). Test summarization in parallel with v0.2.0 usage, validate before deploying to production.
+
+---
+
+**Gap 3: Data-aware suggestion complexity** — Research confirms high perceived value (ThoughtSpot Answer Explorer precedent) but implementation complexity is HIGH (domain intelligence needed). MEDIUM confidence that Onboarding Agent can extract semantic meaning from column names, but edge cases unclear.
+
+**Mitigation:** Ship basic (generic) suggestions in v0.2.0 grouped by analysis type (General, Benchmarking, Predictive). Defer data-aware suggestions to v0.2.1 fast follower. Use research-phase in v0.2.1 to explore domain intelligence patterns.
+
+---
+
+**Gap 4: Connection pool sizing under load** — Research confirms AsyncConnectionPool pattern works, but optimal pool_size depends on concurrent users and query patterns. MEDIUM confidence that pool_size=20, max_overflow=10 handles 100 users (based on standard recommendations), but needs load testing.
+
+**Mitigation:** Start with pool_size=20 (standard for 100 users). Monitor connection count during beta testing. Add PgBouncer if approaching limits (deferred to production scaling). Document scaling threshold (add PgBouncer at 100+ concurrent users).
+
+---
+
+**Gap 5: Web search result caching strategy** — Research identifies caching as cost optimization (15-30% token reduction) but cache invalidation strategy unclear. LOW confidence on optimal TTL (15 minutes cited but not validated).
+
+**Mitigation:** Defer caching to v0.2.3. Ship v0.2.0 with no caching (2,500 free Serper searches sufficient for testing). Implement Redis caching in v0.2.3 after observing query patterns and repeat rates.
 
 ## Sources
 
 ### Primary (HIGH confidence)
 
-**Stack Research:**
-- FastAPI official documentation — Core framework features, deployment, async patterns
-- Next.js 16 documentation — App Router, React 19 compatibility, streaming
-- LangChain/LangGraph documentation — Multi-agent orchestration, state management
-- E2B documentation — Sandbox setup, API, security model
-- Pydantic v2, SQLAlchemy 2.0, shadcn/ui official docs
-- FastAPI GitHub discussions #11773 (passlib deprecation), PR #11589 (PyJWT migration)
+**Stack verification:**
+- [langgraph-checkpoint-postgres PyPI](https://pypi.org/project/langgraph-checkpoint-postgres/) — Version 3.0.4+ async compatibility confirmed
+- [langchain-ollama PyPI](https://pypi.org/project/langchain-ollama/) — Official LangChain package v1.0.1+
+- [aiosmtplib PyPI](https://pypi.org/project/aiosmtplib/) — Production-stable v5.1.0 (Jan 2026)
+- [LangGraph Checkpointing Documentation](https://docs.langchain.com/oss/python/langgraph/persistence) — Official AsyncPostgresSaver patterns
+- [OpenRouter LangChain Integration](https://openrouter.ai/docs/guides/community/langchain) — Official integration guide
+- [Serper.dev Official Site](https://serper.dev/) — Pricing ($0.001/search) and free tier (2,500 searches)
 
-**Features Research:**
-- AI-Driven Conversational Analytics Platforms: Top Tools for 2026 (ovaledge.com)
-- ChatGPT for Data Analysis: Comparing Alternatives (displayr.com)
-- Tableau Ask Data documentation, ThoughtSpot SearchIQ comparison
-- 15+ industry sources on conversational analytics features
+**Feature validation:**
+- [ThoughtSpot AI-suggested searches](https://docs.thoughtspot.com/cloud/latest/search-ai-suggested) — Query suggestion patterns (industry implementation)
+- [ThoughtSpot automates full platform with new Spotter agents](https://www.techtarget.com/searchbusinessanalytics/news/366636078/ThoughtSpot-automates-full-platform-with-new-Spotter-agents) — Spotter 3 capabilities (2026)
+- [Julius AI vs ChatGPT: I Found the Clear Winner for 2026](https://dhruvirzala.com/julius-ai-vs-chatgpt/) — Competitor feature comparison
+- [ChatGPT data analysis vs Julius AI: a side-by-side comparison for 2025](https://deepnote.com/compare/chatgpt-vs-juliusai) — Detailed feature matrix
 
-**Architecture Research:**
-- LangChain Multi-Agent Architecture Patterns (blog.langchain.com)
-- gVisor Security Introduction (gvisor.dev/docs)
-- Setting Up a Secure Python Sandbox for LLM Agents (dida.do)
-- 4 Ways to Sandbox Untrusted Code in 2026 (dev.to)
+**Architecture patterns:**
+- [Mastering LangGraph Checkpointing: Best Practices for 2025](https://sparkco.ai/blog/mastering-langgraph-checkpointing-best-practices-for-2025) — Connection pooling, cleanup strategies
+- [Harnessing the Power of LangGraph Checkpoint With PostgreSQL](https://www.oreateai.com/blog/harnessing-the-power-of-langgraph-checkpoint-with-postgresql/68853ebedf7b26456aa5bff751d06842) — AsyncPostgresSaver implementation
+- [Building Tool Calling Agents with LangGraph: A Complete Guide](https://sangeethasaravanan.medium.com/building-tool-calling-agents-with-langgraph-a-complete-guide-ebdcdea8f475) — ToolNode integration patterns
 
-**Pitfalls Research:**
-- "Detecting and Correcting Hallucinations in LLM-Generated Code via Deterministic AST Analysis" (arXiv 2601.19106) — 56.2% fix rate for pandas hallucinations
-- CVE-2025-52881 vm2 Sandbox Escape (CVSS 9.8)
-- NVIDIA Practical Security Guidance for Sandboxing Agentic Workflows
-- Complete LLM Pricing Comparison 2026 (cloudidr.com)
-- State of Agent Engineering (langchain.com) — 89% use observability, 32% cite quality as blocker
+**Pitfall validation:**
+- [State of Agent Engineering](https://www.langchain.com/state-of-agent-engineering) — 89% use observability, 32% cite quality as blocker
+- [Complete LLM Pricing Comparison 2026](https://www.cloudidr.com/blog/llm-pricing-comparison-2026) — Output token pricing (3-10x input cost)
+- [Detecting and Correcting Hallucinations in LLM-Generated Code via Deterministic AST Analysis](https://arxiv.org/html/2601.19106) — 56.2% fix rate for pandas hallucinations
+- [NVIDIA Practical Security Guidance for Sandboxing Agentic Workflows](https://developer.nvidia.com/blog/practical-security-guidance-for-sandboxing-agentic-workflows-and-managing-execution-risk) — Multi-layer sandbox defense
 
 ### Secondary (MEDIUM confidence)
 
-- Better Stack: Best Sandbox Runners 2026, FastAPI Docker Best Practices
-- TestDriven.io: FastAPI with Async SQLAlchemy setup patterns
-- Medium: Next.js 16 + React Query guide, FastAPI at Scale in 2026
-- Strapi: OpenAI SDK vs Vercel AI SDK comparison
-- Programming Helper: Docker Python containerization trends 2026
-- T-Mobile $350M settlement for 2021 cloud breach (multi-tenant isolation failure)
+- [Run Claude Code with Local & Cloud Models in 5 Minutes (Ollama, LM Studio, llama.cpp, OpenRouter)](https://medium.com/@luongnv89/run-claude-code-on-local-cloud-models-in-5-minutes-ollama-openrouter-llama-cpp-6dfeaee03cda) — Multi-LLM setup patterns (2026)
+- [The Death of Sessionless AI: How Conversation Memory Will Evolve from 2026-2030](https://medium.com/@aniruddhyak/the-death-of-sessionless-ai-how-conversation-memory-will-evolve-from-2026-2030-9afb9943bbb5) — 2026 as "Year of Context" (industry trend)
+- [Data Analytics Trends to Watch in 2026](https://immsswd.github.io/portfolio/2025/11/22/data-analytics-trends-to-watch-in-2026/) — 40% NL query adoption (industry stat)
+- [A practical guide to OpenRouter: Unified LLM APIs, model routing, and real-world use](https://medium.com/@milesk_33/a-practical-guide-to-openrouter-unified-llm-apis-model-routing-and-real-world-use-d3c4c07ed170) — OpenRouter routing patterns
+- [pandas Memory Optimization Guide](https://thinhdanggroup.github.io/pandas-memory-optimization/) — Chunking and dtype optimization strategies
 
-### Tertiary (LOW confidence)
+### Tertiary (LOW confidence, needs validation)
 
-- Specific competitor pricing models (not publicly documented) — inferred from market positioning
-- Future roadmap predictions for proprietary platforms — extrapolated from announcements
-- User adoption statistics for niche features — self-reported surveys with small sample sizes
+- Multi-LLM cost savings percentages (60-80% savings claims) — Anecdotal from blogs, needs validation with actual Spectra usage patterns
+- Context pollution complaints from ChatGPT users — Referenced in multiple blogs but quantitative data not available
+- Data-aware suggestion implementation complexity estimates — Inferred from domain intelligence requirements, not validated with examples
+- Optimal TTL for web search caching (15 minutes) — Single source recommendation, not validated across use cases
 
 ---
-*Research completed: 2026-02-02*
+
+*Research completed: 2026-02-06*
 *Ready for roadmap: yes*
-*Next step: Requirements definition with SUMMARY.md as context*

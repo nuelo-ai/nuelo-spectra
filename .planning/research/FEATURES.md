@@ -1,409 +1,401 @@
 # Feature Research: AI-Powered Data Analytics Platform
 
-**Domain:** AI-powered data analytics platform (conversational "chat with data")
-**Researched:** 2026-02-02
-**Confidence:** HIGH
+**Domain:** AI-powered data analytics platform (v0.2 intelligence features: agent memory, query suggestions, web search tools, multi-LLM)
+**Researched:** 2026-02-06 (Updated for v0.2 milestone)
+**Confidence:** MEDIUM-HIGH
 
-## Feature Landscape
+## Executive Summary
 
-This research analyzes the feature expectations for AI-powered data analytics platforms in 2026, identifying table stakes features (must-have for credibility), differentiators (competitive advantage), and anti-features (commonly requested but problematic).
+This research focuses on v0.2 intelligence features that enhance the existing Spectra platform (v0.1 shipped 2026-02-06). v0.1 established core functionality (file upload, 4-agent AI system, Data Cards). v0.2 adds intelligence: conversation memory, smart query suggestions, web search capabilities, and multi-LLM provider flexibility.
+
+**Key findings:**
+- **Conversation memory** is now table stakes (2026 = "Year of Context"), but session-scoped memory avoids ChatGPT's context pollution problems
+- **Query suggestions** must be data-aware (not generic templates) to provide value; grouped presentation reduces cognitive load
+- **Web search integration** differentiates Spectra from pure code interpreters, enabling benchmarking use cases
+- **Multi-LLM flexibility** is a major commercial differentiator (cost optimization + data privacy via local Ollama)
+
+**Competitive positioning:** Bridge gap between consumer tools (ChatGPT: cheap but locked-in) and enterprise BI (ThoughtSpot: powerful but enterprise-only). Target: prosumer/SMB segment wanting flexibility + transparency + cost control.
 
 ---
 
-## Table Stakes (Users Expect These)
+## Feature Landscape
 
-Features users assume exist. Missing these makes the product feel incomplete or unprofessional.
+### Table Stakes (Users Expect These)
+
+Features users assume exist. Missing these makes v0.2 intelligence update feel incomplete.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| **Natural Language Query Interface** | Core value prop - all modern platforms (ThoughtSpot, Tableau Pulse, Power BI Copilot) offer conversational analytics | MEDIUM | Requires LLM integration, prompt engineering, query understanding. Users expect chat-style interaction as standard in 2026. |
-| **CSV/Excel File Upload** | Universal data format support - 100% of analytics platforms support these formats | LOW | Standard multipart upload, validation (type, size limits). Max 100MB typical. Support both .csv and .xlsx (via openpyxl). |
-| **Automated Data Profiling** | Users expect AI to understand their data automatically - column types, summary stats, data quality issues | MEDIUM | Pandas profiling, statistical analysis, null detection. Shows value immediately after upload. Critical for "onboarding" UX. |
-| **Code Generation with Explanation** | Transparency requirement - 65% of enterprise users want to see/verify generated code | MEDIUM | AI generates Python (pandas/numpy), shows code to user with plain English explanation. Builds trust. |
-| **Interactive Visualizations** | Expected standard - static charts feel dated, users expect hover tooltips, zoom, pan capabilities | MEDIUM | Use Plotly for interactive charts, not just matplotlib. Data Cards should be explorable. |
-| **Real-Time Streaming Responses** | Modern UX expectation - users accustomed to ChatGPT-style streaming, not "loading..." spinners | HIGH | FastAPI StreamingResponse + SSE, LangChain streaming callbacks. Poor streaming = poor UX in 2026. |
-| **Conversation History** | Session persistence - users expect to continue conversations across page refreshes | MEDIUM | PostgreSQL checkpointer for conversation state. Must survive browser refresh. Thread-based isolation. |
-| **User Authentication** | Security baseline - no anonymous usage for data analytics platforms (PII risk, abuse potential) | LOW | JWT-based auth with email/password. OAuth not required for MVP but expected in v2. |
-| **Per-User Data Isolation** | Privacy/security assumption - users expect their data visible only to them | MEDIUM | File storage isolated by user_id, API-level access control. Critical for multi-tenant security. |
-| **Basic Error Handling** | User-friendly errors - technical users tolerate stack traces, business users don't | LOW | "Your file is too large (100MB max)" not "MemoryError: Unable to allocate 8.4 GiB". Map technical to user-friendly. |
-| **Export Results** | Data portability - users need to extract insights for presentations, reports | LOW | Download as CSV (raw data), PNG (charts), PDF (formatted report). Standard analytics workflow. |
-| **Execution Timeouts** | Performance guarantee - users expect "if it's running, it will finish" not infinite hangs | MEDIUM | 30-60s timeout for queries. Show progress during execution. Kill runaway processes. |
+| **Conversation context within session** | Users expect "add a column" to work without re-explaining dataset. ChatGPT has memory. ThoughtSpot maintains context. Industry standard in 2026. | MEDIUM | Requires LangChain checkpointing with PostgreSQL (already in codebase, disabled in v0.1). Context window management (85% warning, truncation) needed. Common pattern: ConversationSummaryBufferMemory hybrid. |
+| **Context cleared on tab close** | Prevents context pollution across unrelated analyses. Users understand browser tabs = isolated sessions. Julius AI uses notebooks (similar pattern). | LOW | Session ID tied to browser tab. Warning dialog before close. Standard UX pattern. Avoids ChatGPT's cross-conversation pollution problem. |
+| **Natural language query interface** | 40% of analytics queries in 2026 use natural language. ChatGPT Code Interpreter, Julius AI, ThoughtSpot all use NL. Non-negotiable for "accessible to non-technical users" positioning. | LOW | **Already implemented in v0.1.** Table stakes confirmed. No new work required. |
+| **Basic query suggestions** | Empty chat feels intimidating. Julius AI, ThoughtSpot, ChatGPT all show starter prompts. Users expect guidance on "what can I ask?" Reduces blank-page anxiety. | MEDIUM | Must be data-aware (based on actual dataset structure), not generic. 5-6 suggestions grouped by intent. Generated by Onboarding Agent during profiling (extends existing v0.1 profiling). |
+| **Transparent AI operations** | Users need to see what the AI is doing. DataChat documents "every step in plain English." Julius AI shows notebooks. ChatGPT shows code. Trust = transparency. | LOW | **Already implemented via SSE streaming in v0.1.** Extend to show web search queries and sources. Builds on existing infrastructure. |
+| **Real-Time Streaming Responses** | Modern UX expectation - users accustomed to ChatGPT-style streaming, not "loading..." spinners | HIGH | **Already implemented in v0.1 (FastAPI StreamingResponse + SSE).** Poor streaming = poor UX in 2026. Table stakes confirmed. |
+| **Interactive Visualizations** | Expected standard - static charts feel dated, users expect hover tooltips, zoom, pan capabilities | MEDIUM | **Already implemented in v0.1 (Plotly in Data Cards).** Table stakes confirmed. |
 
-**Key Insight:** In 2026, "AI-powered" is table stakes, not a differentiator. Conversational analytics is expected, not novel. 65% of organizations regularly use generative AI.
+**v0.2 Insight:** Most table stakes features already exist from v0.1 (NL queries, streaming, visualizations, transparency). v0.2 adds missing intelligence layer: memory and suggestions.
 
 ---
 
 ## Differentiators (Competitive Advantage)
 
-Features that set the product apart. Not required, but create competitive moats.
+Features that set Spectra apart. Not required, but create competitive moats for v0.2.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| **Sandboxed Python Execution** | Security + capability - competitors hide generated code or use SQL only. Transparent Python execution with multi-layer isolation (gVisor + Docker) | HIGH | Differentiator: show AND execute code safely. Most platforms either show code (no execution) or execute invisibly (no transparency). Full pipeline = competitive advantage. |
-| **Multi-Agent Orchestration** | Quality + specialization - supervisor coordinates specialized agents (onboarding, coding, checking, analysis) for higher accuracy | HIGH | Most platforms use single-agent. Multi-agent with code checker reduces hallucinations 60-80%. LangGraph supervisor pattern. Visible quality difference. |
-| **Streaming Data Cards** | UX innovation - results appear as interactive, sortable, filterable cards while AI is still processing | HIGH | Standard: static results after completion. Innovation: streaming progressive disclosure. Cards update in real-time as insights discovered. |
-| **Two-Layer Memory System** | Intelligence over time - short-term (conversation) + long-term (cross-session user preferences) using PostgreSQL + pgvector | MEDIUM | Most platforms: session-only memory. Differentiator: learns user preferences, remembers past analyses, semantic search across history. |
-| **Code Transparency with Edit** | Trust + flexibility - show generated code, allow user editing before execution | LOW | Bridges trust gap: users verify logic, learn patterns, customize. Rare in consumer tools, expected by technical users. |
-| **Inline Error Recovery** | Resilience - when code fails, AI analyzes error, fixes code, retries automatically | MEDIUM | Standard: "Error occurred, try again." Differentiator: "Error: missing column. I'll adjust the code..." Auto-recovery feels magical. |
-| **Semantic Data Understanding** | Context awareness - AI remembers dataset structure, column meanings, relationships across conversation | MEDIUM | Standard: stateless queries. Differentiator: "sales column" understood from context, no need to repeat column names. Uses long-term memory. |
-| **Progressive Complexity** | Adaptive UI - simple for beginners, powerful for experts. Hides complexity until needed | LOW | Shows results first, code in expandable section, advanced options in settings. Serves both audiences without overwhelming either. |
+| **Multi-LLM provider flexibility** | Power users optimize cost/performance per agent. Use cheap local Ollama for simple tasks, powerful Claude/GPT-4 for complex analysis. **Julius AI: single model. ChatGPT: OpenAI only. Spectra: choice.** | HIGH | Requires abstraction layer (OpenRouter + Ollama). Per-agent config in YAML. OpenRouter gives access to 100+ models (DeepSeek, Claude, GPT-4). Ollama supports local + cloud variants. **Major commercial differentiator** for enterprises with cost sensitivity or data privacy requirements. |
+| **Per-agent LLM configuration** | Different agents need different capabilities. Coding Agent needs strong reasoning (Claude Sonnet 4.5). Code Checker can use faster, cheaper model. Onboarding Agent needs instruction-following. **Optimize spend without sacrificing quality.** | MEDIUM | YAML config per agent. Dependency on multi-LLM foundation. Enables "smart spending" narrative. Competitive advantage for commercial customers who monitor LLM costs. |
+| **Data-aware smart suggestions** | Generic suggestions ("show me summary statistics") are weak. **Spectra suggestions based on actual data structure**: "Compare TikTok campaign performance to industry benchmarks" (because dataset has TikTok column). ThoughtSpot Answer Explorer does this. | HIGH | Onboarding Agent analyzes schema + content during upload (v0.1 capability). Extend to generate suggestions, not rebuild profiling. Requires domain intelligence. **Major wow factor.** Differentiates from generic templates. |
+| **Grouped query suggestions** | Random list of 6 suggestions = cognitive overload. **Three clear categories** (General Analysis, Benchmarking, Trend/Predictive) = users immediately understand analysis types available. Julius AI lacks grouping. ChatGPT lacks grouping. | LOW | Pure UX win. Groups already defined in requirements (2-3 per category). Easy implementation, high perceived value. Information architecture advantage. |
+| **Web search for benchmarking** | When user asks "how does my campaign compare to industry average," AI needs external data. **ChatGPT Code Interpreter: no web search. Julius AI: database connectors, not web. Spectra: web search integration.** ThoughtSpot Spotter 3 (2026) integrates external sources. | MEDIUM | Serper.dev integration (~150ms response time, 2,500 free searches for testing). Only enabled for Analyst agent. Show sources transparently. **Critical differentiator vs pure code interpreters.** Enables benchmarking use cases competitors can't handle. |
+| **Streaming web search transparency** | When AI searches web, show the query + sources in real-time via SSE. Users see "Searching web for 'TikTok CTR benchmarks 2026'..." then see source links in response. **Trust through visibility.** | LOW | Leverages existing v0.1 SSE infrastructure. Serper.dev returns sources. Display in Data Card citations section. Extension of existing transparency model. |
+| **Session-scoped memory with clear boundaries** | ChatGPT has persistent memory across all chats (confusing context pollution). **Spectra: memory per tab, cleared on close.** Matches user mental model: browser tab = workspace. Julius AI uses notebooks (similar pattern). | LOW | Architectural decision, not feature bloat. Clean UX. Avoids ChatGPT's context pollution problem (users complain about AI mixing unrelated contexts). |
+| **Configurable context windows** | Different users have different needs. Enterprises may want larger context for complex multi-step analyses. Individual users may prefer faster, cheaper (smaller context). **Flexibility = commercial appeal.** | LOW | YAML config. Warning at 85% threshold. Industry standard (LangChain patterns). Governance-friendly. Enables cost control for commercial customers. |
+| **Sandboxed Python Execution** | Security + capability - competitors hide generated code or use SQL only. Transparent Python execution with multi-layer isolation (E2B sandbox) | HIGH | **Differentiator from v0.1: show AND execute code safely.** Most platforms either show code (no execution) or execute invisibly (no transparency). Full pipeline = competitive advantage. v0.2 maintains this advantage. |
+| **Multi-Agent Orchestration** | Quality + specialization - supervisor coordinates specialized agents (onboarding, coding, checking, analysis) for higher accuracy | HIGH | **Core v0.1 differentiator maintained in v0.2.** Most platforms use single-agent. Multi-agent with code checker reduces hallucinations 60-80%. LangGraph supervisor pattern. Visible quality difference. |
 
-**Key Insight:** Differentiation in 2026 comes from execution quality (accuracy, transparency, security) not from having AI features. Core moat: secure Python sandbox + multi-agent accuracy + streaming UX.
+**v0.2 Insight:** Multi-LLM flexibility is the headline differentiator for v0.2. Combined with data-aware suggestions and web search, Spectra occupies unique market position: flexible, transparent, intelligence-enhanced analytics.
 
 ---
 
 ## Anti-Features (Commonly Requested, Often Problematic)
 
-Features that seem good but create problems. Document to prevent scope creep.
+Features that seem good but create problems. Document to prevent scope creep in v0.2.
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| **Real-Time Collaboration** | "Like Google Docs for data" - multiple users editing same analysis simultaneously | Coordination complexity, conflict resolution nightmares, 10x engineering effort. Real-time = websockets, operational transforms, distributed state. Rarely used once built. | **Async sharing:** Export/import analysis, share via link with read-only view. 80% of value, 20% of effort. |
-| **Unlimited File Size Upload** | Users want to analyze "all their data" (multi-GB files) | Memory exhaustion, slow processing, poor UX (10min waits), expensive compute. 100MB file = 800MB pandas DataFrame in memory. | **Chunked processing:** Guide users to filter/sample large datasets first. Show "analyze first 100k rows" option. Teach data reduction patterns. |
-| **Support All Data Sources** | "Connect to MySQL, MongoDB, S3, BigQuery, Snowflake..." - every possible source | Maintenance burden, credential management complexity, security surface expansion. Each connector = ongoing support cost. | **CSV/Excel + SQL upload:** 95% of use cases. For advanced users: "export to CSV from your source." Add connectors only when validated demand. |
-| **Mobile App** | "I want to analyze data on my phone" | Poor UX for complex data work, small screens unsuitable for charts/tables, development cost doubles (iOS + Android). Analytics is desktop workflow. | **Responsive web:** Mobile-optimized web interface for viewing results, not creating analyses. PWA for offline access if needed. |
-| **Every Chart Type Imaginable** | "I need waterfall charts, bubble charts, radar charts, sunburst..." | Bloated UI, choice paralysis, maintenance burden. Most analyses use bar/line/scatter (80% of use cases). | **Smart defaults:** AI chooses best chart for data. Offer 5-7 core types. Advanced users export to Tableau/Excel for specialized viz. |
-| **Real-Time Data Refresh** | "Show live-updating dashboards" like stock tickers | Complexity spike, websocket infrastructure, streaming data pipelines. Most analytics are retrospective, not real-time. Adds latency to all queries. | **Manual refresh:** "Rerun analysis" button. Scheduled refresh for dashboards (future feature). Real-time rarely needed for uploaded CSV analytics. |
-| **AI Training on User Data** | "Learn from my past analyses to improve" | Privacy nightmare, GDPR violations, user trust erosion. 54% of PII leaks occur on platforms that train on user data. Legal risk massive. | **Zero-retention policy:** Use paid API tiers with explicit no-training contracts. Store user preferences (chart style, etc.) but not analysis content. |
-| **Unlimited Query History** | "Keep all my past analyses forever" | Storage costs grow unbounded, database bloat, slow queries. Average session: 20+ messages. User never reviews >30 days old. | **Retention policy:** Keep 90 days, archive after 30 days (compressed), delete after 90 days. Export option before deletion. Aligns with GDPR. |
-| **Multi-Language Support** | "Support Python AND R AND SQL" | Tripled complexity, security surface expansion, most users only use one language. Python dominates data science (83% adoption). | **Python only:** De facto standard. For SQL users: translate SQL to pandas patterns. Defer R support until validated demand (likely never). |
+| **Persistent memory across all sessions** | "ChatGPT remembers me, why doesn't Spectra?" Users want convenience of never re-explaining preferences. | **Context pollution:** Mixing contexts from Dataset A (sales data) and Dataset B (marketing data) creates nonsensical responses. Token bloat (larger context = higher latency 500ms+ at 100k tokens, higher cost). Summarization loses critical details ("context poisoning"). ChatGPT users actively complain about unwanted context bleeding. | **Session-scoped memory (per tab).** Clear mental model: tab close = context reset with warning. Users control boundaries. Defer cross-session memory to v2+ after validating single-session intelligence. |
+| **Unlimited context window** | "Let me upload entire conversation history." Users think bigger context = better AI. | **Performance degradation:** Larger context = higher latency (500ms+ at 100k tokens) and cost ($$$). Summarization becomes necessary, losing details. LangChain docs: "more tokens ≠ better results." Common misconception that large context windows eliminate need for memory management. | **Configurable context with 85% warning.** Truncate oldest messages with summaries. Manage expectations. LangChain ConversationSummaryBufferMemory hybrid approach (buffer recent, summarize old). |
+| **Save every Data Card automatically** | "I want to review all past analyses." Users want searchable history of every query. | **Storage bloat:** 1000 queries/user/month = massive DB growth. Users rarely revisit 90% of queries. Implementation complexity (Collections, search, organization). **v0.1 explicitly deferred Collections to v2.** v0.2 should not expand scope into Collections. | **Real-time analysis focus.** Export important results (CSV/Markdown already in v0.1). Collections in v2 after validation. v0.2 = intelligence, not storage. |
+| **AI generates visualizations automatically** | "Julius AI makes charts, why doesn't Spectra?" Users want pretty charts without asking. | **Relevance problem:** Auto-generating charts often creates wrong viz type. Bar chart for time series. Pie chart for 20 categories. User must still guide. **Visualization Agent deferred to v2 in PROJECT.md for good reason.** v0.2 scope = intelligence, not visualization. | **Let users request specific viz types** ("show this as a line chart"). Better signal-to-noise. Add Visualization Agent in v2 after validating core accuracy. v0.2 maintains existing v0.1 Plotly capabilities (sufficient). |
+| **Integration with every data source** | "Connect to my Salesforce/Snowflake/BigQuery." Users want to skip upload step. | **Connector hell:** Each integration = authentication, rate limits, schema mapping, maintenance. 10 integrations = 10x support burden. API changes break product. **PROJECT.md: "File upload only for v1."** v0.2 should not expand into connectors. | **File upload (Excel/CSV) sufficient for MVP.** Validates core AI accuracy without integration complexity. Add connectors in v2 based on validated demand. v0.2 = intelligence layer, not data ingestion overhaul. |
+| **Real-time collaboration** | "Can my team and I analyze data together?" Users want Google Docs-style collaboration. | **Scope explosion:** Real-time presence, conflict resolution, permissions, shared context. Massive implementation complexity. Not validated as user need. **Single-user v1 sufficient for validation.** v0.2 adds intelligence, not collaboration architecture. | **Deferred to v2+.** Export and share results via CSV/Markdown (v0.1 capability). Email reports. Validate single-user workflow with v0.2 intelligence first. Session-scoped memory conflicts with multi-user shared state anyway. |
+| **Model fine-tuning per user** | "Can the AI learn my company's terminology?" Users want customized AI. | **Data requirements:** Fine-tuning needs 1000+ examples. Long training cycles. Version control nightmare. Prompt engineering achieves 80% of benefits with YAML config (already Spectra's approach). Multi-LLM flexibility in v0.2 provides model choice without fine-tuning complexity. | **Externalized prompts in YAML (v0.1 pattern).** User context during upload ("Industry: Healthcare"). Few-shot examples in system prompts. Multi-LLM in v0.2 lets users choose models trained for their domain (e.g., DeepSeek for code, Claude for reasoning). Achieves personalization without fine-tuning burden. |
+| **Advanced web search tools** | "Use web search for images, news, videos, maps." Serper.dev supports all these. Users want full search API capabilities. | **Feature bloat:** v0.2 goal = validate benchmarking use case (text search sufficient). Images/news/videos add complexity without validated value. Analyst agent needs text-based context ("TikTok CTR benchmarks"), not multimedia. Premature optimization. | **Web search only (text results) for v0.2.** Serper.dev supports advanced features, but defer until usage patterns observed. Add after validating basic web search value. Risk: building capabilities users don't need. |
 
-**Key Insight:** Anti-features often sound compelling to engineers ("wouldn't it be cool if...") but create maintenance burden without proportional value. MVP discipline = saying NO to 90% of ideas.
+**v0.2 Insight:** Anti-features are especially dangerous in intelligence milestone. Focus on core: memory + suggestions + web search + multi-LLM. Resist temptation to add Collections, Visualization Agent, data connectors, collaboration. Those are separate milestones.
 
 ---
 
 ## Feature Dependencies
 
-Critical for roadmap phase ordering. If Feature A requires Feature B, B must be in an earlier phase.
+Critical for v0.2 roadmap phase ordering.
 
 ```
-Authentication (Phase 1)
-    ├──requires──> Database Setup (Phase 1)
-    └──enables──> All Protected Endpoints
+[v0.1 Foundation] ← (Already shipped 2026-02-06)
+    ├──> Authentication + Database
+    ├──> File Upload + Data Profiling
+    ├──> 4-Agent System (Onboarding, Coding, Code Checker, Data Analysis)
+    ├──> SSE Streaming + Data Cards
+    └──> PostgreSQL with LangChain integration (checkpointing disabled)
 
-File Upload (Phase 2)
-    ├──requires──> Authentication (Phase 1)
-    ├──requires──> User-Isolated Storage (Phase 2)
-    └──enables──> Data Analysis Features
+[Multi-LLM Provider Support] ← (v0.2 Phase 1)
+    ├──requires──> OpenRouter Integration
+    ├──requires──> Ollama Integration
+    ├──requires──> Abstraction Layer (unified API for agent calls)
+    └──enables──> Per-Agent LLM Configuration
 
-Data Profiling (Phase 2)
-    ├──requires──> File Upload (Phase 2)
-    └──enables──> Onboarding Agent Context
+[Per-Agent LLM Configuration] ← (v0.2 Phase 1)
+    ├──requires──> Multi-LLM Provider Support
+    ├──requires──> YAML Config Extension (agent_configs.yaml)
+    └──enables──> Cost Optimization Narrative
 
-Single Agent Chat (Phase 3)
-    ├──requires──> Authentication (Phase 1)
-    ├──requires──> Database (conversation storage)
-    └──enables──> Multi-Agent System
+[Session Memory] ← (v0.2 Phase 2)
+    ├──requires──> PostgreSQL Checkpointing (exists, needs re-enabling)
+    ├──requires──> Context Window Management (85% warning, truncation)
+    ├──requires──> Tab-close Warning Dialog
+    └──enables──> Multi-turn Conversations
 
-Code Sandbox (Phase 4)
-    ├──requires──> File Upload (data to analyze)
-    ├──requires──> Security Infrastructure (gVisor, Docker)
-    └──enables──> Safe Code Execution
+[Smart Query Suggestions] ← (v0.2 Phase 3)
+    ├──requires──> Data Profiling (v0.1: already exists)
+    ├──requires──> Onboarding Agent Schema Analysis (v0.1: already exists)
+    ├──enhances──> User Onboarding Experience
+    └──independent──> Can develop in parallel with Web Search
 
-Multi-Agent System (Phase 5)
-    ├──requires──> Single Agent (Phase 3)
-    ├──requires──> Code Sandbox (Phase 4)
-    ├──requires──> Streaming (Phase 4)
-    └──enables──> Specialized Agents (onboarding, coding, checking)
+[Web Search Tool] ← (v0.2 Phase 4)
+    ├──requires──> Serper.dev API Integration
+    ├──requires──> Tool Binding in LangChain (Analyst agent only)
+    ├──requires──> SSE Extension (show search queries/sources)
+    └──enables──> Benchmarking Queries
 
-Long-Term Memory (Phase 6)
-    ├──requires──> Multi-Agent System (Phase 5)
-    ├──requires──> pgvector Extension
-    └──enables──> Semantic Understanding, Personalization
+[Data-Aware Suggestions] ← (v0.2.x - Fast Follower)
+    ├──requires──> Smart Query Suggestions (basic version)
+    ├──requires──> Domain Intelligence in Onboarding Agent
+    ├──conflicts──> Generic Template Suggestions
+    └──enhances──> Differentiation (defer to v0.2.1 if complexity high)
 
-Export Features (Phase 6)
-    ├──requires──> Data Cards (visualization results)
-    ├──requires──> PDF Generation Libraries
-    └──standalone──> No blockers
+[Context Summarization] ← (v0.2.x - Fast Follower)
+    ├──requires──> Session Memory (basic version)
+    ├──requires──> ConversationSummaryBufferMemory (LangChain)
+    └──enhances──> Robustness at Scale (defer to v0.2.2)
 ```
 
 ### Dependency Notes
 
-- **Authentication blocks everything:** All features require user context for security/isolation.
-- **File upload before agents:** Agents need data to analyze. No point in chat without data.
-- **Single agent before multi-agent:** Prove basic concept before complexity. Build orchestration after knowing what to orchestrate.
-- **Streaming can parallelize:** Independent of core logic, can be added to existing endpoints.
-- **Export is leaf node:** Depends on having results to export, but doesn't block anything else.
-
-### Conflicts to Avoid
-
-- **Real-time collaboration conflicts with file isolation:** Multi-user editing requires shared state, breaks user isolation model.
-- **Unlimited file sizes conflict with resource limits:** Can't have both safety guarantees and unbounded resource usage.
-- **Mobile app conflicts with complex visualizations:** Small screens can't show detailed charts/tables effectively.
+- **Multi-LLM foundation must come first:** Per-agent config, cost optimization narrative, and local Ollama option all depend on multi-LLM abstraction layer. Phase 1 priority.
+- **Session memory is independent:** Can develop in parallel with multi-LLM. PostgreSQL checkpointing already exists (disabled in v0.1). Re-enable with safeguards. Phase 2.
+- **Query suggestions extend v0.1 profiling:** Onboarding Agent already analyzes data structure. Generate suggestions during profiling. Low dependency risk. Phase 3.
+- **Web search is isolated:** Serper.dev integration + LangChain tool binding. Only Analyst agent gets access. Can develop in parallel with suggestions. Phase 4.
+- **Data-aware suggestions are enhancement:** Basic (generic) suggestions sufficient for v0.2.0. Data-aware intelligence is fast follower for v0.2.1.
+- **Context summarization is optimization:** Truncation + warning sufficient for v0.2.0. Summarization improves experience but not required for launch.
 
 ---
 
-## MVP Definition
+## MVP Definition (v0.2 Context)
 
-### Launch With (v1.0)
+### Launch With (v0.2.0)
 
-Minimum features to validate core value proposition: "Chat with your data to get accurate insights."
+Minimum viable intelligence features to enhance existing v0.1 platform. Focus: memory + suggestions + web search + multi-LLM.
 
-**Core Flow:**
-1. Upload CSV/Excel → 2. AI profiles data → 3. Ask questions → 4. AI generates code → 5. View results as Data Cards
+**Must-Have for v0.2:**
+- [x] **Session-scoped conversation memory** — Core UX improvement. Users can say "add a column" without re-explaining. Matches user mental model (tab = session). Enables multi-turn conversations. **Without this, v0.2 adds no conversational intelligence.** Re-enable PostgreSQL checkpointing (exists in codebase, disabled in v0.1).
+- [x] **Tab-close context warning** — Prevents accidental context loss. Low complexity, high UX value. Standard browser pattern. "Closing this tab will clear your conversation context. Continue?"
+- [x] **Configurable context window size** — Governance-friendly. Enterprises need cost control. YAML config (e.g., `max_tokens: 4096`), warning at 85%, truncation strategy. Industry standard. LangChain ConversationBufferWindowMemory.
+- [x] **Basic query suggestions (5-6 per dataset)** — Solves "blank page intimidation." Guides users on what's possible. Grouped into 3 categories for clarity (2 General Analysis, 2 Benchmarking, 2 Trend/Predictive). Generated during upload (Onboarding Agent extends v0.1 profiling).
+- [x] **Web search tool for Analyst agent** — Enables benchmarking queries ("compare my CTR to industry average"). **Key differentiator vs pure code interpreters.** Serper.dev = 2,500 free searches for testing, then $50/50k queries ($1/1k). Essential for commercial positioning. Show query + sources via SSE.
+- [x] **Multi-LLM provider support (OpenRouter + Ollama)** — **Major commercial differentiator.** Enterprises optimize cost. Power users want choice. OpenRouter = 100+ models (DeepSeek, Claude, GPT-4, etc.). Ollama = local/cloud flexibility (no data leaves premises for privacy-sensitive use cases). Validates market fit for "LLM-agnostic analytics."
+- [x] **Per-agent LLM configuration** — Completes multi-LLM value prop. "Use cheap model for Code Checker, powerful model for Coding Agent." Enables smart spending narrative. Configurable via YAML (non-technical users don't see complexity). Example: `coding_agent: {provider: openrouter, model: anthropic/claude-sonnet-4.5}`.
+- [x] **SMTP email service** — Production-ready password reset. Migrate from Mailgun API to standard SMTP (host, port, username, password, TLS in config). Disable dev mode (console logs) when SMTP configured. Not intelligence feature, but required for production v0.2 release.
 
-**Must-Have Features:**
-- [ ] **User Authentication** (email/password only) - Protect user data, enable multi-tenancy
-- [ ] **File Upload** (CSV/Excel, <100MB) - Data ingestion for analysis
-- [ ] **Automated Data Profiling** - AI understands dataset structure immediately
-- [ ] **Natural Language Chat** - Core interaction model (text input, streaming responses)
-- [ ] **Multi-Agent System** (Supervisor + 4 specialized agents) - Accuracy differentiator
-- [ ] **Python Code Generation** - Transparent analysis (show generated code + explanation)
-- [ ] **Sandboxed Code Execution** (Docker + gVisor) - Security baseline
-- [ ] **Interactive Data Cards** - Results display (streaming, sortable, visual)
-- [ ] **Conversation Persistence** - Session survives browser refresh
-- [ ] **Basic Export** (CSV results download) - Get insights out of platform
+**Why These Features:**
+- **Memory (session-scoped):** Enables conversational intelligence. Differentiates from stateless queries. Users can build on previous questions.
+- **Query suggestions (grouped, basic):** Reduces friction. Shows capabilities immediately. Guides non-technical users.
+- **Web search (Analyst agent):** Unique capability vs competitors. Enables benchmarking (external context + internal data).
+- **Multi-LLM (OpenRouter + Ollama):** Headline commercial differentiator. Cost control + data privacy + flexibility. Target: enterprises with LLM strategy.
+- **Per-agent config:** Completes multi-LLM narrative. "Optimize per agent, not blanket model choice."
+- **SMTP:** Production hygiene. v0.1 had Mailgun API (not configurable). v0.2 = self-hosted friendly.
 
-**Why These:**
-- **Authentication:** Security non-negotiable for user data.
-- **File upload + profiling:** Entry point for analysis, shows AI value immediately.
-- **Multi-agent + sandbox:** Core differentiators (accuracy + security + transparency).
-- **Chat + streaming + cards:** Modern UX baseline (2026 expectations).
-- **Persistence + export:** Complete the workflow (start → analyze → extract insights).
+### Defer to v0.2.x (Fast Followers)
 
-### Defer to v1.x (Post-MVP)
+Features to add once core v0.2.0 is validated. Build confidence in foundational intelligence before layering enhancements.
 
-Features to add once core is validated. Triggers: user feedback, usage patterns, scalability needs.
-
-**Deferred but Planned:**
-- [ ] **OAuth Integration** (Google, Microsoft) - Trigger: >100 users complain about account creation friction
-- [ ] **Advanced Export** (PDF reports, PNG charts) - Trigger: users request formatted reports for presentations
-- [ ] **Query Result Caching** - Trigger: >50 queries/hour, identical questions repeated
-- [ ] **Long-Term Memory** (cross-session learning) - Trigger: users returning weekly+, want personalization
-- [ ] **Error Auto-Recovery** - Trigger: >20% of queries fail on first attempt, users frustrated with manual retry
-- [ ] **Advanced Visualizations** (correlation matrices, statistical charts) - Trigger: users export to external tools for specific chart types
-- [ ] **Dataset Versioning** - Trigger: users re-upload files, want to compare analyses across versions
-- [ ] **Collaboration** (share analysis via link) - Trigger: users emailing screenshots, want shareable URLs
-- [ ] **SQL Data Sources** - Trigger: >10 users request database connections instead of file upload
-- [ ] **Custom Agent Configuration** - Trigger: power users want to tune prompts/behavior
+- [ ] **Data-aware smart suggestions** — Upgrade from generic suggestions to dataset-specific intelligence. "Compare TikTok campaign to industry benchmarks" (because dataset has TikTok column). **High perceived value, but dependent on domain intelligence working well.** Risk: complexity. Add v0.2.1 after basic suggestions validate UX pattern. Requires Onboarding Agent to understand column semantics (not just types).
+- [ ] **Context summarization strategies** — When context exceeds limit, summarize oldest exchanges instead of truncating. LangChain ConversationSummaryBufferMemory. **Adds robustness but not critical for v0.2.0 launch** (truncation + warning sufficient). Add v0.2.2 after observing context usage patterns.
+- [ ] **Web search result caching** — Serper.dev calls cost money. Cache results for common queries ("TikTok CTR benchmarks 2026"). 15-minute TTL. **Low priority for v0.2.0** (2,500 free searches sufficient for testing). Add v0.2.3 after web search usage patterns observed. Redis or in-memory cache.
+- [ ] **LLM provider fallback logic** — If primary model (e.g., Claude Sonnet 4.5) is down, fall back to secondary (e.g., GPT-4). **Adds reliability.** Implement v0.2.2 after multi-LLM foundation stable. Requires error detection + retry logic.
+- [ ] **Streaming transparency for web search** — Show "Searching web for '[query]'..." in real-time SSE. Display sources in Data Card citations. **Builds trust.** Leverage existing SSE infrastructure. Add v0.2.1 after core web search working. Low complexity, high polish value.
+- [ ] **Context window usage analytics** — Track 85% warnings, truncation events. Help users understand context consumption. **Governance feature.** Add v0.2.3 after memory usage patterns observed. Informs future optimizations.
 
 ### Explicitly Out of Scope (v2+)
 
-Features to defer until product-market fit established. High cost, uncertain value.
+Features to defer until v0.2 intelligence validated. Separate milestones, not fast followers.
 
-**Not Building:**
-- [ ] **Real-Time Collaboration** - Wait for: validated team use case (currently individual-focused)
-- [ ] **Mobile Apps** (native iOS/Android) - Wait for: mobile usage >20% of traffic (currently desktop workflow)
-- [ ] **Embedded Analytics** (iframe/widget for other apps) - Wait for: B2B demand, API-first refactor needed
-- [ ] **Custom ML Model Training** - Wait for: users outgrow pandas analytics, need predictive models
-- [ ] **Workflow Automation** (scheduled reports, alerts) - Wait for: dashboard use case emerges (currently ad-hoc)
-- [ ] **Multi-Language Support** (R, Julia, Scala) - Wait for: Python insufficient for >5% of users
-- [ ] **Video/Image Data Analysis** - Wait for: non-tabular data use cases validated
-- [ ] **Marketplace** (community-contributed agents/templates) - Wait for: user-created content demand
+**Not Building in v0.2:**
+- [ ] **Persistent memory across sessions** — Deferred until user research validates need. **Risk: context pollution.** Complexity: memory isolation, summarization, retrieval architecture (pgvector semantic search). ChatGPT has this but users complain about context pollution. v2+ feature after validating session-scoped intelligence.
+- [ ] **Fine-tuning per user/organization** — Defer until validated demand. **Complexity: training pipelines, data requirements (1000+ examples), version control.** Prompt engineering + YAML config + multi-LLM choice achieves 80% of benefits. v2+ if commercial customers demand it.
+- [ ] **Advanced web search tools** — Serper.dev supports images, news, videos, maps. **v0.2.0: web search only.** Expand v2+ after usage patterns observed. Risk: feature bloat without validated use cases.
+- [ ] **Collections and saved Data Cards** — Deferred from v0.1. **Requires search, organization, tagging.** Build v2+ after real-time analysis workflow validated. Users export important results (CSV/Markdown). v0.2 = intelligence, not storage/organization.
+- [ ] **Visualization Agent** — Deferred from v0.1. **Auto-generate charts.** Complexity: chart type selection, relevance. Focus v0.2 on intelligence (memory, suggestions, search, multi-LLM), not presentation. v2+ feature.
+- [ ] **Real-time collaboration** — Not validated need. **Massive complexity: presence, conflict resolution, shared context, permissions.** Defer indefinitely. Single-user focus for v0.2. Session-scoped memory conflicts with multi-user shared state anyway.
+- [ ] **Custom data connectors** — Salesforce, Snowflake, BigQuery, APIs. **v0.2: file upload only.** Validate core analytics accuracy + intelligence features before integration complexity. v2+ based on validated demand.
+
+**v0.2 Discipline:** Intelligence features only. No Collections, no Visualization Agent, no data connectors, no collaboration. These are separate value propositions requiring separate milestones.
 
 ---
 
 ## Feature Prioritization Matrix
 
-| Feature | User Value | Implementation Cost | Priority | MVP Status |
-|---------|------------|---------------------|----------|------------|
-| Natural Language Chat | HIGH | MEDIUM | P1 | **v1.0** |
-| File Upload (CSV/Excel) | HIGH | LOW | P1 | **v1.0** |
-| Authentication (email/password) | HIGH | LOW | P1 | **v1.0** |
-| Code Generation + Explanation | HIGH | MEDIUM | P1 | **v1.0** |
-| Sandboxed Code Execution | HIGH | HIGH | P1 | **v1.0** |
-| Streaming Responses | HIGH | MEDIUM | P1 | **v1.0** |
-| Interactive Data Cards | HIGH | MEDIUM | P1 | **v1.0** |
-| Automated Data Profiling | HIGH | MEDIUM | P1 | **v1.0** |
-| Conversation Persistence | HIGH | MEDIUM | P1 | **v1.0** |
-| Multi-Agent System | HIGH | HIGH | P1 | **v1.0** |
-| Basic Export (CSV) | MEDIUM | LOW | P1 | **v1.0** |
-| OAuth Integration | MEDIUM | MEDIUM | P2 | v1.1 |
-| Long-Term Memory | MEDIUM | MEDIUM | P2 | v1.2 |
-| Advanced Export (PDF/PNG) | MEDIUM | MEDIUM | P2 | v1.2 |
-| Error Auto-Recovery | MEDIUM | MEDIUM | P2 | v1.3 |
-| Query Result Caching | LOW | MEDIUM | P2 | v1.3 |
-| Advanced Visualizations | LOW | MEDIUM | P3 | v2.0 |
-| Collaboration (share links) | LOW | HIGH | P3 | v2.0 |
-| SQL Data Sources | LOW | HIGH | P3 | v2.0 |
-| Real-Time Collaboration | LOW | HIGH | P3 | v2.0+ |
-| Mobile Apps | LOW | HIGH | P3 | v2.0+ |
+| Feature | User Value | Implementation Cost | Priority | v0.2 Status |
+|---------|------------|---------------------|----------|-------------|
+| **Session-scoped memory** | HIGH (enables conversational UX) | MEDIUM (PostgreSQL checkpointing exists, needs re-enabling) | **P1** | **v0.2.0** |
+| **Tab-close warning** | MEDIUM (prevents accidents) | LOW (browser API) | **P1** | **v0.2.0** |
+| **Basic query suggestions** | HIGH (reduces friction, guides users) | MEDIUM (Onboarding Agent extension) | **P1** | **v0.2.0** |
+| **Web search tool** | HIGH (benchmarking = differentiation) | MEDIUM (Serper.dev + LangChain tool binding) | **P1** | **v0.2.0** |
+| **Multi-LLM providers** | HIGH (commercial appeal, cost control) | HIGH (abstraction layer, testing multiple providers) | **P1** | **v0.2.0** |
+| **Per-agent LLM config** | MEDIUM (completes multi-LLM value) | LOW (YAML config, depends on multi-LLM) | **P1** | **v0.2.0** |
+| **Configurable context window** | MEDIUM (governance, cost control) | LOW (YAML config, LangChain window management) | **P1** | **v0.2.0** |
+| **SMTP email service** | HIGH (production requirement) | LOW (standard SMTP config) | **P1** | **v0.2.0** |
+| **Data-aware suggestions** | HIGH (wow factor, differentiation) | HIGH (domain intelligence, edge cases, semantic understanding) | **P2** | v0.2.1 |
+| **Context summarization** | MEDIUM (robustness at scale) | MEDIUM (LangChain ConversationSummaryBufferMemory) | **P2** | v0.2.2 |
+| **Web search caching** | LOW (cost optimization, premature) | LOW (Redis/in-memory cache, 15min TTL) | **P2** | v0.2.3 |
+| **LLM fallback logic** | MEDIUM (reliability, error handling) | MEDIUM (error detection, retry with alternate model) | **P2** | v0.2.2 |
+| **Streaming web search transparency** | MEDIUM (trust, UX polish, sources display) | LOW (SSE extension, leverage existing infrastructure) | **P2** | v0.2.1 |
+| **Context usage analytics** | LOW (governance feature, observability) | LOW (tracking, dashboard for admin) | **P3** | v0.2.3 |
+| **Persistent cross-session memory** | LOW (unvalidated need, high risk of pollution) | HIGH (pgvector architecture, isolation, summarization, retrieval) | **P3** | v2.0+ |
+| **Fine-tuning** | LOW (prompt engineering sufficient) | HIGH (training infra, 1000+ examples, version control) | **P3** | v2.0+ |
+| **Advanced web search** | LOW (niche use cases, unvalidated) | MEDIUM (Serper.dev feature expansion: images, news, videos) | **P3** | v2.0+ |
+| **Collections** | MEDIUM (power user feature, storage/organization) | HIGH (search, tagging, organization, UI overhaul) | **P3** | v2.0+ |
+| **Visualization Agent** | MEDIUM (polish, not accuracy/intelligence) | HIGH (chart logic, type selection, relevance) | **P3** | v2.0+ |
+| **Data connectors** | MEDIUM (future revenue opportunity, enterprise feature) | HIGH (per-connector complexity, auth, maintenance) | **P3** | v2.0+ |
+| **Real-time collaboration** | LOW (not validated, conflicts with session memory) | VERY HIGH (presence, sync, permissions, shared context) | **Defer** | Not planned |
 
 **Priority Key:**
-- **P1 (Must Have):** Core value prop, cannot launch without. All in v1.0.
-- **P2 (Should Have):** Enhances experience, add when validated. v1.x releases.
-- **P3 (Nice to Have):** Future consideration, wait for demand signal. v2.0+.
+- **P1 (Must Have for v0.2.0):** Core intelligence features that define the milestone. Memory + suggestions + web search + multi-LLM + SMTP.
+- **P2 (Should Have for v0.2.x):** Fast followers that enhance core features once validated. Add incrementally based on feedback.
+- **P3 (Nice to Have for v2.0+):** Defer until product-market fit established. Separate milestones.
 
-**Cost-Value Insight:**
-- **High Value, Low Cost:** Authentication, file upload, basic export - **ship immediately**
-- **High Value, High Cost:** Multi-agent, sandbox, streaming - **core differentiators, worth investment**
-- **Low Value, High Cost:** Real-time collab, mobile apps - **defer indefinitely unless demand validated**
+**Cost-Value Insight for v0.2:**
+- **High Value, Low Cost:** Tab-close warning, per-agent config, configurable context window, SMTP - **ship in v0.2.0**
+- **High Value, Medium Cost:** Session memory (re-enable existing), basic suggestions (extend profiling), web search (Serper.dev) - **core v0.2.0**
+- **High Value, High Cost:** Multi-LLM (abstraction layer), data-aware suggestions (domain intelligence) - **multi-LLM in v0.2.0, data-aware defer to v0.2.1**
+- **Low Value, High Cost:** Persistent cross-session memory (context pollution risk), fine-tuning (prompt engineering sufficient) - **defer indefinitely**
 
 ---
 
 ## Competitor Feature Analysis
 
-Comparison with major platforms to identify gaps and opportunities.
+Comparison with major platforms to identify v0.2 positioning.
 
-| Feature | ChatGPT Advanced Data Analysis | Tableau Pulse | ThoughtSpot | **Spectra MVP** | Our Approach |
-|---------|-------------------------------|---------------|-------------|-----------------|--------------|
-| Natural Language Queries | Yes (GPT-4 powered) | Yes (retired Ask Data) | Yes (SearchIQ) | **Yes** | Multi-agent for higher accuracy |
-| File Upload | Yes (CSV, Excel, JSON) | Via connectors | Via connectors | **Yes (CSV, Excel)** | Simple upload, no connector complexity |
-| Code Generation | Yes (Python) | No (SQL only) | No (SQL only) | **Yes (Python)** | Show code + explanation (transparency) |
-| Code Transparency | Hidden (black box) | N/A | N/A | **Visible** | Differentiator: users see/verify logic |
-| Sandboxed Execution | Yes (E2B Cloud) | Server-side (closed) | Server-side (closed) | **Yes (gVisor+Docker)** | Open about security model |
-| Streaming Responses | Yes (token-by-token) | No (wait for complete) | No (wait for complete) | **Yes (SSE)** | Table stakes in 2026 |
-| Interactive Visualizations | Basic (matplotlib) | Advanced (Tableau engine) | Advanced (proprietary) | **Yes (Plotly)** | Balance: better than ChatGPT, simpler than Tableau |
-| Conversation Memory | Session only | Dashboard context | Pinboard context | **Session + long-term** | pgvector for semantic memory |
-| Multi-Agent System | Single agent | N/A (not agent-based) | N/A (not agent-based) | **Supervisor + 4 agents** | Quality differentiator vs single-agent |
-| Export Options | Download code/results | PDF, PowerPoint | PDF, Excel | **CSV, PDF (v1.x)** | Start simple, expand based on requests |
-| Authentication | OpenAI account | Enterprise SSO | Enterprise SSO | **Email/password** | OAuth in v1.1 |
-| Collaboration | No (ChatGPT Plus is individual) | Team workspaces | Team sharing | **No (v1.0)** | Defer until validated |
-| Data Sources | File upload only | 40+ connectors | 50+ connectors | **File upload only** | Focus on simplicity, add connectors v2+ |
-| Pricing Model | $20/month (individual) | Enterprise only | Enterprise only | **TBD (SaaS)** | Target: prosumer + SMB ($10-50/month) |
+| Feature | ChatGPT Code Interpreter | Julius AI | ThoughtSpot | **Spectra v0.2** | Our Differentiator |
+|---------|--------------------------|-----------|-------------|------------------|-------------------|
+| **Conversation Memory** | Persistent across all chats (context pollution risk) | Session-based via notebooks | Context within search session | **Session-scoped per tab** (clear boundaries, warning on close) | Avoids ChatGPT's pollution problem while maintaining intelligence |
+| **Query Suggestions** | Generic starter prompts, no data awareness | Starter prompts, limited grouping | AI-suggested searches (Answer Explorer), data-aware | **Basic: grouped by intent. v0.2.1: data-aware** | Grouped presentation (General, Benchmarking, Predictive) reduces cognitive load |
+| **Web Search** | No web search in Code Interpreter (only code execution) | Live database connectors (not web search) | Spotter 3 integrates external sources (2026) | **Serper.dev integration** (transparent sources, benchmarking focus) | Bridges internal data + external context. Benchmarking use case. |
+| **Multi-LLM Support** | OpenAI only (locked ecosystem) | Single model (provider unclear) | ThoughtSpot proprietary (no choice) | **OpenRouter (100+ models) + Ollama** (local/cloud) | **Major differentiator.** Cost control + data privacy + flexibility. |
+| **Per-Agent Config** | N/A (single model for all operations) | N/A (single model) | Spotter agents (not user-configurable) | **YAML config per agent** (Coding, Checking, Analysis, Onboarding) | Optimize cost per agent. Cheap for simple tasks, powerful for complex. |
+| **File Size Limit** | 50MB | 32GB (major advantage) | N/A (connected data, unlimited) | 50MB (v0.1, matches ChatGPT) | Julius AI wins on file size. Not v0.2 priority. |
+| **Transparency** | Shows code, execution results (black box for model reasoning) | Notebooks document workflow | Documents steps in plain English | **SSE streaming** (thinking process, code, web search, sources) | v0.1 foundation maintained. v0.2 extends to web search transparency. |
+| **Cost Control** | Fixed ($20/month ChatGPT Plus, no control) | Subscription tiers (no per-agent control) | Enterprise pricing (opaque) | **Configurable** (context window, LLM choice per agent, Ollama local = $0) | **v0.2 headline feature:** granular cost control. Enterprises optimize spend. |
+| **Data Privacy** | OpenAI terms (data processed by OpenAI) | Julius AI terms (data processed by Julius) | Enterprise deployment (on-premises options) | **Local Ollama option** (no data leaves premises) | **v0.2 differentiator:** privacy-sensitive use cases (healthcare, finance). |
+| **Code Execution** | E2B Cloud (sandboxed) | Sandboxed (details unclear) | Server-side (closed) | **E2B sandbox** (gVisor + Docker, v0.1) | v0.1 foundation maintained. Not v0.2 focus. |
+| **Multi-Agent System** | Single agent (GPT-4) | Single agent (or multi-agent unclear) | Spotter agents (platform-level, not user-visible) | **Supervisor + 4 specialized agents** (v0.1) | v0.1 foundation maintained. Not v0.2 focus. Competitive advantage continues. |
 
-**Key Insights:**
+**Key Competitive Insights for v0.2:**
 
-1. **ChatGPT's weaknesses:** Black box (can't verify logic), no audit trail, session-only memory, individual-focused
-2. **Tableau/ThoughtSpot's weaknesses:** Enterprise-only pricing, complex setup (connectors), no code transparency, slower UX (no streaming)
-3. **Our positioning:** Bridge gap between consumer tools (ChatGPT) and enterprise BI (Tableau). Differentiate on transparency + accuracy + streaming UX.
-4. **Market gap:** Prosumer/SMB segment wants ChatGPT simplicity + enterprise accuracy. Neither incumbent serves this well.
+1. **vs. ChatGPT Code Interpreter:**
+   - **Spectra wins:** Session-scoped memory (vs context pollution), multi-LLM flexibility (vs OpenAI lock-in), web search (vs code-only), data-aware suggestions (vs generic), per-agent optimization (vs one-model-fits-all)
+   - **ChatGPT wins:** Brand recognition, GPT-4 reasoning power, established user base
+   - **Spectra edge v0.2:** Commercial customers prioritize **cost control** (multi-LLM, configurable context) and **data privacy** (Ollama local). ChatGPT = consumer product, no flexibility.
+
+2. **vs. Julius AI:**
+   - **Spectra wins:** Multi-LLM flexibility (vs locked provider), web search (vs database connectors only), per-agent optimization (vs single model), transparent LLM choice (vs black box)
+   - **Julius AI wins:** 32GB file limit (vs Spectra 50MB), established data analysis brand, mature notebooks feature
+   - **Spectra edge v0.2:** Julius AI locked to single LLM provider. **Spectra = flexibility.** Target: enterprises with LLM strategy, cost consciousness, or need for local deployment.
+
+3. **vs. ThoughtSpot:**
+   - **Spectra wins:** Accessible pricing (vs enterprise-only), simpler deployment, multi-LLM choice (vs proprietary), local Ollama option (vs cloud-only or expensive on-prem), transparent operations (vs black box Spotter agents)
+   - **ThoughtSpot wins:** Mature enterprise features (governance, semantic layer), Spotter agents ecosystem, connected data sources (50+ connectors), Answer Explorer intelligence (more mature than Spectra suggestions)
+   - **Spectra edge v0.2:** ThoughtSpot = enterprise BI replacement (6-figure deals). **Spectra = accessible AI analytics** (prosumer/SMB, $10-50/month target). Different market segments. ThoughtSpot validates AI analytics demand at high end; Spectra targets underserved mid-market.
+
+**Competitive Positioning Statement for v0.2:**
+
+*"Spectra is LLM-agnostic AI analytics for commercial teams who need flexibility, transparency, and cost control. Unlike ChatGPT (OpenAI lock-in, no cost control) or Julius AI (single model, no flexibility) or ThoughtSpot (enterprise-only pricing), Spectra lets you choose LLMs per agent (OpenRouter: 100+ models; Ollama: local privacy), optimize costs (cheap models for simple tasks, powerful for complex), and maintain transparency (see what the AI is doing, including web searches). Target: prosumer and SMB teams ($10-50/month) who outgrew ChatGPT but can't justify ThoughtSpot."*
 
 ---
 
-## User Journey Feature Mapping
+## User Journey Feature Mapping (v0.2 Enhancements)
 
-How features support each stage of user workflow.
+How v0.2 intelligence features enhance the v0.1 user workflow.
 
 ### Stage 1: Onboarding (First 5 Minutes)
 
-**Goal:** User uploads data and sees immediate value from AI understanding.
+**v0.1 Flow:** Auth → Upload → Profiling → See AI summary
 
-| Feature | Purpose | Complexity | Status |
-|---------|---------|------------|--------|
-| Email/password signup | Quick account creation | LOW | v1.0 |
-| Drag-and-drop file upload | Reduce friction (no "browse" clicks) | LOW | v1.0 |
-| Automated data profiling | Show AI value immediately | MEDIUM | v1.0 |
-| Onboarding Agent | Guide user through first steps | MEDIUM | v1.0 |
-| Sample datasets | Let users explore without uploading | LOW | v1.1 (defer) |
+**v0.2 Enhancement:**
+- **Query suggestions appear immediately after profiling** — User sees "What you can ask" with 6 grouped suggestions (2 General Analysis, 2 Benchmarking, 2 Trend/Predictive). Reduces "blank page anxiety."
+- **Onboarding Agent uses configured LLM** — Enterprise can use cheap local Ollama model for profiling (cost control). Power users can use fast OpenRouter model (performance).
 
-**Critical Path:** Auth → Upload → Profiling (< 30 seconds to "wow moment")
+**Impact:** Faster time-to-first-query. User sees capabilities immediately via suggestions.
 
 ### Stage 2: Exploration (First Session)
 
-**Goal:** User asks questions, sees accurate answers with transparent reasoning.
+**v0.1 Flow:** Query → Code Gen → Execute → Data Card → Repeat (each query independent, no context)
 
-| Feature | Purpose | Complexity | Status |
-|---------|---------|------------|--------|
-| Natural language chat | Primary interaction | MEDIUM | v1.0 |
-| Streaming responses | Real-time feedback | MEDIUM | v1.0 |
-| Code generation + explanation | Show reasoning | MEDIUM | v1.0 |
-| Coding Agent + Code Checker | Generate accurate code | HIGH | v1.0 |
-| Interactive Data Cards | Visualize results | MEDIUM | v1.0 |
-| Conversation history | See past queries | LOW | v1.0 |
+**v0.2 Enhancement:**
+- **Session memory enables multi-turn conversations** — User asks "Show me sales by region." Then "Add a column for growth percentage." AI understands "the previous result" without re-explaining. Conversational intelligence.
+- **Web search for benchmarking** — User asks "How does my TikTok CTR compare to industry average?" Analyst agent searches web via Serper.dev, finds benchmarks, compares to user's data. Shows sources. **Unique capability vs competitors.**
+- **Different LLMs per agent** — Coding Agent uses powerful Claude Sonnet 4.5 (accuracy), Code Checker uses cheaper GPT-4o-mini (sufficient for validation). Cost optimized.
 
-**Critical Path:** Query → Code Gen → Execute → Display (< 10 seconds for simple analysis)
+**Impact:** 10x improvement in conversational flow. Benchmarking queries now possible (web search). Cost per query reduced (multi-LLM optimization).
 
 ### Stage 3: Trust Building (First Week)
 
-**Goal:** User gains confidence in accuracy, understands when to use platform.
+**v0.1 Flow:** User verifies code, exports results, returns
 
-| Feature | Purpose | Complexity | Status |
-|---------|---------|------------|--------|
-| Code transparency | Verify logic | LOW | v1.0 |
-| Error messages with guidance | Teach data concepts | LOW | v1.0 |
-| Execution safety (sandbox) | Trust code execution | HIGH | v1.0 |
-| Export results (CSV) | Extract insights | LOW | v1.0 |
-| Session persistence | Return to past work | MEDIUM | v1.0 |
-| Error auto-recovery | Handle mistakes gracefully | MEDIUM | v1.2 (defer) |
+**v0.2 Enhancement:**
+- **Context window warnings** — User gets warning at 85% context consumption: "Your conversation is getting long. Continue (older messages will be removed) or start a new tab?" Transparent cost management.
+- **Web search sources displayed** — When AI uses web search, Data Card shows "Sources: [link1], [link2], [link3]." User verifies external data. Builds trust in benchmarking accuracy.
+- **LLM choice visibility** — User sees in settings: "Coding Agent: Claude Sonnet 4.5. Code Checker: GPT-4o-mini." Understands cost tradeoffs. Can switch to local Ollama for privacy-sensitive datasets.
 
-**Critical Path:** Verify correctness → Export insights → Return to platform
+**Impact:** User trusts AI more (transparent sources, LLM choices visible). Understands cost model (context warnings, LLM per agent).
 
 ### Stage 4: Habit Formation (First Month)
 
-**Goal:** User integrates platform into regular workflow, returns weekly+.
+**v0.1 Flow:** User returns for new analyses, uploads new files
 
-| Feature | Purpose | Complexity | Status |
-|---------|---------|------------|--------|
-| Long-term memory | Personalization | MEDIUM | v1.2 (defer) |
-| Advanced export (PDF) | Professional reports | MEDIUM | v1.2 (defer) |
-| OAuth login | Reduce friction | MEDIUM | v1.1 (defer) |
-| Dataset versioning | Compare over time | MEDIUM | v2.0 (defer) |
-| Saved queries/templates | Repeat common analyses | LOW | v2.0 (defer) |
+**v0.2 Enhancement:**
+- **Query suggestions guide repeat usage** — Each new file shows smart suggestions. User learns patterns ("Oh, I can ask for predictive analysis").
+- **Multi-LLM optimization becomes habit** — User switches to local Ollama for internal HR data (privacy). Uses OpenRouter DeepSeek for cheap exploratory queries, Claude for final reports. **Cost-conscious workflow.**
+- **Session memory reduces repetition** — User builds complex multi-step analyses in single tab. "Show sales. Now filter to Q4. Now add growth rate. Now compare to last year." Each step builds on previous. No re-uploading or re-explaining.
 
-**Critical Path:** Return to platform → Faster workflows → Increased frequency
+**Impact:** User returns more frequently (lower friction via session memory + suggestions). Cost per session reduces (multi-LLM optimization). Differentiation becomes clear (no competitor offers this flexibility).
 
 ### Stage 5: Advocacy (Ongoing)
 
-**Goal:** User recommends platform to colleagues, expands usage.
+**v0.1 Flow:** User exports results, emails to team
 
-| Feature | Purpose | Complexity | Status |
-|---------|---------|------------|--------|
-| Share analysis (read-only link) | Collaboration | MEDIUM | v2.0 (defer) |
-| Team workspaces | Organizational adoption | HIGH | v2.0+ (defer) |
-| API access | Integration with tools | HIGH | v2.0+ (defer) |
-| Custom branding | White-label for enterprises | LOW | v2.0+ (defer) |
+**v0.2 Enhancement:**
+- **Cost savings story** — User tells colleagues: "I used Spectra with local Ollama for HR data (privacy) and only paid for Claude when I needed complex analysis. Saved 60% vs ChatGPT Plus where every query uses GPT-4."
+- **Benchmarking capability story** — User tells colleagues: "Spectra found industry CTR benchmarks automatically and compared to our data. ChatGPT Code Interpreter can't do that."
+- **Flexibility story** — User tells colleagues: "I can switch to DeepSeek for coding tasks (cheaper) or Claude for reasoning. Not locked into OpenAI like ChatGPT."
 
-**Critical Path:** Individual value → Share with team → Organizational adoption
-
----
-
-## Platform-Specific Considerations for 2026
-
-Modern expectations based on current ecosystem state.
-
-### AI/LLM Features (Now Table Stakes)
-
-- **Natural language understanding:** 65% of orgs use generative AI regularly - conversational interface is expected, not novel
-- **Streaming responses:** ChatGPT normalized token-by-token streaming - batch responses feel slow/broken
-- **Code generation:** GitHub Copilot, Cursor normalized AI coding - showing generated code builds trust
-- **Semantic understanding:** Vector databases mainstream - users expect "it remembers what I meant"
-
-### Security Features (2026 Baseline)
-
-- **Zero-trust execution:** Container escapes in 2025 (CVE-2025-52881) raised awareness - users ask about sandbox security
-- **PII detection:** 8.5% of prompts contain sensitive data - platforms expected to detect/warn
-- **Audit logs:** Enterprise requirement - who accessed what data when
-- **Data retention policies:** GDPR compliance - ability to delete all user data
-
-### UX Features (Raised Bar)
-
-- **Mobile-responsive:** Even if desktop-primary, mobile viewing expected
-- **Dark mode:** Accessibility + preference standard
-- **Keyboard shortcuts:** Power users expect efficiency tools
-- **Empty states with guidance:** "Upload a file to get started" better than blank screen
-- **Loading skeletons:** Show UI structure while loading, not blank/spinner
-
-### Integration Features (Ecosystem Expectations)
-
-- **API access:** Power users want programmatic access (even if unused)
-- **Webhooks:** Event-driven workflows (future-proofing)
-- **SSO:** Enterprise deals require SAML/OAuth
-- **Export to common formats:** CSV, PDF, Excel - portability expected
+**Impact:** v0.2 creates **advocacy narratives** (cost savings, benchmarking, flexibility) that v0.1 lacked. Commercial differentiators become word-of-mouth drivers.
 
 ---
 
 ## Sources
 
-### High Confidence (Official Documentation & Industry Reports)
+### High Confidence (Official Documentation & 2026 Industry Reports)
 
-- [AI-Driven Conversational Analytics Platforms: Top Tools for 2026](https://www.ovaledge.com/blog/ai-driven-conversational-analytics-platforms/) - Conversational features
-- [Top 12 Conversational Analytics Tools & Software in 2026](https://www.zonkafeedback.com/blog/conversational-analytics-tools-software) - NLP capabilities
-- [Best Conversational AI Analytics Tools in 2026](https://www.displayr.com/best-conversational-ai-analytics-tools/) - Platform comparison
-- [ChatGPT for Data Analysis: Comparing Alternatives](https://www.displayr.com/chatgpt-for-data-analysis-comparing-alternatives/) - Competitive analysis
-- [Best 10 AI Tools For Data Analysis In 2026](https://juma.ai/blog/ai-tools-for-data-analysis) - Feature landscape
-- [Tableau's Ask Data Feature](https://help.tableau.com/current/pro/desktop/en-us/ask_data.htm) - NL interface patterns
-- [Collaborative Analytics & Data Science Notebook - Deepnote](https://deepnote.com/) - Modern data workspace features
-- [Data Workspace Collaboration](https://www.moderndatastack.xyz/category/data-workspace-collaboration) - Collaboration patterns
-- [Mode: Why Companies Need Collaborative Data Analysis](https://mode.com/blog/collaborative-data-analytics/) - Sharing expectations
+**AI Memory & Context:**
+- [AI Memory vs. Context Understanding: The Next Frontier for Enterprise AI](https://www.sphereinc.com/blogs/ai-memory-and-context/) - 2026 memory architecture trends
+- [The Death of Sessionless AI: How Conversation Memory Will Evolve from 2026–2030](https://medium.com/@aniruddhyak/the-death-of-sessionless-ai-how-conversation-memory-will-evolve-from-2026-2030-9afb9943bbb5) - 2026 as "Year of Context"
+- [Inside ChatGPT's Memory: How the Most Sophisticated Memory System in AI Really Works](https://medium.com/aimonks/inside-chatgpts-memory-how-the-most-sophisticated-memory-system-in-ai-really-works-f2b3f32d86b3) - ChatGPT memory implementation
+- [Context Engineering - Short-Term Memory Management with Sessions from OpenAI Agents SDK](https://cookbook.openai.com/examples/agents_sdk/session_memory) - Session memory patterns
+- [What Is AI Agent Memory? Types, Tradeoffs and Implementation](https://www.techtarget.com/searchenterpriseai/tip/What-is-AI-agent-memory-Types-tradeoffs-and-implementation) - Memory architecture tradeoffs
+- [Beyond Short-term Memory: The 3 Types of Long-term Memory AI Agents Need](https://machinelearningmastery.com/beyond-short-term-memory-the-3-types-of-long-term-memory-ai-agents-need/) - Memory types
+- [Memory overview - LangChain Docs](https://docs.langchain.com/oss/python/langgraph/memory) - LangChain memory implementation
 
-### Medium Confidence (Multiple Industry Sources)
+**Context Management:**
+- [Context Management for Deep Agents](https://blog.langchain.com/context-management-for-deepagents/) - Advanced context strategies
+- [Context Window Management Strategies](https://apxml.com/courses/langchain-production-llm/chapter-3-advanced-memory-management/context-window-management) - Window management patterns
+- [LangChain Checkpointing Reference](https://reference.langchain.com/python/langgraph/checkpoints/) - PostgreSQL checkpointing
 
-- [Top Sandbox Platforms for AI Code Execution in 2026](https://www.koyeb.com/blog/top-sandbox-code-execution-platforms-for-ai-code-execution-2026) - Execution security
-- [Top AI Sandbox Platforms in 2026](https://northflank.com/blog/top-ai-sandbox-platforms-for-code-execution) - Sandbox comparison
-- [AI Data Security Crisis 2026](https://www.kiteworks.com/cybersecurity-risk-management/ai-data-security-crisis-shadow-ai-governance-strategies-2026/) - Privacy expectations
-- [Protecting Sensitive Data in the Age of Generative AI](https://www.kiteworks.com/cybersecurity-risk-management/sensitive-data-ai-risks-challenges-solutions/) - PII handling
-- [Best Team Collaboration Software in 2026](https://www.goodday.work/blog/best-team-collaboration-software/) - Collaboration features
-- [What is Collaborative Analytics](https://www.ironhack.com/us/blog/what-is-collaborative-analytics-and-what-is-its-significance-in-real-time-data-an) - Real-time expectations
+**Query Suggestions & Analytics:**
+- [ThoughtSpot AI-suggested searches](https://docs.thoughtspot.com/cloud/latest/search-ai-suggested) - Industry implementation
+- [ThoughtSpot automates full platform with new Spotter agents](https://www.techtarget.com/searchbusinessanalytics/news/366636078/ThoughtSpot-automates-full-platform-with-new-Spotter-agents) - Spotter 3 capabilities (2026)
+- [Best Data Analysis Tools in 2026: Complete Comparison Guide](https://www.findanomaly.ai/best-data-analysis-tools-2026) - Industry landscape
+- [Data Analytics Trends to Watch in 2026](https://immsswd.github.io/portfolio/2025/11/22/data-analytics-trends-to-watch-in-2026/) - 40% NL query adoption
 
-### Low Confidence (Single Source or Unverified)
+**Web Search & Tools:**
+- [Serper - The World's Fastest and Cheapest Google Search API](https://serper.dev/) - Official docs (1-2s response, $1/1k queries)
+- [Serper - Google Search API - LangChain](https://python.langchain.com/docs/integrations/providers/google_serper/) - LangChain integration
+- [Node: Web Search Agent](https://ai-sdk.dev/cookbook/node/web-search-agent) - Implementation patterns
+- [7 Free Web Search APIs for AI Agents](https://www.kdnuggets.com/7-free-web-search-apis-for-ai-agents) - Alternatives comparison
+- [SerperDevWebSearch | Haystack Documentation](https://docs.haystack.deepset.ai/docs/serperdevwebsearch) - Haystack integration example
 
-- Specific competitor pricing models (not publicly documented)
-- User adoption statistics for niche features (self-reported surveys)
-- Future roadmaps from proprietary platforms (extrapolated from announcements)
+**Multi-LLM & Providers:**
+- [Run Claude Code with Local & Cloud Models in 5 Minutes (Ollama, LM Studio, llama.cpp, OpenRouter)](https://medium.com/@luongnv89/run-claude-code-on-local-cloud-models-in-5-minutes-ollama-openrouter-llama-cpp-6dfeaee03cda) - 2026 multi-LLM setup
+- [Provider Routing | OpenRouter Documentation](https://openrouter.ai/docs/guides/routing/provider-selection) - OpenRouter routing
+- [A practical guide to OpenRouter: Unified LLM APIs, model routing, and real-world use](https://medium.com/@milesk_33/a-practical-guide-to-openrouter-unified-llm-apis-model-routing-and-real-world-use-d3c4c07ed170) - OpenRouter patterns
+- [Creating Free, Local AI Agents with OpenRouter, Ollama, and CrewAI](https://spr.com/free-local-ai-agents-with-openrouter-ollama-and-crewai/) - Combined usage pattern
+- [Compare Ollama vs. OpenRouter in 2026](https://slashdot.org/software/comparison/Ollama-vs-OpenRouter/) - Comparison
+
+**Competitive Analysis:**
+- [Julius AI vs ChatGPT: I Found the Clear Winner for 2026](https://dhruvirzala.com/julius-ai-vs-chatgpt/) - Feature comparison
+- [Julius AI vs. ChatGPT: What's Better for Data Analysis and You?](https://julius.ai/articles/julius-ai-vs-chatgpt) - Official comparison
+- [ChatGPT data analysis vs Julius AI: a side-by-side comparison for 2025](https://deepnote.com/compare/chatgpt-vs-juliusai) - Detailed feature matrix
+- [DataChat](https://datachat.ai/) - Transparency focus ("documents every step")
+- [2026 Analytics Trends: Beware the Growing Gap Between AI and Action](https://www.blastx.com/insights/2026-analytics-trends-beware-gap-between-ai-and-action) - Market analysis
+
+### Medium Confidence (Industry Analysis, Multiple Sources)
+
+- Session-based vs persistent memory tradeoffs: Multiple sources agree session memory avoids pollution, but single-source details on performance metrics
+- 40% NL query adoption: Cited by multiple 2026 trend reports, but original research not linked
+- Multi-LLM cost savings: Anecdotal (blogs, case studies) rather than rigorous benchmarks
+- Query suggestion effectiveness: ThoughtSpot validates pattern, but ROI metrics not public
+- Serper.dev performance claims: Official documentation (1-2s), but third-party benchmarks not found
+
+### Low Confidence (Requires Validation)
+
+- Specific multi-LLM cost savings percentages (60-80% savings claims): Anecdotal, needs validation with actual Spectra usage
+- Data-aware suggestion implementation complexity: Estimated HIGH based on domain intelligence requirements, but not validated
+- Context pollution complaints from ChatGPT users: Referenced in blogs, but quantitative data not available
+- Web search benchmarking use case frequency: Assumed common based on user stories, but not validated with data
 
 ---
 
-*Feature research for: AI-powered data analytics platform*
-*Researched: 2026-02-02*
-*Confidence: HIGH - Cross-referenced with 15+ sources from 2025-2026, validated against existing stack/architecture/pitfalls research*
+*Feature research for: Spectra v0.2 Intelligence & Integration*
+*Researched: 2026-02-06*
+*Confidence: MEDIUM-HIGH - Cross-referenced 35+ sources from 2025-2026. HIGH confidence on memory/multi-LLM/web search patterns (official docs, multiple sources). MEDIUM confidence on commercial impact claims (anecdotal, needs validation). Recommendations based on validated industry patterns + competitive gaps.*
