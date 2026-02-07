@@ -117,56 +117,63 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MEMORY-01 | TBD | Pending |
-| MEMORY-02 | TBD | Pending |
-| MEMORY-03 | TBD | Pending |
-| MEMORY-04 | TBD | Pending |
-| MEMORY-05 | TBD | Pending |
-| MEMORY-06 | TBD | Pending |
-| MEMORY-07 | TBD | Pending |
-| MEMORY-08 | TBD | Pending |
-| LLM-01 | TBD | Pending |
-| LLM-02 | TBD | Pending |
-| LLM-03 | TBD | Pending |
-| LLM-04 | TBD | Pending |
-| LLM-05 | TBD | Pending |
-| LLM-06 | TBD | Pending |
-| LLM-07 | TBD | Pending |
-| CONFIG-01 | TBD | Pending |
-| CONFIG-02 | TBD | Pending |
-| CONFIG-03 | TBD | Pending |
-| CONFIG-04 | TBD | Pending |
-| CONFIG-05 | TBD | Pending |
-| SEARCH-01 | TBD | Pending |
-| SEARCH-02 | TBD | Pending |
-| SEARCH-03 | TBD | Pending |
-| SEARCH-04 | TBD | Pending |
-| SEARCH-05 | TBD | Pending |
-| SEARCH-06 | TBD | Pending |
-| SEARCH-07 | TBD | Pending |
-| SUGGEST-01 | TBD | Pending |
-| SUGGEST-02 | TBD | Pending |
-| SUGGEST-03 | TBD | Pending |
-| SUGGEST-04 | TBD | Pending |
-| SUGGEST-05 | TBD | Pending |
-| SUGGEST-06 | TBD | Pending |
-| SMTP-01 | TBD | Pending |
-| SMTP-02 | TBD | Pending |
-| SMTP-03 | TBD | Pending |
-| SMTP-04 | TBD | Pending |
-| SMTP-05 | TBD | Pending |
-| SMTP-06 | TBD | Pending |
-| PWRESET-01 | TBD | Pending |
-| PWRESET-02 | TBD | Pending |
-| PWRESET-03 | TBD | Pending |
-| PWRESET-04 | TBD | Pending |
-| PWRESET-05 | TBD | Pending |
+| MEMORY-01 | Phase 8 | Pending |
+| MEMORY-02 | Phase 8 | Pending |
+| MEMORY-03 | Phase 8 | Pending |
+| MEMORY-04 | Phase 8 | Pending |
+| MEMORY-05 | Phase 8 | Pending |
+| MEMORY-06 | Phase 8 | Pending |
+| MEMORY-07 | Phase 8 | Pending |
+| MEMORY-08 | Phase 8 | Pending |
+| LLM-01 | Phase 7 | Pending |
+| LLM-02 | Phase 7 | Pending |
+| LLM-03 | Phase 7 | Pending |
+| LLM-04 | Phase 7 | Pending |
+| LLM-05 | Phase 7 | Pending |
+| LLM-06 | Phase 7 | Pending |
+| LLM-07 | Phase 7 | Pending |
+| CONFIG-01 | Phase 7 | Pending |
+| CONFIG-02 | Phase 7 | Pending |
+| CONFIG-03 | Phase 7 | Pending |
+| CONFIG-04 | Phase 7 | Pending |
+| CONFIG-05 | Phase 7 | Pending |
+| SEARCH-01 | Phase 10 | Pending |
+| SEARCH-02 | Phase 10 | Pending |
+| SEARCH-03 | Phase 10 | Pending |
+| SEARCH-04 | Phase 10 | Pending |
+| SEARCH-05 | Phase 10 | Pending |
+| SEARCH-06 | Phase 10 | Pending |
+| SEARCH-07 | Phase 10 | Pending |
+| SUGGEST-01 | Phase 9 | Pending |
+| SUGGEST-02 | Phase 9 | Pending |
+| SUGGEST-03 | Phase 9 | Pending |
+| SUGGEST-04 | Phase 9 | Pending |
+| SUGGEST-05 | Phase 9 | Pending |
+| SUGGEST-06 | Phase 9 | Pending |
+| SMTP-01 | Phase 11 | Pending |
+| SMTP-02 | Phase 11 | Pending |
+| SMTP-03 | Phase 11 | Pending |
+| SMTP-04 | Phase 11 | Pending |
+| SMTP-05 | Phase 11 | Pending |
+| SMTP-06 | Phase 11 | Pending |
+| PWRESET-01 | Phase 11 | Pending |
+| PWRESET-02 | Phase 11 | Pending |
+| PWRESET-03 | Phase 11 | Pending |
+| PWRESET-04 | Phase 11 | Pending |
+| PWRESET-05 | Phase 11 | Pending |
 
 **Coverage:**
 - v0.2 requirements: 43 total
-- Mapped to phases: 0
-- Unmapped: 43 ⚠️ (will be mapped during roadmap creation)
+- Mapped to phases: 43/43 (100%)
+- Unmapped: 0
+
+**Phase Distribution:**
+- Phase 7 (Multi-LLM Infrastructure): 12 requirements (LLM + CONFIG)
+- Phase 8 (Session Memory): 8 requirements (MEMORY)
+- Phase 9 (Query Suggestions): 6 requirements (SUGGEST)
+- Phase 10 (Web Search): 7 requirements (SEARCH)
+- Phase 11 (Production Email): 11 requirements (SMTP + PWRESET)
 
 ---
 *Requirements defined: 2026-02-06*
-*Last updated: 2026-02-06 after initial definition*
+*Last updated: 2026-02-06 after roadmap creation*
