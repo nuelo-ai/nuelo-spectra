@@ -442,7 +442,7 @@ async def halt_node(state: ChatAgentState) -> dict:
     }
 
 
-def build_chat_graph():
+def build_chat_graph(checkpointer=None):
     """Build and compile the chat analysis LangGraph workflow.
 
     Creates a StateGraph with the following flow:
@@ -452,43 +452,19 @@ def build_chat_graph():
     4. data_analysis: Interpret results and generate explanation
     5. halt: Error handler for max retries exceeded
 
+    Args:
+        checkpointer: Optional PostgreSQL checkpointer for session persistence
+
     Returns:
         Compiled LangGraph workflow
 
     Example:
-        >>> graph = build_chat_graph("postgresql://...")
+        >>> graph = build_chat_graph(checkpointer)
         >>> result = await graph.ainvoke(
         ...     {"user_query": "What is the average?", ...},
         ...     config={"configurable": {"thread_id": "user123_file456"}}
         ... )
     """
-    # TEMPORARY: Disable PostgreSQL checkpointing due to async compatibility issue
-    # PostgresSaver.aget_tuple() raises NotImplementedError when used with async streaming
-    # TODO: Investigate AsyncPostgresSaver or upgrade langgraph-checkpoint-postgres
-    # For now, graph runs without persistence (each query starts fresh)
-    checkpointer = None
-
-    # Create StateGraph
-    graph = StateGraph(ChatAgentState)
-
-    # Add nodes
-    graph.add_node("coding_agent", coding_agent)
-    graph.add_node("code_checker", code_checker_node)
-    graph.add_node("execute", execute_in_sandbox)
-    graph.add_node("data_analysis", data_analysis_agent)
-    graph.add_node("halt", halt_node)
-
-    # Add edges
-    graph.set_entry_point("coding_agent")
-    graph.add_edge("coding_agent", "code_checker")
-    # code_checker returns Command, so routing is automatic (no add_conditional_edges needed)
-    graph.add_edge("execute", "data_analysis")
-    graph.set_finish_point("data_analysis")
-    graph.set_finish_point("halt")
-
-    # Compile WITHOUT checkpointer for now
-    compiled = graph.compile(checkpointer=checkpointer)
-
     # Create StateGraph
     graph = StateGraph(ChatAgentState)
 
@@ -513,22 +489,25 @@ def build_chat_graph():
     return compiled
 
 
-def get_or_create_graph():
+def get_or_create_graph(checkpointer=None):
     """Get or create cached graph instance.
 
     Lazy initialization: builds graph on first call, returns cached instance thereafter.
     This avoids rebuilding the graph on every request.
 
+    Args:
+        checkpointer: Optional PostgreSQL checkpointer for session persistence
+
     Returns:
         Compiled LangGraph workflow
 
     Example:
-        >>> graph = get_or_create_graph()
+        >>> graph = get_or_create_graph(checkpointer)
         >>> result = await graph.ainvoke({...}, config={...})
     """
     global _cached_graph
 
     if _cached_graph is None:
-        _cached_graph = build_chat_graph()
+        _cached_graph = build_chat_graph(checkpointer)
 
     return _cached_graph

@@ -212,8 +212,28 @@ async def lifespan(app: FastAPI):
     await validate_llm_configuration()
     logging.getLogger("spectra.llm").info("All LLM providers validated successfully")
 
-    # (actual database connection happens on first request via get_db)
-    yield
+    # Initialize PostgreSQL checkpointer for session memory
+    from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+    from psycopg_pool import AsyncConnectionPool
+    from psycopg.rows import dict_row
+
+    # Convert SQLAlchemy URL to psycopg format if needed
+    db_url = settings.database_url
+    if db_url.startswith("postgresql+asyncpg://"):
+        db_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
+
+    async with AsyncConnectionPool(
+        conninfo=db_url,
+        max_size=10,
+        kwargs={"autocommit": True, "row_factory": dict_row}
+    ) as pool:
+        async with AsyncPostgresSaver(pool) as checkpointer:
+            await checkpointer.setup()  # Idempotent - creates tables if needed
+            app.state.checkpointer = checkpointer
+            logging.getLogger("spectra").info("PostgreSQL checkpointer initialized")
+
+            yield
+
     # Shutdown: dispose of database engine
     await engine.dispose()
 

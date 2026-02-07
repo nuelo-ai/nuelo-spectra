@@ -53,6 +53,10 @@ class Settings(BaseSettings):
     sandbox_memory_mb: int = 1024
     sandbox_max_retries: int = 2
 
+    # Session Memory
+    context_window_tokens: int = 12000
+    context_warning_threshold: float = 0.85
+
     model_config = SettingsConfigDict(env_file=".env")
 
     def get_cors_origins(self) -> list[str]:

@@ -1,6 +1,8 @@
 """State schemas for LangGraph agent workflows."""
 
-from typing import TypedDict
+from typing import Annotated, TypedDict
+from langchain_core.messages import AnyMessage
+from langgraph.graph.message import add_messages
 
 
 class OnboardingState(TypedDict):
@@ -81,8 +83,8 @@ class ChatAgentState(TypedDict):
     analysis: str
     """Data Analysis Agent's interpretation of execution results."""
 
-    messages: list
-    """Chat message history for context (not yet implemented in v1)."""
+    messages: Annotated[list[AnyMessage], add_messages]
+    """Conversation history with automatic accumulation via add_messages reducer."""
 
     final_response: str
     """Final response to send back to user."""
