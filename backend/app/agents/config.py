@@ -223,3 +223,33 @@ def get_agent_temperature(agent_name: str) -> float:
     prompts = load_prompts()
     agent_config = prompts["agents"][agent_name]
     return agent_config.get("temperature", 0.0)
+
+
+def get_api_key_for_provider(provider: str, settings) -> str:
+    """Get API key for a specific LLM provider.
+
+    Args:
+        provider: Provider name (e.g., "anthropic", "openai", "google", "ollama", "openrouter").
+        settings: Application settings instance containing API keys.
+
+    Returns:
+        str: API key for the specified provider. Empty string for Ollama (no auth required).
+
+    Raises:
+        ValueError: If provider is unknown or not supported.
+    """
+    if provider == "anthropic":
+        return settings.anthropic_api_key
+    elif provider == "openai":
+        return settings.openai_api_key
+    elif provider == "google":
+        return settings.google_api_key
+    elif provider == "ollama":
+        return ""  # Ollama requires no API key
+    elif provider == "openrouter":
+        return settings.openrouter_api_key
+    else:
+        raise ValueError(
+            f"Unknown provider: {provider}. "
+            f"Supported providers: anthropic, openai, google, ollama, openrouter"
+        )

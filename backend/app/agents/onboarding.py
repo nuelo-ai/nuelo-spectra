@@ -8,7 +8,14 @@ from pathlib import Path
 import pandas as pd
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from app.agents.config import get_agent_prompt, get_agent_max_tokens
+from app.agents.config import (
+    get_agent_prompt,
+    get_agent_max_tokens,
+    get_agent_provider,
+    get_agent_model,
+    get_agent_temperature,
+    get_api_key_for_provider,
+)
 from app.agents.llm_factory import get_llm
 from app.config import get_settings
 
@@ -38,24 +45,6 @@ class OnboardingAgent:
     def __init__(self):
         """Initialize the Onboarding Agent."""
         self.settings = get_settings()
-
-    def _get_api_key(self) -> str:
-        """Get API key based on configured LLM provider.
-
-        Returns:
-            str: API key for the configured provider
-
-        Raises:
-            ValueError: If provider is unknown
-        """
-        if self.settings.llm_provider == "anthropic":
-            return self.settings.anthropic_api_key
-        elif self.settings.llm_provider == "openai":
-            return self.settings.openai_api_key
-        elif self.settings.llm_provider == "google":
-            return self.settings.google_api_key
-        else:
-            raise ValueError(f"Unknown provider: {self.settings.llm_provider}")
 
     async def profile_data(self, file_path: str, file_type: str) -> dict:
         """Profile the dataset using pandas analysis.
@@ -162,15 +151,19 @@ class OnboardingAgent:
         Raises:
             Exception: If LLM invocation fails
         """
-        # Initialize LLM
-        api_key = self._get_api_key()
+        # Initialize LLM using per-agent config
+        provider = get_agent_provider("onboarding")
+        model = get_agent_model("onboarding")
+        temperature = get_agent_temperature("onboarding")
+        api_key = get_api_key_for_provider(provider, self.settings)
         max_tokens = get_agent_max_tokens("onboarding")
-        llm = get_llm(
-            provider=self.settings.llm_provider,
-            model=self.settings.agent_model,
-            api_key=api_key,
-            max_tokens=max_tokens
-        )
+
+        # Build kwargs for provider-specific options
+        kwargs = {"max_tokens": max_tokens, "temperature": temperature}
+        if provider == "ollama":
+            kwargs["base_url"] = self.settings.ollama_base_url
+
+        llm = get_llm(provider=provider, model=model, api_key=api_key, **kwargs)
 
         # Load system prompt from YAML
         system_prompt = get_agent_prompt("onboarding")

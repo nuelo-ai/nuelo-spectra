@@ -4,32 +4,18 @@ import re
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.config import get_stream_writer
 
-from app.agents.config import get_agent_prompt, get_agent_max_tokens, get_allowed_libraries
+from app.agents.config import (
+    get_agent_prompt,
+    get_agent_max_tokens,
+    get_allowed_libraries,
+    get_agent_provider,
+    get_agent_model,
+    get_agent_temperature,
+    get_api_key_for_provider,
+)
 from app.agents.llm_factory import get_llm
 from app.agents.state import ChatAgentState
 from app.config import get_settings
-
-
-def _get_api_key(settings) -> str:
-    """Get API key based on configured LLM provider.
-
-    Args:
-        settings: Application settings instance
-
-    Returns:
-        str: API key for the configured provider
-
-    Raises:
-        ValueError: If provider is unknown
-    """
-    if settings.llm_provider == "anthropic":
-        return settings.anthropic_api_key
-    elif settings.llm_provider == "openai":
-        return settings.openai_api_key
-    elif settings.llm_provider == "google":
-        return settings.google_api_key
-    else:
-        raise ValueError(f"Unknown provider: {settings.llm_provider}")
 
 
 def extract_code_block(text: str) -> str:
@@ -144,15 +130,19 @@ async def coding_agent(state: ChatAgentState) -> dict:
         else:
             user_message += f"\n\nPrevious code had validation issues:\n{error_feedback}\nPlease regenerate the code fixing these issues."
 
-    # Initialize LLM using factory
-    api_key = _get_api_key(settings)
+    # Initialize LLM using per-agent config
+    provider = get_agent_provider("coding")
+    model = get_agent_model("coding")
+    temperature = get_agent_temperature("coding")
+    api_key = get_api_key_for_provider(provider, settings)
     max_tokens = get_agent_max_tokens("coding")
-    llm = get_llm(
-        provider=settings.llm_provider,
-        model=settings.agent_model,
-        api_key=api_key,
-        max_tokens=max_tokens
-    )
+
+    # Build kwargs for provider-specific options
+    kwargs = {"max_tokens": max_tokens, "temperature": temperature}
+    if provider == "ollama":
+        kwargs["base_url"] = settings.ollama_base_url
+
+    llm = get_llm(provider=provider, model=model, api_key=api_key, **kwargs)
 
     # Build messages
     messages = [
