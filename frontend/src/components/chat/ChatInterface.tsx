@@ -7,11 +7,14 @@ import {
   useInvalidateChatMessages,
 } from "@/hooks/useChatMessages";
 import { useSSEStream } from "@/hooks/useSSEStream";
+import { useTabCloseWarning } from "@/hooks/useTabCloseWarning";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { TypingIndicator } from "./TypingIndicator";
 import { DataCard } from "./DataCard";
+import { ContextUsage } from "./ContextUsage";
 import { Separator } from "@/components/ui/separator";
+import { apiClient } from "@/lib/api-client";
 
 interface ChatInterfaceProps {
   fileId: string;
@@ -43,6 +46,14 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
 
   // Track which cards are collapsed (by message ID)
   const [collapsedCards, setCollapsedCards] = useState<Set<string>>(new Set());
+
+  // Track trim confirmation dialog state
+  const [showTrimDialog, setShowTrimDialog] = useState(false);
+
+  // Tab close warning when there's conversation context
+  const messages = chatData?.messages || [];
+  const hasContext = messages.length > 2;  // More than initial greeting
+  useTabCloseWarning(hasContext);
 
   // Scroll to bottom helper
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
@@ -124,6 +135,19 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
     });
   };
 
+  const handleTrimContext = async () => {
+    try {
+      const res = await apiClient.post(`/chat/${fileId}/trim-context`, {});
+      if (res.ok) {
+        setShowTrimDialog(false);
+        // Refetch messages to reflect trimmed state
+        refetch();
+      }
+    } catch (e) {
+      console.error("Failed to trim context:", e);
+    }
+  };
+
   // Parse streaming events to extract progressive data for DataCard
   const getStreamingDataCard = () => {
     if (!isStreaming) return null;
@@ -174,7 +198,6 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
     return { queryBrief, tableData, explanation, generatedCode };
   };
 
-  const messages = chatData?.messages || [];
   const hasMessages = messages.length > 0;
   const showEmptyState = !hasMessages && !isStreaming;
 
@@ -182,10 +205,40 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-3xl mx-auto flex items-center justify-between">
           <h2 className="text-lg font-semibold truncate">{fileName}</h2>
+          <ContextUsage
+            fileId={fileId}
+            messageCount={messages.length}
+            onLimitExceeded={() => setShowTrimDialog(true)}
+          />
         </div>
       </div>
+
+      {/* Trim confirmation dialog */}
+      {showTrimDialog && (
+        <div className="mx-4 my-2 p-3 bg-orange-50 border border-orange-200 rounded-lg text-sm">
+          <p className="text-orange-800 font-medium">Context limit reached</p>
+          <p className="text-orange-700 mt-1">
+            Oldest messages will be removed to make room for new queries.
+            This cannot be undone.
+          </p>
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={handleTrimContext}
+              className="px-3 py-1 bg-orange-600 text-white rounded text-xs hover:bg-orange-700"
+            >
+              Trim older messages
+            </button>
+            <button
+              onClick={() => setShowTrimDialog(false)}
+              className="px-3 py-1 bg-white border rounded text-xs hover:bg-gray-50"
+            >
+              Keep all messages
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Messages area - scrollable */}
       <div ref={scrollAreaRef} className="flex-1 overflow-y-auto">
