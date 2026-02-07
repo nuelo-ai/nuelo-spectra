@@ -22,7 +22,7 @@ System supports multiple LLM providers (Ollama, OpenRouter) with per-agent confi
   - Quota/rate limit exceeded
   - Invalid model name
   - Provider-specific errors
-- **Lazy validation** - Validate provider connectivity first time each agent runs, not at startup. Faster startup, validation happens when actually needed.
+- **Fail-fast startup validation** - Validate provider connectivity at system startup, not on first agent run. Backend refuses to start if any configured provider is unreachable or has invalid credentials. Forces fix before system runs.
 
 ### Per-agent configuration
 - **LLM config in agent's existing YAML** - Add `provider` and `model` fields to each agent's existing YAML prompt file (e.g., `onboarding_agent.yaml` gets `provider: ollama, model: llama3`).
@@ -44,7 +44,11 @@ System supports multiple LLM providers (Ollama, OpenRouter) with per-agent confi
   - Each provider entry specifies: type, endpoint URL (from env), auth method
   - One provider marked with `default: true` flag as system-wide fallback
   - Agents reference providers by name from this registry
-- **Validate at startup** - System validates all agent-referenced providers exist in registry at startup. Fail startup completely if any agent references non-existent provider. Display detailed error message and log for investigation.
+- **Fail-fast startup validation** - System performs comprehensive validation at startup:
+  - **Config validation:** All agent-referenced providers must exist in registry
+  - **Connectivity validation:** All configured providers must be reachable with valid credentials
+  - **Failure behavior:** Backend refuses to start if any validation fails
+  - **Error reporting:** Display detailed error message (which agent, which provider, what's wrong) and log full diagnostics for investigation
 
 ### Error handling & validation
 - **User-friendly errors with detailed logs**
