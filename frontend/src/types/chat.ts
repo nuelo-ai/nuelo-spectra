@@ -32,6 +32,8 @@ export interface ChatAgentResponse {
 }
 
 export type StreamEventType =
+  | "routing_started"
+  | "routing_decided"
   | "coding_started"
   | "validation_started"
   | "execution_started"
@@ -54,4 +56,10 @@ export interface StreamEvent {
   attempt?: number;
   max_attempts?: number;
   data?: Record<string, any>;
+  route?: string;
+  routing_decision?: {
+    route: string;
+    reasoning: string;
+    context_summary: string;
+  };
 }

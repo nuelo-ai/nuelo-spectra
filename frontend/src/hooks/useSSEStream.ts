@@ -30,6 +30,10 @@ export function useSSEStream() {
   // Map status event types to user-friendly messages
   const getStatusMessage = useCallback((type: StreamEventType): string => {
     switch (type) {
+      case "routing_started":
+        return "Analyzing your query...";
+      case "routing_decided":
+        return "Processing...";
       case "coding_started":
         return "Generating code...";
       case "validation_started":
@@ -115,6 +119,14 @@ export function useSSEStream() {
                   newState.events = [...prev.events, event];
 
                   switch (event.type) {
+                    case "routing_started":
+                      newState.currentStatus = "Analyzing your query...";
+                      break;
+
+                    case "routing_decided":
+                      newState.currentStatus = event.message || "Processing...";
+                      break;
+
                     case "coding_started":
                     case "validation_started":
                     case "execution_started":

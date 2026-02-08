@@ -298,54 +298,83 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
             <div className="max-w-3xl mx-auto px-4 mt-6">
               <div className="animate-in fade-in duration-200">
                 {(() => {
-                  const hasNodeComplete = events.some((e) => e.type === "node_complete");
+                  // Detect if this is a memory-only route (no code generation)
+                  const isMemoryRoute = events.some(
+                    (e) => e.type === "routing_decided" && e.route === "MEMORY_SUFFICIENT"
+                  ) || events.some(
+                    (e) =>
+                      e.type === "node_complete" &&
+                      e.data?.routing_decision?.route === "MEMORY_SUFFICIENT"
+                  );
+
+                  // Memory route: render analysis as plain text message (no DataCard)
+                  if (isMemoryRoute) {
+                    const analysisEvent = events.find(
+                      (e) => e.type === "node_complete" && e.node === "data_analysis"
+                    );
+                    const analysisText =
+                      analysisEvent?.data?.analysis ||
+                      analysisEvent?.data?.final_response ||
+                      streamedText;
+
+                    if (analysisText) {
+                      return (
+                        <ChatMessage
+                          message={{
+                            id: "streaming",
+                            file_id: fileId,
+                            role: "assistant",
+                            content: analysisText,
+                            message_type: null,
+                            metadata_json: null,
+                            created_at: new Date().toISOString(),
+                          }}
+                          isStreaming={true}
+                          streamedText={analysisText}
+                        />
+                      );
+                    }
+                    return <TypingIndicator />;
+                  }
+
+                  // Code routes (CODE_MODIFICATION, NEW_ANALYSIS): existing DataCard logic
                   const hasStructuredNode = events.some(
                     (e) =>
                       e.type === "node_complete" &&
                       (e.node === "execute" || e.node === "coding" || e.node === "data_analysis")
                   );
-                  console.log('[ChatInterface] Render check:', {
-                    streamedText: !!streamedText,
-                    hasNodeComplete,
-                    hasStructuredNode,
-                    eventsCount: events.length
-                  });
-                  return null;
+
+                  if (streamedText || events.some((e) => e.type === "node_complete")) {
+                    if (hasStructuredNode) {
+                      return (
+                        <DataCard
+                          {...getStreamingDataCard()!}
+                          isStreaming={true}
+                        />
+                      );
+                    } else if (streamedText) {
+                      return (
+                        <ChatMessage
+                          message={{
+                            id: "streaming",
+                            file_id: fileId,
+                            role: "assistant",
+                            content: streamedText,
+                            message_type: null,
+                            metadata_json: null,
+                            created_at: new Date().toISOString(),
+                          }}
+                          isStreaming={true}
+                          streamedText={streamedText}
+                        />
+                      );
+                    } else {
+                      return <TypingIndicator />;
+                    }
+                  }
+
+                  return <TypingIndicator />;
                 })()}
-                {streamedText || events.some((e) => e.type === "node_complete") ? (
-                  // If we have streaming data, check if it's structured data
-                  events.some(
-                    (e) =>
-                      e.type === "node_complete" &&
-                      (e.node === "execute" || e.node === "coding" || e.node === "data_analysis")
-                  ) ? (
-                    // Render as DataCard for structured response
-                    <DataCard
-                      {...getStreamingDataCard()!}
-                      isStreaming={true}
-                    />
-                  ) : streamedText ? (
-                    // Only render as regular message if we have text
-                    <ChatMessage
-                      message={{
-                        id: "streaming",
-                        file_id: fileId,
-                        role: "assistant",
-                        content: streamedText,
-                        message_type: null,
-                        metadata_json: null,
-                        created_at: new Date().toISOString(),
-                      }}
-                      isStreaming={true}
-                      streamedText={streamedText}
-                    />
-                  ) : (
-                    // Show typing indicator if no text yet
-                    <TypingIndicator />
-                  )
-                ) : (
-                  <TypingIndicator />
-                )}
               </div>
             </div>
           )}
