@@ -1,8 +1,24 @@
 """State schemas for LangGraph agent workflows."""
 
-from typing import Annotated, TypedDict
+from typing import Annotated, Literal, TypedDict
+
 from langchain_core.messages import AnyMessage
 from langgraph.graph.message import add_messages
+from pydantic import BaseModel, Field
+
+
+class RoutingDecision(BaseModel):
+    """Manager Agent's routing decision for query classification.
+
+    Determines which route a user query should take through the agent pipeline:
+    - MEMORY_SUFFICIENT: Answer from conversation history (no code generation)
+    - CODE_MODIFICATION: Modify existing code (incremental changes)
+    - NEW_ANALYSIS: Generate fresh code from scratch
+    """
+
+    route: Literal["MEMORY_SUFFICIENT", "CODE_MODIFICATION", "NEW_ANALYSIS"]
+    reasoning: str = Field(description="Brief explanation of why this route was chosen")
+    context_summary: str = Field(description="Relevant context from conversation for downstream agents")
 
 
 class OnboardingState(TypedDict):
@@ -85,6 +101,12 @@ class ChatAgentState(TypedDict):
 
     messages: Annotated[list[AnyMessage], add_messages]
     """Conversation history with automatic accumulation via add_messages reducer."""
+
+    routing_decision: RoutingDecision | None
+    """Manager Agent's routing decision (route, reasoning, context_summary). None on first entry."""
+
+    previous_code: str
+    """Previously generated code passed by Manager for CODE_MODIFICATION mode."""
 
     final_response: str
     """Final response to send back to user."""
