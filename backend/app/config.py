@@ -57,6 +57,9 @@ class Settings(BaseSettings):
     context_window_tokens: int = 12000
     context_warning_threshold: float = 0.85
 
+    # Suggestions
+    suggestion_auto_send: bool = True
+
     model_config = SettingsConfigDict(env_file=".env")
 
     def get_cors_origins(self) -> list[str]:

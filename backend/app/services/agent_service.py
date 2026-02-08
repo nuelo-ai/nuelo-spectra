@@ -71,8 +71,9 @@ async def run_onboarding(
             detail=f"Onboarding agent failed: {str(e)}"
         )
 
-    # Update file record with summary and context
+    # Update file record with summary, suggestions, and context
     file_record.data_summary = result.data_summary
+    file_record.query_suggestions = result.query_suggestions
     file_record.user_context = user_context if user_context else None
 
     await db.commit()
@@ -171,8 +172,12 @@ async def run_chat_query(
     thread_id = f"file_{file_id}_user_{user_id}"
     config = {"configurable": {"thread_id": thread_id}}
 
-    # Build initial state (metadata only - no messages field)
-    # The messages field is omitted here because it's managed via checkpoint
+    # Build initial state: per-query fields only.
+    # Fields like generated_code, execution_result, analysis are OMITTED so that
+    # checkpoint values from previous queries persist — the Manager Agent needs
+    # to see previous code/results for accurate routing decisions.
+    # These fields use .get() with defaults throughout the graph, so missing on
+    # first query (no checkpoint) is safe.
     from langchain_core.messages import HumanMessage
 
     initial_state = {
@@ -182,18 +187,14 @@ async def run_chat_query(
         "data_summary": file_record.data_summary,
         "user_context": file_record.user_context or "",
         "file_path": file_record.file_path,
-        "generated_code": "",
         "validation_result": "",
         "validation_errors": [],
         "error_count": 0,
         "max_steps": settings.agent_max_retries,
-        "execution_result": "",
-        "analysis": "",
         "final_response": "",
         "error": "",
         "routing_decision": None,
         "previous_code": "",
-        "messages": []  # Initialize empty - will be populated from checkpoint or updated below
     }
 
     # Add new user message to checkpoint using aupdate_state
@@ -202,10 +203,8 @@ async def run_chat_query(
     # On subsequent calls, appends to existing checkpointed messages
     await graph.aupdate_state(config, {"messages": [HumanMessage(content=user_query)]})
 
-    # Remove messages from initial_state before invoke so checkpoint takes precedence
-    initial_state.pop("messages")
-
     # Invoke graph - it will load checkpointed state with accumulated messages
+    # Messages come from checkpoint (not initial_state) so conversation history persists
     result = await graph.ainvoke(initial_state, config)
 
     # Save user message to chat history
@@ -322,8 +321,12 @@ async def run_chat_query_stream(
     thread_id = f"file_{file_id}_user_{user_id}"
     config = {"configurable": {"thread_id": thread_id}}
 
-    # Build initial state (metadata only - no messages field)
-    # The messages field is omitted here because it's managed via checkpoint
+    # Build initial state: per-query fields only.
+    # Fields like generated_code, execution_result, analysis are OMITTED so that
+    # checkpoint values from previous queries persist — the Manager Agent needs
+    # to see previous code/results for accurate routing decisions.
+    # These fields use .get() with defaults throughout the graph, so missing on
+    # first query (no checkpoint) is safe.
     from langchain_core.messages import HumanMessage
 
     initial_state = {
@@ -331,21 +334,17 @@ async def run_chat_query_stream(
         "user_id": str(user_id),
         "user_query": user_query,
         "data_summary": file_record.data_summary,
-        "data_profile": data_profile_json,  # Add structured data profile
+        "data_profile": data_profile_json,
         "user_context": file_record.user_context or "",
         "file_path": file_record.file_path,
-        "generated_code": "",
         "validation_result": "",
         "validation_errors": [],
         "error_count": 0,
         "max_steps": settings.agent_max_retries,
-        "execution_result": "",
-        "analysis": "",
         "final_response": "",
         "error": "",
         "routing_decision": None,
         "previous_code": "",
-        "messages": []  # Initialize empty - will be populated from checkpoint or updated below
     }
 
     # Add new user message to checkpoint using aupdate_state
@@ -353,9 +352,6 @@ async def run_chat_query_stream(
     # On first call (no checkpoint), creates checkpoint with this message
     # On subsequent calls, appends to existing checkpointed messages
     await graph.aupdate_state(config, {"messages": [HumanMessage(content=user_query)]})
-
-    # Remove messages from initial_state before invoke so checkpoint takes precedence
-    initial_state.pop("messages")
 
     # Start timing for stream metadata
     start_time = time.monotonic()

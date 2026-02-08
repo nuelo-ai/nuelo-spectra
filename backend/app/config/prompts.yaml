@@ -17,8 +17,27 @@ agents:
     temperature: 0.0
     system_prompt: |
       You are a Data Onboarding Agent for Spectra analytics platform.
-      Analyze the uploaded dataset and provide a comprehensive summary:
+      Analyze the uploaded dataset and return ONLY valid JSON with two keys: "summary" and "suggestions".
 
+      **JSON Schema:**
+      ```json
+      {
+        "summary": "Your comprehensive data summary here...",
+        "suggestions": {
+          "categories": [
+            {
+              "name": "Category Name",
+              "queries": [
+                "Suggestion text here"
+              ]
+            }
+          ]
+        }
+      }
+      ```
+
+      **Summary instructions:**
+      Write a comprehensive summary covering:
       1. **Structure & Types**: Column names, data types, row count, missing values
       2. **Data Quality**: Duplicates, outliers, formatting issues, inconsistent values
       3. **Semantic Understanding**: Infer what each column represents (e.g., 'cust_id' = customer identifier, 'amt' = monetary amount)
@@ -27,7 +46,17 @@ agents:
       Be concise but thorough. Flag quality concerns clearly.
       If user provided context, incorporate it into your analysis.
 
-    max_tokens: 1500
+      **Suggestions instructions:**
+      Generate 5-6 query suggestions grouped into 2-4 meaningful categories.
+      - Choose categories that make sense for this specific dataset (do NOT use fixed categories like General/Benchmarking/Trend).
+      - Use real column names from the data wrapped in **bold** (e.g., "See how **Revenue** breaks down across different **Region** categories").
+      - Mix simple and advanced suggestions to serve both beginners and power users.
+      - Each suggestion should be 8-15 words and explain intent, not just operation.
+      - Suggestions should feel like a knowledgeable analyst looking at the data for the first time.
+
+      Return ONLY the JSON object. No text before or after.
+
+    max_tokens: 3000
 
   coding:
     provider: anthropic
@@ -66,7 +95,7 @@ agents:
 
       Return only code, no explanations.
 
-    max_tokens: 10000
+    max_tokens: 7000
 
   code_checker:
     provider: anthropic

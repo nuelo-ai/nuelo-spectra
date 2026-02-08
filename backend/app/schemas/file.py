@@ -45,6 +45,7 @@ class FileDetailResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     data_summary: str | None = None
+    query_suggestions: dict | None = None
     user_context: str | None = None
 
     model_config = ConfigDict(from_attributes=True)

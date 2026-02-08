@@ -33,6 +33,9 @@ class OnboardingResult:
     sample_data: str
     """First few rows formatted for user verification."""
 
+    query_suggestions: dict | None = None
+    """LLM-generated categorized query suggestions for the dataset."""
+
 
 class OnboardingAgent:
     """Agent that profiles uploaded data and generates natural language summaries.
@@ -138,15 +141,17 @@ class OnboardingAgent:
                 "quality_issues": [f"Profiling error: {str(e)}"]
             }
 
-    async def generate_summary(self, profile: dict, user_context: str) -> str:
-        """Generate natural language summary using LLM.
+    async def generate_summary(
+        self, profile: dict, user_context: str
+    ) -> tuple[str, dict | None]:
+        """Generate natural language summary and query suggestions using LLM.
 
         Args:
             profile: Data profile dict from profile_data()
             user_context: Optional user-provided context
 
         Returns:
-            str: Natural language summary of the dataset
+            tuple[str, dict | None]: (summary text, suggestions dict or None)
 
         Raises:
             Exception: If LLM invocation fails
@@ -182,7 +187,16 @@ class OnboardingAgent:
         ]
 
         response = await asyncio.to_thread(llm.invoke, messages)
-        return response.content
+
+        # Parse JSON response with fallback for non-JSON responses
+        try:
+            parsed = json.loads(response.content)
+            summary = parsed.get("summary", response.content)
+            suggestions = parsed.get("suggestions", None)
+            return (summary, suggestions)
+        except json.JSONDecodeError:
+            # Fallback: treat entire response as summary, no suggestions
+            return (response.content, None)
 
     async def run(
         self,
@@ -206,8 +220,8 @@ class OnboardingAgent:
         # Phase 1: Profile data
         profile = await self.profile_data(file_path, file_type)
 
-        # Phase 2: Generate LLM summary
-        summary = await self.generate_summary(profile, user_context)
+        # Phase 2: Generate LLM summary and query suggestions
+        summary, suggestions = await self.generate_summary(profile, user_context)
 
         # Format sample data for display
         sample_data = json.dumps(profile.get("sample_data", []), indent=2)
@@ -215,5 +229,6 @@ class OnboardingAgent:
         return OnboardingResult(
             data_summary=summary,
             data_profile=profile,
-            sample_data=sample_data
+            sample_data=sample_data,
+            query_suggestions=suggestions,
         )
