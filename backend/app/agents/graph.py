@@ -1,9 +1,18 @@
 """LangGraph workflow for chat analysis pipeline.
 
 This module assembles the complete chat analysis pipeline:
+Manager Agent -> (routes to) Coding Agent or Data Analysis Agent
+
+The Manager Agent classifies queries and routes via Command:
+- MEMORY_SUFFICIENT -> Data Analysis Agent (skip code generation)
+- CODE_MODIFICATION -> Coding Agent (modify existing code)
+- NEW_ANALYSIS -> Coding Agent (fresh code generation)
+
+The code generation pipeline remains:
 Coding Agent -> Code Checker -> Execute -> Data Analysis Agent
 
 The workflow includes:
+- Intelligent query routing via Manager Agent
 - Conditional routing based on validation results
 - Bounded retry loops with circuit breaker (max_steps=3)
 - PostgreSQL checkpointing for thread isolation
@@ -19,6 +28,7 @@ from langgraph.types import Command
 from langgraph.config import get_stream_writer
 
 from app.agents.state import ChatAgentState
+from app.agents.manager import manager_node
 from app.agents.coding import coding_agent
 from app.agents.code_checker import validate_code
 from app.agents.data_analysis import data_analysis_agent
@@ -446,11 +456,15 @@ def build_chat_graph(checkpointer=None):
     """Build and compile the chat analysis LangGraph workflow.
 
     Creates a StateGraph with the following flow:
-    1. coding_agent: Generate Python code from query
-    2. code_checker: Validate with AST + LLM (routes to execute/retry/halt)
-    3. execute: Run code in restricted namespace (stub)
-    4. data_analysis: Interpret results and generate explanation
-    5. halt: Error handler for max retries exceeded
+    1. manager: Classify query and route via Command
+       - MEMORY_SUFFICIENT -> data_analysis (skip code generation)
+       - CODE_MODIFICATION -> coding_agent (modify existing code)
+       - NEW_ANALYSIS -> coding_agent (fresh code generation)
+    2. coding_agent: Generate Python code from query
+    3. code_checker: Validate with AST + LLM (routes to execute/retry/halt)
+    4. execute: Run code in E2B sandbox
+    5. data_analysis: Interpret results and generate explanation
+    6. halt: Error handler for max retries exceeded
 
     Args:
         checkpointer: Optional PostgreSQL checkpointer for session persistence
@@ -469,14 +483,17 @@ def build_chat_graph(checkpointer=None):
     graph = StateGraph(ChatAgentState)
 
     # Add nodes
+    graph.add_node("manager", manager_node)
     graph.add_node("coding_agent", coding_agent)
     graph.add_node("code_checker", code_checker_node)
     graph.add_node("execute", execute_in_sandbox)
     graph.add_node("data_analysis", data_analysis_agent)
     graph.add_node("halt", halt_node)
 
-    # Add edges
-    graph.set_entry_point("coding_agent")
+    # Set entry point to Manager Agent (routes via Command, no explicit edges needed)
+    graph.set_entry_point("manager")
+
+    # Add edges for code generation pipeline
     graph.add_edge("coding_agent", "code_checker")
     # code_checker returns Command, so routing is automatic (no add_conditional_edges needed)
     graph.add_edge("execute", "data_analysis")

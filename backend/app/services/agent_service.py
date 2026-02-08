@@ -191,6 +191,8 @@ async def run_chat_query(
         "analysis": "",
         "final_response": "",
         "error": "",
+        "routing_decision": None,
+        "previous_code": "",
         "messages": []  # Initialize empty - will be populated from checkpoint or updated below
     }
 
@@ -215,6 +217,10 @@ async def run_chat_query(
         role="user"
     )
 
+    # Serialize routing_decision for metadata storage
+    rd = result.get("routing_decision")
+    routing_meta = rd.model_dump() if hasattr(rd, "model_dump") else (rd or {})
+
     # Save assistant response with metadata
     final_response_text = result.get("final_response") or result.get("analysis", "")
     await ChatService.create_message(
@@ -228,7 +234,8 @@ async def run_chat_query(
             "generated_code": result.get("generated_code"),
             "execution_result": result.get("execution_result"),
             "error_count": result.get("error_count", 0),
-            "error": result.get("error")
+            "error": result.get("error"),
+            "routing_decision": routing_meta,
         }
     )
 
@@ -336,6 +343,8 @@ async def run_chat_query_stream(
         "analysis": "",
         "final_response": "",
         "error": "",
+        "routing_decision": None,
+        "previous_code": "",
         "messages": []  # Initialize empty - will be populated from checkpoint or updated below
     }
 
@@ -366,6 +375,11 @@ async def run_chat_query_stream(
                 # State delta after a node completes
                 # chunk is dict keyed by node name: {"coding_agent": {"generated_code": "..."}}
                 for node_name, update in chunk.items():
+                    # Serialize routing_decision Pydantic model to dict for JSON
+                    if "routing_decision" in update and update["routing_decision"]:
+                        rd = update["routing_decision"]
+                        if hasattr(rd, "model_dump"):
+                            update["routing_decision"] = rd.model_dump()
                     final_state.update(update)
                     # Yield node completion with relevant fields only
                     # (filter to user-visible data, exclude internal state)
@@ -374,7 +388,8 @@ async def run_chat_query_stream(
                         "node": node_name,
                         **{k: v for k, v in update.items()
                            if k in ("generated_code", "execution_result",
-                                    "analysis", "final_response", "error")}
+                                    "analysis", "final_response", "error",
+                                    "routing_decision")}
                     }
 
         # Stream completed successfully -- save atomically with fresh session
@@ -393,6 +408,10 @@ async def run_chat_query_stream(
             await ChatService.create_message(
                 save_db, file_id, user_id, user_query, role="user"
             )
+            # Serialize routing_decision for metadata storage
+            rd = final_state.get("routing_decision")
+            routing_meta = rd.model_dump() if hasattr(rd, "model_dump") else (rd or {})
+
             # Save assistant response with stream metadata
             response_text = final_state.get("final_response") or final_state.get("analysis", "")
             await ChatService.create_message(
@@ -403,6 +422,7 @@ async def run_chat_query_stream(
                     "generated_code": final_state.get("generated_code"),
                     "execution_result": final_state.get("execution_result"),
                     "error_count": final_state.get("error_count", 0),
+                    "routing_decision": routing_meta,
                     "stream_metadata": {
                         "duration_ms": elapsed_ms,
                         "retry_count": final_state.get("error_count", 0),
