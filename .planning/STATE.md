@@ -98,8 +98,9 @@ Recent decisions affecting v0.2 work:
 - [x] SMTP email migration → Phase 11: Production Email
 
 **New v0.2 features:**
-- [ ] Query suggestions (Phase 9)
-- [ ] Web search integration (Phase 10)
+- [ ] Query suggestions (Phase 10)
+- [ ] Web search integration (Phase 11)
+- [ ] Query safety filter in Manager Agent (security — block PII extraction, prompt injection, etc.)
 
 ### Blockers/Concerns
 
