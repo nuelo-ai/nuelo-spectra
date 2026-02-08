@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 10 of 12 (Smart Query Suggestions)
-Plan: 1 of 2 complete
-Status: In progress
+Plan: 2 of 2 complete
+Status: Complete (pending human verification)
 Branch: develop (v0.2 development branch)
-Last activity: 2026-02-08 — Completed 10-01-PLAN.md (Backend query suggestions infrastructure)
+Last activity: 2026-02-08 — Completed 10-02-PLAN.md (Frontend suggestion UI - awaiting human verification)
 
-Progress: [████████████████████░░░░░░░░] 67% (46/~69 estimated total plans)
+Progress: [██████████████████████░░░░░░] 68% (47/~69 estimated total plans)
 
 ## Performance Metrics
 
@@ -42,7 +42,7 @@ Progress: [████████████████████░░░
 | 7. Multi-LLM Provider Infrastructure | 4/4 | Complete |
 | 8. Session Memory with PostgreSQL Checkpointing | 2/2 | Complete (UAT passed) |
 | 9. Manager Agent with Intelligent Query Routing | 3/3 | Complete |
-| 10. Smart Query Suggestions | 1/2 | In progress |
+| 10. Smart Query Suggestions | 2/2 | Complete (pending verification) |
 | 11. Web Search Tool Integration | 0/TBD | Not started |
 | 12. Production Email Infrastructure | 0/TBD | Not started |
 
@@ -58,7 +58,8 @@ Progress: [████████████████████░░░
 - v0.2 Phase 9 Plan 2: 4 min execution (route-aware agents and frontend routing events)
 - v0.2 Phase 9 Plan 3: 3 min execution (routing test suite - 28 tests, fully mocked)
 - v0.2 Phase 10 Plan 1: 4 min execution (backend query suggestions infrastructure - JSON prompts, DB migration, stream wiring)
-- Trend: Stable, high velocity maintained (Phase 7 complete in ~12 min, Phase 8 ~7 min, Phase 9 complete in ~11 min)
+- v0.2 Phase 10 Plan 2: 3 min execution (frontend suggestion UI - QuerySuggestions component, DataCard follow-ups, ChatInterface integration)
+- Trend: Stable, high velocity maintained (Phase 7 ~12 min, Phase 8 ~7 min, Phase 9 ~11 min, Phase 10 ~7 min)
 
 ## Accumulated Context
 
@@ -91,6 +92,7 @@ Recent decisions affecting v0.2 work:
 - **Phase 9 Plan 2 (2026-02-08):** Data Analysis Agent checks routing_decision at function top for MEMORY_SUFFICIENT mode (answers from conversation history, returns empty generated_code/execution_result). Coding Agent checks for CODE_MODIFICATION mode (modifies previous_code instead of generating from scratch). Both use internal branching per RESEARCH.md guidance (single node, no graph topology changes). Frontend adds routing_started/routing_decided to StreamEventType, detects MEMORY_SUFFICIENT route to render as plain ChatMessage (no DataCard).
 - **Phase 9 Plan 3 (2026-02-08):** 28 fully-mocked pytest tests covering routing classification (6), fallback behavior (4), route-specific agent behavior (3), graph topology (4), configuration (4), structured logging (2), RoutingDecision model (3), and stream events (2). Uses _patch_manager_dependencies helper pattern for test boilerplate reduction. All 99 tests (28 routing + 37 code checker + 34 LLM provider) pass with zero regressions.
 - **Phase 10 Plan 1 (2026-02-08):** JSON-structured LLM output with graceful fallback for both onboarding and data_analysis agents. Single LLM call for summary + suggestions (no separate API call). LLM-decided suggestion categories per dataset (not fixed templates). query_suggestions stored as JSON in files table. follow_up_suggestions as list[str] in ChatAgentState, included in stream event allowlist and chat_messages.metadata_json. suggestion_auto_send configurable via .env (default: True). Alembic migration cleaned to exclude LangGraph checkpoint tables.
+- **Phase 10 Plan 2 (2026-02-08):** QuerySuggestions component with categorized chips, fade-out animation, ReactMarkdown for bold column names. Auto-send as default (clicking chip calls handleSend directly). ChatInput initialValue prop for non-auto-send fallback. DataCard follow-up chips with "Continue exploring" header, plain text (no markdown). Follow-up suggestions extracted from metadata_json (historical) and stream events (live). Conditional empty state: suggestions when available, generic fallback for older files.
 
 ### Pending Todos
 
@@ -120,7 +122,7 @@ Recent decisions affecting v0.2 work:
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 10-01-PLAN.md (Backend query suggestions infrastructure)
-Resume with: Execute 10-02-PLAN.md (Frontend suggestion UI)
-Resume file: .planning/phases/10-smart-query-suggestions/10-01-SUMMARY.md
-Next decision: Execute Phase 10 Plan 02
+Stopped at: Completed 10-02-PLAN.md auto tasks (Frontend suggestion UI) - awaiting human verification checkpoint
+Resume with: Human verification of Smart Query Suggestions feature (Task 3 checkpoint), then Phase 11
+Resume file: .planning/phases/10-smart-query-suggestions/10-02-SUMMARY.md
+Next decision: Verify Smart Query Suggestions feature, then start Phase 11 planning
