@@ -1,4 +1,9 @@
-"""Data Analysis Agent for interpreting code execution results."""
+"""Data Analysis Agent for interpreting code execution results.
+
+Supports two modes:
+- MEMORY_SUFFICIENT: Answer from conversation history without code generation
+- Standard mode: Interpret code execution results (existing behavior)
+"""
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.config import get_stream_writer
@@ -17,19 +22,27 @@ from app.config import get_settings
 
 
 async def data_analysis_agent(state: ChatAgentState) -> dict:
-    """Interpret code execution results and generate natural language explanation.
+    """Interpret code execution results or answer from conversation history.
 
-    This agent takes the executed code's output and translates it into a clear,
-    conversational explanation that directly answers the user's query.
+    This agent operates in two modes based on routing_decision:
+
+    1. MEMORY_SUFFICIENT mode: Answers the user's question using only
+       conversation history and data context (no code generation or execution).
+
+    2. Standard mode (default): Takes executed code output and translates it
+       into a clear, conversational explanation that directly answers the user's query.
 
     Args:
         state: Current chat workflow state containing:
             - user_query: Original natural language question
-            - generated_code: Python code that was executed
-            - execution_result: Output from code execution
+            - routing_decision: Manager Agent's routing decision (or None)
+            - messages: Conversation history (used in memory mode)
+            - generated_code: Python code that was executed (standard mode)
+            - execution_result: Output from code execution (standard mode)
 
     Returns:
-        dict: State update with analysis and final_response keys
+        dict: State update with analysis and final_response keys.
+              In memory mode, generated_code and execution_result are empty strings.
 
     Examples:
         >>> state = {
@@ -42,6 +55,81 @@ async def data_analysis_agent(state: ChatAgentState) -> dict:
         True
     """
     writer = get_stream_writer()
+
+    # Check for MEMORY_SUFFICIENT route — answer from conversation history
+    routing = state.get("routing_decision")
+    if routing and routing.route == "MEMORY_SUFFICIENT":
+        # MEMORY MODE: Answer from conversation history, no code/execution
+        writer({
+            "type": "analysis_started",
+            "message": "Answering from conversation context...",
+            "step": 1,
+            "total_steps": 1,
+        })
+
+        # Build memory-mode prompt using conversation history
+        messages_history = state.get("messages", [])
+        context_summary = routing.context_summary
+
+        # Format recent messages for the prompt (last 10)
+        recent = messages_history[-10:] if len(messages_history) > 10 else messages_history
+        formatted_messages = []
+        for msg in recent:
+            role = getattr(msg, "type", "unknown")
+            content = msg.content if isinstance(msg.content, str) else str(msg.content)
+            formatted_messages.append(f"[{role}]: {content}")
+        conversation_text = "\n".join(formatted_messages)
+
+        memory_prompt = f"""Answer the user's question using ONLY the conversation history and data context.
+
+**User's Question:** {state["user_query"]}
+
+**Relevant Context from Router:**
+{context_summary}
+
+**Data Summary:**
+{state.get("data_summary", "No data summary available")}
+
+**Recent Conversation:**
+{conversation_text}
+
+**Instructions:**
+- Answer the user's question using information from the conversation history
+- If the answer is in previous results, reference it clearly
+- If asking about data structure, use the data summary
+- DO NOT suggest generating new code
+- Be concise and direct
+- Format for readability with markdown"""
+
+        # Use existing LLM config for data_analysis agent
+        settings = get_settings()
+        provider = get_agent_provider("data_analysis")
+        model = get_agent_model("data_analysis")
+        temperature = get_agent_temperature("data_analysis")
+        api_key = get_api_key_for_provider(provider, settings)
+        max_tokens = get_agent_max_tokens("data_analysis")
+
+        kwargs = {"max_tokens": max_tokens, "temperature": temperature}
+        if provider == "ollama":
+            kwargs["base_url"] = settings.ollama_base_url
+
+        llm = get_llm(provider=provider, model=model, api_key=api_key, **kwargs)
+
+        messages = [
+            SystemMessage(content="You are a Data Analyst answering questions using conversation context. Do not suggest generating code."),
+            HumanMessage(content=memory_prompt),
+        ]
+
+        response = await llm.ainvoke(messages)
+
+        return {
+            "analysis": response.content,
+            "final_response": response.content,
+            "generated_code": "",       # No code generated for memory route
+            "execution_result": "",     # No execution for memory route
+        }
+
+    # STANDARD MODE: Interpret code execution results (existing behavior)
     writer({
         "type": "analysis_started",
         "message": "Analyzing...",
