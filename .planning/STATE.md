@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** Phase 8 - Session Memory with PostgreSQL Checkpointing (v0.2 milestone)
+**Current focus:** Phase 9 - Manager Agent with Intelligent Query Routing (v0.2 milestone)
 
 ## Current Position
 
-Phase: 8 of 11 (Session Memory with PostgreSQL Checkpointing)
-Plan: 2 of 4 complete
-Status: In progress - Token counting and context management complete
+Phase: 9 of 12 (Manager Agent with Intelligent Query Routing)
+Plan: 1 of 3 complete
+Status: In progress
 Branch: develop (v0.2 development branch)
-Last activity: 2026-02-07 — Completed 08-02-PLAN.md (Token Counting & Context Management)
+Last activity: 2026-02-08 — Completed 09-01-PLAN.md (Manager Agent core implementation)
 
-Progress: [█████████████████░░░░░░░░░░░] 64% (42/66 total plans)
+Progress: [█████████████████░░░░░░░░░░░] 62% (43/~69 estimated total plans)
 
 ## Performance Metrics
 
@@ -40,7 +40,11 @@ Progress: [█████████████████░░░░░░
 | Phase | Plans | Status |
 |-------|-------|--------|
 | 7. Multi-LLM Provider Infrastructure | 4/4 | Complete |
-| 8. Session Memory with PostgreSQL Checkpointing | 2/4 | In progress |
+| 8. Session Memory with PostgreSQL Checkpointing | 2/4 | Paused (UAT pending) |
+| 9. Manager Agent with Intelligent Query Routing | 1/3 | In progress |
+| 10. Smart Query Suggestions | 0/TBD | Not started |
+| 11. Web Search Tool Integration | 0/TBD | Not started |
+| 12. Production Email Infrastructure | 0/TBD | Not started |
 
 **Recent Trend:**
 - v0.1 completed in 5 days with aggressive execution
@@ -50,7 +54,8 @@ Progress: [█████████████████░░░░░░
 - v0.2 Phase 7 Plan 4: 5 min execution (test scenarios - 34 tests, all 5 providers)
 - v0.2 Phase 8 Plan 1: 4 min execution (PostgreSQL checkpointing infrastructure)
 - v0.2 Phase 8 Plan 2: 3 min execution (token counting & context management)
-- Trend: Stable, high velocity maintained (Phase 7 complete in ~12 min, Phase 8 in progress ~7 min so far)
+- v0.2 Phase 9 Plan 1: 4 min execution (Manager Agent core with RoutingDecision and graph wiring)
+- Trend: Stable, high velocity maintained (Phase 7 complete in ~12 min, Phase 8 ~7 min, Phase 9 in progress)
 
 ## Accumulated Context
 
@@ -78,6 +83,8 @@ Recent decisions affecting v0.2 work:
 - **Phase 7 Plan 4 (2026-02-07):** 34 comprehensive test scenarios covering all 5 providers (Anthropic, OpenAI, Google, Ollama, OpenRouter) with factory, config, validation, error classification, health endpoint, and invoke logging tests. All tests fully mocked - zero live API keys required (LLM-06 satisfied)
 - **Phase 8 Plan 1 (2026-02-07):** AsyncPostgresSaver initialized in FastAPI lifespan with connection pooling, add_messages reducer for message accumulation, thread-based conversation isolation per file tab. AsyncPostgresSaver is NOT an async context manager (use direct instantiation). Database URL conversion required (postgresql+asyncpg → postgresql for psycopg). Messages initialized as [HumanMessage(content=user_query)] for proper reducer behavior. Context window defaults: 12000 tokens, 85% warning threshold.
 - **Phase 8 Plan 2 (2026-02-07):** Tiktoken-based token counting with provider-specific scaling factors (1.1x Anthropic, 1.05x Google, 1.0x OpenAI/others) for fast UI updates without expensive API calls. Two-phase trimming flow: check → user confirmation → trim to 90% of limit. Context usage displayed in ChatInterface header ("X / 12,000 tokens" with orange warning at 85%, red at exceeded). Browser tab close warning via beforeunload when hasContext (>2 messages). GET /context-usage and POST /trim-context endpoints for frontend integration.
+- **Manager Agent Architecture Decision (2026-02-07):** Insert Manager Agent as new Phase 9 (renumber subsequent phases 9→10, 10→11, 11→12). Manager Agent intelligently routes queries to 3 paths: MEMORY_SUFFICIENT (answer from history, ~87% faster), CODE_MODIFICATION (modify existing code), NEW_ANALYSIS (fresh code generation). Use Sonnet model (configurable via YAML like Phase 7), analyze last 10 messages, default to NEW_ANALYSIS on uncertainty. No route override or hybrid routes in v0.2 (design for future flexibility). Expected impact: ~40% cost reduction, significantly faster responses for simple queries. Architecture doc: .planning/architecture/manager-agent-routing.md
+- **Phase 9 Plan 1 (2026-02-08):** RoutingDecision Pydantic model defined in state.py (avoids circular imports). Manager Agent uses with_structured_output for reliable JSON parsing. Command-based routing (same pattern as code_checker_node). Fallback to NEW_ANALYSIS on any routing failure. routing_context_messages configurable via YAML (default: 10). Routing decision included in stream events and chat history metadata.
 
 ### Pending Todos
 
@@ -98,13 +105,15 @@ Recent decisions affecting v0.2 work:
 
 **v0.2 phase dependencies:**
 - Phase 8 (Memory) depends on Phase 7 (LLM infrastructure) being stable
-- Phase 9 (Suggestions) depends on Phase 8 (memory) for context-aware features
-- Phase 10 (Web Search) can be parallelized with Phase 9 but sequenced after for safety
-- Phase 11 (SMTP) is independent (can run anytime after Phase 7)
+- Phase 9 (Manager Agent) depends on Phase 8 (memory infrastructure) for conversation context
+- Phase 10 (Suggestions) depends on Phase 9 (Manager Agent) for optimal conversation flow
+- Phase 11 (Web Search) can be parallelized with Phase 10 but sequenced after for safety
+- Phase 12 (SMTP) is independent (can run anytime after Phase 7)
 
 ## Session Continuity
 
-Last session: 2026-02-07
-Stopped at: Completed Phase 8 Plan 2 (08-02-PLAN.md) - Token Counting & Context Management. Tiktoken-based counting with provider scaling, context usage display in ChatInterface header, trim confirmation dialog, and browser tab close warning.
-Resume with: `/gsd:execute-plan` for 08-03 (next Phase 8 plan) or continue with remaining Phase 8 plans
-Resume file: .planning/phases/08-session-memory-with-postgresql-checkpointing/08-02-SUMMARY.md
+Last session: 2026-02-08
+Stopped at: Phase 9 Plan 1 complete (Manager Agent core). Plans 09-02 and 09-03 remain.
+Resume with: `/gsd:execute-phase` for 09-02-PLAN.md (agent mode adaptations for routing)
+Resume file: .planning/phases/09-manager-agent-with-intelligent-query-routing/09-02-PLAN.md
+Next step: Execute Plan 09-02 to add memory-only mode to Data Analysis Agent and modification mode to Coding Agent
