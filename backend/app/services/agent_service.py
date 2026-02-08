@@ -385,7 +385,7 @@ async def run_chat_query_stream(
                         **{k: v for k, v in update.items()
                            if k in ("generated_code", "execution_result",
                                     "analysis", "final_response", "error",
-                                    "routing_decision")}
+                                    "routing_decision", "follow_up_suggestions")}
                     }
 
         # Stream completed successfully -- save atomically with fresh session
@@ -419,6 +419,7 @@ async def run_chat_query_stream(
                     "execution_result": final_state.get("execution_result"),
                     "error_count": final_state.get("error_count", 0),
                     "routing_decision": routing_meta,
+                    "follow_up_suggestions": final_state.get("follow_up_suggestions", []),
                     "stream_metadata": {
                         "duration_ms": elapsed_ms,
                         "retry_count": final_state.get("error_count", 0),

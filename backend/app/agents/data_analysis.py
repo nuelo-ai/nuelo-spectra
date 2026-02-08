@@ -5,7 +5,9 @@ Supports two modes:
 - Standard mode: Interpret code execution results (existing behavior)
 """
 
-from langchain_core.messages import HumanMessage, SystemMessage
+import json
+
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langgraph.config import get_stream_writer
 
 from app.agents.config import (
@@ -41,8 +43,9 @@ async def data_analysis_agent(state: ChatAgentState) -> dict:
             - execution_result: Output from code execution (standard mode)
 
     Returns:
-        dict: State update with analysis and final_response keys.
-              In memory mode, generated_code and execution_result are empty strings.
+        dict: State update with analysis, final_response, and messages (AIMessage).
+              In memory mode, generated_code and execution_result are NOT returned
+              so that checkpoint values from previous queries are preserved.
 
     Examples:
         >>> state = {
@@ -122,11 +125,14 @@ async def data_analysis_agent(state: ChatAgentState) -> dict:
 
         response = await llm.ainvoke(messages)
 
+        # Do NOT return generated_code or execution_result here —
+        # that would overwrite checkpoint values from previous queries,
+        # causing the Manager Agent to lose track of previous code/results.
         return {
             "analysis": response.content,
             "final_response": response.content,
-            "generated_code": "",       # No code generated for memory route
-            "execution_result": "",     # No execution for memory route
+            "follow_up_suggestions": [],
+            "messages": [AIMessage(content=response.content)],
         }
 
     # STANDARD MODE: Interpret code execution results (existing behavior)
@@ -172,8 +178,20 @@ async def data_analysis_agent(state: ChatAgentState) -> dict:
     # Invoke LLM
     response = await llm.ainvoke(messages)
 
-    # Return both analysis and final_response (same content for v1)
+    # Parse JSON response with fallback for non-JSON responses
+    try:
+        parsed = json.loads(response.content)
+        analysis = parsed.get("analysis", response.content)
+        follow_ups = parsed.get("follow_up_suggestions", [])
+    except json.JSONDecodeError:
+        # Fallback: treat entire response as analysis, no follow-ups
+        analysis = response.content
+        follow_ups = []
+
+    # Return analysis, final_response, follow_up_suggestions, and add AIMessage to conversation history
     return {
-        "analysis": response.content,
-        "final_response": response.content
+        "analysis": analysis,
+        "final_response": analysis,
+        "follow_up_suggestions": follow_ups,
+        "messages": [AIMessage(content=analysis)],
     }

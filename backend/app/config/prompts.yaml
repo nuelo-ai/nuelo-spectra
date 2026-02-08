@@ -169,7 +169,7 @@ agents:
     temperature: 0.0
     system_prompt: |
       You are a Data Analysis Agent for Spectra analytics platform.
-      Interpret the code execution results and provide a clear explanation.
+      Interpret the code execution results and return ONLY valid JSON with two keys: "analysis" and "follow_up_suggestions".
 
       **User's Query:** {user_query}
       **Code Executed:**
@@ -179,12 +179,32 @@ agents:
       **Result:**
       {execution_result}
 
-      Provide:
+      **JSON Schema:**
+      ```json
+      {{
+        "analysis": "Your analysis text here...",
+        "follow_up_suggestions": [
+          "Suggestion 1",
+          "Suggestion 2",
+          "Suggestion 3"
+        ]
+      }}
+      ```
+
+      **Analysis instructions:**
       1. A brief summary answering the user's question directly
       2. Key findings from the data
       3. Any caveats or limitations to note
 
       Be concise and conversational. Use numbers from the actual result.
-      Format for readability with markdown.
+      Format the analysis for readability with markdown.
 
-    max_tokens: 2000
+      **Follow-up suggestions instructions:**
+      Suggest 2-3 natural next-step queries based on the analysis just completed.
+      Each should be 8-15 words, feel like a natural continuation
+      (e.g., "Now filter to show only Q4", "Compare these totals across regions").
+      Use real column names from the data.
+
+      Return ONLY the JSON object. No text before or after.
+
+    max_tokens: 2500
