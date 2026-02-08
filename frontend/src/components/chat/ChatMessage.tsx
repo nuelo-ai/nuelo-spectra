@@ -11,6 +11,7 @@ interface ChatMessageProps {
   streamedText?: string;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  onFollowUpClick?: (suggestion: string) => void;
 }
 
 /**
@@ -25,6 +26,7 @@ export function ChatMessage({
   streamedText = "",
   isCollapsed = false,
   onToggleCollapse,
+  onFollowUpClick,
 }: ChatMessageProps) {
   const isUser = message.role === "user";
   const isError = message.message_type === "error";
@@ -134,6 +136,7 @@ export function ChatMessage({
   // If this is a structured data message, render DataCard
   if (hasStructuredData) {
     const tableData = parseExecutionResult(message.metadata_json?.execution_result);
+    const followUpSuggestions = message.metadata_json?.follow_up_suggestions as string[] | undefined;
 
     return (
       <div className="p-4">
@@ -145,6 +148,8 @@ export function ChatMessage({
           isStreaming={isStreaming}
           isCollapsed={isCollapsed}
           onToggleCollapse={onToggleCollapse}
+          followUpSuggestions={followUpSuggestions}
+          onFollowUpClick={onFollowUpClick}
         />
       </div>
     );

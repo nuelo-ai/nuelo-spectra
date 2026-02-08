@@ -203,7 +203,13 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
     }
     console.log('[ChatInterface] explanation:', explanation ? 'found' : 'not found');
 
-    return { queryBrief, tableData, explanation, generatedCode };
+    // Extract follow-up suggestions from data_analysis node_complete event
+    let followUpSuggestions: string[] | undefined = undefined;
+    if (analysisEvent?.data?.follow_up_suggestions) {
+      followUpSuggestions = analysisEvent.data.follow_up_suggestions;
+    }
+
+    return { queryBrief, tableData, explanation, generatedCode, followUpSuggestions };
   };
 
   const hasMessages = messages.length > 0;
@@ -316,6 +322,7 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
                   message={message}
                   isCollapsed={collapsedCards.has(message.id)}
                   onToggleCollapse={() => toggleCardCollapse(message.id)}
+                  onFollowUpClick={handleSend}
                 />
               ))}
             </div>
@@ -374,10 +381,13 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
 
                   if (streamedText || events.some((e) => e.type === "node_complete")) {
                     if (hasStructuredNode) {
+                      const streamingData = getStreamingDataCard()!;
                       return (
                         <DataCard
-                          {...getStreamingDataCard()!}
+                          {...streamingData}
                           isStreaming={true}
+                          followUpSuggestions={streamingData.followUpSuggestions}
+                          onFollowUpClick={handleSend}
                         />
                       );
                     } else if (streamedText) {

@@ -27,6 +27,8 @@ interface DataCardProps {
   isStreaming?: boolean; // Whether this card is still receiving data
   isCollapsed?: boolean; // Whether card starts collapsed (older cards)
   onToggleCollapse?: () => void; // Callback for collapse toggle
+  followUpSuggestions?: string[]; // Follow-up query suggestions
+  onFollowUpClick?: (suggestion: string) => void; // Callback when follow-up chip clicked
 }
 
 /**
@@ -42,6 +44,8 @@ export function DataCard({
   isStreaming = false,
   isCollapsed = false,
   onToggleCollapse,
+  followUpSuggestions,
+  onFollowUpClick,
 }: DataCardProps) {
   const [internalCollapsed, setInternalCollapsed] = useState(isCollapsed);
 
@@ -165,6 +169,24 @@ export function DataCard({
             </div>
           </div>
         ) : null}
+
+        {/* Follow-up suggestions */}
+        {followUpSuggestions && followUpSuggestions.length > 0 && !isStreaming && (
+          <div className="space-y-2 pt-3 border-t border-border/50">
+            <h4 className="text-xs font-medium text-muted-foreground">Continue exploring</h4>
+            <div className="flex flex-wrap gap-2">
+              {followUpSuggestions.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  onClick={() => onFollowUpClick?.(suggestion)}
+                  className="px-3 py-1.5 rounded-full border text-xs hover:bg-accent hover:border-primary/30 transition-all duration-200 bg-background cursor-pointer"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </CollapsibleContent>
     </Collapsible>
   );
