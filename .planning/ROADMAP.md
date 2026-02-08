@@ -135,8 +135,6 @@ Plans:
 Plans:
 - [x] 08-01-PLAN.md — Enable AsyncPostgresSaver checkpointing, add_messages reducer, graph wiring, context window config
 - [x] 08-02-PLAN.md — Token counting, context management endpoints, frontend tab close warning and context usage display
-- [ ] 08-03-PLAN.md — TBD (UAT and verification pending)
-- [ ] 08-04-PLAN.md — TBD (UAT and verification pending)
 
 ---
 
@@ -247,7 +245,7 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12
 | 5. Secure Code Execution & E2B | v0.1 | 6/6 | Complete | 2026-02-06 |
 | 6. Interactive Data Cards | v0.1 | 6/6 | Complete | 2026-02-06 |
 | 7. Multi-LLM Infrastructure | v0.2 | 4/4 | Complete | 2026-02-07 |
-| 8. Session Memory | v0.2 | 2/4 | In progress | - |
+| 8. Session Memory | v0.2 | 2/2 | Complete | 2026-02-08 |
 | 9. Manager Agent Routing | v0.2 | 3/3 | Complete | 2026-02-08 |
 | 10. Smart Query Suggestions | v0.2 | 0/TBD | Not started | - |
 | 11. Web Search Integration | v0.2 | 0/TBD | Not started | - |
