@@ -9,13 +9,13 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 
 ## Current Position
 
-Phase: 9 of 12 (Manager Agent with Intelligent Query Routing)
-Plan: 3 of 3 complete
-Status: Phase complete
+Phase: 10 of 12 (Smart Query Suggestions)
+Plan: 1 of 2 complete
+Status: In progress
 Branch: develop (v0.2 development branch)
-Last activity: 2026-02-08 — Completed 09-03-PLAN.md (Routing test suite - 28 tests)
+Last activity: 2026-02-08 — Completed 10-01-PLAN.md (Backend query suggestions infrastructure)
 
-Progress: [███████████████████░░░░░░░░░] 65% (45/~69 estimated total plans)
+Progress: [████████████████████░░░░░░░░] 67% (46/~69 estimated total plans)
 
 ## Performance Metrics
 
@@ -42,7 +42,7 @@ Progress: [███████████████████░░░░
 | 7. Multi-LLM Provider Infrastructure | 4/4 | Complete |
 | 8. Session Memory with PostgreSQL Checkpointing | 2/2 | Complete (UAT passed) |
 | 9. Manager Agent with Intelligent Query Routing | 3/3 | Complete |
-| 10. Smart Query Suggestions | 0/TBD | Not started |
+| 10. Smart Query Suggestions | 1/2 | In progress |
 | 11. Web Search Tool Integration | 0/TBD | Not started |
 | 12. Production Email Infrastructure | 0/TBD | Not started |
 
@@ -57,6 +57,7 @@ Progress: [███████████████████░░░░
 - v0.2 Phase 9 Plan 1: 4 min execution (Manager Agent core with RoutingDecision and graph wiring)
 - v0.2 Phase 9 Plan 2: 4 min execution (route-aware agents and frontend routing events)
 - v0.2 Phase 9 Plan 3: 3 min execution (routing test suite - 28 tests, fully mocked)
+- v0.2 Phase 10 Plan 1: 4 min execution (backend query suggestions infrastructure - JSON prompts, DB migration, stream wiring)
 - Trend: Stable, high velocity maintained (Phase 7 complete in ~12 min, Phase 8 ~7 min, Phase 9 complete in ~11 min)
 
 ## Accumulated Context
@@ -89,6 +90,7 @@ Recent decisions affecting v0.2 work:
 - **Phase 9 Plan 1 (2026-02-08):** RoutingDecision Pydantic model defined in state.py (avoids circular imports). Manager Agent uses with_structured_output for reliable JSON parsing. Command-based routing (same pattern as code_checker_node). Fallback to NEW_ANALYSIS on any routing failure. routing_context_messages configurable via YAML (default: 10). Routing decision included in stream events and chat history metadata.
 - **Phase 9 Plan 2 (2026-02-08):** Data Analysis Agent checks routing_decision at function top for MEMORY_SUFFICIENT mode (answers from conversation history, returns empty generated_code/execution_result). Coding Agent checks for CODE_MODIFICATION mode (modifies previous_code instead of generating from scratch). Both use internal branching per RESEARCH.md guidance (single node, no graph topology changes). Frontend adds routing_started/routing_decided to StreamEventType, detects MEMORY_SUFFICIENT route to render as plain ChatMessage (no DataCard).
 - **Phase 9 Plan 3 (2026-02-08):** 28 fully-mocked pytest tests covering routing classification (6), fallback behavior (4), route-specific agent behavior (3), graph topology (4), configuration (4), structured logging (2), RoutingDecision model (3), and stream events (2). Uses _patch_manager_dependencies helper pattern for test boilerplate reduction. All 99 tests (28 routing + 37 code checker + 34 LLM provider) pass with zero regressions.
+- **Phase 10 Plan 1 (2026-02-08):** JSON-structured LLM output with graceful fallback for both onboarding and data_analysis agents. Single LLM call for summary + suggestions (no separate API call). LLM-decided suggestion categories per dataset (not fixed templates). query_suggestions stored as JSON in files table. follow_up_suggestions as list[str] in ChatAgentState, included in stream event allowlist and chat_messages.metadata_json. suggestion_auto_send configurable via .env (default: True). Alembic migration cleaned to exclude LangGraph checkpoint tables.
 
 ### Pending Todos
 
@@ -118,7 +120,7 @@ Recent decisions affecting v0.2 work:
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Phase 8 UAT complete (4/4 passed), Phase 9 complete — ready for Phase 10
-Resume with: Plan Phase 10 (Smart Query Suggestions)
-Resume file: .planning/phases/08-session-memory-with-postgresql-checkpointing/08-UAT.md
-Next decision: Plan Phase 10 (Smart Query Suggestions)
+Stopped at: Completed 10-01-PLAN.md (Backend query suggestions infrastructure)
+Resume with: Execute 10-02-PLAN.md (Frontend suggestion UI)
+Resume file: .planning/phases/10-smart-query-suggestions/10-01-SUMMARY.md
+Next decision: Execute Phase 10 Plan 02
