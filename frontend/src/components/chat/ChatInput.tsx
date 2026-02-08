@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, KeyboardEvent } from "react";
+import { useState, useEffect, KeyboardEvent } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,14 +8,23 @@ import { Button } from "@/components/ui/button";
 interface ChatInputProps {
   onSend: (message: string) => void;
   disabled?: boolean;
+  /** External value to populate the input (e.g., from suggestion chips) */
+  initialValue?: string;
 }
 
 /**
  * Auto-expanding textarea with Enter-to-send and Shift+Enter for newlines.
  * Send button always visible as alternative to Enter key.
  */
-export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
+export function ChatInput({ onSend, disabled = false, initialValue }: ChatInputProps) {
   const [message, setMessage] = useState("");
+
+  // When initialValue changes externally, populate the input
+  useEffect(() => {
+    if (initialValue) {
+      setMessage(initialValue);
+    }
+  }, [initialValue]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {

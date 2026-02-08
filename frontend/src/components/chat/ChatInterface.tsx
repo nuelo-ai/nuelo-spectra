@@ -13,8 +13,10 @@ import { ChatInput } from "./ChatInput";
 import { TypingIndicator } from "./TypingIndicator";
 import { DataCard } from "./DataCard";
 import { ContextUsage } from "./ContextUsage";
+import { QuerySuggestions } from "./QuerySuggestions";
 import { Separator } from "@/components/ui/separator";
 import { apiClient } from "@/lib/api-client";
+import { useFileSummary } from "@/hooks/useFileManager";
 
 interface ChatInterfaceProps {
   fileId: string;
@@ -49,6 +51,12 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
 
   // Track trim confirmation dialog state
   const [showTrimDialog, setShowTrimDialog] = useState(false);
+
+  // Suggestion input state for non-auto-send mode
+  const [suggestionInput, setSuggestionInput] = useState<string | undefined>(undefined);
+
+  // Fetch file summary for query suggestions
+  const { data: summaryData } = useFileSummary(fileId);
 
   // Tab close warning when there's conversation context
   const messages = chatData?.messages || [];
@@ -262,21 +270,41 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
 
           {/* Empty state */}
           {showEmptyState && (
-            <div className="flex items-center justify-center min-h-[60vh] p-8 text-center">
-              <div className="max-w-md opacity-60" style={{ animation: "var(--animate-fadeIn)" }}>
-                <div className="mb-4">
-                  <div className="h-16 w-16 rounded-full gradient-primary mx-auto mb-3 flex items-center justify-center">
-                    <span className="text-2xl text-white">💬</span>
+            <>
+              {summaryData?.query_suggestions?.categories &&
+              summaryData.query_suggestions.categories.length > 0 ? (
+                <QuerySuggestions
+                  categories={summaryData.query_suggestions.categories}
+                  onSelect={(suggestion) => {
+                    const autoSend = summaryData.suggestion_auto_send ?? true;
+                    if (autoSend) {
+                      handleSend(suggestion);
+                    } else {
+                      setSuggestionInput(suggestion);
+                    }
+                  }}
+                  autoSend={summaryData.suggestion_auto_send ?? true}
+                />
+              ) : (
+                <div className="flex items-center justify-center min-h-[60vh] p-8 text-center">
+                  <div className="max-w-md opacity-60" style={{ animation: "var(--animate-fadeIn)" }}>
+                    <div className="mb-4">
+                      <div className="h-16 w-16 rounded-full gradient-primary mx-auto mb-3 flex items-center justify-center">
+                        <span className="text-2xl text-white">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground font-medium">
+                      Ask a question about your data to get started
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Your AI assistant will analyze your data and provide insights
+                    </p>
                   </div>
                 </div>
-                <p className="text-muted-foreground font-medium">
-                  Ask a question about your data to get started
-                </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Your AI assistant will analyze your data and provide insights
-                </p>
-              </div>
-            </div>
+              )}
+            </>
           )}
 
           {/* Message list */}
@@ -420,7 +448,7 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
       {/* Chat input - fixed at bottom */}
       <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-3xl mx-auto px-4 py-4">
-          <ChatInput onSend={handleSend} disabled={isStreaming || isLoading} />
+          <ChatInput onSend={handleSend} disabled={isStreaming || isLoading} initialValue={suggestionInput} />
         </div>
       </div>
     </div>
