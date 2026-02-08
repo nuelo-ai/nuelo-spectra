@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 9 of 12 (Manager Agent with Intelligent Query Routing)
-Plan: 1 of 3 complete
+Plan: 2 of 3 complete
 Status: In progress
 Branch: develop (v0.2 development branch)
-Last activity: 2026-02-08 — Completed 09-01-PLAN.md (Manager Agent core implementation)
+Last activity: 2026-02-08 — Completed 09-02-PLAN.md (Route-aware agents and frontend routing events)
 
-Progress: [█████████████████░░░░░░░░░░░] 62% (43/~69 estimated total plans)
+Progress: [██████████████████░░░░░░░░░░] 64% (44/~69 estimated total plans)
 
 ## Performance Metrics
 
@@ -41,7 +41,7 @@ Progress: [█████████████████░░░░░░
 |-------|-------|--------|
 | 7. Multi-LLM Provider Infrastructure | 4/4 | Complete |
 | 8. Session Memory with PostgreSQL Checkpointing | 2/4 | Paused (UAT pending) |
-| 9. Manager Agent with Intelligent Query Routing | 1/3 | In progress |
+| 9. Manager Agent with Intelligent Query Routing | 2/3 | In progress |
 | 10. Smart Query Suggestions | 0/TBD | Not started |
 | 11. Web Search Tool Integration | 0/TBD | Not started |
 | 12. Production Email Infrastructure | 0/TBD | Not started |
@@ -55,7 +55,8 @@ Progress: [█████████████████░░░░░░
 - v0.2 Phase 8 Plan 1: 4 min execution (PostgreSQL checkpointing infrastructure)
 - v0.2 Phase 8 Plan 2: 3 min execution (token counting & context management)
 - v0.2 Phase 9 Plan 1: 4 min execution (Manager Agent core with RoutingDecision and graph wiring)
-- Trend: Stable, high velocity maintained (Phase 7 complete in ~12 min, Phase 8 ~7 min, Phase 9 in progress)
+- v0.2 Phase 9 Plan 2: 4 min execution (route-aware agents and frontend routing events)
+- Trend: Stable, high velocity maintained (Phase 7 complete in ~12 min, Phase 8 ~7 min, Phase 9 ~8 min so far)
 
 ## Accumulated Context
 
@@ -85,6 +86,7 @@ Recent decisions affecting v0.2 work:
 - **Phase 8 Plan 2 (2026-02-07):** Tiktoken-based token counting with provider-specific scaling factors (1.1x Anthropic, 1.05x Google, 1.0x OpenAI/others) for fast UI updates without expensive API calls. Two-phase trimming flow: check → user confirmation → trim to 90% of limit. Context usage displayed in ChatInterface header ("X / 12,000 tokens" with orange warning at 85%, red at exceeded). Browser tab close warning via beforeunload when hasContext (>2 messages). GET /context-usage and POST /trim-context endpoints for frontend integration.
 - **Manager Agent Architecture Decision (2026-02-07):** Insert Manager Agent as new Phase 9 (renumber subsequent phases 9→10, 10→11, 11→12). Manager Agent intelligently routes queries to 3 paths: MEMORY_SUFFICIENT (answer from history, ~87% faster), CODE_MODIFICATION (modify existing code), NEW_ANALYSIS (fresh code generation). Use Sonnet model (configurable via YAML like Phase 7), analyze last 10 messages, default to NEW_ANALYSIS on uncertainty. No route override or hybrid routes in v0.2 (design for future flexibility). Expected impact: ~40% cost reduction, significantly faster responses for simple queries. Architecture doc: .planning/architecture/manager-agent-routing.md
 - **Phase 9 Plan 1 (2026-02-08):** RoutingDecision Pydantic model defined in state.py (avoids circular imports). Manager Agent uses with_structured_output for reliable JSON parsing. Command-based routing (same pattern as code_checker_node). Fallback to NEW_ANALYSIS on any routing failure. routing_context_messages configurable via YAML (default: 10). Routing decision included in stream events and chat history metadata.
+- **Phase 9 Plan 2 (2026-02-08):** Data Analysis Agent checks routing_decision at function top for MEMORY_SUFFICIENT mode (answers from conversation history, returns empty generated_code/execution_result). Coding Agent checks for CODE_MODIFICATION mode (modifies previous_code instead of generating from scratch). Both use internal branching per RESEARCH.md guidance (single node, no graph topology changes). Frontend adds routing_started/routing_decided to StreamEventType, detects MEMORY_SUFFICIENT route to render as plain ChatMessage (no DataCard).
 
 ### Pending Todos
 
@@ -113,7 +115,7 @@ Recent decisions affecting v0.2 work:
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Phase 9 Plan 1 complete (Manager Agent core). Plans 09-02 and 09-03 remain.
-Resume with: `/gsd:execute-phase` for 09-02-PLAN.md (agent mode adaptations for routing)
-Resume file: .planning/phases/09-manager-agent-with-intelligent-query-routing/09-02-PLAN.md
-Next step: Execute Plan 09-02 to add memory-only mode to Data Analysis Agent and modification mode to Coding Agent
+Stopped at: Phase 9 Plan 2 complete (route-aware agents and frontend routing events). Plan 09-03 remains.
+Resume with: `/gsd:execute-phase` for 09-03-PLAN.md (testing & verification)
+Resume file: .planning/phases/09-manager-agent-with-intelligent-query-routing/09-03-PLAN.md
+Next step: Execute Plan 09-03 to test all three routing paths end-to-end
