@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v0.1 Beta MVP** - Phases 1-6 (shipped 2026-02-06)
-- 🚧 **v0.2 Intelligence & Integration** - Phases 7-11 (in progress)
+- 🚧 **v0.2 Intelligence & Integration** - Phases 7-12 (in progress)
 
 ## Phases
 
@@ -130,19 +130,45 @@ Plans:
 4. User sees current context usage displayed in chat interface (e.g., "8,543 / 12,000 tokens used")
 5. User receives warning when context reaches 85% of token limit with option to continue
 
-**Plans:** 2 plans
+**Plans:** 4 plans (estimated)
 
 Plans:
-- [ ] 08-01-PLAN.md — Enable AsyncPostgresSaver checkpointing, add_messages reducer, graph wiring, context window config
-- [ ] 08-02-PLAN.md — Token counting, context management endpoints, frontend tab close warning and context usage display
+- [x] 08-01-PLAN.md — Enable AsyncPostgresSaver checkpointing, add_messages reducer, graph wiring, context window config
+- [x] 08-02-PLAN.md — Token counting, context management endpoints, frontend tab close warning and context usage display
+- [ ] 08-03-PLAN.md — TBD (UAT and verification pending)
+- [ ] 08-04-PLAN.md — TBD (UAT and verification pending)
 
 ---
 
-#### Phase 9: Smart Query Suggestions
+#### Phase 9: Manager Agent with Intelligent Query Routing
+
+**Goal:** Implement Manager Agent to intelligently route queries between memory-only responses, code modification, and fresh code generation, reducing response time by ~40% and improving conversation UX.
+
+**Depends on:** Phase 8 (conversation memory infrastructure)
+
+**Requirements:** ROUTING-01, ROUTING-02, ROUTING-03, ROUTING-04, ROUTING-05, ROUTING-06, ROUTING-07, ROUTING-08, ROUTING-09, ROUTING-10
+
+**Success Criteria** (what must be TRUE):
+1. Manager Agent analyzes user queries and routes to one of three paths: MEMORY_SUFFICIENT, CODE_MODIFICATION, or NEW_ANALYSIS
+2. Memory-only queries (e.g., "What were the columns?") respond in <3 seconds without code generation
+3. Manager Agent uses configurable LLM provider (default: Sonnet) via YAML config consistent with Phase 7
+4. System defaults to NEW_ANALYSIS fallback when routing decision is uncertain
+5. Manager Agent logs all routing decisions with reasoning for monitoring and optimization
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — Manager Agent node with RoutingDecision schema, Command-based routing, YAML config, graph entry point change
+- [ ] 09-02-PLAN.md — Route-aware agent behavior (memory mode for Data Analysis, modification mode for Coding), frontend routing event handling
+- [ ] 09-03-PLAN.md — TDD test suite for routing classification, fallback behavior, route-specific agents, graph topology
+
+---
+
+#### Phase 10: Smart Query Suggestions
 
 **Goal:** New chat tabs display intelligent, context-aware query suggestions grouped by analysis intent, reducing blank-page intimidation.
 
-**Depends on:** Phase 8 (Onboarding Agent working with memory)
+**Depends on:** Phase 9 (Manager Agent enables better conversation flow)
 
 **Requirements:** SUGGEST-01, SUGGEST-02, SUGGEST-03, SUGGEST-04, SUGGEST-05, SUGGEST-06
 
@@ -156,12 +182,12 @@ Plans:
 **Plans:** TBD
 
 Plans:
-- [ ] 09-01: TBD
-- [ ] 09-02: TBD
+- [ ] 10-01: TBD
+- [ ] 10-02: TBD
 
 ---
 
-#### Phase 10: Web Search Tool Integration
+#### Phase 11: Web Search Tool Integration
 
 **Goal:** Data Analysis Agent can search web via Serper.dev to answer benchmarking queries that require external data, with transparent source citations.
 
@@ -179,12 +205,12 @@ Plans:
 **Plans:** TBD
 
 Plans:
-- [ ] 10-01: TBD
-- [ ] 10-02: TBD
+- [ ] 11-01: TBD
+- [ ] 11-02: TBD
 
 ---
 
-#### Phase 11: Production Email Infrastructure
+#### Phase 12: Production Email Infrastructure
 
 **Goal:** System uses standard SMTP for all email operations with production-ready password reset flow, replacing dev-mode console logging.
 
@@ -202,15 +228,15 @@ Plans:
 **Plans:** TBD
 
 Plans:
-- [ ] 11-01: TBD
-- [ ] 11-02: TBD
+- [ ] 12-01: TBD
+- [ ] 12-02: TBD
 
 ---
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 7 → 8 → 9 → 10 → 11
+Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -221,7 +247,8 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11
 | 5. Secure Code Execution & E2B | v0.1 | 6/6 | Complete | 2026-02-06 |
 | 6. Interactive Data Cards | v0.1 | 6/6 | Complete | 2026-02-06 |
 | 7. Multi-LLM Infrastructure | v0.2 | 4/4 | Complete | 2026-02-07 |
-| 8. Session Memory | v0.2 | 0/2 | Planned | - |
-| 9. Smart Query Suggestions | v0.2 | 0/TBD | Not started | - |
-| 10. Web Search Integration | v0.2 | 0/TBD | Not started | - |
-| 11. Production Email | v0.2 | 0/TBD | Not started | - |
+| 8. Session Memory | v0.2 | 2/4 | In progress | - |
+| 9. Manager Agent Routing | v0.2 | 0/3 | Not started | - |
+| 10. Smart Query Suggestions | v0.2 | 0/TBD | Not started | - |
+| 11. Web Search Integration | v0.2 | 0/TBD | Not started | - |
+| 12. Production Email | v0.2 | 0/TBD | Not started | - |
