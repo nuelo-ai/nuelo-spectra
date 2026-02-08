@@ -158,9 +158,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — Manager Agent node with RoutingDecision schema, Command-based routing, YAML config, graph entry point change
-- [ ] 09-02-PLAN.md — Route-aware agent behavior (memory mode for Data Analysis, modification mode for Coding), frontend routing event handling
-- [ ] 09-03-PLAN.md — TDD test suite for routing classification, fallback behavior, route-specific agents, graph topology
+- [x] 09-01-PLAN.md — Manager Agent node with RoutingDecision schema, Command-based routing, YAML config, graph entry point change
+- [x] 09-02-PLAN.md — Route-aware agent behavior (memory mode for Data Analysis, modification mode for Coding), frontend routing event handling
+- [x] 09-03-PLAN.md — TDD test suite for routing classification, fallback behavior, route-specific agents, graph topology
 
 ---
 
@@ -248,7 +248,7 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12
 | 6. Interactive Data Cards | v0.1 | 6/6 | Complete | 2026-02-06 |
 | 7. Multi-LLM Infrastructure | v0.2 | 4/4 | Complete | 2026-02-07 |
 | 8. Session Memory | v0.2 | 2/4 | In progress | - |
-| 9. Manager Agent Routing | v0.2 | 0/3 | Not started | - |
+| 9. Manager Agent Routing | v0.2 | 3/3 | Complete | 2026-02-08 |
 | 10. Smart Query Suggestions | v0.2 | 0/TBD | Not started | - |
 | 11. Web Search Integration | v0.2 | 0/TBD | Not started | - |
 | 12. Production Email | v0.2 | 0/TBD | Not started | - |
