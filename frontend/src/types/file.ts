@@ -41,7 +41,7 @@ export interface FileSummaryResponse {
   query_suggestions: {
     categories: Array<{
       name: string;
-      suggestions: string[];
+      queries: string[];
     }>;
   } | null;
   suggestion_auto_send: boolean;

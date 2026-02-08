@@ -179,8 +179,16 @@ async def data_analysis_agent(state: ChatAgentState) -> dict:
     response = await llm.ainvoke(messages)
 
     # Parse JSON response with fallback for non-JSON responses
+    # Strip markdown code fences if LLM wrapped response in ```json...```
+    content = response.content.strip()
+    if content.startswith("```"):
+        first_newline = content.index("\n")
+        content = content[first_newline + 1:]
+        if content.endswith("```"):
+            content = content[:-3].strip()
+
     try:
-        parsed = json.loads(response.content)
+        parsed = json.loads(content)
         analysis = parsed.get("analysis", response.content)
         follow_ups = parsed.get("follow_up_suggestions", [])
     except json.JSONDecodeError:

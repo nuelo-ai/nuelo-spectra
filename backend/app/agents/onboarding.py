@@ -189,8 +189,18 @@ class OnboardingAgent:
         response = await asyncio.to_thread(llm.invoke, messages)
 
         # Parse JSON response with fallback for non-JSON responses
+        # Strip markdown code fences if LLM wrapped response in ```json...```
+        content = response.content.strip()
+        if content.startswith("```"):
+            # Remove opening fence (```json or ```)
+            first_newline = content.index("\n")
+            content = content[first_newline + 1:]
+            # Remove closing fence
+            if content.endswith("```"):
+                content = content[:-3].strip()
+
         try:
-            parsed = json.loads(response.content)
+            parsed = json.loads(content)
             summary = parsed.get("summary", response.content)
             suggestions = parsed.get("suggestions", None)
             return (summary, suggestions)

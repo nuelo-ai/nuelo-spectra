@@ -6,7 +6,7 @@ import ReactMarkdown from "react-markdown";
 interface QuerySuggestionsProps {
   categories: Array<{
     name: string;
-    suggestions: string[];
+    queries: string[];
   }>;
   onSelect: (suggestion: string) => void;
   autoSend?: boolean;
@@ -55,7 +55,7 @@ export function QuerySuggestions({
               {category.name}
             </h3>
             <div className="flex flex-wrap justify-center gap-2">
-              {category.suggestions.map((suggestion) => {
+              {category.queries.map((suggestion) => {
                 const isSelected = selected === suggestion;
                 const isFadingOut = selected !== null && !isSelected;
 
