@@ -115,10 +115,20 @@ async def da_with_tools_node(state: ChatAgentState) -> dict:
 
     # Build messages for the LLM
     if has_tool_messages:
-        # In tool-calling loop: use ALL messages from state (includes
-        # SystemMessage, HumanMessage, AIMessage with tool_calls, ToolMessages)
-        # The LLM needs the full conversation to decide next action
-        messages = list(existing_messages)
+        # In tool-calling loop: the SystemMessage (with JSON instructions) was
+        # a local variable on the first call and is NOT in state.messages.
+        # We must prepend it so the LLM still follows JSON output format.
+        # Only include messages from the current tool conversation (after last
+        # HumanMessage) to avoid flooding with old checkpoint history.
+        last_human_idx = -1
+        for i, msg in enumerate(existing_messages):
+            if isinstance(msg, HumanMessage):
+                last_human_idx = i
+        if last_human_idx >= 0:
+            tool_conversation = existing_messages[last_human_idx:]
+        else:
+            tool_conversation = existing_messages[-5:]
+        messages = [SystemMessage(content=system_prompt)] + list(tool_conversation)
     else:
         # First call: construct fresh messages
         messages = [
