@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 12 of 13 (Production Email Infrastructure)
-Plan: 1 of 2 complete
-Status: In progress
+Plan: 2 of 2 complete
+Status: Phase 12 complete
 Branch: develop (v0.2 development branch)
-Last activity: 2026-02-09 — Phase 12 Plan 01 complete (SMTP email infrastructure, PasswordResetToken model)
+Last activity: 2026-02-09 — Phase 12 complete (DB-backed password reset tokens, SMTP startup validation, frontend error page)
 
-Progress: [██████████████████████████░░░] 75% (52/~69 estimated total plans)
+Progress: [██████████████████████████░░░] 77% (53/~69 estimated total plans)
 
 ## Performance Metrics
 
@@ -44,7 +44,7 @@ Progress: [███████████████████████
 | 9. Manager Agent with Intelligent Query Routing | 3/3 | Complete |
 | 10. Smart Query Suggestions | 2/2 | Complete (UAT passed) |
 | 11. Web Search Tool Integration | 3/3 | Complete (UAT passed) |
-| 12. Production Email Infrastructure | 1/2 | In progress |
+| 12. Production Email Infrastructure | 2/2 | Complete |
 | 13. Migrate Web Search (Tavily) | 1/1 | Complete |
 
 **Recent Trend:**
@@ -65,7 +65,8 @@ Progress: [███████████████████████
 - v0.2 Phase 11 Plan 3: 10 min execution (frontend search UI - useSearchToggle, ChatInput toggle, search activity, DataCard sources, UAT + 3 bug fix rounds)
 - v0.2 Phase 13 Plan 1: 3 min execution (Tavily migration - SearchService rewrite, tool output update, Serper removal)
 - v0.2 Phase 12 Plan 1: 4 min execution (SMTP email infrastructure - aiosmtplib, PasswordResetToken model, Jinja2 templates)
-- Trend: Stable, high velocity maintained (Phase 7 ~12 min, Phase 8 ~7 min, Phase 9 ~11 min, Phase 10 ~7 min, Phase 11 ~20 min, Phase 13 ~3 min, Phase 12 ~4 min so far)
+- v0.2 Phase 12 Plan 2: 2 min execution (DB-backed tokens, cooldown, SMTP startup validation, frontend error page)
+- Trend: Stable, high velocity maintained (Phase 7 ~12 min, Phase 8 ~7 min, Phase 9 ~11 min, Phase 10 ~7 min, Phase 11 ~20 min, Phase 13 ~3 min, Phase 12 ~6 min)
 
 ## Accumulated Context
 
@@ -104,6 +105,7 @@ Recent decisions affecting v0.2 work:
 - **Phase 11 Plan 3 (2026-02-09):** Frontend search UI complete with useSearchToggle hook (config check, quota validation), custom toggle button below ChatInput (shadcn Switch not installed), real-time search activity indicator showing actual query text, DataCard Sources section with clickable page title links. Toggle resets to OFF after each query. UAT revealed bind_tools mode system prompt loss issue - da_response_node makes fresh LLM call when search was used for reliable JSON output and quality analysis. Phase 11 complete - full web search integration operational.
 
 - **Phase 12 Plan 1 (2026-02-09):** aiosmtplib with start_tls=True for SMTP transport (replaces Mailgun HTTP API). SHA-256 hashing of reset tokens with secrets.compare_digest for constant-time verification. Dev mode console logging when SMTP_HOST is empty. PasswordResetToken model with token_hash, is_used, is_active, expires_at. Jinja2 HTML/text email templates with inline CSS. validate_smtp_connection() for startup health checks.
+- **Phase 12 Plan 2 (2026-02-09):** DB-backed single-use tokens replace JWT for password reset (SHA-256 hash lookup, is_active + is_used + expires_at validation). In-memory dict cooldown (2 min per email) prevents reset spam without leaking email existence. Previous tokens invalidated on new request. SMTP validated at startup (non-blocking). Frontend error page with "Request new reset" button for expired/invalid/missing tokens. JWT password reset functions removed from security.py.
 - **Phase 13 Plan 1 (2026-02-09):** Tavily API migration using tavily-python SDK (AsyncTavilyClient). SearchService rewritten with include_answer=True, max_results=3, configurable search_depth. search_web tool returns synthesized answer + source URLs (answer flows through existing search_results_text -> _generate_analysis_with_search -> system prompt path). search_num_results default changed 5->3. credits_used logged for SEARCH-07 cost tracking. All Serper.dev references removed from codebase. 100 tests pass.
 
 ### Roadmap Evolution
@@ -138,7 +140,7 @@ Recent decisions affecting v0.2 work:
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 12-01-PLAN.md (SMTP email infrastructure, PasswordResetToken model, Jinja2 templates)
-Resume with: Phase 12 Plan 02 (Wire email into auth endpoints)
-Resume file: .planning/phases/12-production-email-infrastructure/12-01-SUMMARY.md
-Next decision: Execute Phase 12 Plan 02
+Stopped at: Completed 12-02-PLAN.md (Phase 12 complete - DB-backed tokens, SMTP startup validation, frontend error page)
+Resume with: v0.2 milestone complete - all phases (7-13) done
+Resume file: .planning/phases/12-production-email-infrastructure/12-02-SUMMARY.md
+Next decision: v0.2 milestone wrap-up (merge develop to master, tag v0.2)
