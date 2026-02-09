@@ -141,7 +141,8 @@ async def query_with_ai(
     # Run chat query through agent pipeline
     result = await agent_service.run_chat_query(
         db, file_id, current_user.id, body.content,
-        checkpointer=request.app.state.checkpointer
+        checkpointer=request.app.state.checkpointer,
+        web_search_enabled=body.web_search_enabled,
     )
 
     return ChatAgentResponse(**result)
@@ -198,7 +199,8 @@ async def stream_query(
         try:
             async for event in agent_service.run_chat_query_stream(
                 db, file_id, current_user.id, body.content,
-                checkpointer=request.app.state.checkpointer
+                checkpointer=request.app.state.checkpointer,
+                web_search_enabled=body.web_search_enabled,
             ):
                 # Check for client disconnect
                 if await request.is_disconnected():

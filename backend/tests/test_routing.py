@@ -157,7 +157,7 @@ class TestRoutingClassification:
             from app.agents.manager import manager_node
             result = await manager_node(base_state)
 
-            assert result.goto == "data_analysis"
+            assert result.goto == "da_with_tools"
             assert result.update["routing_decision"].route == "MEMORY_SUFFICIENT"
 
     @pytest.mark.asyncio
@@ -428,8 +428,8 @@ class TestRouteSpecificBehavior:
     """Tests for agent behavior per route."""
 
     @pytest.mark.asyncio
-    async def test_memory_route_returns_no_code(self, base_state, mock_settings, mock_prompts):
-        """MEMORY_SUFFICIENT route should return analysis with no generated_code or execution_result."""
+    async def test_memory_route_da_with_tools_returns_messages(self, base_state, mock_settings, mock_prompts):
+        """MEMORY_SUFFICIENT route through da_with_tools_node should return LLM response as message."""
         base_state["user_query"] = "What columns does this dataset have?"
         base_state["routing_decision"] = _make_routing_decision(
             "MEMORY_SUFFICIENT",
@@ -449,18 +449,38 @@ class TestRouteSpecificBehavior:
              patch("app.agents.data_analysis.get_api_key_for_provider", return_value="test-key"), \
              patch("app.agents.data_analysis.get_agent_max_tokens", return_value=2000), \
              patch("app.agents.data_analysis.get_stream_writer", return_value=MagicMock()):
+            mock_response = MagicMock()
+            mock_response.content = "The dataset has 4 columns: id, name, sales, region."
+            mock_response.tool_calls = []  # No tool calls for memory route
             mock_llm = AsyncMock()
-            mock_llm.ainvoke.return_value = MagicMock(content="The dataset has 4 columns: id, name, sales, region.")
+            mock_llm.ainvoke.return_value = mock_response
             mock_get_llm.return_value = mock_llm
 
-            from app.agents.data_analysis import data_analysis_agent
-            result = await data_analysis_agent(base_state)
+            from app.agents.data_analysis import da_with_tools_node
+            result = await da_with_tools_node(base_state)
 
-            assert result["analysis"] != ""
-            assert result["final_response"] != ""
-            # Memory route should NOT produce code or execution results
-            assert result["generated_code"] == ""
-            assert result["execution_result"] == ""
+            # da_with_tools_node returns messages for the tool-calling loop
+            assert "messages" in result
+            assert len(result["messages"]) == 1
+
+    @pytest.mark.asyncio
+    async def test_da_response_extracts_analysis(self, base_state):
+        """da_response_node should extract analysis from last AIMessage and return structured response."""
+        base_state["messages"] = [
+            AIMessage(content="The dataset has 4 columns: id, name, sales, region."),
+        ]
+
+        from app.agents.data_analysis import da_response_node
+        result = await da_response_node(base_state)
+
+        assert result["analysis"] != ""
+        assert result["final_response"] != ""
+        # da_response_node returns a clean AIMessage for checkpoint
+        assert "messages" in result
+        assert len(result["messages"]) == 1
+        # Should NOT return generated_code or execution_result
+        assert "generated_code" not in result
+        assert "execution_result" not in result
 
     @pytest.mark.asyncio
     async def test_modification_route_includes_previous_code_in_prompt(self, base_state, mock_settings, mock_prompts):
@@ -564,29 +584,30 @@ class TestGraphTopology:
         assert "manager" in str(graph_json)
 
     def test_graph_has_all_expected_nodes(self):
-        """Graph should contain all expected nodes."""
+        """Graph should contain all expected nodes including tool-calling nodes."""
         from app.agents.graph import build_chat_graph
         graph = build_chat_graph()
 
         graph_dict = graph.get_graph().to_json()
         graph_str = str(graph_dict)
 
-        expected_nodes = ["manager", "coding_agent", "code_checker", "execute", "data_analysis", "halt"]
+        expected_nodes = ["manager", "coding_agent", "code_checker", "execute",
+                          "da_with_tools", "search_tools", "da_response", "halt"]
         for node in expected_nodes:
             assert node in graph_str, f"Node '{node}' not found in graph"
 
-    def test_manager_routes_to_data_analysis_and_coding(self):
-        """Manager should have edges to both data_analysis and coding_agent."""
+    def test_manager_routes_to_da_with_tools_and_coding(self):
+        """Manager should have edges to both da_with_tools and coding_agent."""
         from app.agents.graph import build_chat_graph
         graph = build_chat_graph()
 
         graph_data = graph.get_graph().to_json()
         graph_str = str(graph_data)
 
-        # Manager should be connected to data_analysis (MEMORY_SUFFICIENT)
+        # Manager should be connected to da_with_tools (MEMORY_SUFFICIENT)
         # and coding_agent (CODE_MODIFICATION/NEW_ANALYSIS)
         # These are Command-based routes, so they appear as edges
-        assert "data_analysis" in graph_str
+        assert "da_with_tools" in graph_str
         assert "coding_agent" in graph_str
 
     def test_coding_agent_connects_to_code_checker(self):

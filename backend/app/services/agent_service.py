@@ -127,7 +127,8 @@ async def run_chat_query(
     file_id: UUID,
     user_id: UUID,
     user_query: str,
-    checkpointer=None
+    checkpointer=None,
+    web_search_enabled: bool = False,
 ) -> dict:
     """Run chat query through the full agent pipeline.
 
@@ -142,6 +143,8 @@ async def run_chat_query(
         file_id: File UUID
         user_id: User UUID (for access control)
         user_query: User's natural language query
+        checkpointer: Optional PostgreSQL checkpointer
+        web_search_enabled: Whether web search is enabled for this query
 
     Returns:
         dict: Agent response with user_query, generated_code, execution_result,
@@ -195,6 +198,7 @@ async def run_chat_query(
         "error": "",
         "routing_decision": None,
         "previous_code": "",
+        "web_search_enabled": web_search_enabled,
     }
 
     # Add new user message to checkpoint using aupdate_state
@@ -206,6 +210,10 @@ async def run_chat_query(
     # Invoke graph - it will load checkpointed state with accumulated messages
     # Messages come from checkpoint (not initial_state) so conversation history persists
     result = await graph.ainvoke(initial_state, config)
+
+    # Track search quota per user query (not per Serper API call)
+    if web_search_enabled:
+        await _track_search_quota(db, user_id)
 
     # Save user message to chat history
     await ChatService.create_message(
@@ -235,6 +243,7 @@ async def run_chat_query(
             "error_count": result.get("error_count", 0),
             "error": result.get("error"),
             "routing_decision": routing_meta,
+            "search_sources": result.get("search_sources", []),
         }
     )
 
@@ -254,7 +263,8 @@ async def run_chat_query_stream(
     file_id: UUID,
     user_id: UUID,
     user_query: str,
-    checkpointer=None
+    checkpointer=None,
+    web_search_enabled: bool = False,
 ) -> AsyncGenerator[dict, None]:
     """Run chat query through agent pipeline and yield SSE events.
 
@@ -264,6 +274,7 @@ async def run_chat_query_stream(
     Events yielded:
     - Custom status events from get_stream_writer() (coding_started, validation_started, etc.)
     - Node completion events with intermediate results (generated_code, execution_result, etc.)
+    - Search events from search tool (search_started, search_completed, search_failed)
     - Error events on failure
     - Completion event on success
 
@@ -275,6 +286,8 @@ async def run_chat_query_stream(
         file_id: File UUID
         user_id: User UUID (for access control)
         user_query: User's natural language query
+        checkpointer: Optional PostgreSQL checkpointer
+        web_search_enabled: Whether web search is enabled for this query
 
     Yields:
         dict: Event dictionaries with type, message, and event-specific fields
@@ -345,6 +358,7 @@ async def run_chat_query_stream(
         "error": "",
         "routing_decision": None,
         "previous_code": "",
+        "web_search_enabled": web_search_enabled,
     }
 
     # Add new user message to checkpoint using aupdate_state
@@ -365,7 +379,7 @@ async def run_chat_query_stream(
         ):
             if mode == "custom":
                 # Custom events from get_stream_writer() inside nodes
-                # These are status, progress, and retry events emitted by agents
+                # These are status, progress, retry, and search events emitted by agents/tools
                 yield chunk
             elif mode == "updates":
                 # State delta after a node completes
@@ -385,7 +399,8 @@ async def run_chat_query_stream(
                         **{k: v for k, v in update.items()
                            if k in ("generated_code", "execution_result",
                                     "analysis", "final_response", "error",
-                                    "routing_decision", "follow_up_suggestions")}
+                                    "routing_decision", "follow_up_suggestions",
+                                    "search_sources")}
                     }
 
         # Stream completed successfully -- save atomically with fresh session
@@ -398,6 +413,11 @@ async def run_chat_query_stream(
         # that occur when trying to write with a session that has been idle
         # throughout the entire streaming duration. See 04-RESEARCH.md Pitfall 7.
         elapsed_ms = int((time.monotonic() - start_time) * 1000)
+
+        # Track search quota per user query (not per Serper API call)
+        if web_search_enabled:
+            async with async_session_maker() as quota_db:
+                await _track_search_quota(quota_db, user_id)
 
         async with async_session_maker() as save_db:
             # Save user message
@@ -420,6 +440,7 @@ async def run_chat_query_stream(
                     "error_count": final_state.get("error_count", 0),
                     "routing_decision": routing_meta,
                     "follow_up_suggestions": final_state.get("follow_up_suggestions", []),
+                    "search_sources": final_state.get("search_sources", []),
                     "stream_metadata": {
                         "duration_ms": elapsed_ms,
                         "retry_count": final_state.get("error_count", 0),
@@ -444,3 +465,45 @@ async def run_chat_query_stream(
             "type": "error",
             "message": error_msg
         }
+
+
+async def _track_search_quota(db: AsyncSession, user_id: UUID) -> None:
+    """Track search quota per user query (not per Serper API call).
+
+    Increments the daily search count for the user. Creates a new row
+    if no quota record exists for today.
+
+    Args:
+        db: Database session
+        user_id: User UUID
+    """
+    from datetime import date
+    from sqlalchemy import select
+    from app.models.search_quota import SearchQuota
+
+    today = date.today()
+
+    try:
+        result = await db.execute(
+            select(SearchQuota).where(
+                SearchQuota.user_id == user_id,
+                SearchQuota.search_date == today,
+            )
+        )
+        quota = result.scalar_one_or_none()
+
+        if quota:
+            quota.search_count += 1
+        else:
+            quota = SearchQuota(
+                user_id=user_id,
+                search_date=today,
+                search_count=1,
+            )
+            db.add(quota)
+
+        await db.commit()
+    except Exception as e:
+        logger.warning(f"Failed to track search quota for user {user_id}: {e}")
+        # Don't fail the request if quota tracking fails
+        await db.rollback()
