@@ -203,9 +203,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 11-01-PLAN.md — Backend search infrastructure: SearchService, SearchQuota model, search config, state extension, schema update, search router
-- [ ] 11-02-PLAN.md — Agent integration: Data Analysis Agent search integration, prompt engineering, agent_service wiring, quota tracking
-- [ ] 11-03-PLAN.md — Frontend search UI: search toggle, SSE events, DataCard sources, ChatInterface wiring, human verification
+- [ ] 11-01-PLAN.md — Backend search infrastructure: SearchService, SearchQuota model, config, state/schema extensions, search config router
+- [ ] 11-02-PLAN.md — Agent integration: @tool definition, graph topology (da_with_tools/search_tools/da_response), manager routing, service wiring, quota tracking
+- [ ] 11-03-PLAN.md — Frontend search UI: search toggle, SSE events, DataCard sources section, ChatInterface wiring, human verification
 
 ---
 
