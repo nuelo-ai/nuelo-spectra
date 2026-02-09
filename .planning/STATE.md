@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** Phase 11 - Web Search Tool Integration (v0.2 milestone)
+**Current focus:** Phase 13 - Migrate Web Search from Serper.dev to Tavily (v0.2 milestone)
 
 ## Current Position
 
-Phase: 11 of 12 (Web Search Tool Integration)
-Plan: 3 of 3 complete
-Status: Phase complete (human-verified)
+Phase: 13 of 13 (Migrate Web Search - Tavily)
+Plan: 1 of 1 complete
+Status: Phase complete
 Branch: develop (v0.2 development branch)
-Last activity: 2026-02-09 — Phase 11 complete (all 5 UAT scenarios passed)
+Last activity: 2026-02-09 — Phase 13 complete (Tavily migration, all tests pass)
 
-Progress: [████████████████████████░░░░] 73% (50/~69 estimated total plans)
+Progress: [█████████████████████████░░░] 74% (51/~69 estimated total plans)
 
 ## Performance Metrics
 
@@ -45,6 +45,7 @@ Progress: [███████████████████████
 | 10. Smart Query Suggestions | 2/2 | Complete (UAT passed) |
 | 11. Web Search Tool Integration | 3/3 | Complete (UAT passed) |
 | 12. Production Email Infrastructure | 0/TBD | Not started |
+| 13. Migrate Web Search (Tavily) | 1/1 | Complete |
 
 **Recent Trend:**
 - v0.1 completed in 5 days with aggressive execution
@@ -62,7 +63,8 @@ Progress: [███████████████████████
 - v0.2 Phase 11 Plan 1: 3 min execution (backend search infrastructure - SearchService, SearchQuota, config, router)
 - v0.2 Phase 11 Plan 2: 7 min execution (agent integration - bind_tools/ToolNode loop, da_with_tools/search_tools/da_response, service wiring)
 - v0.2 Phase 11 Plan 3: 10 min execution (frontend search UI - useSearchToggle, ChatInput toggle, search activity, DataCard sources, UAT + 3 bug fix rounds)
-- Trend: Stable, high velocity maintained (Phase 7 ~12 min, Phase 8 ~7 min, Phase 9 ~11 min, Phase 10 ~7 min, Phase 11 ~20 min)
+- v0.2 Phase 13 Plan 1: 3 min execution (Tavily migration - SearchService rewrite, tool output update, Serper removal)
+- Trend: Stable, high velocity maintained (Phase 7 ~12 min, Phase 8 ~7 min, Phase 9 ~11 min, Phase 10 ~7 min, Phase 11 ~20 min, Phase 13 ~3 min)
 
 ## Accumulated Context
 
@@ -100,6 +102,12 @@ Recent decisions affecting v0.2 work:
 - **Phase 11 Plan 2 (2026-02-09):** First tool-calling pattern established using LangGraph bind_tools/ToolNode. data_analysis_agent split into da_with_tools_node (LLM with conditional tool binding), search_tools (ToolNode with handle_tool_errors=True), da_response_node (source extraction, JSON parsing). Manager routes MEMORY_SUFFICIENT to da_with_tools (not data_analysis). web_search_enabled flows end-to-end from ChatQueryRequest through agent_service to initial_state. Quota tracked per user query (not per Serper API call). Search sources included in SSE events and chat metadata. bind_tools wrapped in try/except for provider compatibility.
 - **Phase 11 Plan 3 (2026-02-09):** Frontend search UI complete with useSearchToggle hook (config check, quota validation), custom toggle button below ChatInput (shadcn Switch not installed), real-time search activity indicator showing actual query text, DataCard Sources section with clickable page title links. Toggle resets to OFF after each query. UAT revealed bind_tools mode system prompt loss issue - da_response_node makes fresh LLM call when search was used for reliable JSON output and quality analysis. Phase 11 complete - full web search integration operational.
 
+- **Phase 13 Plan 1 (2026-02-09):** Tavily API migration using tavily-python SDK (AsyncTavilyClient). SearchService rewritten with include_answer=True, max_results=3, configurable search_depth. search_web tool returns synthesized answer + source URLs (answer flows through existing search_results_text -> _generate_analysis_with_search -> system prompt path). search_num_results default changed 5->3. credits_used logged for SEARCH-07 cost tracking. All Serper.dev references removed from codebase. 100 tests pass.
+
+### Roadmap Evolution
+
+- Phase 13 added: Migrate Web Search from Serper.dev to Tavily (Serper.dev returns URL links only; Tavily returns full page content needed for quality AI analysis)
+
 ### Pending Todos
 
 **From v0.1 (now integrated into v0.2 roadmap):**
@@ -128,7 +136,7 @@ Recent decisions affecting v0.2 work:
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Phase 11 complete (UAT passed, all 5 scenarios verified)
+Stopped at: Phase 13 complete (Tavily migration, all 100 tests pass)
 Resume with: Phase 12 (Production Email Infrastructure)
-Resume file: .planning/phases/11-web-search-tool-integration/11-03-SUMMARY.md
+Resume file: .planning/phases/13-migrate-web-search-from-serper-dev-to-tavily/13-01-SUMMARY.md
 Next decision: Plan Phase 12 (Production Email Infrastructure)
