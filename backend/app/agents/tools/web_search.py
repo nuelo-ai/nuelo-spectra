@@ -2,7 +2,7 @@
 
 Defines the search_web @tool that the Data Analysis Agent can call
 when web_search_enabled is True and the query warrants external data.
-Uses SearchService for actual Serper.dev API calls and get_stream_writer()
+Uses SearchService for actual Tavily Search API calls and get_stream_writer()
 for real-time SSE event emission.
 """
 
@@ -14,7 +14,7 @@ from app.services.search import SearchService
 
 @tool
 async def search_web(query: str) -> str:
-    """Search the web for information using Google Search.
+    """Search the web for information using Tavily Search.
 
     Use this tool when you need external data like industry benchmarks,
     market statistics, or comparative data that isn't in the uploaded dataset.
@@ -24,7 +24,7 @@ async def search_web(query: str) -> str:
                company names, personal data, or raw values from the dataset.
 
     Returns:
-        Search results as formatted text with titles and URLs.
+        Search results as formatted text with synthesized answer and source URLs.
     """
     writer = get_stream_writer()
 
@@ -43,14 +43,19 @@ async def search_web(query: str) -> str:
         writer({"type": "search_failed", "message": "Web search unavailable"})
         return f"Search failed ({result.error}). Answer from available data only."
 
-    # No results case
-    if not result.results:
+    # No results and no answer case
+    if not result.results and not result.answer:
         return "No relevant search results found."
 
-    # Format results for LLM consumption
-    formatted = f"Search results for '{query}':\n"
-    for r in result.results:
-        formatted += f"- {r.title}: {r.link}\n"
+    # Format: Tavily answer first (primary value), then source URLs
+    formatted = ""
+    if result.answer:
+        formatted += f"Web search answer for '{query}':\n{result.answer}\n\n"
+
+    if result.results:
+        formatted += "Sources:\n"
+        for r in result.results:
+            formatted += f"- {r.title}: {r.url}\n"
 
     writer({
         "type": "search_completed",

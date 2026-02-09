@@ -212,7 +212,7 @@ async def run_chat_query(
     # Messages come from checkpoint (not initial_state) so conversation history persists
     result = await graph.ainvoke(initial_state, config)
 
-    # Track search quota per user query (not per Serper API call)
+    # Track search quota per user query (not per API call)
     if web_search_enabled:
         await _track_search_quota(db, user_id)
 
@@ -416,7 +416,7 @@ async def run_chat_query_stream(
         # throughout the entire streaming duration. See 04-RESEARCH.md Pitfall 7.
         elapsed_ms = int((time.monotonic() - start_time) * 1000)
 
-        # Track search quota per user query (not per Serper API call)
+        # Track search quota per user query (not per API call)
         if web_search_enabled:
             async with async_session_maker() as quota_db:
                 await _track_search_quota(quota_db, user_id)
@@ -470,7 +470,7 @@ async def run_chat_query_stream(
 
 
 async def _track_search_quota(db: AsyncSession, user_id: UUID) -> None:
-    """Track search quota per user query (not per Serper API call).
+    """Track search quota per user query (not per API call).
 
     Increments the daily search count for the user. Creates a new row
     if no quota record exists for today.

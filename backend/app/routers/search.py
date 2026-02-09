@@ -28,14 +28,14 @@ async def get_search_config(
 
     Returns:
         Search configuration and quota status:
-        - configured: Whether Serper API key is set
+        - configured: Whether Tavily API key is set
         - enabled: Whether search feature is enabled (configured + within quota)
         - daily_quota: Maximum searches per day
         - used_today: Number of searches used today
         - quota_exceeded: Whether daily quota has been exceeded
     """
     settings = get_settings()
-    configured = bool(settings.serper_api_key)
+    configured = bool(settings.tavily_api_key)
 
     # Query today's usage for the current user
     used_today = 0
