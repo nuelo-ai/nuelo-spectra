@@ -61,10 +61,11 @@ class Settings(BaseSettings):
     suggestion_auto_send: bool = True
 
     # Web Search
-    serper_api_key: str = ""
+    tavily_api_key: str = ""
+    search_depth: str = "basic"
     search_max_per_query: int = 5
     search_daily_quota: int = 7
-    search_num_results: int = 5
+    search_num_results: int = 3
     search_timeout: float = 10.0
 
     model_config = SettingsConfigDict(env_file=".env")

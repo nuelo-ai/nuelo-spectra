@@ -29,6 +29,7 @@ dependencies = [
     "langchain-ollama>=0.2.0",
     "sse-starlette>=3.2.0",
     "e2b-code-interpreter>=1.0.2",
+    "tavily-python>=0.7.0",
 ]
 
 [project.optional-dependencies]
