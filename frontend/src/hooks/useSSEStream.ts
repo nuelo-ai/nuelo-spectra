@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { StreamEvent, StreamEventType } from "@/types/chat";
+import { StreamEvent, StreamEventType, SearchSource } from "@/types/chat";
 import { getAccessToken } from "@/lib/api-client";
 
 export interface StreamState {
@@ -9,6 +9,10 @@ export interface StreamState {
   currentStatus: string | null;
   streamedText: string;
   completedData: Record<string, any> | null;
+  /** Current search query being executed (null when not searching) */
+  currentSearchQuery: string | null;
+  /** Search sources extracted from stream events */
+  searchSources: SearchSource[];
 }
 
 /**
@@ -23,6 +27,8 @@ export function useSSEStream() {
     currentStatus: null,
     streamedText: "",
     completedData: null,
+    currentSearchQuery: null,
+    searchSources: [],
   });
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -42,13 +48,19 @@ export function useSSEStream() {
         return "Running analysis...";
       case "analysis_started":
         return "Interpreting results...";
+      case "search_started":
+        return "Searching the web...";
+      case "search_completed":
+        return "Search complete";
+      case "search_failed":
+        return "Web search unavailable";
       default:
         return "Processing...";
     }
   }, []);
 
   const startStream = useCallback(
-    async (fileId: string, message: string) => {
+    async (fileId: string, message: string, webSearchEnabled: boolean = false) => {
       // Cancel any existing stream
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -66,6 +78,8 @@ export function useSSEStream() {
         currentStatus: null,
         streamedText: "",
         completedData: null,
+        currentSearchQuery: null,
+        searchSources: [],
       });
 
       try {
@@ -80,7 +94,7 @@ export function useSSEStream() {
         const response = await fetch(`http://localhost:8000/chat/${fileId}/stream`, {
           method: "POST",
           headers,
-          body: JSON.stringify({ content: message }),
+          body: JSON.stringify({ content: message, web_search_enabled: webSearchEnabled }),
           signal: controller.signal,
         });
 
@@ -148,8 +162,36 @@ export function useSSEStream() {
                       }
                       break;
 
+                    case "search_started":
+                      // Extract query from message like "Searching: 'query text'..."
+                      {
+                        const match = event.message?.match(/Searching:\s*'(.+?)'/);
+                        newState.currentSearchQuery = match ? match[1] : (event.message || null);
+                        newState.currentStatus = event.message || "Searching the web...";
+                      }
+                      break;
+
+                    case "search_completed":
+                      newState.currentSearchQuery = null;
+                      newState.currentStatus = getStatusMessage("analysis_started");
+                      break;
+
+                    case "search_failed":
+                      newState.currentSearchQuery = null;
+                      newState.currentStatus = "Web search unavailable -- answering from available data";
+                      break;
+
+                    case "search_quota_exceeded":
+                      newState.currentSearchQuery = null;
+                      newState.currentStatus = "Search quota exceeded";
+                      break;
+
                     case "node_complete":
                       // Node completion stored in events array
+                      // Extract search sources from da_response node_complete
+                      if (event.node === "da_response" && event.data?.search_sources) {
+                        newState.searchSources = event.data.search_sources;
+                      }
                       break;
 
                     case "completed":
@@ -215,6 +257,8 @@ export function useSSEStream() {
       currentStatus: null,
       streamedText: "",
       completedData: null,
+      currentSearchQuery: null,
+      searchSources: [],
     });
   }, []);
 

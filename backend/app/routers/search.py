@@ -12,7 +12,7 @@ from app.models.search_quota import SearchQuota
 router = APIRouter(prefix="/search", tags=["Search"])
 
 
-@router.get("/search/config")
+@router.get("/config")
 async def get_search_config(
     current_user: CurrentUser,
     db: DbSession,

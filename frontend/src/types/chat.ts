@@ -38,12 +38,29 @@ export type StreamEventType =
   | "validation_started"
   | "execution_started"
   | "analysis_started"
+  | "search_started"
+  | "search_completed"
+  | "search_failed"
+  | "search_quota_exceeded"
   | "progress"
   | "retry"
   | "content_chunk"
   | "node_complete"
   | "completed"
   | "error";
+
+export interface SearchSource {
+  title: string;
+  url: string;
+}
+
+export interface SearchConfig {
+  configured: boolean;
+  enabled: boolean;
+  daily_quota: number;
+  used_today: number;
+  quota_exceeded: boolean;
+}
 
 export interface StreamEvent {
   type: StreamEventType;
