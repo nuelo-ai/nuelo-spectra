@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** Phase 10 - Smart Query Suggestions (v0.2 milestone)
+**Current focus:** Phase 11 - Web Search Tool Integration (v0.2 milestone)
 
 ## Current Position
 
-Phase: 10 of 12 (Smart Query Suggestions)
-Plan: 2 of 2 complete
-Status: Phase complete (human-verified)
+Phase: 11 of 12 (Web Search Tool Integration)
+Plan: 1 of 3 complete
+Status: In progress
 Branch: develop (v0.2 development branch)
-Last activity: 2026-02-08 — Phase 10 complete (all 5 UAT scenarios passed)
+Last activity: 2026-02-09 — Phase 11 Plan 1 complete (backend search infrastructure)
 
-Progress: [██████████████████████░░░░░░] 68% (47/~69 estimated total plans)
+Progress: [███████████████████████░░░░░] 70% (48/~69 estimated total plans)
 
 ## Performance Metrics
 
@@ -43,7 +43,7 @@ Progress: [██████████████████████░
 | 8. Session Memory with PostgreSQL Checkpointing | 2/2 | Complete (UAT passed) |
 | 9. Manager Agent with Intelligent Query Routing | 3/3 | Complete |
 | 10. Smart Query Suggestions | 2/2 | Complete (UAT passed) |
-| 11. Web Search Tool Integration | 0/TBD | Not started |
+| 11. Web Search Tool Integration | 1/3 | In progress |
 | 12. Production Email Infrastructure | 0/TBD | Not started |
 
 **Recent Trend:**
@@ -59,6 +59,7 @@ Progress: [██████████████████████░
 - v0.2 Phase 9 Plan 3: 3 min execution (routing test suite - 28 tests, fully mocked)
 - v0.2 Phase 10 Plan 1: 4 min execution (backend query suggestions infrastructure - JSON prompts, DB migration, stream wiring)
 - v0.2 Phase 10 Plan 2: 3 min execution (frontend suggestion UI - QuerySuggestions component, DataCard follow-ups, ChatInterface integration)
+- v0.2 Phase 11 Plan 1: 3 min execution (backend search infrastructure - SearchService, SearchQuota, config, router)
 - Trend: Stable, high velocity maintained (Phase 7 ~12 min, Phase 8 ~7 min, Phase 9 ~11 min, Phase 10 ~7 min)
 
 ## Accumulated Context
@@ -93,6 +94,7 @@ Recent decisions affecting v0.2 work:
 - **Phase 9 Plan 3 (2026-02-08):** 28 fully-mocked pytest tests covering routing classification (6), fallback behavior (4), route-specific agent behavior (3), graph topology (4), configuration (4), structured logging (2), RoutingDecision model (3), and stream events (2). Uses _patch_manager_dependencies helper pattern for test boilerplate reduction. All 99 tests (28 routing + 37 code checker + 34 LLM provider) pass with zero regressions.
 - **Phase 10 Plan 1 (2026-02-08):** JSON-structured LLM output with graceful fallback for both onboarding and data_analysis agents. Single LLM call for summary + suggestions (no separate API call). LLM-decided suggestion categories per dataset (not fixed templates). query_suggestions stored as JSON in files table. follow_up_suggestions as list[str] in ChatAgentState, included in stream event allowlist and chat_messages.metadata_json. suggestion_auto_send configurable via .env (default: True). Alembic migration cleaned to exclude LangGraph checkpoint tables.
 - **Phase 10 Plan 2 (2026-02-08):** QuerySuggestions component with categorized chips, fade-out animation, ReactMarkdown for bold column names. Auto-send as default (clicking chip calls handleSend directly). ChatInput initialValue prop for non-auto-send fallback. DataCard follow-up chips with "Continue exploring" header, plain text (no markdown). Follow-up suggestions extracted from metadata_json (historical) and stream events (live). Conditional empty state: suggestions when available, generic fallback for older files.
+- **Phase 11 Plan 1 (2026-02-09):** SearchService HTTP client for Serper.dev with httpx.AsyncClient (configurable timeout, domain blocking, structured JSON logging). SearchQuota model with composite PK (user_id, search_date) for daily per-user tracking. Search config settings (serper_api_key, search_max_per_query=5, search_daily_quota=7, search_num_results=5, search_timeout=10.0). search.yaml for feature defaults. ChatAgentState extended with web_search_enabled and search_sources. ChatQueryRequest extended with web_search_enabled. StreamEventType extended with search events and routing events. GET /search/config endpoint returns configured/enabled/quota status.
 
 ### Pending Todos
 
@@ -121,8 +123,8 @@ Recent decisions affecting v0.2 work:
 
 ## Session Continuity
 
-Last session: 2026-02-08
-Stopped at: Phase 10 complete (UAT passed, all 5 scenarios verified)
-Resume with: Phase 11 (Web Search Tool Integration)
-Resume file: .planning/phases/10-smart-query-suggestions/10-02-SUMMARY.md
-Next decision: Plan Phase 11 (Web Search Tool Integration)
+Last session: 2026-02-09
+Stopped at: Completed 11-01-PLAN.md (backend search infrastructure)
+Resume with: Phase 11 Plan 2 (agent integration with bind_tools/ToolNode)
+Resume file: .planning/phases/11-web-search-tool-integration/11-01-SUMMARY.md
+Next decision: Execute 11-02-PLAN.md
