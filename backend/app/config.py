@@ -60,6 +60,13 @@ class Settings(BaseSettings):
     # Suggestions
     suggestion_auto_send: bool = True
 
+    # Web Search
+    serper_api_key: str = ""
+    search_max_per_query: int = 5
+    search_daily_quota: int = 7
+    search_num_results: int = 5
+    search_timeout: float = 10.0
+
     model_config = SettingsConfigDict(env_file=".env")
 
     def get_cors_origins(self) -> list[str]:
