@@ -130,17 +130,11 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
   }, [isStreaming, streamError, refetch, resetStream, chatData?.messages]);
 
   const handleSend = async (message: string) => {
-    // Capture search toggle state before resetting
-    const webSearchEnabled = searchToggle.enabled;
-
     // Optimistically add user message
     addLocalMessage(fileId, message);
 
-    // Reset toggle to OFF after each query (per CONTEXT.md)
-    searchToggle.resetToggle();
-
     // Start streaming AI response with search flag
-    await startStream(fileId, message, webSearchEnabled);
+    await startStream(fileId, message, searchToggle.enabled);
   };
 
   const toggleCardCollapse = (messageId: string) => {
@@ -209,7 +203,7 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
 
     // Extract analysis/explanation from data_analysis node
     let explanation = streamedText || undefined;
-    const analysisEvent = events.find((e) => e.type === "node_complete" && e.node === "data_analysis");
+    const analysisEvent = events.find((e) => e.type === "node_complete" && e.node === "da_response");
     if (analysisEvent?.data?.analysis) {
       explanation = analysisEvent.data.analysis;
     }
@@ -374,7 +368,7 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
                   // Memory route: render analysis as plain text message (no DataCard)
                   if (isMemoryRoute) {
                     const analysisEvent = events.find(
-                      (e) => e.type === "node_complete" && e.node === "data_analysis"
+                      (e) => e.type === "node_complete" && e.node === "da_response"
                     );
                     const analysisText =
                       analysisEvent?.data?.analysis ||

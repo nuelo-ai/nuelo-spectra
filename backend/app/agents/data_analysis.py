@@ -157,9 +157,16 @@ async def da_response_node(state: ChatAgentState) -> dict:
     else:
         analysis = "Unable to generate analysis."
 
-    # Extract search sources from ToolMessages in the conversation
+    # Extract search sources from ToolMessages in the CURRENT query only
+    # (after the last HumanMessage to avoid leaking sources from previous queries)
+    last_human_idx = -1
+    for i, msg in enumerate(messages):
+        if isinstance(msg, HumanMessage):
+            last_human_idx = i
+    current_query_messages = messages[last_human_idx + 1:] if last_human_idx >= 0 else messages
+
     search_sources = []
-    for msg in messages:
+    for msg in current_query_messages:
         if isinstance(msg, ToolMessage):
             sources = _extract_sources_from_tool_response(msg.content)
             search_sources.extend(sources)
@@ -283,7 +290,9 @@ You have access to the search_web tool. When the user's query could benefit from
 - When search results are available, incorporate external benchmarks/data into your analysis and cite sources
 - When search results are not helpful, proceed with available data only
 
-If the query does NOT need external data, do NOT call search_web -- just analyze the execution results directly."""
+If the query does NOT need external data, do NOT call search_web -- just analyze the execution results directly.
+
+IMPORTANT: Your final response MUST still be valid JSON with "analysis" and "follow_up_suggestions" keys, exactly as specified above. Always include 2-3 follow-up suggestions even when search results are incorporated."""
         system_prompt += search_instructions
 
     return system_prompt

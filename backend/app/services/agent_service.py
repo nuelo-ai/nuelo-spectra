@@ -199,6 +199,7 @@ async def run_chat_query(
         "routing_decision": None,
         "previous_code": "",
         "web_search_enabled": web_search_enabled,
+        "search_sources": [],
     }
 
     # Add new user message to checkpoint using aupdate_state
@@ -359,6 +360,7 @@ async def run_chat_query_stream(
         "routing_decision": None,
         "previous_code": "",
         "web_search_enabled": web_search_enabled,
+        "search_sources": [],
     }
 
     # Add new user message to checkpoint using aupdate_state
