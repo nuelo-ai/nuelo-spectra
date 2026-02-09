@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 ## Current Position
 
 Phase: 11 of 12 (Web Search Tool Integration)
-Plan: 2 of 3 complete
-Status: In progress
+Plan: 3 of 3 complete
+Status: Phase complete
 Branch: develop (v0.2 development branch)
-Last activity: 2026-02-09 — Phase 11 Plan 2 complete (agent integration with bind_tools/ToolNode)
+Last activity: 2026-02-09 — Phase 11 complete (web search tool integration: backend infrastructure, agent integration, frontend UI)
 
-Progress: [████████████████████████░░░░] 71% (49/~69 estimated total plans)
+Progress: [████████████████████████░░░░] 73% (50/~69 estimated total plans)
 
 ## Performance Metrics
 
@@ -43,7 +43,7 @@ Progress: [███████████████████████
 | 8. Session Memory with PostgreSQL Checkpointing | 2/2 | Complete (UAT passed) |
 | 9. Manager Agent with Intelligent Query Routing | 3/3 | Complete |
 | 10. Smart Query Suggestions | 2/2 | Complete (UAT passed) |
-| 11. Web Search Tool Integration | 2/3 | In progress |
+| 11. Web Search Tool Integration | 3/3 | Complete |
 | 12. Production Email Infrastructure | 0/TBD | Not started |
 
 **Recent Trend:**
@@ -61,7 +61,8 @@ Progress: [███████████████████████
 - v0.2 Phase 10 Plan 2: 3 min execution (frontend suggestion UI - QuerySuggestions component, DataCard follow-ups, ChatInterface integration)
 - v0.2 Phase 11 Plan 1: 3 min execution (backend search infrastructure - SearchService, SearchQuota, config, router)
 - v0.2 Phase 11 Plan 2: 7 min execution (agent integration - bind_tools/ToolNode loop, da_with_tools/search_tools/da_response, service wiring)
-- Trend: Stable, high velocity maintained (Phase 7 ~12 min, Phase 8 ~7 min, Phase 9 ~11 min, Phase 10 ~7 min)
+- v0.2 Phase 11 Plan 3: 10 min execution (frontend search UI - useSearchToggle, ChatInput toggle, search activity, DataCard sources, UAT + 3 bug fix rounds)
+- Trend: Stable, high velocity maintained (Phase 7 ~12 min, Phase 8 ~7 min, Phase 9 ~11 min, Phase 10 ~7 min, Phase 11 ~20 min)
 
 ## Accumulated Context
 
@@ -97,6 +98,7 @@ Recent decisions affecting v0.2 work:
 - **Phase 10 Plan 2 (2026-02-08):** QuerySuggestions component with categorized chips, fade-out animation, ReactMarkdown for bold column names. Auto-send as default (clicking chip calls handleSend directly). ChatInput initialValue prop for non-auto-send fallback. DataCard follow-up chips with "Continue exploring" header, plain text (no markdown). Follow-up suggestions extracted from metadata_json (historical) and stream events (live). Conditional empty state: suggestions when available, generic fallback for older files.
 - **Phase 11 Plan 1 (2026-02-09):** SearchService HTTP client for Serper.dev with httpx.AsyncClient (configurable timeout, domain blocking, structured JSON logging). SearchQuota model with composite PK (user_id, search_date) for daily per-user tracking. Search config settings (serper_api_key, search_max_per_query=5, search_daily_quota=7, search_num_results=5, search_timeout=10.0). search.yaml for feature defaults. ChatAgentState extended with web_search_enabled and search_sources. ChatQueryRequest extended with web_search_enabled. StreamEventType extended with search events and routing events. GET /search/config endpoint returns configured/enabled/quota status.
 - **Phase 11 Plan 2 (2026-02-09):** First tool-calling pattern established using LangGraph bind_tools/ToolNode. data_analysis_agent split into da_with_tools_node (LLM with conditional tool binding), search_tools (ToolNode with handle_tool_errors=True), da_response_node (source extraction, JSON parsing). Manager routes MEMORY_SUFFICIENT to da_with_tools (not data_analysis). web_search_enabled flows end-to-end from ChatQueryRequest through agent_service to initial_state. Quota tracked per user query (not per Serper API call). Search sources included in SSE events and chat metadata. bind_tools wrapped in try/except for provider compatibility.
+- **Phase 11 Plan 3 (2026-02-09):** Frontend search UI complete with useSearchToggle hook (config check, quota validation), custom toggle button below ChatInput (shadcn Switch not installed), real-time search activity indicator showing actual query text, DataCard Sources section with clickable page title links. Toggle resets to OFF after each query. UAT revealed bind_tools mode system prompt loss issue - da_response_node makes fresh LLM call when search was used for reliable JSON output and quality analysis. Phase 11 complete - full web search integration operational.
 
 ### Pending Todos
 
@@ -107,7 +109,7 @@ Recent decisions affecting v0.2 work:
 
 **New v0.2 features:**
 - [x] Query suggestions (Phase 10)
-- [ ] Web search integration (Phase 11)
+- [x] Web search integration (Phase 11)
 - [ ] Query safety filter in Manager Agent (security — block PII extraction, prompt injection, etc.)
 
 ### Blockers/Concerns
@@ -126,7 +128,7 @@ Recent decisions affecting v0.2 work:
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 11-02-PLAN.md (agent integration with bind_tools/ToolNode)
-Resume with: Phase 11 Plan 3 (frontend toggle and sources display)
-Resume file: .planning/phases/11-web-search-tool-integration/11-02-SUMMARY.md
-Next decision: Execute 11-03-PLAN.md
+Stopped at: Completed 11-03-PLAN.md (frontend search UI - Phase 11 complete)
+Resume with: Phase 12 Plan 1 (Production Email Infrastructure)
+Resume file: .planning/phases/11-web-search-tool-integration/11-03-SUMMARY.md
+Next decision: Begin Phase 12 planning or proceed with existing Phase 12 plans
