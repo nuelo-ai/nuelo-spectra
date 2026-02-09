@@ -20,7 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.database import engine
-from app.routers import auth, chat, files, health
+from app.routers import auth, chat, files, health, search
 
 # Get settings
 settings = get_settings()
@@ -261,6 +261,7 @@ app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(files.router)
 app.include_router(chat.router)
+app.include_router(search.router)
 
 
 @app.get("/")
