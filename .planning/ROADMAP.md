@@ -224,11 +224,11 @@ Plans:
 4. System validates SMTP configuration at startup and displays connection status
 5. Reset links expire after configurable time (default: 10 minutes)
 
-**Plans:** TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 12-01: TBD
-- [ ] 12-02: TBD
+- [ ] 12-01-PLAN.md — SMTP config, PasswordResetToken model + migration, aiosmtplib email service rewrite, Jinja2 HTML/text templates
+- [ ] 12-02-PLAN.md — Auth endpoint rewiring (DB tokens, cooldown, single-use), SMTP startup validation, frontend error page for expired/invalid tokens
 
 ### Phase 13: Migrate Web Search from Serper.dev to Tavily
 
@@ -260,5 +260,5 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13
 | 9. Manager Agent Routing | v0.2 | 3/3 | Complete | 2026-02-08 |
 | 10. Smart Query Suggestions | v0.2 | 2/2 | Complete | 2026-02-08 |
 | 11. Web Search Integration | v0.2 | 3/3 | Complete | 2026-02-09 |
-| 12. Production Email | v0.2 | 0/TBD | Not started | - |
+| 12. Production Email | v0.2 | 0/2 | Not started | - |
 | 13. Migrate Web Search (Tavily) | v0.2 | 1/1 | Complete | 2026-02-09 |
