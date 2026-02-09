@@ -203,9 +203,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 11-01-PLAN.md — Backend search infrastructure: SearchService, SearchQuota model, config, state/schema extensions, search config router
-- [ ] 11-02-PLAN.md — Agent integration: @tool definition, graph topology (da_with_tools/search_tools/da_response), manager routing, service wiring, quota tracking
-- [ ] 11-03-PLAN.md — Frontend search UI: search toggle, SSE events, DataCard sources section, ChatInterface wiring, human verification
+- [x] 11-01-PLAN.md — Backend search infrastructure: SearchService, SearchQuota model, config, state/schema extensions, search config router
+- [x] 11-02-PLAN.md — Agent integration: @tool definition, graph topology (da_with_tools/search_tools/da_response), manager routing, service wiring, quota tracking
+- [x] 11-03-PLAN.md — Frontend search UI: search toggle, SSE events, DataCard sources section, ChatInterface wiring, human verification
 
 ---
 
@@ -249,5 +249,5 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12
 | 8. Session Memory | v0.2 | 2/2 | Complete | 2026-02-08 |
 | 9. Manager Agent Routing | v0.2 | 3/3 | Complete | 2026-02-08 |
 | 10. Smart Query Suggestions | v0.2 | 2/2 | Complete | 2026-02-08 |
-| 11. Web Search Integration | v0.2 | 0/TBD | Not started | - |
+| 11. Web Search Integration | v0.2 | 3/3 | Complete | 2026-02-09 |
 | 12. Production Email | v0.2 | 0/TBD | Not started | - |

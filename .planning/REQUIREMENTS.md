@@ -46,6 +46,19 @@ Requirements for v0.2 Intelligence & Integration milestone. Each maps to roadmap
 - [ ] **SEARCH-06**: System gracefully degrades when web search API unavailable (continues without search)
 - [ ] **SEARCH-07**: Web search queries are logged for debugging and cost tracking
 
+### Manager Agent Intelligent Routing
+
+- [ ] **ROUTING-01**: Manager Agent analyzes user queries to determine optimal routing path (MEMORY_SUFFICIENT, CODE_MODIFICATION, or NEW_ANALYSIS)
+- [ ] **ROUTING-02**: Manager Agent uses configurable LLM provider (default: Sonnet, configurable via YAML like Phase 7)
+- [ ] **ROUTING-03**: Manager Agent analyzes last 10 conversation messages for routing decisions (configurable)
+- [ ] **ROUTING-04**: When routing decision fails or is uncertain, system defaults to NEW_ANALYSIS (safe fallback)
+- [ ] **ROUTING-05**: MEMORY_SUFFICIENT route answers queries from conversation history without code generation (~87% faster for simple questions)
+- [ ] **ROUTING-06**: CODE_MODIFICATION route modifies existing code for incremental changes (filters, sorts, column additions)
+- [ ] **ROUTING-07**: NEW_ANALYSIS route generates fresh code for new analyses (maintains current behavior)
+- [ ] **ROUTING-08**: Manager Agent logs routing decisions with reasoning for monitoring and optimization
+- [ ] **ROUTING-09**: Architecture designed to support future route override commands (not implemented in v0.2)
+- [ ] **ROUTING-10**: System maintains single-route decision logic (no hybrid routes in v0.2)
+
 ### Smart Query Suggestions
 
 - [ ] **SUGGEST-01**: New chat tabs display 5-6 query suggestions when opened
@@ -137,42 +150,53 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CONFIG-03 | Phase 7 | Pending |
 | CONFIG-04 | Phase 7 | Pending |
 | CONFIG-05 | Phase 7 | Pending |
-| SEARCH-01 | Phase 10 | Pending |
-| SEARCH-02 | Phase 10 | Pending |
-| SEARCH-03 | Phase 10 | Pending |
-| SEARCH-04 | Phase 10 | Pending |
-| SEARCH-05 | Phase 10 | Pending |
-| SEARCH-06 | Phase 10 | Pending |
-| SEARCH-07 | Phase 10 | Pending |
-| SUGGEST-01 | Phase 9 | Pending |
-| SUGGEST-02 | Phase 9 | Pending |
-| SUGGEST-03 | Phase 9 | Pending |
-| SUGGEST-04 | Phase 9 | Pending |
-| SUGGEST-05 | Phase 9 | Pending |
-| SUGGEST-06 | Phase 9 | Pending |
-| SMTP-01 | Phase 11 | Pending |
-| SMTP-02 | Phase 11 | Pending |
-| SMTP-03 | Phase 11 | Pending |
-| SMTP-04 | Phase 11 | Pending |
-| SMTP-05 | Phase 11 | Pending |
-| SMTP-06 | Phase 11 | Pending |
-| PWRESET-01 | Phase 11 | Pending |
-| PWRESET-02 | Phase 11 | Pending |
-| PWRESET-03 | Phase 11 | Pending |
-| PWRESET-04 | Phase 11 | Pending |
-| PWRESET-05 | Phase 11 | Pending |
+| ROUTING-01 | Phase 9 | Pending |
+| ROUTING-02 | Phase 9 | Pending |
+| ROUTING-03 | Phase 9 | Pending |
+| ROUTING-04 | Phase 9 | Pending |
+| ROUTING-05 | Phase 9 | Pending |
+| ROUTING-06 | Phase 9 | Pending |
+| ROUTING-07 | Phase 9 | Pending |
+| ROUTING-08 | Phase 9 | Pending |
+| ROUTING-09 | Phase 9 | Pending |
+| ROUTING-10 | Phase 9 | Pending |
+| SUGGEST-01 | Phase 10 | Pending |
+| SUGGEST-02 | Phase 10 | Pending |
+| SUGGEST-03 | Phase 10 | Pending |
+| SUGGEST-04 | Phase 10 | Pending |
+| SUGGEST-05 | Phase 10 | Pending |
+| SUGGEST-06 | Phase 10 | Pending |
+| SEARCH-01 | Phase 11 | Pending |
+| SEARCH-02 | Phase 11 | Pending |
+| SEARCH-03 | Phase 11 | Pending |
+| SEARCH-04 | Phase 11 | Pending |
+| SEARCH-05 | Phase 11 | Pending |
+| SEARCH-06 | Phase 11 | Pending |
+| SEARCH-07 | Phase 11 | Pending |
+| SMTP-01 | Phase 12 | Pending |
+| SMTP-02 | Phase 12 | Pending |
+| SMTP-03 | Phase 12 | Pending |
+| SMTP-04 | Phase 12 | Pending |
+| SMTP-05 | Phase 12 | Pending |
+| SMTP-06 | Phase 12 | Pending |
+| PWRESET-01 | Phase 12 | Pending |
+| PWRESET-02 | Phase 12 | Pending |
+| PWRESET-03 | Phase 12 | Pending |
+| PWRESET-04 | Phase 12 | Pending |
+| PWRESET-05 | Phase 12 | Pending |
 
 **Coverage:**
-- v0.2 requirements: 43 total
-- Mapped to phases: 43/43 (100%)
+- v0.2 requirements: 53 total
+- Mapped to phases: 53/53 (100%)
 - Unmapped: 0
 
 **Phase Distribution:**
 - Phase 7 (Multi-LLM Infrastructure): 12 requirements (LLM + CONFIG)
 - Phase 8 (Session Memory): 8 requirements (MEMORY)
-- Phase 9 (Query Suggestions): 6 requirements (SUGGEST)
-- Phase 10 (Web Search): 7 requirements (SEARCH)
-- Phase 11 (Production Email): 11 requirements (SMTP + PWRESET)
+- Phase 9 (Manager Agent Routing): 10 requirements (ROUTING)
+- Phase 10 (Query Suggestions): 6 requirements (SUGGEST)
+- Phase 11 (Web Search): 7 requirements (SEARCH)
+- Phase 12 (Production Email): 11 requirements (SMTP + PWRESET)
 
 ---
 *Requirements defined: 2026-02-06*
