@@ -212,6 +212,16 @@ async def lifespan(app: FastAPI):
     await validate_llm_configuration()
     logging.getLogger("spectra.llm").info("All LLM providers validated successfully")
 
+    # Validate SMTP email configuration
+    from app.services.email import validate_smtp_connection, is_smtp_configured
+    smtp_configured = await validate_smtp_connection(settings)
+    if smtp_configured:
+        logging.getLogger("spectra.smtp").info("SMTP connection validated - email delivery active")
+    elif is_smtp_configured(settings):
+        logging.getLogger("spectra.smtp").warning("SMTP configured but validation failed - emails may fail")
+    else:
+        logging.getLogger("spectra.smtp").info("SMTP not configured - using dev mode (console logging)")
+
     # Initialize PostgreSQL checkpointer for session memory
     from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
     from psycopg_pool import AsyncConnectionPool
