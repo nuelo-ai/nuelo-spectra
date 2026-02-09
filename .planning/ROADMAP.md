@@ -238,7 +238,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 13-01-PLAN.md — Rewrite SearchService for Tavily (AsyncTavilyClient, synthesized answer in tool output, config swap, full Serper.dev cleanup)
+- [x] 13-01-PLAN.md — Rewrite SearchService for Tavily (AsyncTavilyClient, synthesized answer in tool output, config swap, full Serper.dev cleanup)
 
 ---
 
@@ -261,4 +261,4 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13
 | 10. Smart Query Suggestions | v0.2 | 2/2 | Complete | 2026-02-08 |
 | 11. Web Search Integration | v0.2 | 3/3 | Complete | 2026-02-09 |
 | 12. Production Email | v0.2 | 0/TBD | Not started | - |
-| 13. Migrate Web Search (Tavily) | v0.2 | 0/TBD | Not started | - |
+| 13. Migrate Web Search (Tavily) | v0.2 | 1/1 | Complete | 2026-02-09 |
