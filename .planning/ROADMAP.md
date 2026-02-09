@@ -227,8 +227,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 12-01-PLAN.md — SMTP config, PasswordResetToken model + migration, aiosmtplib email service rewrite, Jinja2 HTML/text templates
-- [ ] 12-02-PLAN.md — Auth endpoint rewiring (DB tokens, cooldown, single-use), SMTP startup validation, frontend error page for expired/invalid tokens
+- [x] 12-01-PLAN.md — SMTP config, PasswordResetToken model + migration, aiosmtplib email service rewrite, Jinja2 HTML/text templates
+- [x] 12-02-PLAN.md — Auth endpoint rewiring (DB tokens, cooldown, single-use), SMTP startup validation, frontend error page for expired/invalid tokens
 
 ### Phase 13: Migrate Web Search from Serper.dev to Tavily
 
@@ -260,5 +260,5 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13
 | 9. Manager Agent Routing | v0.2 | 3/3 | Complete | 2026-02-08 |
 | 10. Smart Query Suggestions | v0.2 | 2/2 | Complete | 2026-02-08 |
 | 11. Web Search Integration | v0.2 | 3/3 | Complete | 2026-02-09 |
-| 12. Production Email | v0.2 | 0/2 | Not started | - |
+| 12. Production Email | v0.2 | 2/2 | Complete | 2026-02-09 |
 | 13. Migrate Web Search (Tavily) | v0.2 | 1/1 | Complete | 2026-02-09 |
