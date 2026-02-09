@@ -200,11 +200,12 @@ Plans:
 4. Web search functionality can be enabled/disabled via configuration file
 5. All web search queries are logged for debugging and cost tracking
 
-**Plans:** TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 11-01: TBD
-- [ ] 11-02: TBD
+- [ ] 11-01-PLAN.md — Backend search infrastructure: SearchService, SearchQuota model, search config, state extension, schema update, search router
+- [ ] 11-02-PLAN.md — Agent integration: Data Analysis Agent search integration, prompt engineering, agent_service wiring, quota tracking
+- [ ] 11-03-PLAN.md — Frontend search UI: search toggle, SSE events, DataCard sources, ChatInterface wiring, human verification
 
 ---
 
