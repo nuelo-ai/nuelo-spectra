@@ -230,12 +230,22 @@ Plans:
 - [ ] 12-01: TBD
 - [ ] 12-02: TBD
 
+### Phase 13: Migrate Web Search from Serper.dev to Tavily
+
+**Goal:** Replace Serper.dev search provider with Tavily API so the Analyst AI agent receives full page content (not just URL links), enabling higher-quality analysis grounded in actual search result content.
+
+**Depends on:** Phase 11 (Web Search Tool Integration)
+**Plans:** 1 plan
+
+Plans:
+- [ ] 13-01-PLAN.md — Rewrite SearchService for Tavily (AsyncTavilyClient, synthesized answer in tool output, config swap, full Serper.dev cleanup)
+
 ---
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12
+Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -251,3 +261,4 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12
 | 10. Smart Query Suggestions | v0.2 | 2/2 | Complete | 2026-02-08 |
 | 11. Web Search Integration | v0.2 | 3/3 | Complete | 2026-02-09 |
 | 12. Production Email | v0.2 | 0/TBD | Not started | - |
+| 13. Migrate Web Search (Tavily) | v0.2 | 0/TBD | Not started | - |
