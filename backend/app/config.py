@@ -20,9 +20,13 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:3000"
     cors_origins: list[str] | str = ["http://localhost:3000"]
 
-    # Email
-    email_service_api_key: str = ""
-    email_from: str = "noreply@spectra.app"
+    # SMTP Email
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_pass: str = ""
+    smtp_from_email: str = "noreply@spectra.app"
+    smtp_from_name: str = "Spectra"
 
     # File Upload
     upload_dir: str = "uploads"
