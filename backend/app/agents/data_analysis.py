@@ -146,10 +146,15 @@ async def da_with_tools_node(state: ChatAgentState) -> dict:
 async def da_response_node(state: ChatAgentState) -> dict:
     """Generate final response from the Data Analysis Agent.
 
-    Called after the tool-calling loop completes (LLM decided no more searches
-    needed). The last AIMessage in state.messages contains the final response.
-    Extracts search sources from ToolMessages in the conversation.
-    Parses JSON response with fallback (preserves existing parsing logic).
+    Called after the tool-calling loop completes (LLM decided no more searches).
+
+    Two paths:
+    - No search used: Extract analysis from last AIMessage (reliable JSON from
+      a clean LLM call without tools bound).
+    - Search used: Make a FRESH LLM call (no tools bound) with search results
+      included in the prompt. This guarantees reliable JSON output because
+      bind_tools mode causes the LLM to unreliably follow text-based JSON
+      format instructions.
 
     Args:
         state: Current chat workflow state with completed tool-calling conversation
@@ -160,26 +165,26 @@ async def da_response_node(state: ChatAgentState) -> dict:
     """
     messages = state.get("messages", [])
 
-    # The last message should be the AIMessage with the final analysis
-    last_msg = messages[-1] if messages else None
-    if last_msg and hasattr(last_msg, "content"):
-        analysis = last_msg.content
-    else:
-        analysis = "Unable to generate analysis."
-
-    # Extract search sources from ToolMessages in the CURRENT query only
-    # (after the last HumanMessage to avoid leaking sources from previous queries)
+    # Extract current query messages (after last HumanMessage)
     last_human_idx = -1
     for i, msg in enumerate(messages):
         if isinstance(msg, HumanMessage):
             last_human_idx = i
     current_query_messages = messages[last_human_idx + 1:] if last_human_idx >= 0 else messages
 
+    # Check if search tools were used in this query
+    has_current_tool_messages = any(
+        isinstance(msg, ToolMessage) for msg in current_query_messages
+    )
+
+    # Extract search sources from ToolMessages
     search_sources = []
+    search_results_text = ""
     for msg in current_query_messages:
         if isinstance(msg, ToolMessage):
             sources = _extract_sources_from_tool_response(msg.content)
             search_sources.extend(sources)
+            search_results_text += msg.content + "\n"
 
     # Deduplicate sources by URL
     seen_urls = set()
@@ -189,26 +194,20 @@ async def da_response_node(state: ChatAgentState) -> dict:
             seen_urls.add(src["url"])
             unique_sources.append(src)
 
-    # Parse JSON response with fallback for non-JSON responses
-    # Strip markdown code fences if LLM wrapped response in ```json...```
-    content = analysis.strip()
-    if content.startswith("```"):
-        try:
-            first_newline = content.index("\n")
-            content = content[first_newline + 1:]
-            if content.endswith("```"):
-                content = content[:-3].strip()
-        except ValueError:
-            pass  # No newline found, use content as-is
-
-    try:
-        parsed = json.loads(content)
-        analysis_text = parsed.get("analysis", analysis)
-        follow_ups = parsed.get("follow_up_suggestions", [])
-    except json.JSONDecodeError:
-        # Fallback: treat entire response as analysis, no follow-ups
-        analysis_text = analysis
-        follow_ups = []
+    if has_current_tool_messages:
+        # Search was used: make a fresh LLM call (no tools) for reliable JSON.
+        # The tool-calling LLM's response is unreliable for JSON format.
+        analysis_text, follow_ups = await _generate_analysis_with_search(
+            state, search_results_text
+        )
+    else:
+        # No search: extract from last AIMessage (reliable JSON)
+        last_msg = messages[-1] if messages else None
+        if last_msg and hasattr(last_msg, "content"):
+            raw = last_msg.content
+        else:
+            raw = "Unable to generate analysis."
+        analysis_text, follow_ups = _parse_analysis_json(raw)
 
     # Return structured response with clean AIMessage for checkpoint
     # The clean AIMessage ensures the Manager Agent sees a readable message
@@ -220,6 +219,80 @@ async def da_response_node(state: ChatAgentState) -> dict:
         "search_sources": unique_sources,
         "messages": [AIMessage(content=analysis_text)],
     }
+
+
+async def _generate_analysis_with_search(
+    state: ChatAgentState, search_results_text: str
+) -> tuple[str, list[str]]:
+    """Generate analysis with a fresh LLM call when search results are available.
+
+    Makes a clean LLM call (no tools bound) to guarantee reliable JSON output.
+    The tool-calling LLM doesn't reliably follow JSON format instructions because
+    bind_tools puts it in function-calling mode.
+
+    Args:
+        state: Current chat workflow state with execution context
+        search_results_text: Concatenated text of search tool results
+
+    Returns:
+        tuple: (analysis_text, follow_up_suggestions)
+    """
+    settings = get_settings()
+    provider = get_agent_provider("data_analysis")
+    model = get_agent_model("data_analysis")
+    temperature = get_agent_temperature("data_analysis")
+    api_key = get_api_key_for_provider(provider, settings)
+    max_tokens = get_agent_max_tokens("data_analysis")
+
+    kwargs = {"max_tokens": max_tokens, "temperature": temperature}
+    if provider == "ollama":
+        kwargs["base_url"] = settings.ollama_base_url
+
+    llm = get_llm(provider=provider, model=model, api_key=api_key, **kwargs)
+
+    # Build prompt with search results included as context
+    system_prompt = _build_analysis_prompt(state, web_search_enabled=False)
+    system_prompt += f"""
+
+**Web Search Results (incorporate relevant findings and cite sources):**
+{search_results_text}"""
+
+    response = await llm.ainvoke([
+        SystemMessage(content=system_prompt),
+        HumanMessage(content="Please analyze these results."),
+    ])
+
+    return _parse_analysis_json(response.content)
+
+
+def _parse_analysis_json(raw: str) -> tuple[str, list[str]]:
+    """Parse LLM response as JSON, extracting analysis and follow-up suggestions.
+
+    Handles markdown code fences and falls back to plain text on parse failure.
+
+    Args:
+        raw: Raw LLM response content
+
+    Returns:
+        tuple: (analysis_text, follow_up_suggestions)
+    """
+    content = raw.strip()
+    if content.startswith("```"):
+        try:
+            first_newline = content.index("\n")
+            content = content[first_newline + 1:]
+            if content.endswith("```"):
+                content = content[:-3].strip()
+        except ValueError:
+            pass
+
+    try:
+        parsed = json.loads(content)
+        analysis_text = parsed.get("analysis", raw)
+        follow_ups = parsed.get("follow_up_suggestions", [])
+        return analysis_text, follow_ups
+    except json.JSONDecodeError:
+        return raw, []
 
 
 def _build_memory_prompt(state: ChatAgentState) -> str:
