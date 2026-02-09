@@ -180,8 +180,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 10-01-PLAN.md — Backend: DB migration, onboarding prompt extension for LLM-generated suggestions, Data Analysis Agent follow-up suggestions, API response changes
-- [ ] 10-02-PLAN.md — Frontend: QuerySuggestions component, ChatInterface empty state integration, DataCard follow-up chips, human verification
+- [x] 10-01-PLAN.md — Backend: DB migration, onboarding prompt extension for LLM-generated suggestions, Data Analysis Agent follow-up suggestions, API response changes
+- [x] 10-02-PLAN.md — Frontend: QuerySuggestions component, ChatInterface empty state integration, DataCard follow-up chips, human verification
 
 ---
 
@@ -247,6 +247,6 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12
 | 7. Multi-LLM Infrastructure | v0.2 | 4/4 | Complete | 2026-02-07 |
 | 8. Session Memory | v0.2 | 2/2 | Complete | 2026-02-08 |
 | 9. Manager Agent Routing | v0.2 | 3/3 | Complete | 2026-02-08 |
-| 10. Smart Query Suggestions | v0.2 | 0/2 | Not started | - |
+| 10. Smart Query Suggestions | v0.2 | 2/2 | Complete | 2026-02-08 |
 | 11. Web Search Integration | v0.2 | 0/TBD | Not started | - |
 | 12. Production Email | v0.2 | 0/TBD | Not started | - |

@@ -62,7 +62,7 @@ completed: 2026-02-08
 - **Duration:** 3 min
 - **Started:** 2026-02-08T21:08:21Z
 - **Completed:** 2026-02-08T21:11:31Z
-- **Tasks:** 2/2 auto tasks (checkpoint pending human verification)
+- **Tasks:** 3/3 (2 auto + 1 human verification: PASSED)
 - **Files modified:** 6
 
 ## Accomplishments
@@ -110,16 +110,32 @@ Each task was committed atomically:
 **Total deviations:** 1 auto-fixed (1 bug)
 **Impact on plan:** Minor cosmetic improvement, no scope creep.
 
+## Bugfix During Human Verification
+
+**LLM JSON code fence wrapping + schema mismatch** - `54a5aa2` (fix)
+- LLM wrapped JSON response in markdown code fences (```json...```), causing json.loads() to fail and store raw JSON as data_summary
+- Prompt schema used `queries` key but frontend expected `suggestions` key in category objects
+- Fix: Added code fence stripping in onboarding.py and data_analysis.py; aligned frontend types to use `queries`
+
+## Human Verification Results
+
+All 5 test scenarios PASSED:
+1. Initial suggestions on new file upload - suggestions grouped by categories with real column names
+2. Suggestion click auto-sends - streaming starts immediately, chips fade out
+3. Follow-up suggestions on DataCard - 2-3 chips with "Continue exploring" header
+4. Existing file backward compatibility - old empty state works, no console errors
+5. Page refresh persistence - follow-up suggestions persist on DataCards
+
 ## Issues Encountered
-None
+None beyond the code fence bugfix noted above.
 
 ## User Setup Required
 None - no external service configuration required.
 
 ## Next Phase Readiness
-- Complete Smart Query Suggestions feature ready for human verification (Task 3 checkpoint)
-- Backend (Plan 01) + Frontend (Plan 02) integration complete
-- Pending: Human verification of 5 test scenarios (initial suggestions, auto-send, follow-ups, backward compatibility, persistence)
+- Complete Smart Query Suggestions feature verified end-to-end
+- Backend (Plan 01) + Frontend (Plan 02) integration complete and human-tested
+- Ready for phase verification
 
 ## Self-Check: PASSED
 
