@@ -38,14 +38,14 @@ logger = logging.getLogger("spectra.routing")
 
 async def manager_node(
     state: ChatAgentState,
-) -> Command[Literal["data_analysis", "coding_agent"]]:
+) -> Command[Literal["da_with_tools", "coding_agent"]]:
     """Manager Agent node that classifies queries and routes to appropriate agent.
 
     Analyzes the user's query and conversation context to determine the optimal
     processing route. Uses structured LLM output for reliable JSON parsing.
 
     Routes:
-    - MEMORY_SUFFICIENT -> data_analysis (skip code generation entirely)
+    - MEMORY_SUFFICIENT -> da_with_tools (skip code generation, answer from history)
     - CODE_MODIFICATION -> coding_agent (with previous code for modification)
     - NEW_ANALYSIS -> coding_agent (fresh code generation)
 
@@ -55,7 +55,7 @@ async def manager_node(
         state: Current chat workflow state
 
     Returns:
-        Command: Routing command to data_analysis or coding_agent with state updates
+        Command: Routing command to da_with_tools or coding_agent with state updates
     """
     writer = get_stream_writer()
     writer({
@@ -94,22 +94,39 @@ async def manager_node(
     messages = state.get("messages", [])
     recent_messages = messages[-routing_context_messages:]
 
-    # Check for previous code
+    # Check for previous code and results from checkpoint
     previous_code = state.get("generated_code", "")
     has_previous_code = bool(previous_code)
+    previous_result = state.get("execution_result", "")
+    has_previous_result = bool(previous_result)
 
-    # Get data summary for context
-    data_summary = state.get("data_summary", "")
+    # Format recent conversation messages for the routing prompt.
+    # AI responses need higher limits because they contain data tables and results
+    # that are critical for MEMORY_SUFFICIENT routing decisions.
+    # Human messages are typically short queries — lower limit is fine.
+    formatted_messages = []
+    for msg in recent_messages:
+        role = getattr(msg, "type", "unknown")
+        content = msg.content if isinstance(msg.content, str) else str(msg.content)
+        max_len = 1500 if role == "ai" else 300
+        if len(content) > max_len:
+            content = content[:max_len] + "..."
+        formatted_messages.append(f"[{role}]: {content}")
+    conversation_text = "\n".join(formatted_messages) if formatted_messages else "No previous conversation"
 
-    # Build routing prompt with context
+    # Build routing prompt — conversation context + previous code/results only.
+    # Data summary is intentionally excluded (not needed for routing, wastes tokens).
     code_snippet = previous_code[:500] if previous_code else "None"
+    result_snippet = previous_result[:1000] if previous_result else "None"
     routing_prompt = (
         f"**Current User Query:** {state.get('user_query', '')}\n\n"
         f"**Conversation Context:**\n"
         f"- Messages in history: {len(messages)}\n"
-        f"- Has previous code: {has_previous_code}\n\n"
-        f"**Data Summary:**\n{data_summary}\n\n"
+        f"- Has previous code: {has_previous_code}\n"
+        f"- Has previous result: {has_previous_result}\n\n"
+        f"**Recent Conversation:**\n{conversation_text}\n\n"
         f"**Previous Code (truncated):**\n```python\n{code_snippet}\n```\n\n"
+        f"**Previous Execution Result (truncated):**\n{result_snippet}\n\n"
         f"Analyze the query and determine the optimal route."
     )
 
@@ -157,7 +174,7 @@ async def manager_node(
     # Route via Command based on decision (single-route logic, ROUTING-10)
     if decision.route == "MEMORY_SUFFICIENT":
         return Command(
-            goto="data_analysis",
+            goto="da_with_tools",
             update={"routing_decision": decision},
         )
     elif decision.route == "CODE_MODIFICATION":
