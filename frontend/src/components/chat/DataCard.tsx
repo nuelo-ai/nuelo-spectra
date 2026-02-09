@@ -9,7 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/data/DataTable";
 import { TypingIndicator } from "./TypingIndicator";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ExternalLink } from "lucide-react";
 import { CSVDownloadButton, MarkdownDownloadButton } from "@/components/data/DownloadButtons";
 import { CodeDisplay } from "@/components/data/CodeDisplay";
 import ReactMarkdown from "react-markdown";
@@ -29,6 +29,7 @@ interface DataCardProps {
   onToggleCollapse?: () => void; // Callback for collapse toggle
   followUpSuggestions?: string[]; // Follow-up query suggestions
   onFollowUpClick?: (suggestion: string) => void; // Callback when follow-up chip clicked
+  searchSources?: { title: string; url: string }[]; // Web search source citations
 }
 
 /**
@@ -46,6 +47,7 @@ export function DataCard({
   onToggleCollapse,
   followUpSuggestions,
   onFollowUpClick,
+  searchSources,
 }: DataCardProps) {
   const [internalCollapsed, setInternalCollapsed] = useState(isCollapsed);
 
@@ -183,6 +185,28 @@ export function DataCard({
                 >
                   {suggestion}
                 </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Sources section */}
+        {searchSources && searchSources.length > 0 && !isStreaming && (
+          <div className="space-y-2 pt-3 border-t border-border/50">
+            <h4 className="text-xs font-medium text-muted-foreground">Sources</h4>
+            <div className="space-y-1">
+              {searchSources.map((source, idx) => (
+                <a
+                  key={idx}
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-xs text-primary hover:underline truncate group"
+                  title={source.url}
+                >
+                  <ExternalLink className="h-3 w-3 shrink-0 opacity-50 group-hover:opacity-100" />
+                  {source.title || source.url}
+                </a>
               ))}
             </div>
           </div>

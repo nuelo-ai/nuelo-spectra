@@ -137,6 +137,7 @@ export function ChatMessage({
   if (hasStructuredData) {
     const tableData = parseExecutionResult(message.metadata_json?.execution_result);
     const followUpSuggestions = message.metadata_json?.follow_up_suggestions as string[] | undefined;
+    const searchSources = message.metadata_json?.search_sources as { title: string; url: string }[] | undefined;
 
     return (
       <div className="p-4">
@@ -150,6 +151,7 @@ export function ChatMessage({
           onToggleCollapse={onToggleCollapse}
           followUpSuggestions={followUpSuggestions}
           onFollowUpClick={onFollowUpClick}
+          searchSources={searchSources}
         />
       </div>
     );

@@ -7,6 +7,7 @@ import {
   useInvalidateChatMessages,
 } from "@/hooks/useChatMessages";
 import { useSSEStream } from "@/hooks/useSSEStream";
+import { useSearchToggle } from "@/hooks/useSearchToggle";
 import { useTabCloseWarning } from "@/hooks/useTabCloseWarning";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
@@ -14,6 +15,7 @@ import { TypingIndicator } from "./TypingIndicator";
 import { DataCard } from "./DataCard";
 import { ContextUsage } from "./ContextUsage";
 import { QuerySuggestions } from "./QuerySuggestions";
+import { Globe } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { apiClient } from "@/lib/api-client";
 import { useFileSummary } from "@/hooks/useFileManager";
@@ -38,9 +40,13 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
     error: streamError,
     completedData,
     events,
+    currentSearchQuery,
+    searchSources: streamSearchSources,
     startStream,
     resetStream,
   } = useSSEStream();
+
+  const searchToggle = useSearchToggle();
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -124,11 +130,17 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
   }, [isStreaming, streamError, refetch, resetStream, chatData?.messages]);
 
   const handleSend = async (message: string) => {
+    // Capture search toggle state before resetting
+    const webSearchEnabled = searchToggle.enabled;
+
     // Optimistically add user message
     addLocalMessage(fileId, message);
 
-    // Start streaming AI response
-    await startStream(fileId, message);
+    // Reset toggle to OFF after each query (per CONTEXT.md)
+    searchToggle.resetToggle();
+
+    // Start streaming AI response with search flag
+    await startStream(fileId, message, webSearchEnabled);
   };
 
   const toggleCardCollapse = (messageId: string) => {
@@ -209,8 +221,25 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
       followUpSuggestions = analysisEvent.data.follow_up_suggestions;
     }
 
-    return { queryBrief, tableData, explanation, generatedCode, followUpSuggestions };
+    // Extract search sources from da_response node_complete event
+    let searchSources: { title: string; url: string }[] | undefined = undefined;
+    const daResponseEvent = events.find((e) => e.type === "node_complete" && e.node === "da_response");
+    if (daResponseEvent?.data?.search_sources && daResponseEvent.data.search_sources.length > 0) {
+      searchSources = daResponseEvent.data.search_sources;
+    } else if (streamSearchSources.length > 0) {
+      searchSources = streamSearchSources;
+    }
+
+    return { queryBrief, tableData, explanation, generatedCode, followUpSuggestions, searchSources };
   };
+
+  // Refresh search config when quota exceeded event received
+  useEffect(() => {
+    const hasQuotaExceeded = events.some((e) => e.type === "search_quota_exceeded");
+    if (hasQuotaExceeded) {
+      searchToggle.checkConfig();
+    }
+  }, [events, searchToggle.checkConfig]);
 
   const hasMessages = messages.length > 0;
   const showEmptyState = !hasMessages && !isStreaming;
@@ -388,6 +417,7 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
                           isStreaming={true}
                           followUpSuggestions={streamingData.followUpSuggestions}
                           onFollowUpClick={handleSend}
+                          searchSources={streamingData.searchSources}
                         />
                       );
                     } else if (streamedText) {
@@ -444,11 +474,16 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
         <div className="border-t bg-muted/50 py-2" style={{ animation: "var(--animate-slideUp)" }}>
           <div className="max-w-3xl mx-auto px-4">
             <div className="flex items-center gap-2">
-              <div className="flex gap-1">
-                <div className="h-1.5 w-1.5 rounded-full bg-primary" style={{ animation: "var(--animate-pulse-gentle)", animationDelay: "0ms" }} />
-                <div className="h-1.5 w-1.5 rounded-full bg-primary" style={{ animation: "var(--animate-pulse-gentle)", animationDelay: "200ms" }} />
-                <div className="h-1.5 w-1.5 rounded-full bg-primary" style={{ animation: "var(--animate-pulse-gentle)", animationDelay: "400ms" }} />
-              </div>
+              {currentSearchQuery ? (
+                /* Search activity: Globe icon with pulsing animation */
+                <Globe className="h-3.5 w-3.5 text-primary" style={{ animation: "var(--animate-pulse-gentle)" }} />
+              ) : (
+                <div className="flex gap-1">
+                  <div className="h-1.5 w-1.5 rounded-full bg-primary" style={{ animation: "var(--animate-pulse-gentle)", animationDelay: "0ms" }} />
+                  <div className="h-1.5 w-1.5 rounded-full bg-primary" style={{ animation: "var(--animate-pulse-gentle)", animationDelay: "200ms" }} />
+                  <div className="h-1.5 w-1.5 rounded-full bg-primary" style={{ animation: "var(--animate-pulse-gentle)", animationDelay: "400ms" }} />
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">{currentStatus}</p>
             </div>
           </div>
@@ -458,7 +493,15 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
       {/* Chat input - fixed at bottom */}
       <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-3xl mx-auto px-4 py-4">
-          <ChatInput onSend={handleSend} disabled={isStreaming || isLoading} initialValue={suggestionInput} />
+          <ChatInput
+            onSend={handleSend}
+            disabled={isStreaming || isLoading}
+            initialValue={suggestionInput}
+            searchEnabled={searchToggle.enabled}
+            onSearchToggle={searchToggle.toggle}
+            searchConfigured={searchToggle.isConfigured}
+            searchQuotaExceeded={searchToggle.isQuotaExceeded}
+          />
         </div>
       </div>
     </div>
