@@ -13,7 +13,7 @@ Phase: 13 of 13 (Migrate Web Search from Serper.dev to Tavily)
 Plan: 2 of 2 complete
 Status: Phase 13 complete
 Branch: develop (v0.2 development branch)
-Last activity: 2026-02-09 — Phase 13 complete (follow-up suggestion chips for MEMORY_SUFFICIENT route)
+Last activity: 2026-02-09 — Phase 7 Plan 5 complete (UAT gap closure: empty response validation + reasoning model config)
 
 Progress: [██████████████████████████████] 100% (55/~55 estimated total plans)
 
@@ -39,7 +39,7 @@ Progress: [███████████████████████
 
 | Phase | Plans | Status |
 |-------|-------|--------|
-| 7. Multi-LLM Provider Infrastructure | 4/4 | Complete |
+| 7. Multi-LLM Provider Infrastructure | 5/5 | Complete (UAT gap closure) |
 | 8. Session Memory with PostgreSQL Checkpointing | 2/2 | Complete (UAT passed) |
 | 9. Manager Agent with Intelligent Query Routing | 3/3 | Complete |
 | 10. Smart Query Suggestions | 2/2 | Complete (UAT passed) |
@@ -67,7 +67,8 @@ Progress: [███████████████████████
 - v0.2 Phase 12 Plan 1: 4 min execution (SMTP email infrastructure - aiosmtplib, PasswordResetToken model, Jinja2 templates)
 - v0.2 Phase 12 Plan 2: 2 min execution (DB-backed tokens, cooldown, SMTP startup validation, frontend error page)
 - v0.2 Phase 13 Plan 2: 4 min execution (MEMORY_SUFFICIENT follow-up suggestions - 4 defect fixes across backend prompt, frontend streaming, frontend persistence, non-streaming metadata)
-- Trend: Stable, high velocity maintained (Phase 7 ~12 min, Phase 8 ~7 min, Phase 9 ~11 min, Phase 10 ~7 min, Phase 11 ~20 min, Phase 13 ~7 min, Phase 12 ~6 min)
+- v0.2 Phase 7 Plan 5: 3 min execution (UAT gap closure - empty response validation, reasoning model config, 11 new tests)
+- Trend: Stable, high velocity maintained (Phase 7 ~15 min, Phase 8 ~7 min, Phase 9 ~11 min, Phase 10 ~7 min, Phase 11 ~20 min, Phase 13 ~7 min, Phase 12 ~6 min)
 
 ## Accumulated Context
 
@@ -93,6 +94,7 @@ Recent decisions affecting v0.2 work:
 - **Phase 7 Plan 2 (2026-02-07):** Shared get_api_key_for_provider() helper in agents/config.py for centralized API key resolution, temperature passed via kwargs to get_llm() for all agents
 - **Phase 7 Plan 3 (2026-02-07):** Fail-fast startup validation with connectivity tests (5-second timeout per provider), 60-second cached health checks, structured JSON logging for LLM calls (metadata only, not full content)
 - **Phase 7 Plan 4 (2026-02-07):** 34 comprehensive test scenarios covering all 5 providers (Anthropic, OpenAI, Google, Ollama, OpenRouter) with factory, config, validation, error classification, health endpoint, and invoke logging tests. All tests fully mocked - zero live API keys required (LLM-06 satisfied)
+- **Phase 7 Plan 5 (2026-02-09):** UAT gap closure: EmptyLLMResponseError and validate_llm_response() centralized in llm_factory.py. All 5 LLM invocation sites validate for empty content. OpenAI reasoning models (o1, o3, o4-mini, gpt-5-nano, gpt-5-mini) auto-configured with reasoning_effort=low. 11 new tests (5 validation + 6 reasoning config). 106 total tests pass.
 - **Phase 8 Plan 1 (2026-02-07):** AsyncPostgresSaver initialized in FastAPI lifespan with connection pooling, add_messages reducer for message accumulation, thread-based conversation isolation per file tab. AsyncPostgresSaver is NOT an async context manager (use direct instantiation). Database URL conversion required (postgresql+asyncpg → postgresql for psycopg). Messages initialized as [HumanMessage(content=user_query)] for proper reducer behavior. Context window defaults: 12000 tokens, 85% warning threshold.
 - **Phase 8 Plan 2 (2026-02-07):** Tiktoken-based token counting with provider-specific scaling factors (1.1x Anthropic, 1.05x Google, 1.0x OpenAI/others) for fast UI updates without expensive API calls. Two-phase trimming flow: check → user confirmation → trim to 90% of limit. Context usage displayed in ChatInterface header ("X / 12,000 tokens" with orange warning at 85%, red at exceeded). Browser tab close warning via beforeunload when hasContext (>2 messages). GET /context-usage and POST /trim-context endpoints for frontend integration.
 - **Manager Agent Architecture Decision (2026-02-07):** Insert Manager Agent as new Phase 9 (renumber subsequent phases 9→10, 10→11, 11→12). Manager Agent intelligently routes queries to 3 paths: MEMORY_SUFFICIENT (answer from history, ~87% faster), CODE_MODIFICATION (modify existing code), NEW_ANALYSIS (fresh code generation). Use Sonnet model (configurable via YAML like Phase 7), analyze last 10 messages, default to NEW_ANALYSIS on uncertainty. No route override or hybrid routes in v0.2 (design for future flexibility). Expected impact: ~40% cost reduction, significantly faster responses for simple queries. Architecture doc: .planning/architecture/manager-agent-routing.md
@@ -142,7 +144,7 @@ Recent decisions affecting v0.2 work:
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 13-02-PLAN.md (Phase 13 complete - MEMORY_SUFFICIENT follow-up suggestions fix)
-Resume with: v0.2 milestone complete - all phases (7-13) done
-Resume file: .planning/phases/13-migrate-web-search-from-serper-dev-to-tavily/13-02-SUMMARY.md
+Stopped at: Completed 07-05-PLAN.md (Phase 7 UAT gap closure - empty response validation + reasoning model config)
+Resume with: v0.2 milestone complete - all phases (7-13) done, UAT gaps closed
+Resume file: .planning/phases/07-multi-llm-provider-infrastructure/07-05-SUMMARY.md
 Next decision: v0.2 milestone wrap-up (merge develop to master, tag v0.2)
