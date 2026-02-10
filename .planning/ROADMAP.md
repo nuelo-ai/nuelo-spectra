@@ -105,13 +105,14 @@ Plans:
 4. System maintains current behavior with Sonnet 4.0 as default for all agents
 5. System displays clear error messages when LLM provider configuration is invalid or unavailable
 
-**Plans:** 4 plans
+**Plans:** 5 plans
 
 Plans:
 - [x] 07-01-PLAN.md — Provider registry, LLM factory extension (Ollama + OpenRouter), per-agent YAML config (provider/model/temperature)
 - [x] 07-02-PLAN.md — Migrate all 4 agents to per-agent provider/model/temperature config
 - [x] 07-03-PLAN.md — Fail-fast startup validation, structured logging, /health/llm endpoint
 - [x] 07-04-PLAN.md — Test scenarios for all LLM providers (LLM-06)
+- [ ] 07-05-PLAN.md — Gap closure: empty response validation for reasoning models, reasoning_effort config (UAT fix)
 
 ---
 
@@ -256,7 +257,7 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13
 | 4. AI Agent System & Code Generation | v0.1 | 8/8 | Complete | 2026-02-06 |
 | 5. Secure Code Execution & E2B | v0.1 | 6/6 | Complete | 2026-02-06 |
 | 6. Interactive Data Cards | v0.1 | 6/6 | Complete | 2026-02-06 |
-| 7. Multi-LLM Infrastructure | v0.2 | 4/4 | Complete | 2026-02-07 |
+| 7. Multi-LLM Infrastructure | v0.2 | 4/5 | Gap closure | 2026-02-07 |
 | 8. Session Memory | v0.2 | 2/2 | Complete | 2026-02-08 |
 | 9. Manager Agent Routing | v0.2 | 3/3 | Complete | 2026-02-08 |
 | 10. Smart Query Suggestions | v0.2 | 2/2 | Complete | 2026-02-08 |
