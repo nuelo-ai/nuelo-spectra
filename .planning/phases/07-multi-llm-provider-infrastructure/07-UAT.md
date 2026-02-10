@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 07-multi-llm-provider-infrastructure
 source: [07-01-SUMMARY.md, 07-02-SUMMARY.md, 07-03-SUMMARY.md, 07-04-SUMMARY.md]
 started: 2026-02-09T12:00:00Z
@@ -53,7 +53,14 @@ skipped: 0
   reason: "User reported: Changed Onboarding Agent to openai/gpt-5-nano-2025-08-07, received ai: {\"refusal\":null} — no actual content returned"
   severity: major
   test: 2
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "gpt-5-nano reasoning models exhaust token budget on reasoning before producing content, leaving response.content empty. onboarding.py generate_summary() (line 193) doesn't validate empty content — silently stores empty string. LangChain stores OpenAI's refusal field in additional_kwargs, which surfaces as {refusal:null}."
+  artifacts:
+    - path: "backend/app/agents/onboarding.py"
+      issue: "generate_summary() lines 189-209 — no validation for empty response.content"
+    - path: "backend/app/agents/llm_factory.py"
+      issue: "OpenAI instantiation lacks reasoning model config (reasoning_effort param)"
+  missing:
+    - "Add empty content validation after LLM invocation in all agents"
+    - "Set reasoning_effort=minimal for OpenAI reasoning models (nano/mini) in llm_factory"
+    - "Return user-friendly error instead of silently storing empty string"
+  debug_session: ".planning/debug/openai-refusal-null-response.md"
