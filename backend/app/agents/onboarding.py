@@ -16,7 +16,7 @@ from app.agents.config import (
     get_agent_temperature,
     get_api_key_for_provider,
 )
-from app.agents.llm_factory import get_llm
+from app.agents.llm_factory import get_llm, validate_llm_response, EmptyLLMResponseError
 from app.config import get_settings
 
 
@@ -188,9 +188,21 @@ class OnboardingAgent:
 
         response = await asyncio.to_thread(llm.invoke, messages)
 
+        # Validate non-empty response
+        try:
+            content = validate_llm_response(response, provider, model, "onboarding")
+        except EmptyLLMResponseError:
+            # Return a clear error message as summary, no suggestions
+            return (
+                "Unable to generate data summary. The configured LLM model returned "
+                "an empty response. Please check the model configuration in prompts.yaml "
+                "or try a different model.",
+                None,
+            )
+
         # Parse JSON response with fallback for non-JSON responses
         # Strip markdown code fences if LLM wrapped response in ```json...```
-        content = response.content.strip()
+        content = content.strip()
         if content.startswith("```"):
             # Remove opening fence (```json or ```)
             first_newline = content.index("\n")
@@ -201,12 +213,12 @@ class OnboardingAgent:
 
         try:
             parsed = json.loads(content)
-            summary = parsed.get("summary", response.content)
+            summary = parsed.get("summary", content)
             suggestions = parsed.get("suggestions", None)
             return (summary, suggestions)
         except json.JSONDecodeError:
             # Fallback: treat entire response as summary, no suggestions
-            return (response.content, None)
+            return (content, None)
 
     async def run(
         self,

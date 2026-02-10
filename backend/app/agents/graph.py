@@ -47,7 +47,7 @@ from app.agents.config import (
     get_agent_temperature,
     get_api_key_for_provider,
 )
-from app.agents.llm_factory import get_llm
+from app.agents.llm_factory import get_llm, validate_llm_response, EmptyLLMResponseError
 from app.config import get_settings
 from app.services.sandbox import E2BSandboxRuntime, ExecutionResult
 
@@ -156,7 +156,39 @@ async def code_checker_node(
     ]
 
     response = await llm.ainvoke(messages)
-    validation_response = response.content.strip()
+
+    # Validate non-empty response
+    try:
+        validation_response = validate_llm_response(response, provider, model, "code_checker")
+        validation_response = validation_response.strip()
+    except EmptyLLMResponseError:
+        # Treat empty response as validation failure (route to retry)
+        new_error_count = error_count + 1
+        if new_error_count >= max_steps:
+            return Command(
+                goto="halt",
+                update={
+                    "validation_result": "INVALID",
+                    "validation_errors": ["Code checker LLM returned empty response"],
+                    "error_count": new_error_count,
+                },
+            )
+        else:
+            writer({
+                "type": "retry",
+                "event": "retry",
+                "message": "Code validation returned empty response. Retrying...",
+                "attempt": new_error_count,
+                "max_attempts": max_steps
+            })
+            return Command(
+                goto="coding_agent",
+                update={
+                    "validation_result": "INVALID",
+                    "validation_errors": ["Code checker LLM returned empty response"],
+                    "error_count": new_error_count,
+                },
+            )
 
     # Parse LLM response
     if validation_response.upper().startswith("VALID"):

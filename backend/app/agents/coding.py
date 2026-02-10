@@ -18,7 +18,7 @@ from app.agents.config import (
     get_agent_temperature,
     get_api_key_for_provider,
 )
-from app.agents.llm_factory import get_llm
+from app.agents.llm_factory import get_llm, validate_llm_response, EmptyLLMResponseError
 from app.agents.state import ChatAgentState
 from app.config import get_settings
 
@@ -196,7 +196,14 @@ async def coding_agent(state: ChatAgentState) -> dict:
     # Invoke LLM
     response = await llm.ainvoke(messages)
 
+    # Validate non-empty response
+    try:
+        content = validate_llm_response(response, provider, model, "coding")
+    except EmptyLLMResponseError:
+        # Return empty code -- code_checker will catch this and route to retry/halt
+        return {"generated_code": ""}
+
     # Extract code from response
-    generated_code = extract_code_block(response.content)
+    generated_code = extract_code_block(content)
 
     return {"generated_code": generated_code}

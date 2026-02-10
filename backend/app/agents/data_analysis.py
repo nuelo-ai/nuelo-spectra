@@ -25,7 +25,7 @@ from app.agents.config import (
     get_agent_temperature,
     get_api_key_for_provider,
 )
-from app.agents.llm_factory import get_llm
+from app.agents.llm_factory import get_llm, validate_llm_response, EmptyLLMResponseError
 from app.agents.state import ChatAgentState
 from app.agents.tools import search_web
 from app.config import get_settings
@@ -138,6 +138,22 @@ async def da_with_tools_node(state: ChatAgentState) -> dict:
 
     # Invoke LLM -- it will either return tool_calls or a final response
     response = await llm_with_tools.ainvoke(messages)
+
+    # Validate non-empty response ONLY when LLM is NOT requesting tools.
+    # In tool-calling mode, content may be empty while tool_calls is populated.
+    has_tool_calls = bool(getattr(response, "tool_calls", None))
+    if not has_tool_calls:
+        try:
+            validate_llm_response(response, provider, model, "data_analysis")
+        except EmptyLLMResponseError:
+            # Return a user-friendly error as AIMessage
+            from langchain_core.messages import AIMessage as _AIMessage
+            error_msg = (
+                "The AI model returned an empty response. This may happen with certain "
+                "reasoning models. Please try rephrasing your question or check the model "
+                "configuration."
+            )
+            return {"messages": [_AIMessage(content=error_msg)]}
 
     # Return as message for the tool-calling loop
     return {"messages": [response]}
@@ -262,7 +278,17 @@ async def _generate_analysis_with_search(
         HumanMessage(content="Please analyze these results."),
     ])
 
-    return _parse_analysis_json(response.content)
+    # Validate non-empty response
+    try:
+        content = validate_llm_response(response, provider, model, "data_analysis")
+    except EmptyLLMResponseError:
+        return (
+            "Unable to generate analysis. The AI model returned an empty response. "
+            "Please try rephrasing your question or check the model configuration.",
+            [],
+        )
+
+    return _parse_analysis_json(content)
 
 
 def _parse_analysis_json(raw: str) -> tuple[str, list[str]]:
