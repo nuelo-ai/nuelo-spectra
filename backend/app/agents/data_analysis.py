@@ -336,7 +336,26 @@ def _build_memory_prompt(state: ChatAgentState) -> str:
 - If asking about data structure, use the data summary
 - DO NOT suggest generating new code
 - Be concise and direct
-- Format for readability with markdown"""
+- Format the analysis text with markdown for readability
+
+Return ONLY valid JSON with two keys: "analysis" and "follow_up_suggestions".
+
+**JSON Schema:**
+```json
+{{
+  "analysis": "Your response text here...",
+  "follow_up_suggestions": [
+    "Suggestion 1",
+    "Suggestion 2",
+    "Suggestion 3"
+  ]
+}}
+```
+
+- "analysis": Your direct answer formatted with markdown
+- "follow_up_suggestions": 2-3 natural follow-up questions the user might ask next, based on the conversation context and data. Use real column names from the data summary.
+
+Return ONLY the JSON object. No text before or after."""
 
 
 def _build_analysis_prompt(state: ChatAgentState, web_search_enabled: bool) -> str:

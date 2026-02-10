@@ -245,6 +245,7 @@ async def run_chat_query(
             "error": result.get("error"),
             "routing_decision": routing_meta,
             "search_sources": result.get("search_sources", []),
+            "follow_up_suggestions": result.get("follow_up_suggestions", []),
         }
     )
 
