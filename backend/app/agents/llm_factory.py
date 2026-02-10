@@ -43,6 +43,48 @@ def classify_llm_error(error: Exception, provider: str) -> str:
     return "provider_error"
 
 
+class EmptyLLMResponseError(Exception):
+    """Raised when an LLM returns empty content."""
+    def __init__(self, provider: str, model: str, agent: str):
+        self.provider = provider
+        self.model = model
+        self.agent = agent
+        super().__init__(
+            f"LLM returned empty response (provider={provider}, model={model}, agent={agent}). "
+            f"This often happens with reasoning models that exhaust token budget on internal reasoning. "
+            f"Try increasing max_tokens or using a non-reasoning model."
+        )
+
+
+def validate_llm_response(response, provider: str, model: str, agent: str) -> str:
+    """Validate that an LLM response has non-empty content.
+
+    Args:
+        response: LangChain LLM response object
+        provider: Provider name (for error context)
+        model: Model name (for error context)
+        agent: Agent name (for error context)
+
+    Returns:
+        str: The validated, non-empty response content
+
+    Raises:
+        EmptyLLMResponseError: If response.content is empty or whitespace-only
+    """
+    content = getattr(response, "content", None)
+    if content is None or (isinstance(content, str) and not content.strip()):
+        logger.error(json.dumps({
+            "event": "llm_empty_response",
+            "agent": agent,
+            "provider": provider,
+            "model": model,
+            "has_content_attr": content is not None,
+            "content_repr": repr(content)[:100] if content is not None else "None",
+        }))
+        raise EmptyLLMResponseError(provider, model, agent)
+    return content if isinstance(content, str) else str(content)
+
+
 async def invoke_with_logging(
     llm: BaseChatModel,
     messages: list,
@@ -152,6 +194,24 @@ def get_llm(
 
     elif provider == "openai":
         from langchain_openai import ChatOpenAI
+        # Detect OpenAI reasoning models and configure reasoning_effort
+        # Reasoning models (o1, o3, o4-mini, gpt-5-nano, gpt-5-mini, etc.) use
+        # internal chain-of-thought that consumes token budget. Without
+        # reasoning_effort, they may exhaust budget on reasoning and return
+        # empty content. Set reasoning_effort=low as default for these models.
+        _reasoning_patterns = ("o1", "o3", "o4-mini", "gpt-5-nano", "gpt-5-mini")
+        model_lower = model.lower()
+        is_reasoning_model = any(model_lower.startswith(p) for p in _reasoning_patterns)
+        if is_reasoning_model and "model_kwargs" not in kwargs:
+            kwargs.setdefault("model_kwargs", {})
+        if is_reasoning_model and "reasoning_effort" not in kwargs.get("model_kwargs", {}):
+            kwargs.setdefault("model_kwargs", {})
+            kwargs["model_kwargs"]["reasoning_effort"] = "low"
+            logger.info(json.dumps({
+                "event": "reasoning_model_config",
+                "model": model,
+                "reasoning_effort": "low",
+            }))
         return ChatOpenAI(model=model, api_key=api_key, **kwargs)
 
     elif provider == "google":
