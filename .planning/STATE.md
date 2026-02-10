@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** Phase 12 - Production Email Infrastructure (v0.2 milestone)
+**Current focus:** Phase 13 - Migrate Web Search from Serper.dev to Tavily (v0.2 milestone)
 
 ## Current Position
 
-Phase: 12 of 13 (Production Email Infrastructure)
+Phase: 13 of 13 (Migrate Web Search from Serper.dev to Tavily)
 Plan: 2 of 2 complete
-Status: Phase 12 complete
+Status: Phase 13 complete
 Branch: develop (v0.2 development branch)
-Last activity: 2026-02-09 — Phase 12 complete (DB-backed password reset tokens, SMTP startup validation, frontend error page)
+Last activity: 2026-02-09 — Phase 13 complete (follow-up suggestion chips for MEMORY_SUFFICIENT route)
 
-Progress: [██████████████████████████░░░] 77% (53/~69 estimated total plans)
+Progress: [██████████████████████████████] 100% (55/~55 estimated total plans)
 
 ## Performance Metrics
 
@@ -45,7 +45,7 @@ Progress: [███████████████████████
 | 10. Smart Query Suggestions | 2/2 | Complete (UAT passed) |
 | 11. Web Search Tool Integration | 3/3 | Complete (UAT passed) |
 | 12. Production Email Infrastructure | 2/2 | Complete |
-| 13. Migrate Web Search (Tavily) | 1/1 | Complete |
+| 13. Migrate Web Search (Tavily) | 2/2 | Complete |
 
 **Recent Trend:**
 - v0.1 completed in 5 days with aggressive execution
@@ -66,7 +66,8 @@ Progress: [███████████████████████
 - v0.2 Phase 13 Plan 1: 3 min execution (Tavily migration - SearchService rewrite, tool output update, Serper removal)
 - v0.2 Phase 12 Plan 1: 4 min execution (SMTP email infrastructure - aiosmtplib, PasswordResetToken model, Jinja2 templates)
 - v0.2 Phase 12 Plan 2: 2 min execution (DB-backed tokens, cooldown, SMTP startup validation, frontend error page)
-- Trend: Stable, high velocity maintained (Phase 7 ~12 min, Phase 8 ~7 min, Phase 9 ~11 min, Phase 10 ~7 min, Phase 11 ~20 min, Phase 13 ~3 min, Phase 12 ~6 min)
+- v0.2 Phase 13 Plan 2: 4 min execution (MEMORY_SUFFICIENT follow-up suggestions - 4 defect fixes across backend prompt, frontend streaming, frontend persistence, non-streaming metadata)
+- Trend: Stable, high velocity maintained (Phase 7 ~12 min, Phase 8 ~7 min, Phase 9 ~11 min, Phase 10 ~7 min, Phase 11 ~20 min, Phase 13 ~7 min, Phase 12 ~6 min)
 
 ## Accumulated Context
 
@@ -107,6 +108,7 @@ Recent decisions affecting v0.2 work:
 - **Phase 12 Plan 1 (2026-02-09):** aiosmtplib with start_tls=True for SMTP transport (replaces Mailgun HTTP API). SHA-256 hashing of reset tokens with secrets.compare_digest for constant-time verification. Dev mode console logging when SMTP_HOST is empty. PasswordResetToken model with token_hash, is_used, is_active, expires_at. Jinja2 HTML/text email templates with inline CSS. validate_smtp_connection() for startup health checks.
 - **Phase 12 Plan 2 (2026-02-09):** DB-backed single-use tokens replace JWT for password reset (SHA-256 hash lookup, is_active + is_used + expires_at validation). In-memory dict cooldown (2 min per email) prevents reset spam without leaking email existence. Previous tokens invalidated on new request. SMTP validated at startup (non-blocking). Frontend error page with "Request new reset" button for expired/invalid/missing tokens. JWT password reset functions removed from security.py.
 - **Phase 13 Plan 1 (2026-02-09):** Tavily API migration using tavily-python SDK (AsyncTavilyClient). SearchService rewritten with include_answer=True, max_results=3, configurable search_depth. search_web tool returns synthesized answer + source URLs (answer flows through existing search_results_text -> _generate_analysis_with_search -> system prompt path). search_num_results default changed 5->3. credits_used logged for SEARCH-07 cost tracking. All Serper.dev references removed from codebase. 100 tests pass.
+- **Phase 13 Plan 2 (2026-02-09):** Fixed 4 compounding defects preventing follow-up suggestion chips on MEMORY_SUFFICIENT route. _build_memory_prompt() now instructs JSON output with "analysis" and "follow_up_suggestions" keys matching data_analysis YAML pattern. ChatInterface memory streaming branch extracts follow_up_suggestions from da_response event. ChatMessage renders chips for persisted non-DataCard messages. Non-streaming run_chat_query() includes follow_up_suggestions in metadata_json.
 
 ### Roadmap Evolution
 
@@ -140,7 +142,7 @@ Recent decisions affecting v0.2 work:
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 12-02-PLAN.md (Phase 12 complete - DB-backed tokens, SMTP startup validation, frontend error page)
+Stopped at: Completed 13-02-PLAN.md (Phase 13 complete - MEMORY_SUFFICIENT follow-up suggestions fix)
 Resume with: v0.2 milestone complete - all phases (7-13) done
-Resume file: .planning/phases/12-production-email-infrastructure/12-02-SUMMARY.md
+Resume file: .planning/phases/13-migrate-web-search-from-serper-dev-to-tavily/13-02-SUMMARY.md
 Next decision: v0.2 milestone wrap-up (merge develop to master, tag v0.2)
