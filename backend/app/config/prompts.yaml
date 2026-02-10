@@ -128,7 +128,7 @@ agents:
       - Issue 2: [description]
       - Suggestion: [how to fix]
 
-    max_tokens: 500
+    max_tokens: 700
 
   manager:
     provider: anthropic
@@ -207,4 +207,4 @@ agents:
 
       Return ONLY the JSON object. No text before or after.
 
-    max_tokens: 2500
+    max_tokens: 3000

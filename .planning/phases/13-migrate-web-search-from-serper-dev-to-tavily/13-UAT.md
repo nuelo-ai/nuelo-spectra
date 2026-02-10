@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 13-migrate-web-search-from-serper-dev-to-tavily
 source: 13-01-SUMMARY.md
 started: 2026-02-09T23:10:00Z
@@ -49,7 +49,19 @@ skipped: 0
   reason: "User reported: Overall is good. However, when the result was generated from Memory (MEMORY_SUFFICIENT), the Query Suggestions did not show"
   severity: major
   test: 4
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "4 compounding defects: (1) _build_memory_prompt() returns plain text, not JSON with follow_up_suggestions; (2) ChatInterface memory streaming branch ignores follow_up_suggestions; (3) ChatMessage hasStructuredData guard excludes MEMORY_SUFFICIENT from DataCard; (4) non-streaming path omits follow_up_suggestions from metadata_json"
+  artifacts:
+    - path: "backend/app/agents/data_analysis.py"
+      issue: "_build_memory_prompt() (lines 298-339) does not instruct JSON output with follow_up_suggestions"
+    - path: "frontend/src/components/chat/ChatInterface.tsx"
+      issue: "Memory route streaming branch (lines 369-394) uses ChatMessage without suggestion chips"
+    - path: "frontend/src/components/chat/ChatMessage.tsx"
+      issue: "hasStructuredData guard (lines 38-44) requires generated_code/execution_result, excludes memory responses"
+    - path: "backend/app/services/agent_service.py"
+      issue: "Non-streaming run_chat_query() (lines 241-248) omits follow_up_suggestions from metadata_json"
+  missing:
+    - "Update _build_memory_prompt() to require JSON output with analysis + follow_up_suggestions keys"
+    - "Extract follow_up_suggestions in ChatInterface memory streaming branch and render chips"
+    - "Add follow-up chip rendering path for non-DataCard assistant messages"
+    - "Add follow_up_suggestions to non-streaming metadata_json"
+  debug_session: ".planning/debug/memory-suggestions-missing.md"
