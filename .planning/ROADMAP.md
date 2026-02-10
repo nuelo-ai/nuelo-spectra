@@ -239,7 +239,7 @@ Plans:
 
 Plans:
 - [x] 13-01-PLAN.md — Rewrite SearchService for Tavily (AsyncTavilyClient, synthesized answer in tool output, config swap, full Serper.dev cleanup)
-- [ ] 13-02-PLAN.md — Fix MEMORY_SUFFICIENT follow-up suggestions (memory prompt JSON output, streaming/persisted chip rendering, non-streaming metadata)
+- [x] 13-02-PLAN.md — Fix MEMORY_SUFFICIENT follow-up suggestions (memory prompt JSON output, streaming/persisted chip rendering, non-streaming metadata)
 
 ---
 
@@ -262,4 +262,4 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13
 | 10. Smart Query Suggestions | v0.2 | 2/2 | Complete | 2026-02-08 |
 | 11. Web Search Integration | v0.2 | 3/3 | Complete | 2026-02-09 |
 | 12. Production Email | v0.2 | 2/2 | Complete | 2026-02-09 |
-| 13. Migrate Web Search (Tavily) | v0.2 | 1/2 | Gap closure | 2026-02-09 |
+| 13. Migrate Web Search (Tavily) | v0.2 | 2/2 | Complete | 2026-02-09 |
