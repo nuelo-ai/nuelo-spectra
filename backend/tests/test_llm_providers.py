@@ -742,3 +742,127 @@ class TestInvokeWithLogging:
             assert "openai" in log_call
             assert "error" in log_call
             assert "auth_error" in log_call
+
+
+# ============================================================================
+# Test Group 8: Empty Response Validation (UAT Gap Closure)
+# ============================================================================
+
+
+class TestEmptyResponseValidation:
+    """Tests for empty LLM response validation (UAT gap closure)."""
+
+    def test_validate_llm_response_returns_content_on_valid(self):
+        """validate_llm_response returns content when response has non-empty content."""
+        from app.agents.llm_factory import validate_llm_response
+
+        response = MagicMock()
+        response.content = "Hello, this is a valid response."
+        result = validate_llm_response(response, "openai", "gpt-4o", "onboarding")
+        assert result == "Hello, this is a valid response."
+
+    def test_validate_llm_response_raises_on_empty_string(self):
+        """validate_llm_response raises EmptyLLMResponseError on empty string."""
+        from app.agents.llm_factory import validate_llm_response, EmptyLLMResponseError
+
+        response = MagicMock()
+        response.content = ""
+        with pytest.raises(EmptyLLMResponseError) as exc_info:
+            validate_llm_response(response, "openai", "gpt-5-nano", "onboarding")
+        assert "gpt-5-nano" in str(exc_info.value)
+        assert "onboarding" in str(exc_info.value)
+
+    def test_validate_llm_response_raises_on_whitespace_only(self):
+        """validate_llm_response raises EmptyLLMResponseError on whitespace-only content."""
+        from app.agents.llm_factory import validate_llm_response, EmptyLLMResponseError
+
+        response = MagicMock()
+        response.content = "   \n\t  "
+        with pytest.raises(EmptyLLMResponseError):
+            validate_llm_response(response, "openai", "o3", "coding")
+
+    def test_validate_llm_response_raises_on_none_content(self):
+        """validate_llm_response raises EmptyLLMResponseError when content is None."""
+        from app.agents.llm_factory import validate_llm_response, EmptyLLMResponseError
+
+        response = MagicMock()
+        response.content = None
+        with pytest.raises(EmptyLLMResponseError):
+            validate_llm_response(response, "openai", "gpt-5-nano", "data_analysis")
+
+    def test_validate_llm_response_handles_non_string_content(self):
+        """validate_llm_response converts non-string content to string."""
+        from app.agents.llm_factory import validate_llm_response
+
+        response = MagicMock()
+        response.content = ["some", "list", "content"]
+        result = validate_llm_response(response, "anthropic", "claude-sonnet-4-20250514", "coding")
+        assert isinstance(result, str)
+        assert "some" in result
+
+
+# ============================================================================
+# Test Group 9: Reasoning Model Configuration (UAT Gap Closure)
+# ============================================================================
+
+
+class TestReasoningModelConfig:
+    """Tests for OpenAI reasoning model configuration (UAT gap closure)."""
+
+    @patch("langchain_openai.ChatOpenAI")
+    def test_reasoning_model_gets_reasoning_effort(self, mock_openai):
+        """OpenAI reasoning models automatically receive reasoning_effort='low'."""
+        get_llm("openai", "gpt-5-nano-2025-08-07", "test-key", max_tokens=4096)
+        mock_openai.assert_called_once()
+        call_kwargs = mock_openai.call_args
+        model_kwargs = call_kwargs.kwargs.get("model_kwargs", {})
+        assert model_kwargs.get("reasoning_effort") == "low"
+
+    @patch("langchain_openai.ChatOpenAI")
+    def test_o3_model_gets_reasoning_effort(self, mock_openai):
+        """o3 models automatically receive reasoning_effort='low'."""
+        get_llm("openai", "o3-mini-2025-01-31", "test-key", max_tokens=4096)
+        mock_openai.assert_called_once()
+        call_kwargs = mock_openai.call_args
+        model_kwargs = call_kwargs.kwargs.get("model_kwargs", {})
+        assert model_kwargs.get("reasoning_effort") == "low"
+
+    @patch("langchain_openai.ChatOpenAI")
+    def test_o1_model_gets_reasoning_effort(self, mock_openai):
+        """o1 models automatically receive reasoning_effort='low'."""
+        get_llm("openai", "o1-2024-12-17", "test-key", max_tokens=4096)
+        mock_openai.assert_called_once()
+        call_kwargs = mock_openai.call_args
+        model_kwargs = call_kwargs.kwargs.get("model_kwargs", {})
+        assert model_kwargs.get("reasoning_effort") == "low"
+
+    @patch("langchain_openai.ChatOpenAI")
+    def test_o4_mini_model_gets_reasoning_effort(self, mock_openai):
+        """o4-mini models automatically receive reasoning_effort='low'."""
+        get_llm("openai", "o4-mini-2025-04-16", "test-key", max_tokens=4096)
+        mock_openai.assert_called_once()
+        call_kwargs = mock_openai.call_args
+        model_kwargs = call_kwargs.kwargs.get("model_kwargs", {})
+        assert model_kwargs.get("reasoning_effort") == "low"
+
+    @patch("langchain_openai.ChatOpenAI")
+    def test_non_reasoning_model_no_reasoning_effort(self, mock_openai):
+        """Standard OpenAI models (gpt-4o) do NOT receive reasoning_effort."""
+        get_llm("openai", "gpt-4o", "test-key", max_tokens=4096)
+        mock_openai.assert_called_once()
+        call_kwargs = mock_openai.call_args
+        model_kwargs = call_kwargs.kwargs.get("model_kwargs", {})
+        assert "reasoning_effort" not in model_kwargs
+
+    @patch("langchain_openai.ChatOpenAI")
+    def test_explicit_reasoning_effort_not_overridden(self, mock_openai):
+        """User-provided reasoning_effort is NOT overridden by auto-detection."""
+        get_llm(
+            "openai", "gpt-5-nano-2025-08-07", "test-key",
+            max_tokens=4096,
+            model_kwargs={"reasoning_effort": "high"},
+        )
+        mock_openai.assert_called_once()
+        call_kwargs = mock_openai.call_args
+        model_kwargs = call_kwargs.kwargs.get("model_kwargs", {})
+        assert model_kwargs.get("reasoning_effort") == "high"
