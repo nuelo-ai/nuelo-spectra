@@ -38,7 +38,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Pending Todos
 
+- [ ] Create Dokploy Docker deployment package (deployment)
 - [ ] Query safety filter in Manager Agent (security — block PII extraction, prompt injection, etc.)
+- [ ] Show suggestions in Data Summary sidebar panel (ui)
 - [ ] Use Pydantic structured output for agent JSON responses (eliminate inconsistent JSON rendering across LLM providers)
 
 ### Blockers/Concerns
