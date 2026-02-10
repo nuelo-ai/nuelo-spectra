@@ -86,7 +86,7 @@ Plans:
 
 ---
 
-### 🚧 v0.2 Intelligence & Integration (In Progress)
+### v0.2 Intelligence & Integration (In Progress)
 
 **Milestone Goal:** Enhance AI agent capabilities with memory persistence and multi-provider LLM support, add intelligent query suggestions, and complete production email infrastructure.
 
@@ -235,10 +235,11 @@ Plans:
 **Goal:** Replace Serper.dev search provider with Tavily API so the Analyst AI agent receives full page content (not just URL links), enabling higher-quality analysis grounded in actual search result content.
 
 **Depends on:** Phase 11 (Web Search Tool Integration)
-**Plans:** 1 plan
+**Plans:** 2 plans
 
 Plans:
 - [x] 13-01-PLAN.md — Rewrite SearchService for Tavily (AsyncTavilyClient, synthesized answer in tool output, config swap, full Serper.dev cleanup)
+- [ ] 13-02-PLAN.md — Fix MEMORY_SUFFICIENT follow-up suggestions (memory prompt JSON output, streaming/persisted chip rendering, non-streaming metadata)
 
 ---
 
@@ -261,4 +262,4 @@ Phases execute in numeric order: 7 → 8 → 9 → 10 → 11 → 12 → 13
 | 10. Smart Query Suggestions | v0.2 | 2/2 | Complete | 2026-02-08 |
 | 11. Web Search Integration | v0.2 | 3/3 | Complete | 2026-02-09 |
 | 12. Production Email | v0.2 | 2/2 | Complete | 2026-02-09 |
-| 13. Migrate Web Search (Tavily) | v0.2 | 1/1 | Complete | 2026-02-09 |
+| 13. Migrate Web Search (Tavily) | v0.2 | 1/2 | Gap closure | 2026-02-09 |
