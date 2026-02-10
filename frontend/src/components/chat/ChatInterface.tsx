@@ -375,21 +375,44 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
                       analysisEvent?.data?.final_response ||
                       streamedText;
 
+                    // Extract follow-up suggestions from da_response event
+                    const followUpSuggestions: string[] | undefined =
+                      analysisEvent?.data?.follow_up_suggestions;
+
                     if (analysisText) {
                       return (
-                        <ChatMessage
-                          message={{
-                            id: "streaming",
-                            file_id: fileId,
-                            role: "assistant",
-                            content: analysisText,
-                            message_type: null,
-                            metadata_json: null,
-                            created_at: new Date().toISOString(),
-                          }}
-                          isStreaming={true}
-                          streamedText={analysisText}
-                        />
+                        <div>
+                          <ChatMessage
+                            message={{
+                              id: "streaming",
+                              file_id: fileId,
+                              role: "assistant",
+                              content: analysisText,
+                              message_type: null,
+                              metadata_json: null,
+                              created_at: new Date().toISOString(),
+                            }}
+                            isStreaming={!analysisEvent}
+                            streamedText={analysisText}
+                          />
+                          {/* Follow-up suggestions for memory route */}
+                          {followUpSuggestions && followUpSuggestions.length > 0 && analysisEvent && (
+                            <div className="max-w-[70%] ml-11 mt-2 space-y-2">
+                              <h4 className="text-xs font-medium text-muted-foreground">Continue exploring</h4>
+                              <div className="flex flex-wrap gap-2">
+                                {followUpSuggestions.map((suggestion) => (
+                                  <button
+                                    key={suggestion}
+                                    onClick={() => handleSend(suggestion)}
+                                    className="px-3 py-1.5 rounded-full border text-xs hover:bg-accent hover:border-primary/30 transition-all duration-200 bg-background cursor-pointer"
+                                  >
+                                    {suggestion}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       );
                     }
                     return <TypingIndicator />;

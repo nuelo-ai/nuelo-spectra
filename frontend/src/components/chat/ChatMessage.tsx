@@ -157,6 +157,14 @@ export function ChatMessage({
     );
   }
 
+  // Check for follow-up suggestions without structured data (e.g., MEMORY_SUFFICIENT responses)
+  const hasFollowUpSuggestions =
+    !isUser &&
+    !isError &&
+    message.metadata_json?.follow_up_suggestions &&
+    Array.isArray(message.metadata_json.follow_up_suggestions) &&
+    message.metadata_json.follow_up_suggestions.length > 0;
+
   // Calculate relative time
   const getRelativeTime = (timestamp: string): string => {
     const now = new Date();
@@ -227,6 +235,24 @@ export function ChatMessage({
         <span className="text-xs text-muted-foreground px-1">
           {getRelativeTime(message.created_at)}
         </span>
+
+        {/* Follow-up suggestions for non-DataCard messages */}
+        {hasFollowUpSuggestions && onFollowUpClick && (
+          <div className="mt-2 space-y-2">
+            <h4 className="text-xs font-medium text-muted-foreground">Continue exploring</h4>
+            <div className="flex flex-wrap gap-2">
+              {(message.metadata_json!.follow_up_suggestions as string[]).map((suggestion: string) => (
+                <button
+                  key={suggestion}
+                  onClick={() => onFollowUpClick(suggestion)}
+                  className="px-3 py-1.5 rounded-full border text-xs hover:bg-accent hover:border-primary/30 transition-all duration-200 bg-background cursor-pointer"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
