@@ -127,6 +127,7 @@ Recent decisions affecting v0.2 work:
 - [x] Query suggestions (Phase 10)
 - [x] Web search integration (Phase 11)
 - [ ] Query safety filter in Manager Agent (security — block PII extraction, prompt injection, etc.)
+- [ ] Use Pydantic structured output for agent JSON responses (eliminate inconsistent JSON rendering across LLM providers)
 
 ### Blockers/Concerns
 
