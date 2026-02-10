@@ -1,0 +1,23 @@
+providers:
+  anthropic:
+    type: anthropic
+    default: true
+    # API key from env: ANTHROPIC_API_KEY
+
+  google:
+    type: google
+    # API key from env: GOOGLE_API_KEY
+
+  openai:
+    type: openai
+    # API key from env: OPENAI_API_KEY
+
+  ollama:
+    type: ollama
+    base_url_env: OLLAMA_BASE_URL
+    # No API key needed (local/remote Ollama)
+
+  openrouter:
+    type: openrouter
+    base_url: https://openrouter.ai/api/v1
+    # API key from env: OPENROUTER_API_KEY

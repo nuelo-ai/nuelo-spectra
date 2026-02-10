@@ -10,7 +10,7 @@ from app.config import get_settings
 
 # Import all models so Alembic can see them
 from app.models.base import Base
-from app.models import user, file, chat_message
+from app.models import user, file, chat_message, search_quota, password_reset
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

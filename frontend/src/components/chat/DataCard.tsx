@@ -9,7 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/data/DataTable";
 import { TypingIndicator } from "./TypingIndicator";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ExternalLink } from "lucide-react";
 import { CSVDownloadButton, MarkdownDownloadButton } from "@/components/data/DownloadButtons";
 import { CodeDisplay } from "@/components/data/CodeDisplay";
 import ReactMarkdown from "react-markdown";
@@ -27,6 +27,9 @@ interface DataCardProps {
   isStreaming?: boolean; // Whether this card is still receiving data
   isCollapsed?: boolean; // Whether card starts collapsed (older cards)
   onToggleCollapse?: () => void; // Callback for collapse toggle
+  followUpSuggestions?: string[]; // Follow-up query suggestions
+  onFollowUpClick?: (suggestion: string) => void; // Callback when follow-up chip clicked
+  searchSources?: { title: string; url: string }[]; // Web search source citations
 }
 
 /**
@@ -42,6 +45,9 @@ export function DataCard({
   isStreaming = false,
   isCollapsed = false,
   onToggleCollapse,
+  followUpSuggestions,
+  onFollowUpClick,
+  searchSources,
 }: DataCardProps) {
   const [internalCollapsed, setInternalCollapsed] = useState(isCollapsed);
 
@@ -165,6 +171,46 @@ export function DataCard({
             </div>
           </div>
         ) : null}
+
+        {/* Follow-up suggestions */}
+        {followUpSuggestions && followUpSuggestions.length > 0 && !isStreaming && (
+          <div className="space-y-2 pt-3 border-t border-border/50">
+            <h4 className="text-xs font-medium text-muted-foreground">Continue exploring</h4>
+            <div className="flex flex-wrap gap-2">
+              {followUpSuggestions.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  onClick={() => onFollowUpClick?.(suggestion)}
+                  className="px-3 py-1.5 rounded-full border text-xs hover:bg-accent hover:border-primary/30 transition-all duration-200 bg-background cursor-pointer"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Sources section */}
+        {searchSources && searchSources.length > 0 && !isStreaming && (
+          <div className="space-y-2 pt-3 border-t border-border/50">
+            <h4 className="text-xs font-medium text-muted-foreground">Sources</h4>
+            <div className="space-y-1">
+              {searchSources.map((source, idx) => (
+                <a
+                  key={idx}
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-xs text-primary hover:underline truncate group"
+                  title={source.url}
+                >
+                  <ExternalLink className="h-3 w-3 shrink-0 opacity-50 group-hover:opacity-100" />
+                  {source.title || source.url}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </CollapsibleContent>
     </Collapsible>
   );

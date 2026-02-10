@@ -7,6 +7,7 @@ from uuid import UUID
 from fastapi import APIRouter, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel
 
+from app.config import get_settings
 from app.database import async_session_maker
 from app.dependencies import CurrentUser, DbSession
 from app.schemas.file import FileDetailResponse, FileListItem, FileUploadResponse
@@ -169,6 +170,8 @@ class FileContextUpdate(BaseModel):
 class FileSummaryResponse(BaseModel):
     """Response schema for file summary."""
     data_summary: str | None
+    query_suggestions: dict | None = None
+    suggestion_auto_send: bool = True
     user_context: str | None
 
 
@@ -245,5 +248,7 @@ async def get_file_summary(
 
     return FileSummaryResponse(
         data_summary=file.data_summary,
-        user_context=file.user_context
+        query_suggestions=file.query_suggestions,
+        suggestion_auto_send=get_settings().suggestion_auto_send,
+        user_context=file.user_context,
     )

@@ -32,16 +32,35 @@ export interface ChatAgentResponse {
 }
 
 export type StreamEventType =
+  | "routing_started"
+  | "routing_decided"
   | "coding_started"
   | "validation_started"
   | "execution_started"
   | "analysis_started"
+  | "search_started"
+  | "search_completed"
+  | "search_failed"
+  | "search_quota_exceeded"
   | "progress"
   | "retry"
   | "content_chunk"
   | "node_complete"
   | "completed"
   | "error";
+
+export interface SearchSource {
+  title: string;
+  url: string;
+}
+
+export interface SearchConfig {
+  configured: boolean;
+  enabled: boolean;
+  daily_quota: number;
+  used_today: number;
+  quota_exceeded: boolean;
+}
 
 export interface StreamEvent {
   type: StreamEventType;
@@ -54,4 +73,10 @@ export interface StreamEvent {
   attempt?: number;
   max_attempts?: number;
   data?: Record<string, any>;
+  route?: string;
+  routing_decision?: {
+    route: string;
+    reasoning: string;
+    context_summary: string;
+  };
 }

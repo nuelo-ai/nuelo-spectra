@@ -1,11 +1,25 @@
 """LangGraph workflow for chat analysis pipeline.
 
 This module assembles the complete chat analysis pipeline:
-Coding Agent -> Code Checker -> Execute -> Data Analysis Agent
+Manager Agent -> (routes to) Coding Agent or Data Analysis Agent (with tools)
+
+The Manager Agent classifies queries and routes via Command:
+- MEMORY_SUFFICIENT -> da_with_tools (skip code generation, answer from history)
+- CODE_MODIFICATION -> Coding Agent (modify existing code)
+- NEW_ANALYSIS -> Coding Agent (fresh code generation)
+
+The code generation pipeline:
+Coding Agent -> Code Checker -> Execute -> da_with_tools
+
+The data analysis pipeline (tool-calling loop):
+da_with_tools <-> search_tools (loop via tools_condition)
+da_with_tools -> da_response (when LLM has no more tool calls)
 
 The workflow includes:
+- Intelligent query routing via Manager Agent
 - Conditional routing based on validation results
 - Bounded retry loops with circuit breaker (max_steps=3)
+- Tool-calling loop for web search (bind_tools + ToolNode)
 - PostgreSQL checkpointing for thread isolation
 """
 
@@ -17,43 +31,32 @@ from langgraph.graph import StateGraph
 # from langgraph.checkpoint.postgres import PostgresSaver  # Temporarily disabled
 from langgraph.types import Command
 from langgraph.config import get_stream_writer
+from langgraph.prebuilt import ToolNode, tools_condition
 
 from app.agents.state import ChatAgentState
+from app.agents.manager import manager_node
 from app.agents.coding import coding_agent
 from app.agents.code_checker import validate_code
-from app.agents.data_analysis import data_analysis_agent
-from app.agents.config import get_agent_prompt, get_agent_max_tokens
-from app.agents.llm_factory import get_llm
+from app.agents.data_analysis import da_with_tools_node, da_response_node
+from app.agents.tools import search_web
+from app.agents.config import (
+    get_agent_prompt,
+    get_agent_max_tokens,
+    get_agent_provider,
+    get_agent_model,
+    get_agent_temperature,
+    get_api_key_for_provider,
+)
+from app.agents.llm_factory import get_llm, validate_llm_response, EmptyLLMResponseError
 from app.config import get_settings
 from app.services.sandbox import E2BSandboxRuntime, ExecutionResult
 
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 
-# Module-level cached graph instance
+# Module-level cached graph instance and its checkpointer
 _cached_graph = None
-
-
-def _get_api_key(settings) -> str:
-    """Get API key based on configured LLM provider.
-
-    Args:
-        settings: Application settings instance
-
-    Returns:
-        str: API key for the configured provider
-
-    Raises:
-        ValueError: If provider is unknown
-    """
-    if settings.llm_provider == "anthropic":
-        return settings.anthropic_api_key
-    elif settings.llm_provider == "openai":
-        return settings.openai_api_key
-    elif settings.llm_provider == "google":
-        return settings.google_api_key
-    else:
-        raise ValueError(f"Unknown provider: {settings.llm_provider}")
+_cached_checkpointer = None
 
 
 async def code_checker_node(
@@ -132,15 +135,19 @@ async def code_checker_node(
         user_query=state["user_query"], generated_code=generated_code
     )
 
-    # Initialize LLM
-    api_key = _get_api_key(settings)
+    # Initialize LLM using per-agent config
+    provider = get_agent_provider("code_checker")
+    model = get_agent_model("code_checker")
+    temperature = get_agent_temperature("code_checker")
+    api_key = get_api_key_for_provider(provider, settings)
     max_tokens = get_agent_max_tokens("code_checker")
-    llm = get_llm(
-        provider=settings.llm_provider,
-        model=settings.agent_model,
-        api_key=api_key,
-        max_tokens=max_tokens,
-    )
+
+    # Build kwargs for provider-specific options
+    kwargs = {"max_tokens": max_tokens, "temperature": temperature}
+    if provider == "ollama":
+        kwargs["base_url"] = settings.ollama_base_url
+
+    llm = get_llm(provider=provider, model=model, api_key=api_key, **kwargs)
 
     # Invoke LLM for logical validation
     messages = [
@@ -149,7 +156,39 @@ async def code_checker_node(
     ]
 
     response = await llm.ainvoke(messages)
-    validation_response = response.content.strip()
+
+    # Validate non-empty response
+    try:
+        validation_response = validate_llm_response(response, provider, model, "code_checker")
+        validation_response = validation_response.strip()
+    except EmptyLLMResponseError:
+        # Treat empty response as validation failure (route to retry)
+        new_error_count = error_count + 1
+        if new_error_count >= max_steps:
+            return Command(
+                goto="halt",
+                update={
+                    "validation_result": "INVALID",
+                    "validation_errors": ["Code checker LLM returned empty response"],
+                    "error_count": new_error_count,
+                },
+            )
+        else:
+            writer({
+                "type": "retry",
+                "event": "retry",
+                "message": "Code validation returned empty response. Retrying...",
+                "attempt": new_error_count,
+                "max_attempts": max_steps
+            })
+            return Command(
+                goto="coding_agent",
+                update={
+                    "validation_result": "INVALID",
+                    "validation_errors": ["Code checker LLM returned empty response"],
+                    "error_count": new_error_count,
+                },
+            )
 
     # Parse LLM response
     if validation_response.upper().startswith("VALID"):
@@ -450,72 +489,81 @@ async def halt_node(state: ChatAgentState) -> dict:
     return {
         "final_response": final_response,
         "error": error_type or "max_retries_exceeded",
+        "messages": [AIMessage(content=final_response)],
     }
 
 
-def build_chat_graph():
+def build_chat_graph(checkpointer=None):
     """Build and compile the chat analysis LangGraph workflow.
 
     Creates a StateGraph with the following flow:
-    1. coding_agent: Generate Python code from query
-    2. code_checker: Validate with AST + LLM (routes to execute/retry/halt)
-    3. execute: Run code in restricted namespace (stub)
-    4. data_analysis: Interpret results and generate explanation
-    5. halt: Error handler for max retries exceeded
+    1. manager: Classify query and route via Command
+       - MEMORY_SUFFICIENT -> da_with_tools (answer from history, may skip tools)
+       - CODE_MODIFICATION -> coding_agent (modify existing code)
+       - NEW_ANALYSIS -> coding_agent (fresh code generation)
+    2. coding_agent: Generate Python code from query
+    3. code_checker: Validate with AST + LLM (routes to execute/retry/halt)
+    4. execute: Run code in E2B sandbox
+    5. da_with_tools: LLM with optional search tools bound (tool-calling loop)
+    6. search_tools: ToolNode that executes search_web tool
+    7. da_response: Final response generation after tool loop
+    8. halt: Error handler for max retries exceeded
+
+    Tool-calling loop: da_with_tools <-> search_tools (via tools_condition)
+    When LLM has no more tool calls, routes to da_response.
+
+    Args:
+        checkpointer: Optional PostgreSQL checkpointer for session persistence
 
     Returns:
         Compiled LangGraph workflow
 
     Example:
-        >>> graph = build_chat_graph("postgresql://...")
+        >>> graph = build_chat_graph(checkpointer)
         >>> result = await graph.ainvoke(
         ...     {"user_query": "What is the average?", ...},
         ...     config={"configurable": {"thread_id": "user123_file456"}}
         ... )
     """
-    # TEMPORARY: Disable PostgreSQL checkpointing due to async compatibility issue
-    # PostgresSaver.aget_tuple() raises NotImplementedError when used with async streaming
-    # TODO: Investigate AsyncPostgresSaver or upgrade langgraph-checkpoint-postgres
-    # For now, graph runs without persistence (each query starts fresh)
-    checkpointer = None
-
     # Create StateGraph
     graph = StateGraph(ChatAgentState)
 
     # Add nodes
+    graph.add_node("manager", manager_node)
     graph.add_node("coding_agent", coding_agent)
     graph.add_node("code_checker", code_checker_node)
     graph.add_node("execute", execute_in_sandbox)
-    graph.add_node("data_analysis", data_analysis_agent)
     graph.add_node("halt", halt_node)
 
-    # Add edges
-    graph.set_entry_point("coding_agent")
+    # Tool-calling nodes for Data Analysis Agent
+    graph.add_node("da_with_tools", da_with_tools_node)
+    graph.add_node("search_tools", ToolNode(
+        [search_web],
+        handle_tool_errors=True,
+    ))
+    graph.add_node("da_response", da_response_node)
+
+    # Set entry point to Manager Agent (routes via Command, no explicit edges needed)
+    graph.set_entry_point("manager")
+
+    # Add edges for code generation pipeline
     graph.add_edge("coding_agent", "code_checker")
     # code_checker returns Command, so routing is automatic (no add_conditional_edges needed)
-    graph.add_edge("execute", "data_analysis")
-    graph.set_finish_point("data_analysis")
-    graph.set_finish_point("halt")
+    graph.add_edge("execute", "da_with_tools")
 
-    # Compile WITHOUT checkpointer for now
-    compiled = graph.compile(checkpointer=checkpointer)
+    # Tool-calling loop: da_with_tools decides via tools_condition
+    graph.add_conditional_edges(
+        "da_with_tools",
+        tools_condition,
+        {
+            "tools": "search_tools",       # LLM wants to search -> execute tool
+            "__end__": "da_response",       # LLM done searching -> generate response
+        },
+    )
+    graph.add_edge("search_tools", "da_with_tools")  # Tool results -> back to LLM
 
-    # Create StateGraph
-    graph = StateGraph(ChatAgentState)
-
-    # Add nodes
-    graph.add_node("coding_agent", coding_agent)
-    graph.add_node("code_checker", code_checker_node)
-    graph.add_node("execute", execute_in_sandbox)
-    graph.add_node("data_analysis", data_analysis_agent)
-    graph.add_node("halt", halt_node)
-
-    # Add edges
-    graph.set_entry_point("coding_agent")
-    graph.add_edge("coding_agent", "code_checker")
-    # code_checker returns Command, so routing is automatic (no add_conditional_edges needed)
-    graph.add_edge("execute", "data_analysis")
-    graph.set_finish_point("data_analysis")
+    # Finish points
+    graph.set_finish_point("da_response")
     graph.set_finish_point("halt")
 
     # Compile with checkpointer
@@ -524,22 +572,27 @@ def build_chat_graph():
     return compiled
 
 
-def get_or_create_graph():
+def get_or_create_graph(checkpointer=None):
     """Get or create cached graph instance.
 
     Lazy initialization: builds graph on first call, returns cached instance thereafter.
-    This avoids rebuilding the graph on every request.
+    Rebuilds the graph if the checkpointer changes (e.g., first call was without
+    checkpointer, then lifespan provides one).
+
+    Args:
+        checkpointer: Optional PostgreSQL checkpointer for session persistence
 
     Returns:
         Compiled LangGraph workflow
 
     Example:
-        >>> graph = get_or_create_graph()
+        >>> graph = get_or_create_graph(checkpointer)
         >>> result = await graph.ainvoke({...}, config={...})
     """
-    global _cached_graph
+    global _cached_graph, _cached_checkpointer
 
-    if _cached_graph is None:
-        _cached_graph = build_chat_graph()
+    if _cached_graph is None or checkpointer is not _cached_checkpointer:
+        _cached_graph = build_chat_graph(checkpointer)
+        _cached_checkpointer = checkpointer
 
     return _cached_graph

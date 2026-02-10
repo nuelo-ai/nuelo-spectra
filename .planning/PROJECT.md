@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Spectra is an AI-powered data analytics platform that transforms how users interact with their data. Users upload datasets (Excel/CSV), ask questions in natural language through a conversational chat interface, and receive instant insights, visualizations, and exportable reports presented as interactive Data Cards. The platform makes data analysis accessible to anyone, regardless of technical expertise, by combining intuitive file management with AI-driven Python code generation executed in a secure sandbox.
+Spectra is an AI-powered data analytics platform that transforms how users interact with their data. Users upload datasets (Excel/CSV), ask questions in natural language through a conversational chat interface, and receive instant insights presented as interactive Data Cards. A 5-agent AI system with intelligent query routing generates validated Python code in a secure sandbox, with multi-turn conversation memory, web search integration, and smart query suggestions. The platform supports 5 LLM providers with per-agent configuration, making it adaptable to different deployment scenarios.
 
 ## Core Value
 
@@ -13,30 +13,36 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 **GitHub:** https://github.com/marwazihs/nuelo-spectra.git (private)
 **Remote:** origin
 **Branch:** master
-**Latest Tag:** v0.1 (2026-02-06)
+**Latest Tag:** v0.2 (2026-02-10)
 
 ## Current State
 
-**Shipped:** v0.1 Beta MVP (2026-02-06)
-**Status:** Production-ready beta release
-**Codebase:** 10,011 LOC (4,433 Python, 5,578 TypeScript/TSX)
-**Tech Stack:** FastAPI + PostgreSQL + LangChain + E2B (backend), Next.js 16 + React 19 + TanStack + shadcn/ui (frontend)
+**Shipped:** v0.2 Intelligence & Integration (2026-02-10)
+**Status:** Production-ready with intelligent agent capabilities
+**Codebase:** 15,478 LOC (6,574 Python app + 2,077 Python tests + 6,827 TypeScript/TSX)
+**Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily (backend), Next.js 16 + React 19 + TanStack + shadcn/ui (frontend)
 
 **What works:**
-- ✅ Complete authentication system with JWT and refresh tokens
+- ✅ Complete authentication system with JWT, refresh tokens, and SMTP password reset
 - ✅ File upload with AI-powered data profiling (Excel/CSV up to 50MB)
 - ✅ Multi-file management with tabbed interface and independent chat histories
-- ✅ 4-agent AI system generating validated Python code in E2B sandbox
+- ✅ 5-agent AI system (Onboarding, Manager, Coding, Code Checker, Data Analysis) with LangGraph orchestration
+- ✅ Multi-turn conversation memory with PostgreSQL checkpointing and token counting
+- ✅ Manager Agent with intelligent 3-path query routing (MEMORY_SUFFICIENT, CODE_MODIFICATION, NEW_ANALYSIS)
+- ✅ Smart query suggestions on new chat tabs and follow-up chips on DataCards
+- ✅ Tavily-powered web search tool with transparent source citations and quota tracking
+- ✅ 5 LLM providers (Anthropic, OpenAI, Google, Ollama, OpenRouter) with per-agent YAML config
 - ✅ Real-time SSE streaming showing AI thinking process
-- ✅ Interactive Data Cards with sortable tables and CSV/Markdown exports
-- ✅ Settings page with profile editing and password change
+- ✅ Interactive Data Cards with sortable tables, code display, and CSV/Markdown exports
+- ✅ Production SMTP email service with DB-backed single-use password reset tokens
 
 **Known limitations:**
-- PostgreSQL checkpointing temporarily disabled (each query starts fresh - no conversation memory across queries)
 - E2B sandboxes created per-execution (no warm pools - ~150ms cold start per query)
 - Basic mobile responsiveness (functional but not optimized)
+- No query safety filter in Manager Agent (PII extraction, prompt injection not blocked)
+- Agent JSON responses not using Pydantic structured output (inconsistent across providers)
 
-**Next milestone goals:** UI/UX polish, additional export features (PDF, collections), performance optimizations, conversation memory
+**Next milestone goals:** Visualization capabilities, advanced memory features, production hardening
 
 ## Requirements
 
@@ -99,56 +105,99 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 - ✓ User can view account details (email address, account creation date) — v0.1
 - ✓ User can change password from settings page — v0.1
 
-**Total: 42/42 requirements satisfied (100%)**
+**v0.1 Total: 42/42 requirements satisfied (100%)**
+
+**✅ v0.2 Intelligence & Integration — Shipped 2026-02-10**
+
+**Multi-LLM Provider Support (12/12):**
+- ✓ System supports Ollama LLM provider (local and remote) — v0.2
+- ✓ System supports OpenRouter gateway (100+ models) — v0.2
+- ✓ LLM provider configuration externalized to YAML — v0.2
+- ✓ System defaults to Sonnet 4.0 for all agents — v0.2
+- ✓ Comprehensive test scenarios for each provider (34 tests) — v0.2
+- ✓ Graceful error handling for LLM provider failures — v0.2
+- ✓ Each agent configurable with different LLM provider — v0.2
+- ✓ Each agent configurable with different model — v0.2
+- ✓ Agent LLM configuration in YAML (provider, model, temperature) — v0.2
+- ✓ Fail-fast startup validation for LLM configuration — v0.2
+- ✓ Configuration changes require server restart — v0.2
+- ✓ Empty response validation for all LLM invocations — v0.2
+
+**Session Memory (8/8):**
+- ✓ Multi-turn conversation context within same chat tab — v0.2
+- ✓ Context persists after browser refresh (tab remains open) — v0.2
+- ✓ Warning dialog before closing chat tab — v0.2
+- ✓ Independent conversation memory per file tab — v0.2
+- ✓ Configurable context window size (default: 12,000 tokens) — v0.2
+- ✓ Warning at 85% context limit — v0.2
+- ✓ Automatic pruning with user confirmation — v0.2
+- ✓ Context usage display in chat interface — v0.2
+
+**Manager Agent Routing (10/10):**
+- ✓ Manager Agent routes to MEMORY_SUFFICIENT, CODE_MODIFICATION, or NEW_ANALYSIS — v0.2
+- ✓ Configurable LLM provider for Manager Agent — v0.2
+- ✓ Analyzes last 10 conversation messages for routing — v0.2
+- ✓ Defaults to NEW_ANALYSIS on routing uncertainty — v0.2
+- ✓ MEMORY_SUFFICIENT answers without code generation — v0.2
+- ✓ CODE_MODIFICATION modifies existing code — v0.2
+- ✓ NEW_ANALYSIS generates fresh code — v0.2
+- ✓ Routing decisions logged with reasoning — v0.2
+- ✓ Architecture designed for future route override commands — v0.2
+- ✓ Single-route decision logic (no hybrid routes) — v0.2
+
+**Smart Query Suggestions (6/6):**
+- ✓ New chat tabs display 5-6 query suggestions — v0.2
+- ✓ Suggestions grouped into 3 categories — v0.2
+- ✓ Click suggestion to start chat — v0.2
+- ✓ Suggestions based on data profiling results — v0.2
+- ✓ Suggestions use real column names and data types — v0.2
+- ✓ Suggestions persist until file re-analyzed — v0.2
+
+**Web Search Integration (7/7):**
+- ✓ Data Analysis Agent searches web via Tavily API — v0.2
+- ✓ Agent decides when to search based on query content — v0.2
+- ✓ Search results displayed with source citations — v0.2
+- ✓ Web search configurable (API key, enabled/disabled) — v0.2
+- ✓ Graceful degradation on quota exceeded — v0.2
+- ✓ Graceful degradation on API unavailable — v0.2
+- ✓ Search queries logged for cost tracking — v0.2
+
+**Production Email (11/11):**
+- ✓ SMTP protocol for email transport — v0.2
+- ✓ SMTP config: host, port, username, password, TLS — v0.2
+- ✓ SMTP config externalized to environment variables — v0.2
+- ✓ Jinja2 email templates — v0.2
+- ✓ Dev mode fallback when SMTP not configured — v0.2
+- ✓ SMTP startup validation — v0.2
+- ✓ Password reset via SMTP — v0.2
+- ✓ Secure reset link format — v0.2
+- ✓ Professional HTML email template — v0.2
+- ✓ Dev mode auto-disabled when SMTP configured — v0.2
+- ✓ Configurable reset link expiry (default: 10 min) — v0.2
+
+**v0.2 Total: 54/54 requirements satisfied (100%)**
 
 ### Active
 
-## Current Milestone: v0.2 Intelligence & Integration
-
-**Goal:** Enhance AI agent capabilities with memory persistence and multi-provider LLM support, add intelligent query suggestions, and complete production email infrastructure.
-
-**Target features:**
-- AI agent memory persistence with configurable context windows
-- Multi-LLM provider support (Ollama, OpenRouter) with per-agent configuration
-- Web search tool integration (Serper.dev) for Analyst agent
-- Smart query suggestions based on initial data analysis
-- Production-ready SMTP email service and forgot password flow
-
-**Active Requirements for v0.2:**
-- [ ] User can maintain chat context across sessions within same tab
-- [ ] User receives warning before closing tab (context loss)
-- [ ] Context window size is configurable
-- [ ] System warns when context limit reached with option to continue
-- [ ] System supports Ollama LLM provider (local or remote)
-- [ ] System supports OpenRouter LLM provider
-- [ ] Each agent can use different LLM provider and model
-- [ ] Agent LLM configuration is externalized to config file
-- [ ] Analyst agent can search web via Serper.dev tool
-- [ ] Web search tool is configurable (API key, enabled/disabled)
-- [ ] New chat tabs display 5-6 smart query suggestions
-- [ ] Suggestions grouped: general analysis, benchmarking, predictive
-- [ ] User can click suggestion to start chat with that query
-- [ ] Email service uses standard SMTP (not Mailgun API)
-- [ ] SMTP configuration in settings (host, port, username, password, TLS)
-- [ ] Password reset emails sent via SMTP (no dev mode console logs)
-- [ ] Dev mode disabled when SMTP is configured
+(No active requirements — define in next milestone via `/gsd:new-milestone`)
 
 ### Out of Scope
 
-- **Email verification on signup** — Deferred to v2. Let users in immediately; add verification later for security.
-- **Save Data Cards to Collections** — Deferred to v2. Focus on real-time analysis first; saving for later review is polish.
-- **CSV/PDF export from Data Cards** — Deferred to v2. View results in-app for v1; export proves less critical than analysis accuracy.
-- **Full Collections organization** — Deferred to v2. Basic file list sufficient for v1; organizing into collections adds complexity.
-- **Bulk file download** — Deferred to v2. Users can delete individual files; bulk operations not essential for MVP.
-- **Google OAuth authentication** — Deferred to v2. Email/password sufficient for MVP validation.
-- **Visualization Agent** — Deferred to v2. Focus on accurate analysis first; charts can come later.
-- **PowerPoint export** — Deferred to v2. PDF export (also deferred) proves the concept; PowerPoint adds significant complexity.
-- **Billing and subscription management** — Deferred to v2. Need to validate product-market fit before building payment infrastructure.
-- **Credit tracking system** — Deferred to v2. No billing means no credits needed yet.
-- **S3/cloud file storage** — Deferred to v2. Local storage sufficient for MVP; cloud storage adds deployment complexity.
-- **Real-time collaboration** — Not planned. Single-user experience for v1.
-- **Mobile native apps** — Not planned. Web-responsive design only.
-- **Data source integrations (APIs, databases)** — Not planned. File upload only for v1.
+- **Email verification on signup** — Let users in immediately; add verification later for security
+- **Save Data Cards to Collections** — Focus on real-time analysis; saving for review is polish
+- **Full Collections organization** — Basic file list sufficient; collections add complexity
+- **Google OAuth authentication** — Email/password sufficient for current validation
+- **Visualization Agent** — Focus on accurate analysis first; charts can come later
+- **PowerPoint export** — PDF export proves the concept first
+- **Billing and subscription management** — Validate product-market fit before payment infrastructure
+- **Credit tracking system** — No billing means no credits needed yet
+- **S3/cloud file storage** — Local storage sufficient; cloud storage adds deployment complexity
+- **Real-time collaboration** — Single-user experience for now
+- **Mobile native apps** — Web-responsive design only
+- **Data source integrations (APIs, databases)** — File upload only
+- **Cross-session memory persistence** — Context pollution risk; session-scoped memory by design
+- **Query safety filter** — Block PII extraction, prompt injection (deferred to v0.3)
+- **Pydantic structured output for agents** — Eliminate inconsistent JSON across providers (deferred to v0.3)
 
 ## Context
 
@@ -156,46 +205,51 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **User experience priority:** The platform's success depends on making data analysis feel natural and accessible. Interactive UI, especially streaming responses and polished Data Cards, is critical. Users should see the AI "thinking" (generating code in real-time) and interact fluidly with results (sort, filter, explore).
 
-**AI Agent architecture:** Multiple specialized agents work together:
-- **Onboarding Agent:** Analyzes uploaded data structure, generates metadata, suggests initial analyses
-- **Coding Agent:** Generates Python code from natural language queries
-- **Code Checker Agent:** Validates code for security (no risky operations like file deletion, drop tables) and correctness (enforces deterministic execution, avoids infinite loops)
-- **Data Analysis Agent:** Interprets code execution results and generates natural language explanations
+**AI Agent architecture:** 5 specialized agents work together via LangGraph:
+- **Manager Agent:** Routes queries to optimal path (memory-only, code modification, or new analysis)
+- **Onboarding Agent:** Analyzes uploaded data structure, generates metadata, suggests initial queries
+- **Coding Agent:** Generates Python code from natural language queries (or modifies existing code)
+- **Code Checker Agent:** Validates code for security and correctness
+- **Data Analysis Agent:** Interprets execution results, generates explanations, optionally searches web for context
 
 **Security considerations:**
 - Sandbox must prevent risky operations (file deletion, table drops, network access)
 - Code execution must be deterministic (no infinite loops, time limits)
 - User data must be isolated (segregated by user in file storage)
-- Agent execution must be traceable (consider LangSmith for debugging)
+- Agent execution must be traceable (structured JSON logging for LLM calls)
 
 **Technical ecosystem:**
-- Backend: Python ecosystem (FastAPI, LangChain, pandas)
-- Frontend: Next.js (chosen for streaming support, modern DX)
-- Agent framework: LangChain provides structured AI agent patterns
-- Deployment: Docker-based, considering separate containers for frontend, backend, and AI agent engine
+- Backend: Python (FastAPI, LangGraph, LangChain, pandas, tiktoken, aiosmtplib, tavily-python)
+- Frontend: Next.js 16 (React 19, TanStack Query, shadcn/ui)
+- Agent framework: LangGraph with PostgreSQL checkpointing (AsyncPostgresSaver)
+- LLM providers: Anthropic (default), OpenAI, Google, Ollama, OpenRouter
+- Deployment: Docker-based, separate containers for frontend, backend, and AI agent engine
 
 ## Constraints
 
-- **Timeline:** Aggressive (2-4 weeks). Need to ship MVP quickly to validate concept. Scope must remain ruthlessly focused on core workflow.
-- **Team:** Single developer. Architecture must be simple enough for one person to build and maintain. Avoid over-engineering.
-- **Budget:** Limited. Minimize LLM API calls during development. Choose efficient models where possible.
-- **Tech stack:** Python backend (LangChain + FastAPI), Next.js frontend, PostgreSQL database, local file storage. These are locked in based on existing requirements and ecosystem expertise.
-- **Security:** Code execution sandbox is non-negotiable. Generated Python code runs user-uploaded data; must prevent malicious or accidental damage.
+- **Team:** Single developer. Architecture must be simple enough for one person to build and maintain.
+- **Budget:** Limited. Manager Agent routing reduces LLM costs ~40%. Choose efficient models where possible.
+- **Tech stack:** Python backend (LangGraph + FastAPI), Next.js frontend, PostgreSQL database, local file storage. Locked in.
+- **Security:** Code execution sandbox is non-negotiable. Generated Python code runs user-uploaded data.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Next.js for frontend | Supports streaming AI responses natively, modern full-stack framework, handles SSR and API routes | — Pending |
-| 4 AI agents for v1 (skip Visualization) | Timeline constraint. Onboarding, Coding, Code Checker, Data Analysis are core to accuracy. Visualization can be added later. | — Pending |
-| Email auth only (defer Google OAuth) | Reduces complexity, faster to ship. OAuth is polish, not core value. | — Pending |
-| Skip email verification for v1 | Let users in immediately after signup. Verification adds friction and complexity not needed to validate core value. | — Pending |
-| Tabbed file interface with per-file chat history | Each file gets its own chat tab. More intuitive than single shared history, validates multi-file workflow without full Collections. | — Pending |
-| Basic file management (no Collections) | File list with metadata (name, size, date), delete, and tabs. Proves file handling without collection organization complexity. | — Pending |
-| Skip export features for v1 | No CSV/PDF export, no saved Data Cards. Focus on real-time analysis accuracy first; export is polish for later. | — Pending |
-| Skip billing for v1 | Need product validation before building payment infrastructure. Avoids Stripe integration, credit tracking, subscription logic. | — Pending |
-| Local file storage (defer S3) | Simpler deployment, fewer dependencies. S3 adds cost and configuration complexity not needed for MVP. | — Pending |
-| Explore AG-UI for Data Cards | Mentioned in architecture requirements for dynamic AI-generated components. Worth researching but not a hard requirement—any solution achieving interactive, polished Data Cards works. | — Pending |
+| Next.js for frontend | Supports streaming AI responses natively, modern DX | ✓ Good — SSE streaming works excellently |
+| 4 AI agents for v0.1 (skip Visualization) | Timeline constraint. Core agents are critical to accuracy. | ✓ Good — expanded to 5 agents in v0.2 with Manager Agent |
+| Email auth only (defer Google OAuth) | Reduces complexity, faster to ship | ✓ Good — no user demand for OAuth yet |
+| Skip email verification for v1 | Let users in immediately | ✓ Good — reduces signup friction |
+| Tabbed file interface with per-file chat history | More intuitive than shared history | ✓ Good — natural UX, independent memory per tab |
+| Session-scoped memory (no cross-session) | Avoid context pollution, clean slate per tab | ✓ Good — users get clean analysis per session |
+| Manager Agent for query routing | Reduce response time ~40%, skip code gen for simple queries | ✓ Good — MEMORY_SUFFICIENT path is significantly faster |
+| Tavily over Serper.dev for web search | Serper returns URLs only; Tavily returns full page content | ✓ Good — higher quality analysis with actual content |
+| Per-agent LLM configuration via YAML | Enable cost optimization and vendor flexibility | ✓ Good — agents can use different models per use case |
+| PostgreSQL checkpointing for memory | Native LangGraph integration, reliable persistence | ✓ Good — AsyncPostgresSaver works with proper lifecycle |
+| DB-backed password reset tokens (not JWT) | Single-use, revocable, auditable | ✓ Good — more secure than JWT-based resets |
+| LLM-generated query suggestions | Dataset-specific, not hardcoded templates | ✓ Good — suggestions reflect actual data structure |
+| Local file storage (defer S3) | Simpler deployment, fewer dependencies | — Pending |
+| Skip billing for v1 | Need product validation first | — Pending |
 
 ---
-*Last updated: 2026-02-06 after starting v0.2 Intelligence & Integration milestone*
+*Last updated: 2026-02-10 after v0.2 Intelligence & Integration milestone*

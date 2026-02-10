@@ -35,7 +35,47 @@
 
 **Testing:** UAT Round 6 passed (3/3 tests) - All E2E flows verified
 
-**What's next:** v0.2 will focus on UI/UX polish, additional export features, and performance optimizations
+**What's next:** v0.2 will focus on enhancing AI agents with memory persistence and additional LLM providers (Ollama and OpenRouter)
+
+---
+
+
+## v0.2 Intelligence & Integration (Shipped: 2026-02-10)
+
+**Delivered:** Enhanced AI agent capabilities with multi-provider LLM support, conversation memory, intelligent query routing, web search integration, and production email infrastructure
+
+**Phases completed:** 7-13 (19 plans total)
+
+**Key accomplishments:**
+
+- Added 5-provider LLM support (Anthropic, OpenAI, Google, Ollama, OpenRouter) with per-agent YAML configuration, fail-fast startup validation, and empty response handling for reasoning models
+- Enabled multi-turn conversation memory with PostgreSQL checkpointing, tiktoken-based token counting, context usage display, and tab close warnings
+- Built Manager Agent with intelligent 3-path query routing (MEMORY_SUFFICIENT, CODE_MODIFICATION, NEW_ANALYSIS) reducing response time ~40% for simple queries
+- Implemented LLM-generated smart query suggestions on new chat tabs and follow-up suggestion chips on DataCards
+- Integrated Tavily-powered web search tool with transparent source citations, daily per-user quota tracking, and configurable toggle
+- Deployed production SMTP email service with DB-backed single-use password reset tokens, Jinja2 HTML/text templates, and startup validation
+
+**Stats:**
+
+- 6,574 lines of Python (app) + 2,077 lines of Python (tests)
+- 6,827 lines of TypeScript/TSX (frontend)
+- 15,478 total lines of code
+- 7 phases, 19 plans executed
+- 110 commits over 4 days (Feb 7-10, 2026)
+
+**Git range:** `adbfed0 (feat(07-01))` → `7dab5cc (docs: todo)`
+
+**Requirements:** 53/53 mapped (100%)
+- Multi-LLM Provider: 12/12 (LLM + CONFIG)
+- Session Memory: 8/8 (MEMORY)
+- Manager Agent Routing: 10/10 (ROUTING)
+- Smart Query Suggestions: 6/6 (SUGGEST)
+- Web Search Integration: 7/7 (SEARCH)
+- Production Email: 11/11 (SMTP + PWRESET)
+
+**Testing:** UAT passed for all phases — 106 total tests (34 LLM provider + 28 routing + 44 other)
+
+**What's next:** v0.3 will focus on visualization capabilities, advanced memory features, and production hardening
 
 ---
 

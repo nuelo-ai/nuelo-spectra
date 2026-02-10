@@ -47,6 +47,7 @@ class ChatQueryRequest(BaseModel):
     """Request schema for AI chat query."""
 
     content: str
+    web_search_enabled: bool = False
 
 
 class ChatAgentResponse(BaseModel):
@@ -76,6 +77,16 @@ class StreamEventType(str, Enum):
     # Content events
     CONTENT_CHUNK = "content_chunk"
     NODE_COMPLETE = "node_complete"
+
+    # Routing events
+    ROUTING_STARTED = "routing_started"
+    ROUTING_DECIDED = "routing_decided"
+
+    # Search events
+    SEARCH_STARTED = "search_started"
+    SEARCH_COMPLETED = "search_completed"
+    SEARCH_FAILED = "search_failed"
+    SEARCH_QUOTA_EXCEEDED = "search_quota_exceeded"
 
     # Terminal events
     COMPLETED = "completed"

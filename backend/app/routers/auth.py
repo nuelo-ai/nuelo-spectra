@@ -1,14 +1,20 @@
 """Authentication API endpoints."""
 
+import hashlib
+import time
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
 from app.database import get_db
 from app.dependencies import CurrentUser
+from app.models.password_reset import PasswordResetToken
+from app.models.user import User
 from app.schemas.auth import (
     ChangePasswordRequest,
     ForgotPasswordRequest,
@@ -22,14 +28,15 @@ from app.schemas.auth import (
 )
 from app.schemas.user import UserResponse
 from app.services import auth as auth_service
-from app.services.email import send_password_reset_email
+from app.services.email import create_reset_token, send_password_reset_email
 from app.utils.security import (
-    create_password_reset_token,
     create_tokens,
     hash_password,
-    verify_password_reset_token,
     verify_token
 )
+
+# Per-email cooldown tracking (email -> last request timestamp)
+_reset_cooldowns: dict[str, float] = {}
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -182,7 +189,7 @@ async def forgot_password(
     """Request a password reset email.
 
     ALWAYS returns 202 regardless of whether the email exists, to prevent
-    user enumeration attacks.
+    user enumeration attacks. Enforces 2-minute per-email cooldown.
 
     Args:
         request: Email address to send reset link to
@@ -192,8 +199,19 @@ async def forgot_password(
     Returns:
         Generic success message (always same response)
     """
-    from sqlalchemy import select
-    from app.models.user import User
+    now = time.time()
+
+    # Clean up expired cooldown entries (older than 120 seconds)
+    expired_keys = [k for k, v in _reset_cooldowns.items() if now - v >= 120]
+    for k in expired_keys:
+        del _reset_cooldowns[k]
+
+    # Cooldown check: if same email requested within 2 minutes, return 202 silently
+    last_request = _reset_cooldowns.get(request.email)
+    if last_request is not None and now - last_request < 120:
+        return MessageResponse(
+            message="If the email exists, a reset link has been sent"
+        )
 
     # Query user by email
     result = await db.execute(
@@ -201,16 +219,38 @@ async def forgot_password(
     )
     user = result.scalar_one_or_none()
 
-    # If user exists, send reset email
+    # If user exists, create DB token and send reset email
     if user:
-        # Create password reset token (valid for 10 minutes)
-        reset_token = create_password_reset_token(request.email, settings)
+        # Invalidate all previous active tokens for this email
+        await db.execute(
+            update(PasswordResetToken)
+            .where(
+                PasswordResetToken.email == request.email,
+                PasswordResetToken.is_active == True,  # noqa: E712
+            )
+            .values(is_active=False)
+        )
+
+        # Generate new token
+        raw_token, token_hash = create_reset_token()
+
+        # Store token in DB (10-minute expiry)
+        db_token = PasswordResetToken(
+            email=request.email,
+            token_hash=token_hash,
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
+        )
+        db.add(db_token)
+        await db.commit()
 
         # Build reset link
-        reset_link = f"{settings.frontend_url}/reset-password?token={reset_token}"
+        reset_link = f"{settings.frontend_url}/reset-password?token={raw_token}"
 
-        # Send email (or log to console in dev mode)
-        await send_password_reset_email(user.email, reset_link, settings)
+        # Send email with first_name for personalized greeting
+        await send_password_reset_email(user.email, user.first_name, reset_link, settings)
+
+        # Record cooldown
+        _reset_cooldowns[request.email] = time.time()
 
     # ALWAYS return same response (prevent email enumeration)
     return MessageResponse(
@@ -222,43 +262,60 @@ async def forgot_password(
 async def reset_password(
     request: ResetPasswordRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
-    settings: Annotated[Settings, Depends(get_settings)]
 ) -> MessageResponse:
-    """Reset user password using a valid reset token.
+    """Reset user password using a valid DB-backed reset token.
+
+    Validates token hash against database (single-use, not expired, active).
 
     Args:
         request: Reset token and new password
         db: Database session
-        settings: Application settings
 
     Returns:
         Success message
 
     Raises:
-        HTTPException: 400 if token is invalid or user not found
+        HTTPException: 400 if token is invalid, expired, or already used
     """
-    from sqlalchemy import select
-    from app.models.user import User
+    # Hash incoming token for DB lookup
+    token_hash = hashlib.sha256(request.token.encode()).hexdigest()
 
-    # Verify token and extract email
-    email = verify_password_reset_token(request.token, settings)
-
-    # Query user by email
+    # Look up token in DB: must be active, unused, and not expired
     result = await db.execute(
-        select(User).where(User.email == email)
+        select(PasswordResetToken).where(
+            PasswordResetToken.token_hash == token_hash,
+            PasswordResetToken.is_active == True,  # noqa: E712
+            PasswordResetToken.is_used == False,  # noqa: E712
+            PasswordResetToken.expires_at > datetime.now(timezone.utc),
+        )
     )
-    user = result.scalar_one_or_none()
+    token_record = result.scalar_one_or_none()
+
+    if not token_record:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token"
+        )
+
+    # Look up user by token's email
+    user_result = await db.execute(
+        select(User).where(User.email == token_record.email)
+    )
+    user = user_result.scalar_one_or_none()
 
     if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid token"
+            detail="Invalid or expired reset token"
         )
 
-    # Hash new password
+    # Mark token as used (single-use)
+    token_record.is_used = True
+
+    # Update password
     user.hashed_password = hash_password(request.new_password)
 
-    # Commit to database
+    # Commit both changes
     await db.commit()
 
     return MessageResponse(message="Password reset successful")

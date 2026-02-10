@@ -38,4 +38,11 @@ export interface FileDetailResponse {
 export interface FileSummaryResponse {
   data_summary: string | null;
   user_context: string | null;
+  query_suggestions: {
+    categories: Array<{
+      name: string;
+      queries: string[];
+    }>;
+  } | null;
+  suggestion_auto_send: boolean;
 }

@@ -8,8 +8,15 @@ from pathlib import Path
 import pandas as pd
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from app.agents.config import get_agent_prompt, get_agent_max_tokens
-from app.agents.llm_factory import get_llm
+from app.agents.config import (
+    get_agent_prompt,
+    get_agent_max_tokens,
+    get_agent_provider,
+    get_agent_model,
+    get_agent_temperature,
+    get_api_key_for_provider,
+)
+from app.agents.llm_factory import get_llm, validate_llm_response, EmptyLLMResponseError
 from app.config import get_settings
 
 
@@ -26,6 +33,9 @@ class OnboardingResult:
     sample_data: str
     """First few rows formatted for user verification."""
 
+    query_suggestions: dict | None = None
+    """LLM-generated categorized query suggestions for the dataset."""
+
 
 class OnboardingAgent:
     """Agent that profiles uploaded data and generates natural language summaries.
@@ -38,24 +48,6 @@ class OnboardingAgent:
     def __init__(self):
         """Initialize the Onboarding Agent."""
         self.settings = get_settings()
-
-    def _get_api_key(self) -> str:
-        """Get API key based on configured LLM provider.
-
-        Returns:
-            str: API key for the configured provider
-
-        Raises:
-            ValueError: If provider is unknown
-        """
-        if self.settings.llm_provider == "anthropic":
-            return self.settings.anthropic_api_key
-        elif self.settings.llm_provider == "openai":
-            return self.settings.openai_api_key
-        elif self.settings.llm_provider == "google":
-            return self.settings.google_api_key
-        else:
-            raise ValueError(f"Unknown provider: {self.settings.llm_provider}")
 
     async def profile_data(self, file_path: str, file_type: str) -> dict:
         """Profile the dataset using pandas analysis.
@@ -149,28 +141,34 @@ class OnboardingAgent:
                 "quality_issues": [f"Profiling error: {str(e)}"]
             }
 
-    async def generate_summary(self, profile: dict, user_context: str) -> str:
-        """Generate natural language summary using LLM.
+    async def generate_summary(
+        self, profile: dict, user_context: str
+    ) -> tuple[str, dict | None]:
+        """Generate natural language summary and query suggestions using LLM.
 
         Args:
             profile: Data profile dict from profile_data()
             user_context: Optional user-provided context
 
         Returns:
-            str: Natural language summary of the dataset
+            tuple[str, dict | None]: (summary text, suggestions dict or None)
 
         Raises:
             Exception: If LLM invocation fails
         """
-        # Initialize LLM
-        api_key = self._get_api_key()
+        # Initialize LLM using per-agent config
+        provider = get_agent_provider("onboarding")
+        model = get_agent_model("onboarding")
+        temperature = get_agent_temperature("onboarding")
+        api_key = get_api_key_for_provider(provider, self.settings)
         max_tokens = get_agent_max_tokens("onboarding")
-        llm = get_llm(
-            provider=self.settings.llm_provider,
-            model=self.settings.agent_model,
-            api_key=api_key,
-            max_tokens=max_tokens
-        )
+
+        # Build kwargs for provider-specific options
+        kwargs = {"max_tokens": max_tokens, "temperature": temperature}
+        if provider == "ollama":
+            kwargs["base_url"] = self.settings.ollama_base_url
+
+        llm = get_llm(provider=provider, model=model, api_key=api_key, **kwargs)
 
         # Load system prompt from YAML
         system_prompt = get_agent_prompt("onboarding")
@@ -189,7 +187,38 @@ class OnboardingAgent:
         ]
 
         response = await asyncio.to_thread(llm.invoke, messages)
-        return response.content
+
+        # Validate non-empty response
+        try:
+            content = validate_llm_response(response, provider, model, "onboarding")
+        except EmptyLLMResponseError:
+            # Return a clear error message as summary, no suggestions
+            return (
+                "Unable to generate data summary. The configured LLM model returned "
+                "an empty response. Please check the model configuration in prompts.yaml "
+                "or try a different model.",
+                None,
+            )
+
+        # Parse JSON response with fallback for non-JSON responses
+        # Strip markdown code fences if LLM wrapped response in ```json...```
+        content = content.strip()
+        if content.startswith("```"):
+            # Remove opening fence (```json or ```)
+            first_newline = content.index("\n")
+            content = content[first_newline + 1:]
+            # Remove closing fence
+            if content.endswith("```"):
+                content = content[:-3].strip()
+
+        try:
+            parsed = json.loads(content)
+            summary = parsed.get("summary", content)
+            suggestions = parsed.get("suggestions", None)
+            return (summary, suggestions)
+        except json.JSONDecodeError:
+            # Fallback: treat entire response as summary, no suggestions
+            return (content, None)
 
     async def run(
         self,
@@ -213,8 +242,8 @@ class OnboardingAgent:
         # Phase 1: Profile data
         profile = await self.profile_data(file_path, file_type)
 
-        # Phase 2: Generate LLM summary
-        summary = await self.generate_summary(profile, user_context)
+        # Phase 2: Generate LLM summary and query suggestions
+        summary, suggestions = await self.generate_summary(profile, user_context)
 
         # Format sample data for display
         sample_data = json.dumps(profile.get("sample_data", []), indent=2)
@@ -222,5 +251,6 @@ class OnboardingAgent:
         return OnboardingResult(
             data_summary=summary,
             data_profile=profile,
-            sample_data=sample_data
+            sample_data=sample_data,
+            query_suggestions=suggestions,
         )

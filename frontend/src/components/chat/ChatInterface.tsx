@@ -7,11 +7,18 @@ import {
   useInvalidateChatMessages,
 } from "@/hooks/useChatMessages";
 import { useSSEStream } from "@/hooks/useSSEStream";
+import { useSearchToggle } from "@/hooks/useSearchToggle";
+import { useTabCloseWarning } from "@/hooks/useTabCloseWarning";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { TypingIndicator } from "./TypingIndicator";
 import { DataCard } from "./DataCard";
+import { ContextUsage } from "./ContextUsage";
+import { QuerySuggestions } from "./QuerySuggestions";
+import { Globe } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { apiClient } from "@/lib/api-client";
+import { useFileSummary } from "@/hooks/useFileManager";
 
 interface ChatInterfaceProps {
   fileId: string;
@@ -33,9 +40,13 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
     error: streamError,
     completedData,
     events,
+    currentSearchQuery,
+    searchSources: streamSearchSources,
     startStream,
     resetStream,
   } = useSSEStream();
+
+  const searchToggle = useSearchToggle();
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -43,6 +54,20 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
 
   // Track which cards are collapsed (by message ID)
   const [collapsedCards, setCollapsedCards] = useState<Set<string>>(new Set());
+
+  // Track trim confirmation dialog state
+  const [showTrimDialog, setShowTrimDialog] = useState(false);
+
+  // Suggestion input state for non-auto-send mode
+  const [suggestionInput, setSuggestionInput] = useState<string | undefined>(undefined);
+
+  // Fetch file summary for query suggestions
+  const { data: summaryData } = useFileSummary(fileId);
+
+  // Tab close warning when there's conversation context
+  const messages = chatData?.messages || [];
+  const hasContext = messages.length > 2;  // More than initial greeting
+  useTabCloseWarning(hasContext);
 
   // Scroll to bottom helper
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
@@ -108,8 +133,8 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
     // Optimistically add user message
     addLocalMessage(fileId, message);
 
-    // Start streaming AI response
-    await startStream(fileId, message);
+    // Start streaming AI response with search flag
+    await startStream(fileId, message, searchToggle.enabled);
   };
 
   const toggleCardCollapse = (messageId: string) => {
@@ -122,6 +147,19 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
       }
       return next;
     });
+  };
+
+  const handleTrimContext = async () => {
+    try {
+      const res = await apiClient.post(`/chat/${fileId}/trim-context`, {});
+      if (res.ok) {
+        setShowTrimDialog(false);
+        // Refetch messages to reflect trimmed state
+        refetch();
+      }
+    } catch (e) {
+      console.error("Failed to trim context:", e);
+    }
   };
 
   // Parse streaming events to extract progressive data for DataCard
@@ -165,16 +203,38 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
 
     // Extract analysis/explanation from data_analysis node
     let explanation = streamedText || undefined;
-    const analysisEvent = events.find((e) => e.type === "node_complete" && e.node === "data_analysis");
+    const analysisEvent = events.find((e) => e.type === "node_complete" && e.node === "da_response");
     if (analysisEvent?.data?.analysis) {
       explanation = analysisEvent.data.analysis;
     }
     console.log('[ChatInterface] explanation:', explanation ? 'found' : 'not found');
 
-    return { queryBrief, tableData, explanation, generatedCode };
+    // Extract follow-up suggestions from data_analysis node_complete event
+    let followUpSuggestions: string[] | undefined = undefined;
+    if (analysisEvent?.data?.follow_up_suggestions) {
+      followUpSuggestions = analysisEvent.data.follow_up_suggestions;
+    }
+
+    // Extract search sources from da_response node_complete event
+    let searchSources: { title: string; url: string }[] | undefined = undefined;
+    const daResponseEvent = events.find((e) => e.type === "node_complete" && e.node === "da_response");
+    if (daResponseEvent?.data?.search_sources && daResponseEvent.data.search_sources.length > 0) {
+      searchSources = daResponseEvent.data.search_sources;
+    } else if (streamSearchSources.length > 0) {
+      searchSources = streamSearchSources;
+    }
+
+    return { queryBrief, tableData, explanation, generatedCode, followUpSuggestions, searchSources };
   };
 
-  const messages = chatData?.messages || [];
+  // Refresh search config when quota exceeded event received
+  useEffect(() => {
+    const hasQuotaExceeded = events.some((e) => e.type === "search_quota_exceeded");
+    if (hasQuotaExceeded) {
+      searchToggle.checkConfig();
+    }
+  }, [events, searchToggle.checkConfig]);
+
   const hasMessages = messages.length > 0;
   const showEmptyState = !hasMessages && !isStreaming;
 
@@ -182,10 +242,40 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-3xl mx-auto flex items-center justify-between">
           <h2 className="text-lg font-semibold truncate">{fileName}</h2>
+          <ContextUsage
+            fileId={fileId}
+            messageCount={messages.length}
+            onLimitExceeded={() => setShowTrimDialog(true)}
+          />
         </div>
       </div>
+
+      {/* Trim confirmation dialog */}
+      {showTrimDialog && (
+        <div className="mx-4 my-2 p-3 bg-orange-50 border border-orange-200 rounded-lg text-sm">
+          <p className="text-orange-800 font-medium">Context limit reached</p>
+          <p className="text-orange-700 mt-1">
+            Oldest messages will be removed to make room for new queries.
+            This cannot be undone.
+          </p>
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={handleTrimContext}
+              className="px-3 py-1 bg-orange-600 text-white rounded text-xs hover:bg-orange-700"
+            >
+              Trim older messages
+            </button>
+            <button
+              onClick={() => setShowTrimDialog(false)}
+              className="px-3 py-1 bg-white border rounded text-xs hover:bg-gray-50"
+            >
+              Keep all messages
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Messages area - scrollable */}
       <div ref={scrollAreaRef} className="flex-1 overflow-y-auto">
@@ -209,21 +299,41 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
 
           {/* Empty state */}
           {showEmptyState && (
-            <div className="flex items-center justify-center min-h-[60vh] p-8 text-center">
-              <div className="max-w-md opacity-60" style={{ animation: "var(--animate-fadeIn)" }}>
-                <div className="mb-4">
-                  <div className="h-16 w-16 rounded-full gradient-primary mx-auto mb-3 flex items-center justify-center">
-                    <span className="text-2xl text-white">💬</span>
+            <>
+              {summaryData?.query_suggestions?.categories &&
+              summaryData.query_suggestions.categories.length > 0 ? (
+                <QuerySuggestions
+                  categories={summaryData.query_suggestions.categories}
+                  onSelect={(suggestion) => {
+                    const autoSend = summaryData.suggestion_auto_send ?? true;
+                    if (autoSend) {
+                      handleSend(suggestion);
+                    } else {
+                      setSuggestionInput(suggestion);
+                    }
+                  }}
+                  autoSend={summaryData.suggestion_auto_send ?? true}
+                />
+              ) : (
+                <div className="flex items-center justify-center min-h-[60vh] p-8 text-center">
+                  <div className="max-w-md opacity-60" style={{ animation: "var(--animate-fadeIn)" }}>
+                    <div className="mb-4">
+                      <div className="h-16 w-16 rounded-full gradient-primary mx-auto mb-3 flex items-center justify-center">
+                        <span className="text-2xl text-white">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground font-medium">
+                      Ask a question about your data to get started
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Your AI assistant will analyze your data and provide insights
+                    </p>
                   </div>
                 </div>
-                <p className="text-muted-foreground font-medium">
-                  Ask a question about your data to get started
-                </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Your AI assistant will analyze your data and provide insights
-                </p>
-              </div>
-            </div>
+              )}
+            </>
           )}
 
           {/* Message list */}
@@ -235,6 +345,7 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
                   message={message}
                   isCollapsed={collapsedCards.has(message.id)}
                   onToggleCollapse={() => toggleCardCollapse(message.id)}
+                  onFollowUpClick={handleSend}
                 />
               ))}
             </div>
@@ -245,54 +356,110 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
             <div className="max-w-3xl mx-auto px-4 mt-6">
               <div className="animate-in fade-in duration-200">
                 {(() => {
-                  const hasNodeComplete = events.some((e) => e.type === "node_complete");
+                  // Detect if this is a memory-only route (no code generation)
+                  const isMemoryRoute = events.some(
+                    (e) => e.type === "routing_decided" && e.route === "MEMORY_SUFFICIENT"
+                  ) || events.some(
+                    (e) =>
+                      e.type === "node_complete" &&
+                      e.data?.routing_decision?.route === "MEMORY_SUFFICIENT"
+                  );
+
+                  // Memory route: render analysis as plain text message (no DataCard)
+                  if (isMemoryRoute) {
+                    const analysisEvent = events.find(
+                      (e) => e.type === "node_complete" && e.node === "da_response"
+                    );
+                    const analysisText =
+                      analysisEvent?.data?.analysis ||
+                      analysisEvent?.data?.final_response ||
+                      streamedText;
+
+                    // Extract follow-up suggestions from da_response event
+                    const followUpSuggestions: string[] | undefined =
+                      analysisEvent?.data?.follow_up_suggestions;
+
+                    if (analysisText) {
+                      return (
+                        <div>
+                          <ChatMessage
+                            message={{
+                              id: "streaming",
+                              file_id: fileId,
+                              role: "assistant",
+                              content: analysisText,
+                              message_type: null,
+                              metadata_json: null,
+                              created_at: new Date().toISOString(),
+                            }}
+                            isStreaming={!analysisEvent}
+                            streamedText={analysisText}
+                          />
+                          {/* Follow-up suggestions for memory route */}
+                          {followUpSuggestions && followUpSuggestions.length > 0 && analysisEvent && (
+                            <div className="max-w-[70%] ml-11 mt-2 space-y-2">
+                              <h4 className="text-xs font-medium text-muted-foreground">Continue exploring</h4>
+                              <div className="flex flex-wrap gap-2">
+                                {followUpSuggestions.map((suggestion) => (
+                                  <button
+                                    key={suggestion}
+                                    onClick={() => handleSend(suggestion)}
+                                    className="px-3 py-1.5 rounded-full border text-xs hover:bg-accent hover:border-primary/30 transition-all duration-200 bg-background cursor-pointer"
+                                  >
+                                    {suggestion}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+                    return <TypingIndicator />;
+                  }
+
+                  // Code routes (CODE_MODIFICATION, NEW_ANALYSIS): existing DataCard logic
                   const hasStructuredNode = events.some(
                     (e) =>
                       e.type === "node_complete" &&
                       (e.node === "execute" || e.node === "coding" || e.node === "data_analysis")
                   );
-                  console.log('[ChatInterface] Render check:', {
-                    streamedText: !!streamedText,
-                    hasNodeComplete,
-                    hasStructuredNode,
-                    eventsCount: events.length
-                  });
-                  return null;
+
+                  if (streamedText || events.some((e) => e.type === "node_complete")) {
+                    if (hasStructuredNode) {
+                      const streamingData = getStreamingDataCard()!;
+                      return (
+                        <DataCard
+                          {...streamingData}
+                          isStreaming={true}
+                          followUpSuggestions={streamingData.followUpSuggestions}
+                          onFollowUpClick={handleSend}
+                          searchSources={streamingData.searchSources}
+                        />
+                      );
+                    } else if (streamedText) {
+                      return (
+                        <ChatMessage
+                          message={{
+                            id: "streaming",
+                            file_id: fileId,
+                            role: "assistant",
+                            content: streamedText,
+                            message_type: null,
+                            metadata_json: null,
+                            created_at: new Date().toISOString(),
+                          }}
+                          isStreaming={true}
+                          streamedText={streamedText}
+                        />
+                      );
+                    } else {
+                      return <TypingIndicator />;
+                    }
+                  }
+
+                  return <TypingIndicator />;
                 })()}
-                {streamedText || events.some((e) => e.type === "node_complete") ? (
-                  // If we have streaming data, check if it's structured data
-                  events.some(
-                    (e) =>
-                      e.type === "node_complete" &&
-                      (e.node === "execute" || e.node === "coding" || e.node === "data_analysis")
-                  ) ? (
-                    // Render as DataCard for structured response
-                    <DataCard
-                      {...getStreamingDataCard()!}
-                      isStreaming={true}
-                    />
-                  ) : streamedText ? (
-                    // Only render as regular message if we have text
-                    <ChatMessage
-                      message={{
-                        id: "streaming",
-                        file_id: fileId,
-                        role: "assistant",
-                        content: streamedText,
-                        message_type: null,
-                        metadata_json: null,
-                        created_at: new Date().toISOString(),
-                      }}
-                      isStreaming={true}
-                      streamedText={streamedText}
-                    />
-                  ) : (
-                    // Show typing indicator if no text yet
-                    <TypingIndicator />
-                  )
-                ) : (
-                  <TypingIndicator />
-                )}
               </div>
             </div>
           )}
@@ -324,11 +491,16 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
         <div className="border-t bg-muted/50 py-2" style={{ animation: "var(--animate-slideUp)" }}>
           <div className="max-w-3xl mx-auto px-4">
             <div className="flex items-center gap-2">
-              <div className="flex gap-1">
-                <div className="h-1.5 w-1.5 rounded-full bg-primary" style={{ animation: "var(--animate-pulse-gentle)", animationDelay: "0ms" }} />
-                <div className="h-1.5 w-1.5 rounded-full bg-primary" style={{ animation: "var(--animate-pulse-gentle)", animationDelay: "200ms" }} />
-                <div className="h-1.5 w-1.5 rounded-full bg-primary" style={{ animation: "var(--animate-pulse-gentle)", animationDelay: "400ms" }} />
-              </div>
+              {currentSearchQuery ? (
+                /* Search activity: Globe icon with pulsing animation */
+                <Globe className="h-3.5 w-3.5 text-primary" style={{ animation: "var(--animate-pulse-gentle)" }} />
+              ) : (
+                <div className="flex gap-1">
+                  <div className="h-1.5 w-1.5 rounded-full bg-primary" style={{ animation: "var(--animate-pulse-gentle)", animationDelay: "0ms" }} />
+                  <div className="h-1.5 w-1.5 rounded-full bg-primary" style={{ animation: "var(--animate-pulse-gentle)", animationDelay: "200ms" }} />
+                  <div className="h-1.5 w-1.5 rounded-full bg-primary" style={{ animation: "var(--animate-pulse-gentle)", animationDelay: "400ms" }} />
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">{currentStatus}</p>
             </div>
           </div>
@@ -338,7 +510,15 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
       {/* Chat input - fixed at bottom */}
       <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-3xl mx-auto px-4 py-4">
-          <ChatInput onSend={handleSend} disabled={isStreaming || isLoading} />
+          <ChatInput
+            onSend={handleSend}
+            disabled={isStreaming || isLoading}
+            initialValue={suggestionInput}
+            searchEnabled={searchToggle.enabled}
+            onSearchToggle={searchToggle.toggle}
+            searchConfigured={searchToggle.isConfigured}
+            searchQuotaExceeded={searchToggle.isQuotaExceeded}
+          />
         </div>
       </div>
     </div>

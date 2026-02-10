@@ -31,6 +31,31 @@ def load_prompts() -> dict:
 
 
 @lru_cache(maxsize=1)
+def load_provider_registry() -> dict:
+    """Load LLM provider registry from YAML configuration.
+
+    Returns:
+        dict: Parsed provider registry with structure:
+            {
+                "providers": {
+                    "anthropic": {"type": "anthropic", "default": true},
+                    "ollama": {"type": "ollama", "base_url_env": "OLLAMA_BASE_URL"},
+                    ...
+                }
+            }
+
+    Raises:
+        FileNotFoundError: If llm_providers.yaml doesn't exist.
+        yaml.YAMLError: If YAML is malformed.
+    """
+    config_dir = Path(__file__).parent.parent / "config"
+    providers_path = config_dir / "llm_providers.yaml"
+
+    with open(providers_path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
+@lru_cache(maxsize=1)
 def load_allowlist() -> dict:
     """Load library allowlist and unsafe operation lists from YAML.
 
@@ -124,3 +149,107 @@ def get_unsafe_operations() -> set[str]:
     """
     allowlist = load_allowlist()
     return set(allowlist["unsafe_operations"])
+
+
+def get_default_provider() -> str:
+    """Get default LLM provider from registry.
+
+    Returns:
+        str: Name of the default provider (e.g., "anthropic").
+
+    Raises:
+        ValueError: If no provider is marked as default in the registry.
+    """
+    registry = load_provider_registry()
+    for provider_name, config in registry["providers"].items():
+        if config.get("default", False):
+            return provider_name
+    raise ValueError("No default provider found in llm_providers.yaml")
+
+
+def get_agent_provider(agent_name: str) -> str:
+    """Get LLM provider for a specific agent.
+
+    Args:
+        agent_name: Name of the agent (onboarding, coding, code_checker, data_analysis).
+
+    Returns:
+        str: Provider name (e.g., "anthropic", "openai"). Falls back to default provider
+             if agent doesn't specify a provider.
+
+    Raises:
+        KeyError: If agent_name doesn't exist in configuration.
+    """
+    prompts = load_prompts()
+    agent_config = prompts["agents"][agent_name]
+    return agent_config.get("provider", get_default_provider())
+
+
+def get_agent_model(agent_name: str) -> str:
+    """Get model name for a specific agent.
+
+    Args:
+        agent_name: Name of the agent.
+
+    Returns:
+        str: Model name/ID (e.g., "claude-sonnet-4-20250514", "gpt-4").
+
+    Raises:
+        KeyError: If agent_name doesn't exist or has no model field.
+    """
+    prompts = load_prompts()
+    agent_config = prompts["agents"][agent_name]
+    if "model" not in agent_config:
+        raise KeyError(
+            f"Agent '{agent_name}' has no 'model' field in prompts.yaml. "
+            f"Please add a model configuration."
+        )
+    return agent_config["model"]
+
+
+def get_agent_temperature(agent_name: str) -> float:
+    """Get temperature setting for a specific agent.
+
+    Args:
+        agent_name: Name of the agent.
+
+    Returns:
+        float: Temperature value (0.0 = deterministic, higher = more creative).
+               Defaults to 0.0 if not specified.
+
+    Raises:
+        KeyError: If agent_name doesn't exist in configuration.
+    """
+    prompts = load_prompts()
+    agent_config = prompts["agents"][agent_name]
+    return agent_config.get("temperature", 0.0)
+
+
+def get_api_key_for_provider(provider: str, settings) -> str:
+    """Get API key for a specific LLM provider.
+
+    Args:
+        provider: Provider name (e.g., "anthropic", "openai", "google", "ollama", "openrouter").
+        settings: Application settings instance containing API keys.
+
+    Returns:
+        str: API key for the specified provider. Empty string for Ollama (no auth required).
+
+    Raises:
+        ValueError: If provider is unknown or not supported.
+    """
+    if provider == "anthropic":
+        return settings.anthropic_api_key
+    elif provider == "openai":
+        return settings.openai_api_key
+    elif provider == "google":
+        return settings.google_api_key
+    elif provider == "ollama":
+        return ""  # Ollama requires no API key
+    elif provider == "openrouter":
+        return settings.openrouter_api_key
+    else:
+        raise ValueError(
+            f"Unknown provider: {provider}. "
+            f"Supported providers: anthropic, openai, google, ollama, openrouter"
+        )

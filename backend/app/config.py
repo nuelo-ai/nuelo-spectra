@@ -20,9 +20,13 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:3000"
     cors_origins: list[str] | str = ["http://localhost:3000"]
 
-    # Email
-    email_service_api_key: str = ""
-    email_from: str = "noreply@spectra.app"
+    # SMTP Email
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_pass: str = ""
+    smtp_from_email: str = "noreply@spectra.app"
+    smtp_from_name: str = "Spectra"
 
     # File Upload
     upload_dir: str = "uploads"
@@ -33,6 +37,8 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     openai_api_key: str = ""
     google_api_key: str = ""
+    ollama_base_url: str = "http://localhost:11434"
+    openrouter_api_key: str = ""
     agent_model: str = "claude-sonnet-4-20250514"
     agent_max_retries: int = 3
 
@@ -50,6 +56,21 @@ class Settings(BaseSettings):
     sandbox_timeout_seconds: int = 60
     sandbox_memory_mb: int = 1024
     sandbox_max_retries: int = 2
+
+    # Session Memory
+    context_window_tokens: int = 12000
+    context_warning_threshold: float = 0.85
+
+    # Suggestions
+    suggestion_auto_send: bool = True
+
+    # Web Search
+    tavily_api_key: str = ""
+    search_depth: str = "basic"
+    search_max_per_query: int = 5
+    search_daily_quota: int = 7
+    search_num_results: int = 3
+    search_timeout: float = 10.0
 
     model_config = SettingsConfigDict(env_file=".env")
 
