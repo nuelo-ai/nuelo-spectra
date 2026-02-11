@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 ## Current Position
 
 Phase: 16 - Frontend Restructure (Session-Centric UX)
-Plan: 01 of 03 (Session State & Left Sidebar) — COMPLETE
-Status: Executing Phase 16 — plan 01 complete, session store + sidebar components built
+Plan: 02 of 03 (Dashboard Layout & Session Migration) — COMPLETE
+Status: Executing Phase 16 — plan 02 complete, session routes and ChatInterface migrated
 Branch: develop (fresh from master for v0.3)
-Last activity: 2026-02-11 — Completed 16-01-PLAN.md
+Last activity: 2026-02-11 — Completed 16-02-PLAN.md
 
-Progress: [███████████░░░░░░░░░░░░░░░░░░░░░] 33% (1/3 plans complete in Phase 16)
+Progress: [██████████████████████░░░░░░░░░░░] 67% (2/3 plans complete in Phase 16)
 
 ## Performance Metrics
 
@@ -40,7 +40,8 @@ Progress: [███████████░░░░░░░░░░░░
 - Phase 15 Plan 02: 2 min, 2 tasks, 2 files
 - Phase 15 Plan 03: 3 min, 2 tasks, 6 files
 - Phase 16 Plan 01: 4 min, 2 tasks, 13 files
-- Total commits: 16
+- Phase 16 Plan 02: 4 min, 2 tasks, 10 files
+- Total commits: 18
 
 ## Accumulated Context
 
@@ -99,6 +100,11 @@ Progress: [███████████░░░░░░░░░░░░
 - Session list staleTime 5 minutes to balance freshness with request volume
 - UserSection replicates avatar gradient style from existing dashboard layout
 
+**Phase 16-02 (Dashboard Layout & Session Migration):**
+- ContextUsage and trim-context deferred to Phase 18 (file-based endpoints not yet session-aware)
+- Legacy dashboard page converted to redirect stub instead of deletion (preserves bookmarks)
+- Empty state simplified to generic message (WelcomeScreen replaces QuerySuggestions in Plan 03)
+
 See also: PROJECT.md Key Decisions table for milestone-level decisions.
 
 ### Pending Todos
@@ -115,7 +121,7 @@ See also: PROJECT.md Key Decisions table for milestone-level decisions.
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed 16-01-PLAN.md (Session State & Left Sidebar)
-Resume with: Execute 16-02-PLAN.md (Dashboard Layout Integration -- wire sidebar into layout)
-Next decision: Session store + sidebar components built. Plan 02 integrates into dashboard layout with SidebarProvider.
+Stopped at: Completed 16-02-PLAN.md (Dashboard Layout & Session Migration)
+Resume with: Execute 16-03-PLAN.md (WelcomeScreen & Session Creation Flow)
+Next decision: Session routes and ChatInterface migrated. Plan 03 adds WelcomeScreen to /sessions/new page.
 UI directive: Use Frontend Design skill (/frontend-design) for UI work in Phases 16, 17, 18
