@@ -27,6 +27,7 @@ class ChatMessageResponse(BaseModel):
 
     id: UUID
     file_id: UUID
+    session_id: UUID | None = None  # Nullable for backward compatibility
     role: str
     content: str
     message_type: str | None
