@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 ## Current Position
 
 Phase: 17 - File Management & Linking
-Plan: 02 of 03 (My Files Screen) — COMPLETE
-Status: Plan 17-02 complete — My Files page with TanStack Table and full file management. Continuing to Plan 03.
+Plan: 03 of 03 (In-Chat File Linking) — COMPLETE
+Status: Phase 17 COMPLETE — All 3 plans finished. File download, My Files screen, and in-chat file linking delivered.
 Branch: develop (fresh from master for v0.3)
-Last activity: 2026-02-11 — Completed Plan 17-02
+Last activity: 2026-02-11 — Completed Plan 17-03
 
-Progress: [█████████████████████░░░░░░░░░░░] 67% (2/3 plans complete in Phase 17)
+Progress: [████████████████████████████████] 100% (3/3 plans complete in Phase 17)
 
 ## Performance Metrics
 
@@ -31,7 +31,7 @@ Progress: [█████████████████████░░
 - Total commits: 110
 
 **Velocity (v0.3):**
-- Total plans completed: 12
+- Total plans completed: 13
 - Phase 14 Plan 01: 3 min, 2 tasks, 7 files
 - Phase 14 Plan 02: 4 min, 2 tasks, 3 files
 - Phase 14 Plan 03: 3 min, 2 tasks, 5 files
@@ -44,7 +44,8 @@ Progress: [█████████████████████░░
 - Phase 16 Plan 03: 3 min, 2 tasks, 7 files
 - Phase 17 Plan 01: 2 min, 2 tasks, 3 files
 - Phase 17 Plan 02: 3 min, 2 tasks, 5 files
-- Total commits: 24
+- Phase 17 Plan 03: 3 min, 2 tasks, 6 files
+- Total commits: 26
 
 ## Accumulated Context
 
@@ -126,6 +127,13 @@ Progress: [█████████████████████░░
 - Sidebar My Files link updated from /files to /my-files to match route convention
 - TanStack Table getRowId uses file.id for stable selection across re-renders
 
+**Phase 17-03 (In-Chat File Linking):**
+- Upload from chat uses prevFileIdsRef snapshot pattern to detect and auto-link newly uploaded files
+- Paperclip button placed in toolbar row below textarea (alongside search toggle) via leftSlot prop
+- FileCard switched from FileInfoModal to FileContextModal for consistent file info display
+- Drag-and-drop overlay has its own upload dialog separate from FileLinkingDropdown (acceptable duplication)
+- File limit errors surface via component-level onError callbacks with toast.error
+
 See also: PROJECT.md Key Decisions table for milestone-level decisions.
 
 ### Pending Todos
@@ -142,7 +150,7 @@ See also: PROJECT.md Key Decisions table for milestone-level decisions.
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed 17-02-PLAN.md
-Resume with: Execute Plan 17-03 (In-Chat File Linking)
-Next decision: Plan 17-02 complete — My Files page with full file management. Plan 03 builds in-chat file linking UI.
+Stopped at: Completed 17-03-PLAN.md (Phase 17 COMPLETE)
+Resume with: Plan next phase (Phase 18 or next milestone phase)
+Next decision: Phase 17 complete — all file management and linking UI delivered. Next phase continues v0.3 roadmap.
 UI directive: Use Frontend Design skill (/frontend-design) for UI work in Phases 16, 17, 18
