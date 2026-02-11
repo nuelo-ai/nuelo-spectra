@@ -37,7 +37,7 @@ export function ChatSidebar() {
   };
 
   const handleMyFiles = () => {
-    router.push("/files");
+    router.push("/my-files");
   };
 
   return (
