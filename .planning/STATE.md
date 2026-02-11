@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 ## Current Position
 
 Phase: 14 - Database Foundation & Migration
-Plan: 03 of 04 (Session Service) — COMPLETE
-Status: Executing phase plans
+Plan: 04 of 04 (Session-Based Agent Integration) — COMPLETE
+Status: Phase 14 complete — ready for Phase 15
 Branch: develop (fresh from master for v0.3)
-Last activity: 2026-02-11 — Completed 14-03-PLAN.md
+Last activity: 2026-02-11 — Completed 14-04-PLAN.md
 
-Progress: [█████████░░░░░░░░░░░░░░░░░░░░] 75% (3/4 plans complete in Phase 14)
+Progress: [████████████████████████████████] 100% (4/4 plans complete in Phase 14)
 
 ## Performance Metrics
 
@@ -31,11 +31,12 @@ Progress: [█████████░░░░░░░░░░░░░░
 - Total commits: 110
 
 **Velocity (v0.3):**
-- Total plans completed: 3
+- Total plans completed: 4
 - Phase 14 Plan 01: 3 min, 2 tasks, 7 files
 - Phase 14 Plan 02: 4 min, 2 tasks, 3 files
 - Phase 14 Plan 03: 3 min, 2 tasks, 5 files
-- Total commits: 6
+- Phase 14 Plan 04: 4 min, 2 tasks, 3 files
+- Total commits: 8
 
 ## Accumulated Context
 
@@ -60,6 +61,13 @@ Progress: [█████████░░░░░░░░░░░░░░
 - 10-file-per-session limit enforced at service layer
 - Session-based messages use file_id=None (messages belong to sessions, not files)
 
+**Phase 14-04 (Session-Based Agent Integration):**
+- Session-based endpoints require at least one linked file (400 error if none)
+- File-based endpoints preserved during transition (removed in later phase)
+- Agent service file_id parameter made optional (UUID | None) for session-based flow
+- Session-based flow uses first file's context (multi-file assembly is Phase 15 scope)
+- Thread_id format: session_{session_id}_user_{user_id} for sessions, file_{file_id}_user_{user_id} for files
+
 See also: PROJECT.md Key Decisions table for milestone-level decisions.
 
 ### Pending Todos
@@ -76,8 +84,8 @@ See also: PROJECT.md Key Decisions table for milestone-level decisions.
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed Phase 14 Plan 03 (Session Service & API)
-Resume with: Execute Phase 14 Plan 04 (Session Migration)
-Next decision: Continue executing Phase 14 plans sequentially
-Note: Phase 14 Plan 03 complete - Session CRUD API with file linking operational, ready for agent system and frontend integration
+Stopped at: Completed Phase 14 Plan 04 (Session-Based Agent Integration) — Phase 14 COMPLETE
+Resume with: Begin Phase 15 (Context Assembler) or continue with remaining v0.3 phases
+Next decision: Phase 14 complete — database foundation and migration finished. All 4 plans executed successfully (models, migration, service, integration). Ready for Phase 15 multi-file context assembly.
+Note: Phase 14 complete - Session-based routing operational, LangGraph using session-based thread_ids, messages saved with session_id. Backend fully transitioned to session-centric conversation flow.
 UI directive: Use Frontend Design skill (/frontend-design) for UI work in Phases 16, 17, 18
