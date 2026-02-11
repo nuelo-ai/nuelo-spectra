@@ -48,10 +48,10 @@
 **Plans:** 4 plans
 
 Plans:
-- [ ] 14-01-PLAN.md — ChatSession model, association table, Pydantic schemas
-- [ ] 14-02-PLAN.md — Alembic migrations (schema, data, checkpoint)
-- [ ] 14-03-PLAN.md — ChatSession service layer and REST API endpoints
-- [ ] 14-04-PLAN.md — Integration wiring (session-based thread_ids in agent service)
+- [x] 14-01-PLAN.md — ChatSession model, association table, Pydantic schemas
+- [x] 14-02-PLAN.md — Alembic migrations (schema, data, checkpoint)
+- [x] 14-03-PLAN.md — ChatSession service layer and REST API endpoints
+- [x] 14-04-PLAN.md — Integration wiring (session-based thread_ids in agent service)
 
 **Success Criteria:**
 1. Chat sessions can be created, read, updated, and deleted via API endpoints
@@ -151,7 +151,7 @@ Plans:
 | 11. Web Search Integration | v0.2 | 3/3 | Complete | 2026-02-09 |
 | 12. Production Email | v0.2 | 2/2 | Complete | 2026-02-09 |
 | 13. Migrate Web Search (Tavily) | v0.2 | 2/2 | Complete | 2026-02-09 |
-| 14. Database Foundation & Migration | v0.3 | 0/4 | Planned | — |
+| 14. Database Foundation & Migration | v0.3 | 4/4 | Complete | 2026-02-11 |
 | 15. Agent System Enhancement | v0.3 | 0/? | Pending | — |
 | 16. Frontend Restructure | v0.3 | 0/? | Pending | — |
 | 17. File Management & Linking | v0.3 | 0/? | Pending | — |
