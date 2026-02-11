@@ -579,6 +579,10 @@ def get_or_create_graph(checkpointer=None):
     Rebuilds the graph if the checkpointer changes (e.g., first call was without
     checkpointer, then lifespan provides one).
 
+    Thread ID formats (v0.3):
+    - Session-based: "session_{session_id}_user_{user_id}" (multi-file conversations)
+    - File-based: "file_{file_id}_user_{user_id}" (legacy, backward compat)
+
     Args:
         checkpointer: Optional PostgreSQL checkpointer for session persistence
 
@@ -587,7 +591,9 @@ def get_or_create_graph(checkpointer=None):
 
     Example:
         >>> graph = get_or_create_graph(checkpointer)
-        >>> result = await graph.ainvoke({...}, config={...})
+        >>> # Session-based conversation
+        >>> config = {"configurable": {"thread_id": "session_abc123_user_xyz789"}}
+        >>> result = await graph.ainvoke({...}, config=config)
     """
     global _cached_graph, _cached_checkpointer
 
