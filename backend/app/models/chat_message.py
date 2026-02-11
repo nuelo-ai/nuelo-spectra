@@ -27,10 +27,10 @@ class ChatMessage(Base):
         index=True,
         nullable=False
     )
-    file_id: Mapped[UUID] = mapped_column(
-        ForeignKey("files.id", ondelete="CASCADE"),
+    file_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("files.id", ondelete="SET NULL"),
         index=True,
-        nullable=False
+        nullable=True
     )
     session_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("chat_sessions.id", ondelete="CASCADE"),
@@ -48,5 +48,5 @@ class ChatMessage(Base):
 
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="chat_messages")
-    file: Mapped["File"] = relationship("File", back_populates="chat_messages")
+    file: Mapped[Optional["File"]] = relationship("File", back_populates="chat_messages")
     session: Mapped[Optional["ChatSession"]] = relationship("ChatSession", back_populates="messages")
