@@ -1,4 +1,6 @@
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
 import {
   FileListItem,
@@ -141,6 +143,85 @@ export function useUpdateFileContext() {
       queryClient.invalidateQueries({
         queryKey: ["files", "summary", variables.fileId],
       });
+    },
+  });
+}
+
+/**
+ * TanStack Query mutation for downloading a file via blob URL
+ */
+export function useDownloadFile() {
+  return useMutation({
+    mutationFn: async ({
+      fileId,
+      filename,
+    }: {
+      fileId: string;
+      filename: string;
+    }) => {
+      const response = await apiClient.get(`/files/${fileId}/download`);
+      if (!response.ok) {
+        throw new Error("Failed to download file");
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      try {
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to download file");
+    },
+  });
+}
+
+/**
+ * Derives recent files from existing useFiles query (no extra API call).
+ * Returns last N files sorted by created_at descending.
+ */
+export function useRecentFiles(limit: number = 5) {
+  const { data: files, ...rest } = useFiles();
+  const recentFiles = useMemo(() => {
+    if (!files) return [];
+    return [...files]
+      .sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+      .slice(0, limit);
+  }, [files, limit]);
+  return { data: recentFiles, ...rest };
+}
+
+/**
+ * TanStack Query mutation for bulk-deleting multiple files.
+ * Uses Promise.allSettled for parallel deletion with partial failure handling.
+ */
+export function useBulkDeleteFiles() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (fileIds: string[]) => {
+      const results = await Promise.allSettled(
+        fileIds.map(async (fileId) => {
+          const response = await apiClient.delete(`/files/${fileId}`);
+          if (!response.ok) throw new Error(`Failed to delete file ${fileId}`);
+        })
+      );
+      const failures = results.filter((r) => r.status === "rejected");
+      if (failures.length > 0) {
+        throw new Error(`Failed to delete ${failures.length} file(s)`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["files"] });
+      queryClient.invalidateQueries({ queryKey: ["sessions"] });
     },
   });
 }
