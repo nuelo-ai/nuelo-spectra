@@ -15,10 +15,22 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 **Branch:** master
 **Latest Tag:** v0.2 (2026-02-10)
 
+## Current Milestone: v0.3 Multi-file Conversation Support
+
+**Goal:** Restructure the UX from file-tab-centric to chat-session-centric, enabling multi-file conversations and cross-file analysis
+
+**Target features:**
+- Chat-centric architecture (sessions independent of files, ChatGPT-style)
+- Multi-file linking per conversation for cross-file analysis
+- File upload and link within chat sessions
+- Dedicated "My Files" management screen
+- Sidebar-based chat history navigation
+- Right sidebar panel for linked file context
+
 ## Current State
 
 **Shipped:** v0.2 Intelligence & Integration (2026-02-10)
-**Status:** Production-ready with intelligent agent capabilities
+**Status:** Defining v0.3 requirements
 **Codebase:** 15,478 LOC (6,574 Python app + 2,077 Python tests + 6,827 TypeScript/TSX)
 **Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily (backend), Next.js 16 + React 19 + TanStack + shadcn/ui (frontend)
 
@@ -41,8 +53,7 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 - Basic mobile responsiveness (functional but not optimized)
 - No query safety filter in Manager Agent (PII extraction, prompt injection not blocked)
 - Agent JSON responses not using Pydantic structured output (inconsistent across providers)
-
-**Next milestone goals:** Visualization capabilities, advanced memory features, production hardening
+- File-tab-centric UX limits multi-file analysis (v0.3 addresses this)
 
 ## Requirements
 
@@ -179,7 +190,7 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 ### Active
 
-(No active requirements — define in next milestone via `/gsd:new-milestone`)
+(v0.3 requirements being defined — see `.planning/REQUIREMENTS.md`)
 
 ### Out of Scope
 
@@ -196,8 +207,8 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 - **Mobile native apps** — Web-responsive design only
 - **Data source integrations (APIs, databases)** — File upload only
 - **Cross-session memory persistence** — Context pollution risk; session-scoped memory by design
-- **Query safety filter** — Block PII extraction, prompt injection (deferred to v0.3)
-- **Pydantic structured output for agents** — Eliminate inconsistent JSON across providers (deferred to v0.3)
+- **Query safety filter** — Block PII extraction, prompt injection (deferred to future milestone)
+- **Pydantic structured output for agents** — Eliminate inconsistent JSON across providers (deferred to future milestone)
 
 ## Context
 
@@ -240,7 +251,7 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | 4 AI agents for v0.1 (skip Visualization) | Timeline constraint. Core agents are critical to accuracy. | ✓ Good — expanded to 5 agents in v0.2 with Manager Agent |
 | Email auth only (defer Google OAuth) | Reduces complexity, faster to ship | ✓ Good — no user demand for OAuth yet |
 | Skip email verification for v1 | Let users in immediately | ✓ Good — reduces signup friction |
-| Tabbed file interface with per-file chat history | More intuitive than shared history | ✓ Good — natural UX, independent memory per tab |
+| Tabbed file interface with per-file chat history | More intuitive than shared history | ⚠️ Revisit — replacing with chat-session-centric UX in v0.3 |
 | Session-scoped memory (no cross-session) | Avoid context pollution, clean slate per tab | ✓ Good — users get clean analysis per session |
 | Manager Agent for query routing | Reduce response time ~40%, skip code gen for simple queries | ✓ Good — MEMORY_SUFFICIENT path is significantly faster |
 | Tavily over Serper.dev for web search | Serper returns URLs only; Tavily returns full page content | ✓ Good — higher quality analysis with actual content |
@@ -250,6 +261,9 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | LLM-generated query suggestions | Dataset-specific, not hardcoded templates | ✓ Good — suggestions reflect actual data structure |
 | Local file storage (defer S3) | Simpler deployment, fewer dependencies | — Pending |
 | Skip billing for v1 | Need product validation first | — Pending |
+| Chat-session-centric UX (v0.3) | Enable multi-file analysis, ChatGPT-style conversations | — Pending |
+| Cross-file analysis support | AI can reference all linked files in a single query | — Pending |
+| At least one file required per chat | Prevents empty chats, maintains data analysis focus | — Pending |
 
 ---
-*Last updated: 2026-02-10 after v0.2 Intelligence & Integration milestone*
+*Last updated: 2026-02-11 after v0.3 Multi-file Conversation Support milestone started*
