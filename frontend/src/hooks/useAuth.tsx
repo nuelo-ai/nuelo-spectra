@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (userResponse.ok) {
       const userData: UserResponse = await userResponse.json();
       setUser(userData);
-      router.push("/dashboard");
+      router.push("/sessions/new");
     } else {
       throw new Error("Failed to load user data");
     }
@@ -112,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (userResponse.ok) {
       const userData: UserResponse = await userResponse.json();
       setUser(userData);
-      router.push("/dashboard");
+      router.push("/sessions/new");
     } else {
       throw new Error("Failed to load user data");
     }
