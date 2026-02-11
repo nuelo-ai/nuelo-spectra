@@ -53,6 +53,32 @@ from app.services.sandbox import E2BSandboxRuntime, ExecutionResult
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def _extract_used_dataframes(code: str, file_metadata: list[dict]) -> list[dict]:
+    """Find which DataFrames from file_metadata are actually used in code.
+
+    Checks for each file's var_name in the generated code string.
+    Only files whose variable name appears in the code will be uploaded
+    to the sandbox (selective loading for memory efficiency).
+
+    Args:
+        code: Generated Python code string.
+        file_metadata: List of file metadata dicts, each containing
+            'var_name', 'name', 'file_path', 'file_type'.
+
+    Returns:
+        List of file metadata dicts for files actually referenced in code.
+    """
+    used = []
+    for fm in file_metadata:
+        if fm["var_name"] in code:
+            used.append(fm)
+    return used
+
 
 # Module-level cached graph instance and its checkpointer
 _cached_graph = None
@@ -282,68 +308,122 @@ async def execute_in_sandbox(
         "total_steps": 4
     })
 
-    # Read user's data file from disk with error handling
-    file_path = state.get("file_path", "")
-    data_file = None
-    data_filename = None
-    if file_path:
-        data_filename = os.path.basename(file_path)
-        try:
-            with open(file_path, "rb") as f:
-                data_file = f.read()
-        except FileNotFoundError:
-            writer({
-                "type": "error",
-                "event": "error",
-                "message": "Data file not found. Please re-upload your file and try again."
-            })
-            return Command(
-                goto="halt",
-                update={
-                    "execution_result": "Error: Data file not found on server",
-                    "error": "file_not_found",
-                },
-            )
-        except (IOError, OSError) as e:
-            writer({
-                "type": "error",
-                "event": "error",
-                "message": "Unable to read data file. Please re-upload your file and try again."
-            })
-            return Command(
-                goto="halt",
-                update={
-                    "execution_result": f"Error: Unable to read data file: {e}",
-                    "error": "file_read_error",
-                },
-            )
-
-    # Emit execution started status
-    writer({
-        "type": "execution_started",
-        "message": "Executing...",
-        "step": 3,
-        "total_steps": 4
-    })
-
-    # Create E2B runtime and execute in thread pool (SDK is synchronous)
-    runtime = E2BSandboxRuntime(timeout_seconds=settings.sandbox_timeout_seconds)
-
-    # Prepend file loading code if data file exists
     generated_code = state.get("generated_code", "")
-    if data_file and data_filename:
-        # Inject pandas import and file loading before generated code
-        # Detect file type by extension and use appropriate reader
-        file_ext = os.path.splitext(data_filename)[1].lower()
-        if file_ext in ['.xlsx', '.xls']:
-            # Excel file - use read_excel
-            file_loading_code = f"""import pandas as pd
+    file_metadata = state.get("file_metadata", [])
+
+    # Multi-file mode: file_metadata is non-empty (session-based flow)
+    if file_metadata:
+        files_to_load = _extract_used_dataframes(generated_code, file_metadata)
+        loading_lines = ["import pandas as pd"]
+        data_files_to_upload: list[tuple[bytes, str]] = []
+
+        for fm in files_to_load:
+            file_path = fm["file_path"]
+            filename = fm["name"]
+            var_name = fm["var_name"]
+            file_ext = os.path.splitext(filename)[1].lower()
+
+            # Read file from disk -- fail entire query if any referenced file is unreadable
+            try:
+                with open(file_path, "rb") as f:
+                    file_bytes = f.read()
+                data_files_to_upload.append((file_bytes, filename))
+            except (FileNotFoundError, IOError) as e:
+                writer({"type": "error", "event": "error",
+                        "message": f"Cannot read file: {filename}"})
+                return Command(goto="halt", update={
+                    "execution_result": f"Error: Cannot read file {filename}: {e}",
+                    "error": "file_read_error",
+                })
+
+            if file_ext in ['.xlsx', '.xls']:
+                loading_lines.append(f"{var_name} = pd.read_excel('/home/user/{filename}')")
+            else:
+                loading_lines.append(f"{var_name} = pd.read_csv('/home/user/{filename}')")
+
+        file_loading_code = "\n".join(loading_lines) + "\n\n"
+        full_code = file_loading_code + generated_code
+
+        # Emit execution started status
+        writer({
+            "type": "execution_started",
+            "message": "Executing...",
+            "step": 3,
+            "total_steps": 4
+        })
+
+        # Create E2B runtime and execute with multi-file upload
+        runtime = E2BSandboxRuntime(timeout_seconds=settings.sandbox_timeout_seconds)
+
+        result: ExecutionResult = await asyncio.to_thread(
+            runtime.execute,
+            code=full_code,
+            timeout=float(settings.sandbox_timeout_seconds),
+            data_files=data_files_to_upload,
+        )
+
+    else:
+        # Single-file legacy mode: unchanged behavior
+        file_path = state.get("file_path", "")
+        data_file = None
+        data_filename = None
+        if file_path:
+            data_filename = os.path.basename(file_path)
+            try:
+                with open(file_path, "rb") as f:
+                    data_file = f.read()
+            except FileNotFoundError:
+                writer({
+                    "type": "error",
+                    "event": "error",
+                    "message": "Data file not found. Please re-upload your file and try again."
+                })
+                return Command(
+                    goto="halt",
+                    update={
+                        "execution_result": "Error: Data file not found on server",
+                        "error": "file_not_found",
+                    },
+                )
+            except (IOError, OSError) as e:
+                writer({
+                    "type": "error",
+                    "event": "error",
+                    "message": "Unable to read data file. Please re-upload your file and try again."
+                })
+                return Command(
+                    goto="halt",
+                    update={
+                        "execution_result": f"Error: Unable to read data file: {e}",
+                        "error": "file_read_error",
+                    },
+                )
+
+        # Emit execution started status
+        writer({
+            "type": "execution_started",
+            "message": "Executing...",
+            "step": 3,
+            "total_steps": 4
+        })
+
+        # Create E2B runtime and execute in thread pool (SDK is synchronous)
+        runtime = E2BSandboxRuntime(timeout_seconds=settings.sandbox_timeout_seconds)
+
+        # Prepend file loading code if data file exists
+        if data_file and data_filename:
+            # Inject pandas import and file loading before generated code
+            # Detect file type by extension and use appropriate reader
+            file_ext = os.path.splitext(data_filename)[1].lower()
+            if file_ext in ['.xlsx', '.xls']:
+                # Excel file - use read_excel
+                file_loading_code = f"""import pandas as pd
 df = pd.read_excel('/home/user/{data_filename}')
 
 """
-        else:
-            # CSV file - use read_csv with encoding fallback
-            file_loading_code = f"""import pandas as pd
+            else:
+                # CSV file - use read_csv with encoding fallback
+                file_loading_code = f"""import pandas as pd
 try:
     df = pd.read_csv('/home/user/{data_filename}', encoding='utf-8')
 except UnicodeDecodeError:
@@ -353,17 +433,17 @@ except UnicodeDecodeError:
         df = pd.read_csv('/home/user/{data_filename}', encoding='cp1252')
 
 """
-        full_code = file_loading_code + generated_code
-    else:
-        full_code = generated_code
+            full_code = file_loading_code + generated_code
+        else:
+            full_code = generated_code
 
-    result: ExecutionResult = await asyncio.to_thread(
-        runtime.execute,
-        code=full_code,
-        timeout=float(settings.sandbox_timeout_seconds),
-        data_file=data_file,
-        data_filename=data_filename,
-    )
+        result: ExecutionResult = await asyncio.to_thread(
+            runtime.execute,
+            code=full_code,
+            timeout=float(settings.sandbox_timeout_seconds),
+            data_file=data_file,
+            data_filename=data_filename,
+        )
 
     # Handle execution result
     if result.success:

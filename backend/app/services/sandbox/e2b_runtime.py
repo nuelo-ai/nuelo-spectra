@@ -38,18 +38,20 @@ class E2BSandboxRuntime:
         timeout: float = 60.0,
         data_file: bytes | None = None,
         data_filename: str | None = None,
+        data_files: list[tuple[bytes, str]] | None = None,
     ) -> ExecutionResult:
         """Execute Python code in an E2B sandbox.
 
-        Creates a fresh Firecracker microVM, optionally uploads data file,
+        Creates a fresh Firecracker microVM, optionally uploads data file(s),
         executes code, and returns structured results. All errors are caught
         and returned as ExecutionResult (never raised).
 
         Args:
             code: Python code to execute
             timeout: Maximum execution time in seconds
-            data_file: Optional file data to upload to sandbox
+            data_file: Optional single file data to upload (legacy single-file mode)
             data_filename: Filename for uploaded data (required if data_file provided)
+            data_files: Optional list of (file_bytes, filename) tuples for multi-file mode
 
         Returns:
             ExecutionResult with stdout, stderr, results, error, timing
@@ -63,7 +65,12 @@ class E2BSandboxRuntime:
                 timeout=int(timeout),
                 api_key=settings.e2b_api_key
             ) as sandbox:
-                # Upload data file if provided
+                # Upload multiple data files if provided (multi-file mode)
+                if data_files:
+                    for file_bytes, filename in data_files:
+                        sandbox.files.write(f"/home/user/{filename}", file_bytes)
+
+                # Upload single data file if provided (legacy single-file mode)
                 if data_file and data_filename:
                     sandbox.files.write(
                         f"/home/user/{data_filename}",

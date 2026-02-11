@@ -210,9 +210,20 @@ class ChatSessionService:
         if file in session.files:
             raise ValueError("File already linked to session")
 
-        # Check file count limit (10 files per session)
-        if len(session.files) >= 10:
-            raise ValueError("Maximum 10 files per session")
+        # Check configurable file count limit from settings.yaml
+        from app.services.context_assembler import load_session_settings
+        settings = load_session_settings()
+        max_files = settings["session"]["max_files_per_session"]
+
+        if len(session.files) >= max_files:
+            raise ValueError(f"Maximum {max_files} files per session")
+
+        # Check total file size limit
+        max_size_bytes = settings["session"]["max_total_file_size_mb"] * 1024 * 1024
+        current_total = sum(f.file_size for f in session.files)
+        if current_total + file.file_size > max_size_bytes:
+            max_mb = settings["session"]["max_total_file_size_mb"]
+            raise ValueError(f"Total file size would exceed {max_mb}MB limit")
 
         # Link file to session
         session.files.append(file)
