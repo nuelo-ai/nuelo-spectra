@@ -45,6 +45,14 @@
 
 **Requirements:** DATA-01, DATA-02, DATA-03, DATA-04, DATA-05, DATA-06
 
+**Plans:** 4 plans
+
+Plans:
+- [ ] 14-01-PLAN.md — ChatSession model, association table, Pydantic schemas
+- [ ] 14-02-PLAN.md — Alembic migrations (schema, data, checkpoint)
+- [ ] 14-03-PLAN.md — ChatSession service layer and REST API endpoints
+- [ ] 14-04-PLAN.md — Integration wiring (session-based thread_ids in agent service)
+
 **Success Criteria:**
 1. Chat sessions can be created, read, updated, and deleted via API endpoints
 2. Files can be linked to multiple sessions and sessions can have multiple files (many-to-many relationship working)
@@ -143,7 +151,7 @@
 | 11. Web Search Integration | v0.2 | 3/3 | Complete | 2026-02-09 |
 | 12. Production Email | v0.2 | 2/2 | Complete | 2026-02-09 |
 | 13. Migrate Web Search (Tavily) | v0.2 | 2/2 | Complete | 2026-02-09 |
-| 14. Database Foundation & Migration | v0.3 | 0/? | Pending | — |
+| 14. Database Foundation & Migration | v0.3 | 0/4 | Planned | — |
 | 15. Agent System Enhancement | v0.3 | 0/? | Pending | — |
 | 16. Frontend Restructure | v0.3 | 0/? | Pending | — |
 | 17. File Management & Linking | v0.3 | 0/? | Pending | — |
