@@ -5,12 +5,15 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ChatSidebar } from "@/components/sidebar/ChatSidebar";
+import { LinkedFilesPanel } from "@/components/session/LinkedFilesPanel";
+import { useSessionStore } from "@/stores/sessionStore";
+import { useSessionDetail } from "@/hooks/useChatSessions";
 
 /**
  * Dashboard layout - protected route that requires authentication.
  * Shows loading spinner while checking auth state.
  * Redirects to login if not authenticated.
- * Layout: SidebarProvider wrapping ChatSidebar (left) + main content (right).
+ * Layout: SidebarProvider wrapping ChatSidebar (left) + main content (center) + LinkedFilesPanel (right).
  * No top nav header - user menu is in the sidebar UserSection.
  */
 export default function DashboardLayout({
@@ -20,6 +23,8 @@ export default function DashboardLayout({
 }) {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const currentSessionId = useSessionStore((s) => s.currentSessionId);
+  const { data: sessionDetail } = useSessionDetail(currentSessionId);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -45,7 +50,15 @@ export default function DashboardLayout({
     <SidebarProvider defaultOpen={true}>
       <div className="flex h-screen overflow-hidden w-full">
         <ChatSidebar />
-        <main className="flex-1 overflow-hidden">{children}</main>
+        <main className="flex-1 overflow-hidden transition-all duration-300 ease-in-out">
+          {children}
+        </main>
+        {currentSessionId && (
+          <LinkedFilesPanel
+            sessionId={currentSessionId}
+            files={sessionDetail?.files ?? []}
+          />
+        )}
       </div>
     </SidebarProvider>
   );

@@ -11,7 +11,10 @@ import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { TypingIndicator } from "./TypingIndicator";
 import { DataCard } from "./DataCard";
-import { Globe } from "lucide-react";
+import { Globe, PanelRightOpen, PanelRightClose } from "lucide-react";
+import { useSessionStore } from "@/stores/sessionStore";
+import { useSessionDetail } from "@/hooks/useChatSessions";
+import { Button } from "@/components/ui/button";
 
 interface ChatInterfaceProps {
   sessionId: string;
@@ -25,6 +28,9 @@ interface ChatInterfaceProps {
 export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
   const { data: chatData, isLoading, refetch } = useChatMessages(sessionId);
   const addLocalMessage = useAddLocalMessage();
+  const { data: sessionDetail } = useSessionDetail(sessionId);
+  const rightPanelOpen = useSessionStore((s) => s.rightPanelOpen);
+  const toggleRightPanel = useSessionStore((s) => s.toggleRightPanel);
 
   const {
     isStreaming,
@@ -231,7 +237,25 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
       <div className="px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <h2 className="text-lg font-semibold truncate">{sessionTitle}</h2>
-          {/* TODO: Phase 18 - Migrate ContextUsage to session-based endpoint */}
+          <div className="flex items-center gap-2">
+            {/* TODO: Phase 18 - Migrate ContextUsage to session-based endpoint */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-muted-foreground hover:text-foreground"
+              onClick={toggleRightPanel}
+              title={rightPanelOpen ? "Close linked files" : "Open linked files"}
+            >
+              {rightPanelOpen ? (
+                <PanelRightClose className="h-4 w-4" />
+              ) : (
+                <PanelRightOpen className="h-4 w-4" />
+              )}
+              <span className="text-xs">
+                Files{sessionDetail?.files?.length ? ` (${sessionDetail.files.length})` : ""}
+              </span>
+            </Button>
+          </div>
         </div>
       </div>
 
