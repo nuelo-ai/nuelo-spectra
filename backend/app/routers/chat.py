@@ -17,6 +17,7 @@ from app.schemas.chat import (
 )
 from app.services import agent_service
 from app.services.chat import ChatService
+from app.services.chat_session import ChatSessionService
 from app.services.file import FileService
 from app.agents.graph import get_or_create_graph
 
@@ -313,6 +314,306 @@ async def trim_context(
 
     # Get current state
     thread_id = f"file_{file_id}_user_{current_user.id}"
+    config = {"configurable": {"thread_id": thread_id}}
+    state = await graph.aget_state(config)
+
+    messages = state.values.get("messages", []) if state.values else []
+    if not messages:
+        return {"trimmed": False, "message": "No messages to trim"}
+
+    # Trim messages
+    provider = get_agent_provider("coding")
+    model = get_agent_model("coding")
+    counter = get_token_counter(provider, model)
+
+    trimmed_messages, _ = await trim_if_needed(
+        messages,
+        max_tokens=settings.context_window_tokens,
+        token_counter=counter,
+        user_confirmed=True
+    )
+
+    # Update state with trimmed messages via graph
+    # Use graph.aupdate_state to replace messages in checkpoint
+    await graph.aupdate_state(config, {"messages": trimmed_messages})
+
+    # Return updated stats
+    new_tokens = counter.count_messages(trimmed_messages)
+    return {
+        "trimmed": True,
+        "previous_count": len(messages),
+        "new_count": len(trimmed_messages),
+        "current_tokens": new_tokens,
+        "max_tokens": settings.context_window_tokens,
+        "percentage": round((new_tokens / settings.context_window_tokens * 100), 1),
+    }
+
+
+# ========== Session-based endpoints (v0.3 Multi-file Conversation Support) ==========
+
+@router.post("/sessions/{session_id}/query", response_model=ChatAgentResponse)
+async def session_query_with_ai(
+    session_id: UUID,
+    body: ChatQueryRequest,
+    current_user: CurrentUser,
+    db: DbSession,
+    request: Request
+) -> ChatAgentResponse:
+    """Run AI-powered query through the complete agent pipeline (session-based).
+
+    This endpoint is the session-based equivalent of /{file_id}/query.
+    Uses session-based thread_id for LangGraph memory persistence.
+
+    The workflow:
+    1. Validates session ownership
+    2. Gets linked files from session (requires at least one file)
+    3. Passes session_id to agent service (uses session-based thread_id)
+    4. Agent system processes query with multi-file context
+    5. Messages saved with session_id (not file_id)
+
+    Args:
+        session_id: Session UUID
+        body: Chat query request with user's natural language query
+        current_user: Authenticated user
+        db: Database session
+
+    Returns:
+        Agent response with code, execution result, and analysis
+
+    Raises:
+        HTTPException: 404 if session not found
+        HTTPException: 400 if session has no linked files
+    """
+    # Validate session ownership
+    session = await ChatSessionService.get_user_session(db, session_id, current_user.id)
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found"
+        )
+
+    # Check that session has at least one linked file
+    if not session.files:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No files linked to this session. Please link a file before querying."
+        )
+
+    # Run chat query through agent pipeline (session-based)
+    result = await agent_service.run_chat_query(
+        db, None, current_user.id, body.content,
+        checkpointer=request.app.state.checkpointer,
+        web_search_enabled=body.web_search_enabled,
+        session_id=session_id,
+    )
+
+    return ChatAgentResponse(**result)
+
+
+@router.post("/sessions/{session_id}/stream")
+async def session_stream_query(
+    session_id: UUID,
+    body: ChatQueryRequest,
+    current_user: CurrentUser,
+    db: DbSession,
+    request: Request,
+):
+    """Stream AI-powered query through the complete agent pipeline via SSE (session-based).
+
+    This endpoint is the session-based equivalent of /{file_id}/stream.
+    Uses session-based thread_id for LangGraph memory persistence.
+
+    The response is a Server-Sent Events stream. Each event has:
+    - event: The event type (status, node_complete, retry, error, completed)
+    - data: JSON payload with event details
+    - id: Event ID for reconnection support
+    - retry: Reconnection interval (15 seconds)
+
+    Chat history is saved atomically on successful stream completion.
+    Failed streams save nothing to the database.
+
+    Args:
+        session_id: Session UUID
+        body: Chat query request with user's natural language query
+        current_user: Authenticated user
+        db: Database session (used for initial validation only)
+        request: FastAPI request for disconnect detection
+
+    Returns:
+        EventSourceResponse: SSE stream of agent events
+
+    Raises:
+        HTTPException: 404 if session not found
+        HTTPException: 400 if session has no linked files
+    """
+    # Validate session ownership
+    session = await ChatSessionService.get_user_session(db, session_id, current_user.id)
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found"
+        )
+
+    # Check that session has at least one linked file
+    if not session.files:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No files linked to this session. Please link a file before querying."
+        )
+
+    settings = get_settings()
+    event_counter = 0
+
+    async def event_generator():
+        nonlocal event_counter
+        try:
+            async for event in agent_service.run_chat_query_stream(
+                db, None, current_user.id, body.content,
+                checkpointer=request.app.state.checkpointer,
+                web_search_enabled=body.web_search_enabled,
+                session_id=session_id,
+            ):
+                # Check for client disconnect
+                if await request.is_disconnected():
+                    break
+
+                event_counter += 1
+                event_type = event.get("type", "message")
+
+                yield {
+                    "event": event_type,
+                    "data": json.dumps(event),
+                    "id": str(event_counter),
+                    "retry": 15000,  # 15 second reconnection interval
+                }
+        except Exception as e:
+            yield {
+                "event": "error",
+                "data": json.dumps({
+                    "type": "error",
+                    "message": f"Stream error: {str(e)}"
+                }),
+            }
+
+    return EventSourceResponse(
+        event_generator(),
+        ping=settings.stream_ping_interval,
+        send_timeout=settings.stream_timeout_seconds,
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",  # Disable Nginx buffering
+        },
+    )
+
+
+@router.get("/sessions/{session_id}/context-usage")
+async def get_session_context_usage(
+    session_id: UUID,
+    current_user: CurrentUser,
+    db: DbSession,
+    request: Request,
+):
+    """Get current context window usage for a session.
+
+    Returns token count, max tokens, percentage, and warning flag.
+    Used by frontend to display context usage indicator.
+
+    Args:
+        session_id: Session UUID
+        current_user: Authenticated user
+        db: Database session
+        request: FastAPI request for accessing app state
+
+    Returns:
+        dict: Context usage statistics
+
+    Raises:
+        HTTPException: 404 if session not found
+    """
+    from app.agents.memory.token_counter import get_token_counter
+    from app.agents.config import get_agent_provider, get_agent_model
+
+    # Validate session ownership
+    session = await ChatSessionService.get_user_session(db, session_id, current_user.id)
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found"
+        )
+
+    settings = get_settings()
+    checkpointer = request.app.state.checkpointer
+    graph = get_or_create_graph(checkpointer)
+
+    # Get current state from checkpointer using session-based thread_id
+    thread_id = f"session_{session_id}_user_{current_user.id}"
+    config = {"configurable": {"thread_id": thread_id}}
+    state = await graph.aget_state(config)
+
+    messages = state.values.get("messages", []) if state.values else []
+
+    # Count tokens using first agent's provider config (coding agent is primary)
+    provider = get_agent_provider("coding")
+    model = get_agent_model("coding")
+    counter = get_token_counter(provider, model)
+
+    current_tokens = counter.count_messages(messages) if messages else 0
+    max_tokens = settings.context_window_tokens
+    percentage = round((current_tokens / max_tokens * 100), 1) if max_tokens > 0 else 0
+
+    return {
+        "current_tokens": current_tokens,
+        "max_tokens": max_tokens,
+        "percentage": percentage,
+        "message_count": len(messages),
+        "is_warning": percentage >= (settings.context_warning_threshold * 100),
+        "is_limit_exceeded": current_tokens > max_tokens,
+    }
+
+
+@router.post("/sessions/{session_id}/trim-context")
+async def trim_session_context(
+    session_id: UUID,
+    current_user: CurrentUser,
+    db: DbSession,
+    request: Request,
+):
+    """Trim oldest messages from context when limit exceeded (session-based).
+
+    Called after user confirms pruning via frontend dialog.
+    Trims to 90% of context window to leave headroom.
+    Returns updated context usage after trimming.
+
+    Args:
+        session_id: Session UUID
+        current_user: Authenticated user
+        db: Database session
+        request: FastAPI request for accessing app state
+
+    Returns:
+        dict: Trimming result with updated statistics
+
+    Raises:
+        HTTPException: 404 if session not found
+    """
+    from app.agents.memory.token_counter import get_token_counter
+    from app.agents.memory.trimmer import trim_if_needed
+    from app.agents.config import get_agent_provider, get_agent_model
+
+    # Validate session ownership
+    session = await ChatSessionService.get_user_session(db, session_id, current_user.id)
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found"
+        )
+
+    settings = get_settings()
+    checkpointer = request.app.state.checkpointer
+    graph = get_or_create_graph(checkpointer)
+
+    # Get current state using session-based thread_id
+    thread_id = f"session_{session_id}_user_{current_user.id}"
     config = {"configurable": {"thread_id": thread_id}}
     state = await graph.aget_state(config)
 
