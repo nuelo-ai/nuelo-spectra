@@ -119,6 +119,13 @@ Plans:
 
 **Requirements:** FILE-01, FILE-02, FILE-03, FILE-04, FILE-05, FILE-06, FILE-07, LINK-01, LINK-02, LINK-03, LINK-04, LINK-05, LINK-07, LINK-08
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 17-01-PLAN.md — Backend download endpoint, frontend hooks (download, recent, bulk delete), formatFileSize utility
+- [ ] 17-02-PLAN.md — My Files page with drag-and-drop upload, MyFilesTable with TanStack Table, FileContextModal
+- [ ] 17-03-PLAN.md — FileSelectionModal, FileLinkingDropdown (paperclip), chat drag-and-drop overlay, right sidebar update
+
 **Success Criteria:**
 1. User can access "My Files" screen from sidebar showing all uploaded files with metadata
 2. User can upload a new file from My Files screen and it completes onboarding flow
@@ -168,5 +175,5 @@ Plans:
 | 14. Database Foundation & Migration | v0.3 | 4/4 | Complete | 2026-02-11 |
 | 15. Agent System Enhancement | v0.3 | 3/3 | Complete | 2026-02-11 |
 | 16. Frontend Restructure | v0.3 | 3/3 | Complete | 2026-02-11 |
-| 17. File Management & Linking | v0.3 | 0/? | Pending | — |
+| 17. File Management & Linking | v0.3 | 0/3 | Pending | — |
 | 18. Integration & Polish | v0.3 | 0/? | Pending | — |
