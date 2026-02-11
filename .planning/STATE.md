@@ -9,13 +9,13 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 ## Current Position
 
-Phase: 15 - Agent System Enhancement (Multi-File Support) — COMPLETE
-Plan: 03 of 03 (Agent Pipeline Integration) — COMPLETE
-Status: Phase 15 complete — all 3 plans executed, multi-file pipeline fully wired
+Phase: 16 - Frontend Restructure (Session-Centric UX)
+Plan: 01 of 03 (Session State & Left Sidebar) — COMPLETE
+Status: Executing Phase 16 — plan 01 complete, session store + sidebar components built
 Branch: develop (fresh from master for v0.3)
-Last activity: 2026-02-11 — Completed 15-03-PLAN.md
+Last activity: 2026-02-11 — Completed 16-01-PLAN.md
 
-Progress: [████████████████████████████████] 100% (3/3 plans complete in Phase 15)
+Progress: [███████████░░░░░░░░░░░░░░░░░░░░░] 33% (1/3 plans complete in Phase 16)
 
 ## Performance Metrics
 
@@ -31,7 +31,7 @@ Progress: [███████████████████████
 - Total commits: 110
 
 **Velocity (v0.3):**
-- Total plans completed: 7
+- Total plans completed: 8
 - Phase 14 Plan 01: 3 min, 2 tasks, 7 files
 - Phase 14 Plan 02: 4 min, 2 tasks, 3 files
 - Phase 14 Plan 03: 3 min, 2 tasks, 5 files
@@ -39,7 +39,8 @@ Progress: [███████████████████████
 - Phase 15 Plan 01: 3 min, 2 tasks, 2 files
 - Phase 15 Plan 02: 2 min, 2 tasks, 2 files
 - Phase 15 Plan 03: 3 min, 2 tasks, 6 files
-- Total commits: 14
+- Phase 16 Plan 01: 4 min, 2 tasks, 13 files
+- Total commits: 16
 
 ## Accumulated Context
 
@@ -91,6 +92,13 @@ Progress: [███████████████████████
 - Selective loading uses var_name substring match in code -- sufficient because ContextAssembler generates unique df_ prefixed names
 - E2B data_files parameter is additive alongside existing data_file/data_filename (both paths coexist)
 
+**Phase 16-01 (Session State & Left Sidebar):**
+- Sidebar uses shadcn default 16rem (256px) width, within user's 260-300px range
+- Optimistic update for session rename with rollback on error
+- Delete redirects to /dashboard when active session is deleted
+- Session list staleTime 5 minutes to balance freshness with request volume
+- UserSection replicates avatar gradient style from existing dashboard layout
+
 See also: PROJECT.md Key Decisions table for milestone-level decisions.
 
 ### Pending Todos
@@ -107,7 +115,7 @@ See also: PROJECT.md Key Decisions table for milestone-level decisions.
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed 15-03-PLAN.md (Agent Pipeline Integration) -- Phase 15 complete
-Resume with: Plan next phase (Phase 16 -- Session UI or next milestone phase)
-Next decision: Phase 15 complete -- full multi-file pipeline wired end-to-end. ContextAssembler profiles files, coding agent generates named-DataFrame code, sandbox loads files selectively, manager routes with file awareness. Ready for UI phases (16, 17, 18) to surface multi-file features to users.
+Stopped at: Completed 16-01-PLAN.md (Session State & Left Sidebar)
+Resume with: Execute 16-02-PLAN.md (Dashboard Layout Integration -- wire sidebar into layout)
+Next decision: Session store + sidebar components built. Plan 02 integrates into dashboard layout with SidebarProvider.
 UI directive: Use Frontend Design skill (/frontend-design) for UI work in Phases 16, 17, 18
