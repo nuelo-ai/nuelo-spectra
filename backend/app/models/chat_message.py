@@ -2,17 +2,22 @@ from sqlalchemy import String, Text, JSON, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from app.models.base import Base
 
 if TYPE_CHECKING:
     from app.models.user import User
     from app.models.file import File
+    from app.models.chat_session import ChatSession
 
 
 class ChatMessage(Base):
-    """Chat message model with user and file isolation."""
+    """Chat message model with user and file isolation.
+
+    Note: session_id is the new primary relationship for multi-file conversations.
+    file_id is kept for backward compatibility during migration.
+    """
 
     __tablename__ = "chat_messages"
 
@@ -27,6 +32,11 @@ class ChatMessage(Base):
         index=True,
         nullable=False
     )
+    session_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
+        index=True,
+        nullable=True  # Nullable for migration compatibility
+    )
     role: Mapped[str] = mapped_column(String(20))  # user, assistant
     content: Mapped[str] = mapped_column(Text)
     message_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -39,3 +49,4 @@ class ChatMessage(Base):
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="chat_messages")
     file: Mapped["File"] = relationship("File", back_populates="chat_messages")
+    session: Mapped[Optional["ChatSession"]] = relationship("ChatSession", back_populates="messages")
