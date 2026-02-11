@@ -98,13 +98,49 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated during roadmap creation) | | |
+| CHAT-01 | Phase 16 | Pending |
+| CHAT-02 | Phase 16 | Pending |
+| CHAT-03 | Phase 18 | Pending |
+| CHAT-04 | Phase 16 | Pending |
+| CHAT-05 | Phase 16 | Pending |
+| CHAT-06 | Phase 18 | Pending |
+| CHAT-07 | Phase 18 | Pending |
+| CHAT-08 | Phase 18 | Pending |
+| CHAT-09 | Phase 16 | Pending |
+| LINK-01 | Phase 17 | Pending |
+| LINK-02 | Phase 17 | Pending |
+| LINK-03 | Phase 17 | Pending |
+| LINK-04 | Phase 17 | Pending |
+| LINK-05 | Phase 17 | Pending |
+| LINK-06 | Phase 15 | Pending |
+| LINK-07 | Phase 17 | Pending |
+| LINK-08 | Phase 17 | Pending |
+| FILE-01 | Phase 17 | Pending |
+| FILE-02 | Phase 17 | Pending |
+| FILE-03 | Phase 17 | Pending |
+| FILE-04 | Phase 17 | Pending |
+| FILE-05 | Phase 17 | Pending |
+| FILE-06 | Phase 17 | Pending |
+| FILE-07 | Phase 17 | Pending |
+| NAV-01 | Phase 16 | Pending |
+| NAV-02 | Phase 16 | Pending |
+| NAV-03 | Phase 16 | Pending |
+| NAV-04 | Phase 16 | Pending |
+| NAV-05 | Phase 16 | Pending |
+| DATA-01 | Phase 14 | Pending |
+| DATA-02 | Phase 14 | Pending |
+| DATA-03 | Phase 14 | Pending |
+| DATA-04 | Phase 14 | Pending |
+| DATA-05 | Phase 14 | Pending |
+| DATA-06 | Phase 14 | Pending |
+| THEME-01 | Phase 18 | Pending |
+| THEME-02 | Phase 18 | Pending |
 
 **Coverage:**
-- v0.3 requirements: 30 total
-- Mapped to phases: 0
-- Unmapped: 30
+- v0.3 requirements: 37 total
+- Mapped to phases: 37 (100%)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-11*
-*Last updated: 2026-02-11 after initial definition*
+*Last updated: 2026-02-11 after roadmap creation*
