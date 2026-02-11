@@ -9,13 +9,13 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 ## Current Position
 
-Phase: 16 - Frontend Restructure (Session-Centric UX) — COMPLETE
-Plan: 03 of 03 (WelcomeScreen & LinkedFilesPanel) — COMPLETE
-Status: Phase 16 complete — all 3 plans executed, session-centric UX fully built. Human verification deferred to Phase 18.
+Phase: 17 - File Management & Linking
+Plan: 01 of 03 (File Download Endpoint & Frontend Hooks) — COMPLETE
+Status: Plan 17-01 complete — download endpoint and hooks built. Continuing to Plan 02.
 Branch: develop (fresh from master for v0.3)
-Last activity: 2026-02-11 — Completed Phase 16
+Last activity: 2026-02-11 — Completed Plan 17-01
 
-Progress: [████████████████████████████████] 100% (3/3 plans complete in Phase 16)
+Progress: [██████████░░░░░░░░░░░░░░░░░░░░░░] 33% (1/3 plans complete in Phase 17)
 
 ## Performance Metrics
 
@@ -31,7 +31,7 @@ Progress: [███████████████████████
 - Total commits: 110
 
 **Velocity (v0.3):**
-- Total plans completed: 10
+- Total plans completed: 11
 - Phase 14 Plan 01: 3 min, 2 tasks, 7 files
 - Phase 14 Plan 02: 4 min, 2 tasks, 3 files
 - Phase 14 Plan 03: 3 min, 2 tasks, 5 files
@@ -42,7 +42,8 @@ Progress: [███████████████████████
 - Phase 16 Plan 01: 4 min, 2 tasks, 13 files
 - Phase 16 Plan 02: 4 min, 2 tasks, 10 files
 - Phase 16 Plan 03: 3 min, 2 tasks, 7 files
-- Total commits: 20
+- Phase 17 Plan 01: 2 min, 2 tasks, 3 files
+- Total commits: 22
 
 ## Accumulated Context
 
@@ -112,6 +113,12 @@ Progress: [███████████████████████
 - Right panel toggle in ChatInterface header shows file count badge from session detail
 - FileCard action buttons (info, remove) appear on hover for cleaner visual
 
+**Phase 17-01 (File Download Endpoint & Frontend Hooks):**
+- Download endpoint uses FileResponse with application/octet-stream for universal download behavior
+- useRecentFiles derives from existing useFiles cache (no separate API endpoint)
+- useBulkDeleteFiles invalidates both "files" and "sessions" query keys (CASCADE on session_files)
+- Download endpoint checks both DB record and disk file existence (separate 404 messages)
+
 See also: PROJECT.md Key Decisions table for milestone-level decisions.
 
 ### Pending Todos
@@ -128,7 +135,7 @@ See also: PROJECT.md Key Decisions table for milestone-level decisions.
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Phase 16 complete — all plans executed
-Resume with: Plan Phase 17 (File Management & Linking)
-Next decision: Phase 16 complete — session-centric UX built (sidebar, routes, welcome screen, linked files panel, chat migration). Human verification deferred to Phase 18 comprehensive test. Ready for Phase 17 (File Management & Linking).
+Stopped at: Completed 17-01-PLAN.md
+Resume with: Execute Plan 17-02 (My Files Screen)
+Next decision: Plan 17-01 complete — download endpoint and frontend hooks ready. Plan 02 builds the My Files screen UI consuming these hooks.
 UI directive: Use Frontend Design skill (/frontend-design) for UI work in Phases 16, 17, 18
