@@ -1,362 +1,438 @@
 # Project Research Summary
 
-**Project:** Spectra v0.2 Intelligence & Integration
-**Domain:** AI-powered data analytics platform (LangGraph agent enhancements)
-**Researched:** 2026-02-06
-**Confidence:** MEDIUM-HIGH
+**Project:** Spectra v0.3 - Multi-File Conversation Support
+**Domain:** AI-powered data analytics platform (chat-session-centric architecture transformation)
+**Researched:** 2026-02-11
+**Confidence:** HIGH
 
 ## Executive Summary
 
-Spectra v0.2 builds on the validated v0.1 Beta MVP (shipped 2026-02-06, 42/42 requirements satisfied) by adding an intelligence layer that transforms stateless AI interactions into conversational analytics with cost control and flexibility. The research reveals three core architectural truths: (1) PostgreSQL checkpointing works reliably with AsyncPostgresSaver v3.0.4+ (v0.1's async issues are resolved), (2) multi-LLM flexibility (Ollama local + OpenRouter gateway) is the headline commercial differentiator vs. ChatGPT/Julius AI lock-in, and (3) web search integration (Serper.dev) enables benchmarking queries that pure code interpreters cannot handle.
+Spectra v0.3 represents the most architecturally significant change since the platform's inception, transforming from a file-tab-centric model (where each uploaded file has its own isolated chat) to a chat-session-centric model (ChatGPT-style conversations that can reference multiple files). This is not merely a UI restructure -- it requires changes at every layer: database schema, LangGraph agent state, E2B sandbox execution, API endpoints, and frontend state management.
 
-The recommended approach prioritizes multi-LLM infrastructure first (Phase 1), followed by session memory (Phase 2), then intelligence features (query suggestions Phase 3, web search Phase 4), and production SMTP last (Phase 5). This ordering reflects dependency chains discovered in architecture research: per-agent LLM configuration requires multi-LLM foundation, and session memory must work before context-aware suggestions make sense. All features integrate cleanly via well-defined LangGraph extension points without disrupting the existing 4-agent system.
+The recommended approach leverages Spectra's existing clean separation of concerns. The current stack (FastAPI, PostgreSQL, SQLAlchemy, LangGraph, E2B, Next.js 16, React 19, TanStack Query, shadcn/ui, Zustand) requires zero new backend dependencies and only three new shadcn/ui components on the frontend (Sidebar, Resizable, Sheet). The transformation is primarily architectural and schema-level, not a library addition problem. The critical path is: (1) database schema migration with LangGraph checkpoint thread_id migration, (2) multi-file agent state extension with context assembly service, (3) frontend layout restructure with session-based navigation.
 
-Key risk: PostgreSQL checkpointing complexity increases operational burden (connection pooling, cleanup policies, context window management). Mitigation: Use FastAPI lifespan for connection pool initialization, implement 85% context warnings with truncation strategy, and add TTL-based checkpoint cleanup (30 days). Secondary risk: Multi-LLM abstraction adds testing surface area (6 providers vs. 1). Mitigation: YAML-driven configuration with provider-agnostic LLM factory enables swapping models without code changes.
+The highest risk is data loss during migration. The LangGraph checkpoint tables store conversation memory keyed by `thread_id = file_{file_id}_user_{user_id}`. This thread_id format must change to `session_{session_id}_user_{user_id}` while preserving conversation context, or all existing memory is silently lost. The second critical risk is multi-file context overflow: with 5 files at ~800 tokens of metadata each, the agent prompt can reach 4K tokens before a single user query is processed, leaving insufficient room for conversation history within the 12K token context window. Mitigation: tiered metadata inclusion (full profile for primary file, compact summaries for secondary files) and a hard 10-file limit per session.
 
 ## Key Findings
 
 ### Recommended Stack
 
-**Summary:** All v0.2 additions are evolutionary upgrades to existing stack, not disruptive replacements. The core finding is that current LangGraph versions solve v0.1's async checkpointing problems, and multi-LLM support requires zero new database dependencies (just Python packages).
+The v0.3 transformation requires **zero new backend dependencies** and minimal frontend additions. The existing stack is validated in production (96 requirements across v0.1 and v0.2) and well-suited for this architectural change.
 
-**Core technologies:**
-- **langgraph-checkpoint-postgres v3.0.4+**: Async PostgreSQL checkpointing for conversation memory — v3.0.4 (Jan 2026) fixes v0.1's async issues. Uses psycopg3 with proper async/await. Enables session-scoped memory (thread_id = chat_tab_id).
-- **langchain-ollama v1.0.1+**: Official Ollama integration for local/remote LLM deployment — Enables cost-effective local models (DeepSeek, Llama, Qwen) and data privacy (no external API calls). ChatOllama provides native LangChain tool binding and streaming.
-- **OpenRouter via langchain-openai**: Multi-model gateway (100+ models) using existing OpenAI-compatible API — Access to Claude, GPT-4, Gemini, DeepSeek via single integration. No new dependencies (uses existing langchain-openai with custom base_url).
-- **langchain-community v0.4.1+**: GoogleSerperAPIWrapper for web search tool integration — Serper.dev = $0.001/search (vs. SerpAPI $0.002+), 2,500 free searches for testing. Enables benchmarking queries ("compare my CTR to industry average") that differentiate from ChatGPT Code Interpreter.
-- **aiosmtplib v5.1.0+**: Async SMTP client for production email — Replaces Mailgun API with standard SMTP (Gmail, SendGrid, AWS SES). Zero dependencies, production-stable (Jan 2026), native async/await for FastAPI.
-- **psycopg[binary] v3.3+**: PostgreSQL async driver for checkpointing — Required by langgraph-checkpoint-postgres. Binary wheels for performance. Coexists with existing asyncpg (used by SQLAlchemy).
+**Core technologies (unchanged):**
+- FastAPI 0.115+ -- handles new `/sessions/*` router, session-based `/chat/*` endpoints
+- PostgreSQL + SQLAlchemy 2.0+ -- new `chat_sessions` table, `session_files` junction table, modified `chat_messages` FK from `file_id` to `session_id`
+- LangGraph 1.0.7+ -- state changes to support multi-file context (lists instead of singular file fields)
+- E2B Sandbox -- extends to upload N files per execution, creates named DataFrames (`df_sales`, `df_customers`) instead of single `df`
+- Next.js 16 + React 19 -- dynamic routes (`/dashboard/chat/[sessionId]`) replace tab-based navigation
 
-**Critical version requirements:**
-- langgraph-checkpoint-postgres must be v3.0.4+ (v2.x has async bugs)
-- Python 3.10+ (aiosmtplib requirement, already satisfied by v0.1's >=3.12)
-- All LangChain packages require langchain-core>=0.3.0 (already installed in v0.1)
+**Frontend additions (3 shadcn/ui components):**
+- **Sidebar** (via `npx shadcn@latest add sidebar`) -- replaces current `FileSidebar` with collapsible chat history sidebar featuring SidebarProvider, cookie-based state persistence, and keyboard shortcuts
+- **Resizable** (via `npx shadcn@latest add resizable`) -- three-panel layout: left sidebar + main chat + right file context panel. Built on react-resizable-panels v4.5.0 with drag mechanics and layout persistence
+- **Sheet** (via `npx shadcn@latest add sheet`) -- mobile-friendly slide-over panel for file context on small screens
+
+**Supporting libraries (already installed):**
+- Zustand 5.0.11 with `persist` middleware -- new `useChatSessionStore` replaces `useTabStore`, persists active session ID across page reloads
+- TanStack Query 5.90.20 -- new query keys `["sessions"]`, `["sessions", sessionId, "messages"]`
+- Radix UI 1.4.3 -- unified package already supports new shadcn components
+
+**Version compatibility:** All existing packages (Next.js 16.1.6, React 19.2.3, SQLAlchemy 2.0+, FastAPI 0.115+) are compatible with v0.3 changes. No version upgrades needed.
 
 ### Expected Features
 
-**Summary:** Most table stakes features exist from v0.1 (NL queries, streaming, transparency, multi-agent orchestration). v0.2 adds missing intelligence layer (memory, suggestions, multi-LLM) and production email. Key competitive insight: Multi-LLM flexibility is the primary differentiator vs. ChatGPT (OpenAI lock-in) and Julius AI (single model), targeting prosumer/SMB segment wanting cost control and data privacy.
-
 **Must have (table stakes):**
-- **Session-scoped conversation memory** — Enables multi-turn conversations ("add a column" works without re-explaining). Maps thread_id to browser tab. Clears context on tab close with warning. Avoids ChatGPT's cross-session context pollution problem.
-- **Basic query suggestions (5-6 per dataset, grouped)** — Solves "blank page intimidation." Three categories: General Analysis (2), Benchmarking (2), Trend/Predictive (2). Generated by Onboarding Agent during profiling (extends v0.1 capability).
-- **Configurable context window size** — YAML config (e.g., max_tokens: 8000), 85% warning, truncation strategy. Governance-friendly for enterprise cost control.
-- **Tab-close context warning** — Browser dialog: "Closing tab clears conversation. Continue?" Prevents accidental context loss. Standard UX pattern.
+- **Chat session as primary entity** -- ChatGPT, Claude, Gemini all center on "conversations," not files. Users expect to create a chat, then bring context into it. File-first is the exception, not the norm.
+- **Chat history sidebar** -- chronological grouping (Today, Yesterday, This Week, This Month, Older) is universal across AI chat tools and formalized by PatternFly as a standard component pattern
+- **File linking to chat sessions** -- users must attach files to conversations. At minimum: select from previously uploaded files. At least one file required before chatting.
+- **Session title auto-generation** -- ChatGPT auto-titles conversations from first message. Users expect this.
+- **"My Files" management screen** -- when files are decoupled from conversations, users need a dedicated place to see all their files (Google Drive model)
+- **Preserve existing conversation memory** -- v0.2 has multi-turn memory via LangGraph PostgreSQL checkpointing. v0.3 must preserve this.
 
 **Should have (competitive differentiators):**
-- **Multi-LLM provider support (OpenRouter + Ollama)** — HEADLINE COMMERCIAL FEATURE. Enables cost optimization (cheap models for simple tasks, powerful for complex), data privacy (local Ollama = no data leaves premises), and vendor flexibility. Target: enterprises with LLM strategy and cost consciousness.
-- **Per-agent LLM configuration** — Different models per agent (Coding Agent: Claude Sonnet 4.5, Code Checker: GPT-4o-mini, Analyst: Ollama local). YAML-driven. Completes multi-LLM value proposition ("smart spending").
-- **Web search tool for Analyst agent** — Serper.dev integration enables benchmarking queries ("compare my TikTok CTR to industry average"). Shows query + sources via SSE. Key differentiator vs. ChatGPT Code Interpreter (code-only, no web search) and Julius AI (database connectors, not web search).
-- **Streaming web search transparency** — When AI searches web, show "Searching for '[query]'..." in real-time SSE. Display source links in Data Card citations. Builds trust through visibility.
-- **SMTP email service** — Production-ready password reset. Migrate from Mailgun API to standard SMTP (host/port/user/pass in config). Self-hosted friendly.
+- **Cross-file analysis (joins/merges)** -- ask "Compare sales data from Q1.csv with Q2.csv" and get merged analysis. Julius AI supports this. This is the killer feature that justifies the multi-file architecture.
+- **Right sidebar file context panel** -- dedicated panel showing linked files with summaries, column info, row counts. Always visible during chat.
+- **Drag-and-drop file onto chat** -- drop a file directly onto the chat area to upload and link in one step (ChatGPT supports this)
+- **Light/dark mode toggle** -- explicitly requested in requirements, modern UX expectation
 
-**Defer (v2+):**
-- **Data-aware smart suggestions** — Upgrade from generic to dataset-specific ("Compare TikTok campaign to benchmarks" because dataset has TikTok column). HIGH perceived value but HIGH complexity (domain intelligence). Fast follower for v0.2.1.
-- **Context summarization strategies** — LangChain ConversationSummaryBufferMemory hybrid. Truncation sufficient for v0.2.0 launch. Add v0.2.2 after observing usage patterns.
-- **Persistent cross-session memory** — Deferred until user research validates need. Risk: context pollution (ChatGPT users complain). Complexity: pgvector, semantic search, isolation. v2.0+ feature.
-- **Collections and saved Data Cards** — Search, organization, tagging. Requires storage/UI overhaul. v2.0+ after real-time workflow validated.
-- **Visualization Agent** — Auto-generate charts. Complexity: chart type selection, relevance. v2.0+ feature (focus v0.2 on intelligence, not presentation).
+**Defer (v0.3.1 or v0.4):**
+- Session-level multi-file query suggestions (requires cross-file schema analysis)
+- Smart file suggestion in empty chat (low priority UX polish)
+- Advanced cross-file join intelligence (complex prompt engineering)
+
+**Anti-features (explicitly avoid):**
+- **Automatic cross-file joins without user intent** -- silently merging datasets leads to wrong results. Schema mismatches, duplicate columns, Cartesian products.
+- **Real-time collaborative editing** -- multi-user on same session adds massive complexity. Not in requirements.
+- **Folder/directory organization for files** -- over-engineering file management. Users will have 5-50 files, not thousands.
+- **Conversation branching/forking** -- extremely complex UX and data model. Not requested.
+- **Embedding/vector search across files** -- architecturally different from structured data analysis. Different product direction.
 
 ### Architecture Approach
 
-**Summary:** All v0.2 features integrate via well-defined LangGraph extension points without disrupting existing 4-agent system. Key architectural pattern: FastAPI lifespan manages connection pool lifecycle (shared across requests), per-agent LLM factory reads YAML config (enables experimentation without code changes), and ToolNode adds web search capability to Analyst agent only (isolated change). No database schema changes required (AsyncPostgresSaver auto-creates checkpoint tables).
+The v0.3 architecture transforms the data model from `User --1:N--> File --1:N--> ChatMessage` to `User --1:N--> ChatSession --M:N--> File` with `ChatSession --1:N--> ChatMessage`. This requires changes at every layer while preserving the clean separation of concerns that makes the migration feasible without a full rewrite.
 
 **Major components:**
 
-1. **AsyncPostgresSaver with connection pooling** — FastAPI lifespan function initializes AsyncConnectionPool (min_size=2, max_size=10) with autocommit=True and dict_row. Checkpointer setup creates two tables (checkpoints, checkpoint_blobs). Thread_id = user_{user_id}_file_{file_id} for session isolation. Graceful degradation: graph works with or without checkpointer.
+1. **Database Schema (NEW)**
+   - `ChatSession` model -- first-class chat entity with `id`, `user_id`, `title`, `created_at`, `updated_at`
+   - `SessionFile` association -- many-to-many join between sessions and files with `linked_at` timestamp and optional `alias` (DataFrame variable name)
+   - `ChatMessage` FK change -- from required `file_id` to required `session_id`, messages now belong to sessions not files
+   - Migration strategy: two-phase Alembic migration (Phase 1: add tables + nullable `session_id`, Phase 2: data migration + thread_id update + drop `file_id`)
 
-2. **Multi-LLM factory with YAML config** — Enhanced get_llm() supports 6 providers (anthropic, openai, google, ollama, openrouter, groq). Per-agent config in prompts.yaml adds llm section (provider, model, temperature, base_url). Each agent node loads config and instantiates LLM (not shared global instance). OpenRouter uses OpenAI-compatible API (no new package). Ollama doesn't need API key for local deployment.
+2. **Agent Pipeline (MODIFIED)**
+   - `ContextAssembler` service -- builds aggregated multi-file context from session files. Auto-detects join hints by finding matching column names across files.
+   - `ChatAgentState` extension -- singular `file_id`, `file_path`, `data_summary` become lists: `file_contexts: list[dict]`, `combined_data_summary: str`, `combined_data_profile: str`
+   - Thread ID change -- from `file_{file_id}_user_{user_id}` to `session_{session_id}_user_{user_id}`
+   - E2B sandbox multi-file execution -- uploads N files, creates named DataFrames (`df_sales`, `df_customers`), backward-compatible `df` alias for single-file sessions
+   - Coding Agent prompt -- receives multi-file profile JSON with `join_hints` array, generates code using named DataFrames
 
-3. **ToolNode integration for web search** — Add ToolNode to graph with conditional routing (should_call_tools checks last_message.tool_calls). Bind tools to Analyst agent only (llm.bind_tools([search_tool])). Tools configured via tools.yaml (provider: tavily/serper/duckduckgo). SSE streaming extended to show search queries and sources.
+3. **API Endpoints (NEW + MODIFIED)**
+   - **NEW:** `/sessions/*` router -- CRUD for chat sessions, link/unlink files
+   - **MODIFIED:** `/chat/{file_id}/*` becomes `/chat/sessions/{session_id}/*` (6 endpoints)
+   - Session list response -- includes `file_count`, `message_count`, `last_message_preview` for sidebar
 
-4. **Async SMTP service** — Replace Mailgun API calls with aiosmtplib.send(). Jinja2 templates for HTML emails (backend/app/templates/emails/). SMTP config in settings (host, port, username, password, use_tls). Graceful degradation: if no SMTP configured, log to console (dev mode).
+4. **Frontend Structure (RESTRUCTURED)**
+   - Layout: `ChatSidebar` (left, 260px) + Main Content + `LinkedFilesPanel` (right, 240px, conditional)
+   - State: `useChatSessionStore` replaces `useTabStore`, TanStack Query keys change to `["sessions", sessionId, "messages"]`
+   - Routes: `/dashboard` (empty state) + `/dashboard/chat/[sessionId]` (chat view) + `/dashboard/files` (file management)
+   - Components: `ChatSidebar` with history grouping, `LinkedFilesBar` showing file badges, `FileLinkModal` for selecting existing files
 
-5. **Context window management** — trim_messages() utility wraps LangChain function (max_tokens=8000, strategy="last", include_system=True). Agent nodes call before LLM invocation. Config in memory.yaml (max_messages: 50, context_window_tokens: 8000, ttl_days: 30).
+**Key patterns:**
+- **Context Assembler** -- dedicated service for multi-file aggregation (keeps `agent_service` from becoming a god function)
+- **Session-First, Files-Second** -- sessions start empty, files linked explicitly before first AI query (matches ChatGPT-style UX)
+- **Backward-Compatible DataFrame Naming** -- single-file sessions get both named DataFrame and generic `df` alias (existing patterns continue working)
+- **Additive Two-Phase Migration** -- Phase 1 adds new tables/columns (nullable), Phase 2 migrates data and removes old columns (reduces blast radius)
+- **File Limit Enforcement** -- cap at 10 files per session at API level (prevents context window overflow and sandbox timeouts)
+
+**Build order (dependency-aware):**
+```
+Phase A: Database Foundation (sequential, critical path)
+  1-7: ChatSession + SessionFile models → Alembic migrations → ChatSessionService → API
+
+Phase B: Agent Pipeline (depends on A.1-A.3, sequential)
+  8-14: ContextAssembler → ChatAgentState changes → Prompt updates → E2B multi-file → Agent service refactor
+
+Phase C: Frontend Structure (can start parallel with B)
+  15-19: Route structure → ChatSessionStore → Hooks → ChatSidebar → Layout restructure
+
+Phase D: Frontend Features (depends on C + B.13)
+  20-27: ChatView → LinkedFilesBar/Panel → FileManagerPage → FileLinkModal → Hook refactors
+
+Phase E: Polish
+  28-31: Auto-title → Empty state → Light/dark mode → Migration testing
+```
+
+**Critical path:** A.1 → A.2 → A.3 → B.8 → B.9 → B.12 → B.13 → D.20 → D.26
 
 ### Critical Pitfalls
 
-Research identified 8 critical pitfalls from PITFALLS.md. Top 5 relevant to v0.2:
+1. **Data Migration Destroys LangGraph Checkpoint Thread IDs**
+   - LangGraph stores conversation memory in its own tables (`checkpoint`, `checkpoint_blobs`) keyed by `thread_id`. Current format: `file_{file_id}_user_{user_id}`. New format: `session_{session_id}_user_{user_id}`.
+   - If migration creates new sessions but does NOT update thread_ids in LangGraph tables, all existing conversation memory is silently lost (Manager Agent cannot route to MEMORY_SUFFICIENT for existing conversations).
+   - Prevention: Migration must UPDATE thread_id in LangGraph tables alongside application table migration. Write verification query counting checkpoints before/after.
 
-1. **PostgreSQL connection pool exhaustion under load** — FastAPI lifespan pattern prevents per-request pool creation. Set pool_size=20, max_overflow=10. Monitor with connection count queries. Add PgBouncer if scaling beyond 100 users. TTL cleanup for checkpoints (30 days) prevents table bloat. Symptom: "too many connections" errors at 50+ concurrent users.
+2. **Chat Messages Table Migration Breaks Cascade Delete**
+   - Currently: `ChatMessage.file_id` FK with `cascade="all, delete-orphan"`. Deleting a file cascades to delete all its messages.
+   - In v0.3: messages belong to sessions (M:N with files). Deleting a file should NOT cascade to delete session messages (would destroy analysis of other files in same session).
+   - Prevention: Messages move from `file_id` FK to `session_id` FK. Define clear cascade rules: delete session → cascade delete messages; delete file → remove from junction table only.
 
-2. **Uncontrolled LLM token costs with multi-provider system** — Multi-LLM increases testing surface but also enables cost optimization. Implement token-aware rate limits (per user per hour), set max_tokens on LLM calls (cap output), cache similar queries (15-30% reduction). Track cost per provider in database. Symptom: Bill increases >2x week-over-week. Mitigation: Per-user token budgets, cost alerts ($50/day threshold).
+3. **Agent State Assumes Single File Context -- Multi-File Breaks Code Generation**
+   - Current pipeline assumes singular `file_id`, `file_path`, `data_summary`. Evidence: `execute_in_sandbox` uploads ONE file as `df`, Coding Agent prompt uses singular `{data_profile}`.
+   - With 3 linked files, system must load 3 data profiles, upload 3 files, generate code referencing `df_sales`, `df_customers`, `df_products`.
+   - Prevention: Extend `ChatAgentState` to support lists. Build compact multi-file context block (~500 tokens total) with full profiles available on-demand. Keep backward compatibility: single-file sessions continue using `df`.
 
-3. **Streaming response connection failures without recovery** — EventSource auto-reconnects by default but needs server cooperation. Yield retry events ({"event": "retry", "data": "3000"}), check await request.is_disconnected(), checkpoint partial results. Yield progress events every 5s to keep connection alive. Symptom: Users report "stuck loading." Mitigation: Client reconnection + server-side checkpointing.
+4. **E2B Sandbox Memory Overflow with Multiple Large Files**
+   - E2B sandboxes have 512 MiB RAM by default. A 30MB CSV consumes 100-300MB in pandas (object dtype overhead). Three such files require 300-900MB -- exceeding sandbox limit, causing MemoryError.
+   - Prevention: Pre-flight memory estimation (`sum(file_sizes) * 5` against sandbox RAM). Generate code with selective column loading (`pd.read_csv(file, usecols=[...])`). Hard file size budget per session.
 
-4. **Multi-agent orchestration failures without observability** — LangSmith tracing is mandatory (single env variable LANGCHAIN_TRACING_V2=true, zero code changes). Enables debugging non-deterministic agent decisions. Add circuit breaker (max_retries=3 with exponential backoff) to prevent hallucination loops. Symptom: "Analysis failed" with no details. Mitigation: LangSmith traces + structured logging.
+5. **Frontend Navigation Restructure Breaks SSE Stream Lifecycle**
+   - Current: tab-based UI hides/shows `ChatInterface` without unmounting. New: sidebar navigation via Next.js App Router unmounts page component on route change.
+   - If SSE stream is active during session switch, stream aborts before save logic runs. Messages not saved, checkpoint inconsistent.
+   - Prevention: Design chat session view as layout-level component (persists across navigation) OR show confirmation dialog before session switch during active streaming. Server-side safety net: save progress with `status: "interrupted"` on disconnect.
 
-5. **Context window overflow with conversation memory** — Unbounded message history exceeds model limits. Implement trim_messages (keep last 50 messages, 8000 tokens). Warn at 85% threshold. LangChain ConversationBufferWindowMemory pattern. Symptom: LLM errors about context length. Mitigation: Proactive trimming + user warning.
-
-**Anti-pattern specific to v0.2:** Using synchronous PostgresSaver in async FastAPI. v0.1 disabled checkpointing due to this issue. v0.2 must use AsyncPostgresSaver with async connection pool. Blocks event loop otherwise.
+**Additional moderate pitfalls:**
+- Context window token explosion (multi-file metadata can consume 4K tokens before first user query)
+- Thread ID collision when same file appears in multiple sessions (fixed by consistent `session_{id}` format)
+- API route structure break (`/chat/{file_id}/*` → `/chat/{session_id}/*` requires atomic frontend/backend update)
+- Zustand TabStore replacement creates state synchronization bugs (single commit for all imports, delete old store)
+- Query suggestions break for multi-file sessions (merge suggestions or use most-recent file's)
 
 ## Implications for Roadmap
 
-Based on research, suggested 5-phase structure optimizes for dependency chains and risk mitigation:
+Based on research, the critical dependency graph and pitfall severity analysis suggest a **4-phase sequential roadmap** with optional polish phase:
 
-### Phase 1: Multi-LLM Provider Infrastructure
-
-**Rationale:** Multi-LLM is the foundational capability that enables all per-agent configurations. Must come first because Phase 2+ features (memory, suggestions, web search) all depend on agents having LLM instances, and those instances need to support multiple providers. OpenRouter and Ollama integrations are independent (can be parallelized) but share common LLM factory abstraction.
+### Phase 1: Database Foundation & Migration
+**Rationale:** The entire v0.3 transformation depends on the data model change. This phase is the foundation for all subsequent work. Must be completed first because both backend agent changes (Phase 2) and frontend changes (Phase 3) require the new schema to exist.
 
 **Delivers:**
-- OpenRouter integration (100+ models via gateway)
-- Ollama integration (local/remote deployment)
-- Enhanced LLM factory (6 providers: anthropic, openai, google, ollama, openrouter, groq)
-- Per-agent YAML configuration (prompts.yaml extended with llm section)
-- API key management (get_api_key_for_provider utility)
-- Environment variable setup (OPENROUTER_API_KEY, OLLAMA_BASE_URL)
+- `chat_sessions` and `session_files` tables
+- Alembic migration infrastructure (if not already set up)
+- Data migration from v0.2 file-chat model to v0.3 session model
+- LangGraph checkpoint thread_id migration (CRITICAL: prevents conversation memory loss)
+- Session CRUD APIs (`POST /sessions`, `GET /sessions`, etc.)
+- File linking/unlinking APIs
 
-**Addresses (from FEATURES.md):**
-- Multi-LLM provider support (P1 competitive differentiator)
-- Per-agent LLM configuration (P1 completes multi-LLM value)
+**Addresses:**
+- Table stakes: "Chat session as primary entity"
+- Architecture: Database schema transformation
+- Pitfall 1: LangGraph checkpoint thread_id orphaning
+- Pitfall 2: Chat messages cascade delete topology
 
-**Avoids (from PITFALLS.md):**
-- Global LLM instance anti-pattern (prevents per-agent optimization)
-- Hard-coded provider in agent code (prevents experimentation)
+**Avoids:**
+- Pitfall 16: Manual schema migration without Alembic versioning
+- Pitfall 7: Thread ID collision across sessions (centralize thread_id construction)
 
-**Architecture components:** Enhanced LLM factory (llm_factory.py), per-agent config loader (config.py), agent node updates (coding.py, code_checker.py, data_analysis.py)
-
-**Research flag:** Standard patterns (well-documented LangChain integrations). Skip research-phase.
+**Research flag:** STANDARD PATTERNS -- database migration with Alembic is well-documented. LangGraph checkpoint table structure is documented in official persistence docs. SQLAlchemy many-to-many via association table is standard pattern. No additional research needed.
 
 ---
 
-### Phase 2: Session Memory with PostgreSQL Checkpointing
-
-**Rationale:** Memory is the second foundational capability that enables conversational intelligence. Must come after multi-LLM (because agents need working LLM instances before we can persist their conversations). Connection pooling setup is prerequisite for all subsequent phases (shared infrastructure). Session-scoped memory (vs. persistent cross-session) reduces complexity and avoids context pollution risks identified in research.
+### Phase 2: Agent System Enhancement (Multi-File Support)
+**Rationale:** Extending the LangGraph agent pipeline to support multi-file context is the most technically complex part of v0.3. This phase must follow database migration (depends on `ChatSession` model existing) but can precede frontend restructure. Building the backend capability first allows testing multi-file agent behavior independently of UI changes.
 
 **Delivers:**
-- AsyncPostgresSaver setup with connection pooling (FastAPI lifespan)
-- State schema enhancement (Annotated[list, add_messages] reducer)
-- Graph compilation with checkpointer parameter
-- Thread_id management (user_{user_id}_file_{file_id})
-- Tab-close warning dialog (browser API)
-- Configurable context window (memory.yaml)
-- Context trimming utility (trim_messages wrapper)
-- 85% context warning (client-side alert)
-- TTL-based checkpoint cleanup (30 days)
+- `ContextAssembler` service (aggregates multi-file context from session files)
+- `ChatAgentState` schema changes (multi-file fields)
+- E2B sandbox multi-file execution (`execute_multi_file` method)
+- Coding Agent, Code Checker, Manager Agent prompt updates for multi-file awareness
+- `agent_service.run_chat_query_stream` refactor (session-based, uses ContextAssembler)
+- Chat router refactor (`/chat/sessions/{session_id}/stream`)
+- Thread ID pattern migration to `session_{session_id}_user_{user_id}`
 
-**Addresses (from FEATURES.md):**
-- Session-scoped conversation memory (P1 table stakes)
-- Tab-close context warning (P1 UX)
-- Configurable context window size (P1 governance)
+**Uses:**
+- Existing LangGraph 1.0.7+ (state changes backward-compatible)
+- Existing E2B runtime (extends with new method, keeps old method for compatibility)
+- Existing SQLAlchemy (ContextAssembler queries session files via relationships)
 
-**Avoids (from PITFALLS.md):**
-- Connection pool exhaustion (lifespan pattern)
-- Context window overflow (trim_messages + 85% warning)
-- Unbounded message history (context window limits)
+**Implements:**
+- Architecture: Multi-file agent state, context assembly service, named DataFrame sandbox execution
+- Differentiator: Cross-file analysis foundation (joins/merges)
 
-**Architecture components:** AsyncConnectionPool initialization (main.py lifespan), checkpointer integration (graph.py), state schema update (state.py), endpoint config (chat.py thread_id)
+**Addresses:**
+- Pitfall 3: Single-file assumptions in agent state (extend to lists, build compact context)
+- Pitfall 4: E2B sandbox memory overflow (pre-flight estimation, selective column loading)
+- Pitfall 6: Context window token explosion (tiered metadata, compressed profiles)
+- Pitfall 11: Deleted file orphans in code history (clear stale state on unlink)
 
-**Research flag:** Standard patterns (official LangGraph docs, multiple tutorials). Skip research-phase.
+**Avoids:**
+- Anti-pattern: Storing file bytes in LangGraph state (use metadata only, read bytes at execution time)
+- Anti-pattern: Concatenating all files into one DataFrame (preserve semantic distinction)
+
+**Research flag:** NEEDS DEEPER RESEARCH -- multi-file prompt engineering patterns for coding agents, cross-file join hint detection strategies, memory estimation heuristics for pandas DataFrames. Recommend targeted `/gsd:research-phase` on "multi-file code generation patterns for data analytics LLMs" and "E2B sandbox resource limits with multiple file uploads."
 
 ---
 
-### Phase 3: Smart Query Suggestions
-
-**Rationale:** With memory and multi-LLM working, add intelligence features that enhance UX. Query suggestions come before web search because they're simpler (extend existing Onboarding Agent profiling) and have no external API dependencies. Basic (generic) suggestions ship in v0.2.0, data-aware suggestions deferred to v0.2.1 (HIGH complexity identified in research).
+### Phase 3: Frontend Restructure (Session-Centric UX)
+**Rationale:** Frontend restructure can begin in parallel with Phase 2 (agent work) but converges when chat functionality is integrated. The sidebar navigation and layout changes are independent of agent internals until the point where chat messages need to be displayed. Must come after database foundation (Phase 1) because it depends on session APIs existing.
 
 **Delivers:**
-- Query suggestion generation in Onboarding Agent (during profiling)
-- Three suggestion categories (General Analysis 2, Benchmarking 2, Trend/Predictive 2)
-- Frontend UI for grouped suggestions (below file upload confirmation)
-- Suggestion persistence (database column in files table)
-- Click-to-populate suggestion into chat input
+- New route structure: `/dashboard` (empty) + `/dashboard/chat/[sessionId]` + `/dashboard/files`
+- `ChatSessionStore` (Zustand, replaces `useTabStore`)
+- `useChatSessions` hooks (TanStack Query for session CRUD)
+- `ChatSidebar` component (left sidebar with chat history, "New Chat", "My Files")
+- Layout restructure (sidebar + main + optional right panel for linked files)
+- `ChatView` (session-based `ChatInterface`)
+- `LinkedFilesBar` and `LinkedFilesPanel` (show linked files with context)
+- `FileManagerPage` (/dashboard/files)
+- `FileLinkModal` (select existing files to link to session)
+- `useChatMessages` refactor (sessionId-based)
+- `useSSEStream` refactor (session-based URL)
+- Upload-and-chat flow integration
 
-**Addresses (from FEATURES.md):**
-- Basic query suggestions grouped by intent (P1 table stakes)
-- Reduces blank-page anxiety (user journey Stage 1: onboarding)
+**Uses:**
+- shadcn/ui Sidebar, Resizable, Sheet components (new installations)
+- Zustand 5.0.11 with persist middleware (already installed)
+- TanStack Query 5.90.20 (new query keys)
+- Next.js 16 dynamic routes (already supported)
 
-**Avoids (from PITFALLS.md):**
-- Generic unhelpful suggestions (grouping by analysis type provides structure)
-- Overwhelming users with too many suggestions (limit 5-6 total)
+**Implements:**
+- Architecture: Frontend session-centric layout, Zustand session store, TanStack Query session hooks
+- Table stakes: Chat history sidebar, file linking UX, "My Files" screen, drag-and-drop file upload
 
-**Architecture components:** Onboarding Agent extension (onboarding.py), database schema update (files.suggestions column), frontend suggestion UI
+**Addresses:**
+- Pitfall 5: SSE stream lifecycle on navigation (layout-level component or confirmation dialog)
+- Pitfall 8: API route structure break (backend and frontend updated together)
+- Pitfall 9: Zustand store replacement state sync (single commit, delete old store)
+- Pitfall 10: Query suggestions for multi-file sessions (merge suggestions from linked files)
+- Pitfall 12: Hardcoded localhost URL (centralize base URL)
 
-**Research flag:** Basic version is standard pattern (many tools have query suggestions). Data-aware version (v0.2.1) likely needs research-phase for domain intelligence patterns.
+**Avoids:**
+- Pitfall 13: Chat history sidebar performance (paginate sessions, load minimal metadata)
+- Pitfall 14: File list dual-mode confusion (prop-driven onSelect callback)
+
+**Research flag:** STANDARD PATTERNS -- Next.js App Router dynamic routes, Zustand store migration, shadcn/ui component integration are all well-documented with official examples. SSE stream cleanup in React components has established patterns. No additional research needed.
 
 ---
 
-### Phase 4: Web Search Tool Integration
-
-**Rationale:** With memory + suggestions working, add external data capability. Web search is isolated change (only Analyst agent, ToolNode addition, Serper.dev API). Independent of previous phases (could parallelize with Phase 3) but benefits from memory (search results persist in conversation context). Serper.dev chosen over Tavily because cheaper ($0.001 vs. $0.003/search) and 2,500 free searches for testing.
+### Phase 4: Integration & Testing
+**Rationale:** After database, backend agent, and frontend are independently built, this phase integrates all three layers and validates that existing v0.1/v0.2 functionality (96 validated requirements) continues working. This is the phase where end-to-end multi-file flows are tested and regressions are caught.
 
 **Delivers:**
-- Serper.dev API integration (GoogleSerperAPIWrapper from langchain-community)
-- Tool definitions (tools.py with get_web_search_tool factory)
-- ToolNode addition to graph (conditional routing via should_call_tools)
-- Tool binding for Analyst agent only (llm.bind_tools([search_tool]))
-- SSE extension for search transparency (yield search query + sources)
-- Data Card citations section (display source links)
-- Tool configuration (tools.yaml with provider selection)
-- SERPER_API_KEY environment variable
+- End-to-end multi-file analysis testing (upload 2+ files, link to session, cross-file query)
+- Migration validation (verify old conversations restored with correct context)
+- Regression testing (v0.1 and v0.2 requirement validation in new architecture)
+- Performance testing (context window usage with 5+ files, sandbox execution time)
+- Session title auto-generation (LLM-based or first-query truncation)
+- Error handling for edge cases (session with no files, deleted file references in code)
+- Cleanup script for orphaned LangGraph checkpoints (old `file_*` thread_ids)
 
-**Addresses (from FEATURES.md):**
-- Web search tool for Analyst agent (P1 differentiator)
-- Streaming web search transparency (P2 trust-building, fast follower)
+**Addresses:**
+- Regression risk: "Each file has its own chat tab" (v0.1 File-10) -- verify files create their own session
+- Regression risk: "Chat history persists per file across browser sessions" (v0.1 AI-07) -- verify messages in correct session
+- Regression risk: "Independent conversation memory per file tab" (v0.2 Memory-04) -- verify sessions have independent checkpoints
+- Regression risk: "New chat tabs display 5-6 query suggestions" (v0.2 Suggest-01) -- verify suggestions appear when file linked
 
-**Avoids (from PITFALLS.md):**
-- Hard-coded tool in agent (tools configured at graph level)
-- No visibility into AI actions (SSE shows search queries)
-
-**Architecture components:** ToolNode integration (graph.py), tool definitions (tools.py), Analyst agent update (data_analysis.py), SSE streaming extension (chat.py)
-
-**Research flag:** Standard patterns (LangChain tool integration docs). Skip research-phase.
+**Research flag:** NO RESEARCH NEEDED -- this is implementation testing, not architecture research.
 
 ---
 
-### Phase 5: Production SMTP Email
-
-**Rationale:** Last phase because it's independent of intelligence features (not user-facing in chat UX). Required for production but doesn't interact with agents/memory/tools. Can be developed in parallel with Phase 4 but prioritized last because it's hygiene (replacing Mailgun API) not core value.
+### Phase 5: Polish & Dark Mode (Optional)
+**Rationale:** After core functionality is stable, visual polish and light/dark mode can be added. Implementing dark mode after layout restructure is complete avoids compounding CSS complexity (Pitfall 15).
 
 **Delivers:**
-- aiosmtplib integration (replace Mailgun API calls)
-- Jinja2 email templates (backend/app/templates/emails/reset_password.html)
-- SMTP configuration (settings.py with smtp_host, smtp_port, smtp_username, smtp_password, smtp_use_tls)
-- send_email helper function (services/email.py)
-- HTML email rendering (Jinja2 templates)
-- Graceful degradation (log to console if SMTP not configured)
-- SMTP environment variables (SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, EMAIL_FROM)
+- Light/dark mode toggle (Tailwind dark mode classes, next-themes integration)
+- Empty state UX refinements (greeting message, file suggestion cards)
+- Session rename UX (inline edit in sidebar)
+- Smart file suggestion in empty chat (show recently uploaded files)
+- UI polish (animations, loading states, responsive refinements)
 
-**Addresses (from FEATURES.md):**
-- SMTP email service (P1 production requirement)
+**Addresses:**
+- Should-have: "Light/dark mode toggle"
+- Table stakes: Session title auto-generation (if not completed in Phase 4)
 
-**Avoids (from PITFALLS.md):**
-- Synchronous SMTP in async context (aiosmtplib native async/await)
+**Avoids:**
+- Pitfall 15: Dark mode + layout restructure CSS conflict (implement after layout is stable)
 
-**Architecture components:** Email service rewrite (services/email.py), settings update (config.py), password reset endpoint update (auth.py)
-
-**Research flag:** Standard patterns (aiosmtplib docs). Skip research-phase.
+**Research flag:** STANDARD PATTERNS -- Tailwind dark mode with next-themes is well-documented in shadcn/ui setup guides. No research needed.
 
 ---
 
 ### Phase Ordering Rationale
 
-**Dependency-driven ordering:**
-1. Multi-LLM infrastructure must come first (per-agent config requires working LLM factory)
-2. Session memory second (connection pooling infrastructure used by subsequent phases)
-3. Query suggestions third (requires Onboarding Agent which requires LLM)
-4. Web search fourth (requires Analyst agent which requires LLM, benefits from memory)
-5. SMTP last (independent of intelligence features, pure production hygiene)
+**Why this order:**
+- **Database first (Phase 1)** because both backend (Phase 2) and frontend (Phase 3) depend on the new schema existing. Migration must happen before any code references `ChatSession` model.
+- **Backend agent before frontend (Phase 2 → Phase 3)** allows testing multi-file agent behavior independently. Frontend can be built against stable backend APIs.
+- **Integration after both (Phase 4)** validates that independently built layers work together and existing functionality is preserved.
+- **Polish last (Phase 5)** avoids compounding complexity. Dark mode after layout restructure prevents CSS conflicts.
 
-**Risk mitigation sequencing:**
-- Phase 1 validates multi-provider abstraction before building features on top
-- Phase 2 validates memory before adding context-dependent features (suggestions)
-- Phase 3 and 4 can be parallelized (independent) but Phase 3 simpler (no external API)
-- Phase 5 isolated (no dependency risk, can slip without blocking v0.2 launch)
+**Why this grouping:**
+- **Phase 1** is purely data model -- no agent or UI work. Clean separation.
+- **Phase 2** is agent pipeline only -- can be tested with direct API calls before UI exists.
+- **Phase 3** is frontend structure -- can be built against API contracts even if full agent implementation is incomplete.
+- **Phase 4** is integration -- brings all layers together.
+- **Phase 5** is additive polish -- no architectural changes.
 
-**Integration point clustering:**
-- Phases 1-2 are infrastructure (foundational capabilities)
-- Phases 3-4 are features (user-facing intelligence)
-- Phase 5 is operations (production readiness)
-
-**Architectural alignment:**
-- Phases follow LangGraph extension points: LLM factory (1) → checkpointer (2) → agent logic (3) → tools (4) → external services (5)
-- Each phase has clean boundaries (no cross-phase coupling beyond dependencies)
+**How this avoids pitfalls:**
+- The two-phase database migration (add schema → migrate data) reduces blast radius (Pitfall 1, Pitfall 2).
+- Building agent multi-file support in isolation allows memory estimation testing before UI is built (Pitfall 4).
+- Restructuring frontend after backend APIs are stable prevents frontend-backend contract mismatches (Pitfall 8).
+- Testing SSE stream lifecycle during integration catches navigation-related state issues (Pitfall 5).
 
 ### Research Flags
 
+**Phases likely needing deeper research during planning:**
+- **Phase 2 (Agent System Enhancement):** Multi-file prompt engineering is a niche domain with sparse documentation. Specific research needed:
+  - How to structure coding agent prompts for multi-DataFrame pandas code generation
+  - Cross-file join hint detection strategies (beyond basic column name matching)
+  - Token budget allocation strategies when context includes N file profiles
+  - Memory estimation heuristics for pandas DataFrame size prediction
+  - Recommend: `/gsd:research-phase` on "multi-file code generation for data analytics LLMs" and "E2B sandbox resource optimization"
+
 **Phases with standard patterns (skip research-phase):**
-- **Phase 1 (Multi-LLM):** Official LangChain provider packages (langchain-ollama, OpenRouter docs). Well-documented integration patterns.
-- **Phase 2 (Session Memory):** Official LangGraph checkpointing docs. Multiple tutorials on AsyncPostgresSaver. Connection pooling is standard FastAPI pattern.
-- **Phase 3 (Query Suggestions - basic):** Query suggestion patterns are common (ThoughtSpot, Julius AI examples). Generic templates sufficient for v0.2.0.
-- **Phase 4 (Web Search):** LangChain tool integration is well-documented. Serper.dev has official LangChain wrapper (GoogleSerperAPIWrapper).
-- **Phase 5 (SMTP):** aiosmtplib is mature (v5.x stable). Standard email patterns (Jinja2 templates, HTML rendering).
-
-**Phases needing deeper research (if scope expands):**
-- **Phase 3 (Data-aware suggestions - v0.2.1):** Domain intelligence patterns for extracting semantic meaning from column names/types. Requires research-phase if attempting in v0.2.1 fast follower.
-- **Context summarization (v0.2.2):** LangChain ConversationSummaryBufferMemory patterns well-documented but testing strategies for summarization quality need validation.
-
-**High-risk integration points (monitor during implementation):**
-- **Phase 2:** PostgreSQL connection pool under load (test with 50+ concurrent users before launch)
-- **Phase 4:** Serper.dev rate limits and response times (test with realistic query patterns)
-- **Cross-phase:** Multi-LLM cost tracking (ensure per-provider monitoring works across all phases)
+- **Phase 1 (Database Foundation):** Alembic migrations, SQLAlchemy many-to-many relationships, PostgreSQL FK changes -- all well-documented with official guides and established patterns.
+- **Phase 3 (Frontend Restructure):** Next.js App Router dynamic routes, Zustand store migration, shadcn/ui component integration, TanStack Query key patterns -- extensive official documentation and community examples.
+- **Phase 4 (Integration & Testing):** No research needed -- implementation testing phase.
+- **Phase 5 (Polish & Dark Mode):** Tailwind dark mode, next-themes -- standard patterns in shadcn/ui documentation.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All versions verified from official sources (PyPI, official docs). langgraph-checkpoint-postgres v3.0.4+ confirmed to fix v0.1 async issues. langchain-ollama v1.0.1+ is official package (Dec 2025). aiosmtplib v5.1.0 production-stable (Jan 2026). |
-| Features | MEDIUM-HIGH | Table stakes features validated via competitor analysis (ChatGPT, Julius AI, ThoughtSpot). Multi-LLM differentiator confirmed by market analysis (ChatGPT lock-in pain point). Web search benchmarking validated via user stories. Query suggestion patterns standard (ThoughtSpot Answer Explorer precedent). MEDIUM not HIGH because data-aware suggestions complexity needs validation. |
-| Architecture | MEDIUM-HIGH | All integration patterns verified with official LangGraph/LangChain docs. AsyncPostgresSaver architecture confirmed via multiple tutorials and official examples. Multi-LLM factory pattern is standard (config-driven LLM selection). ToolNode integration documented in LangGraph prebuilt components. MEDIUM not HIGH because connection pooling performance at scale (100+ users) needs load testing. |
-| Pitfalls | HIGH | All critical pitfalls verified with 2026 sources (CVE reports, incident post-mortems, research papers). PostgreSQL pool exhaustion is known scaling bottleneck. LLM token cost blowup validated via pricing analysis (output tokens 3-10x input cost). Context window overflow documented in LangChain memory management guides. Multi-agent observability gap validated by State of Agent Engineering report (32% cite quality as blocker, 89% use observability). |
+| Stack | HIGH | All recommendations use existing validated dependencies (v0.1/v0.2 production stack) or official shadcn/ui components. Zero speculative packages. Version compatibility verified across all libraries. |
+| Features | MEDIUM-HIGH | Feature landscape based on ChatGPT, Claude, Julius AI UX patterns (well-documented) and PatternFly component standards. Cross-file analysis patterns validated via Julius AI documentation. Minor uncertainty around optimal query suggestion merging for multi-file sessions. |
+| Architecture | HIGH | Based on direct codebase analysis (all source files inspected with line-number references). LangGraph state management patterns verified via official persistence docs. SQLAlchemy many-to-many via association table is standard pattern. Next.js App Router layout/page semantics confirmed in official docs. |
+| Pitfalls | HIGH | All critical pitfalls verified against actual codebase with line-number references. LangGraph checkpoint thread_id structure confirmed in official docs. E2B sandbox memory limits (512 MiB default) from official pricing page. PostgreSQL migration best practices from multiple verified sources (Miro Engineering, Shelf.io Engineering). SSE stream lifecycle issues confirmed in Next.js GitHub discussions. |
 
-**Overall confidence:** MEDIUM-HIGH
-
-The research is comprehensive for v0.2.0 launch. Stack recommendations are HIGH confidence (official versions, verified compatibility). Architecture patterns are HIGH confidence (official docs, multiple examples). Feature prioritization is MEDIUM-HIGH (competitor analysis solid but data-aware suggestions complexity needs validation). Pitfall mitigation is HIGH confidence (real-world incident data, official security guidance).
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-**Gap 1: Per-agent cost tracking granularity** — Research confirms per-provider cost tracking is essential, but optimal granularity (per-agent vs. per-user vs. per-query) unclear. MEDIUM confidence that database logging per agent call works, but aggregation queries and reporting UI need design during planning.
+**Multi-file prompt engineering strategies:**
+- Research identified the pattern (extend state to lists, build compact context block) but optimal prompt structure for cross-file join generation needs validation during implementation.
+- How to handle: Phase 2 includes targeted research on multi-file coding agent prompts. Start with basic approach (list all files with join hints), iterate based on actual LLM performance.
 
-**Mitigation:** Start with per-user per-provider daily totals (simplest aggregation). Add per-agent breakdown in v0.2.1 after usage patterns observed. Alert on daily cost >$50 threshold (manual monitoring).
+**Memory estimation heuristics:**
+- Rule of thumb "CSV size * 3-5x for pandas memory" is a starting point but may not be accurate for all data types (heavy object dtype columns can exceed 5x).
+- How to handle: Phase 2 includes empirical testing with real datasets. Build conservative estimate first (5x multiplier), refine based on sandbox execution logs.
 
----
+**Context window budget allocation:**
+- Research confirms multi-file metadata can consume 4K tokens, but optimal allocation strategy (which files get full profiles vs summaries) needs testing with real conversation flows.
+- How to handle: Phase 2 implements tiered metadata (full profile for first file, compact summaries for others). Monitor context usage in Phase 4 integration testing, adjust strategy if needed.
 
-**Gap 2: Context summarization strategy** — Research identifies ConversationSummaryBufferMemory as standard pattern, but testing strategy for summarization quality unclear. LOW confidence that summarization preserves critical details (research cites "context poisoning" risk).
+**SSE stream cleanup on navigation:**
+- Next.js documentation confirms pages unmount on navigation, but optimal pattern (layout-level component vs confirmation dialog vs server-side save-on-disconnect) needs UX validation.
+- How to handle: Phase 3 implements server-side safety net (save progress on disconnect) as backstop. Frontend pattern (layout-level vs dialog) decided during implementation based on UX testing.
 
-**Mitigation:** Defer summarization to v0.2.2. Ship v0.2.0 with simple truncation + 85% warning (HIGH confidence this works). Test summarization in parallel with v0.2.0 usage, validate before deploying to production.
-
----
-
-**Gap 3: Data-aware suggestion complexity** — Research confirms high perceived value (ThoughtSpot Answer Explorer precedent) but implementation complexity is HIGH (domain intelligence needed). MEDIUM confidence that Onboarding Agent can extract semantic meaning from column names, but edge cases unclear.
-
-**Mitigation:** Ship basic (generic) suggestions in v0.2.0 grouped by analysis type (General, Benchmarking, Predictive). Defer data-aware suggestions to v0.2.1 fast follower. Use research-phase in v0.2.1 to explore domain intelligence patterns.
-
----
-
-**Gap 4: Connection pool sizing under load** — Research confirms AsyncConnectionPool pattern works, but optimal pool_size depends on concurrent users and query patterns. MEDIUM confidence that pool_size=20, max_overflow=10 handles 100 users (based on standard recommendations), but needs load testing.
-
-**Mitigation:** Start with pool_size=20 (standard for 100 users). Monitor connection count during beta testing. Add PgBouncer if approaching limits (deferred to production scaling). Document scaling threshold (add PgBouncer at 100+ concurrent users).
-
----
-
-**Gap 5: Web search result caching strategy** — Research identifies caching as cost optimization (15-30% token reduction) but cache invalidation strategy unclear. LOW confidence on optimal TTL (15 minutes cited but not validated).
-
-**Mitigation:** Defer caching to v0.2.3. Ship v0.2.0 with no caching (2,500 free Serper searches sufficient for testing). Implement Redis caching in v0.2.3 after observing query patterns and repeat rates.
+**Session title auto-generation:**
+- Two approaches identified (truncate first user query vs LLM-based summarization) but optimal pattern for data analytics queries unclear.
+- How to handle: Phase 4 implements simple approach first (truncate first query to 50 chars), evaluate if LLM summarization adds value during testing.
 
 ## Sources
 
 ### Primary (HIGH confidence)
 
-**Stack verification:**
-- [langgraph-checkpoint-postgres PyPI](https://pypi.org/project/langgraph-checkpoint-postgres/) — Version 3.0.4+ async compatibility confirmed
-- [langchain-ollama PyPI](https://pypi.org/project/langchain-ollama/) — Official LangChain package v1.0.1+
-- [aiosmtplib PyPI](https://pypi.org/project/aiosmtplib/) — Production-stable v5.1.0 (Jan 2026)
-- [LangGraph Checkpointing Documentation](https://docs.langchain.com/oss/python/langgraph/persistence) — Official AsyncPostgresSaver patterns
-- [OpenRouter LangChain Integration](https://openrouter.ai/docs/guides/community/langchain) — Official integration guide
-- [Serper.dev Official Site](https://serper.dev/) — Pricing ($0.001/search) and free tier (2,500 searches)
+**From STACK.md:**
+- shadcn/ui Components: https://ui.shadcn.com/docs/components/radix/sidebar, /resizable, /sheet -- official shadcn/ui documentation
+- react-resizable-panels: https://www.npmjs.com/package/react-resizable-panels (v4.5.0), https://github.com/bvaughn/react-resizable-panels
+- Zustand Persist Middleware: https://zustand.docs.pmnd.rs/middlewares/persist -- official Zustand v5 documentation
+- SQLAlchemy Many-to-Many: https://docs.sqlalchemy.org/en/20/orm/basic_relationships.html -- official SQLAlchemy 2.0 docs
+- LangGraph State Management: https://medium.com/@vinodkrane/mastering-persistence-in-langgraph-checkpoints-threads-and-beyond-21e412aaed60
+- Next.js Dynamic Routes: https://nextjs.org/docs/app/api-reference/file-conventions/dynamic-routes
 
-**Feature validation:**
-- [ThoughtSpot AI-suggested searches](https://docs.thoughtspot.com/cloud/latest/search-ai-suggested) — Query suggestion patterns (industry implementation)
-- [ThoughtSpot automates full platform with new Spotter agents](https://www.techtarget.com/searchbusinessanalytics/news/366636078/ThoughtSpot-automates-full-platform-with-new-Spotter-agents) — Spotter 3 capabilities (2026)
-- [Julius AI vs ChatGPT: I Found the Clear Winner for 2026](https://dhruvirzala.com/julius-ai-vs-chatgpt/) — Competitor feature comparison
-- [ChatGPT data analysis vs Julius AI: a side-by-side comparison for 2025](https://deepnote.com/compare/chatgpt-vs-juliusai) — Detailed feature matrix
+**From FEATURES.md:**
+- PatternFly Chatbot Conversation History: https://www.patternfly.org/patternfly-ai/chatbot/chatbot-conversation-history/ -- formalized chat history sidebar pattern
+- OpenAI File Uploads FAQ: https://help.openai.com/en/articles/8555545-file-uploads-faq
+- OpenAI UX Principles: https://developers.openai.com/apps-sdk/concepts/ux-principles/
+- LangGraph State Management: https://sparkco.ai/blog/mastering-langgraph-state-management-in-2025
 
-**Architecture patterns:**
-- [Mastering LangGraph Checkpointing: Best Practices for 2025](https://sparkco.ai/blog/mastering-langgraph-checkpointing-best-practices-for-2025) — Connection pooling, cleanup strategies
-- [Harnessing the Power of LangGraph Checkpoint With PostgreSQL](https://www.oreateai.com/blog/harnessing-the-power-of-langgraph-checkpoint-with-postgresql/68853ebedf7b26456aa5bff751d06842) — AsyncPostgresSaver implementation
-- [Building Tool Calling Agents with LangGraph: A Complete Guide](https://sangeethasaravanan.medium.com/building-tool-calling-agents-with-langgraph-a-complete-guide-ebdcdea8f475) — ToolNode integration patterns
+**From ARCHITECTURE.md:**
+- Direct codebase analysis: `agent_service.py`, `state.py`, `graph.py`, `chat_message.py`, `file.py`, `tabStore.ts`, `ChatInterface.tsx`, `useSSEStream.ts`, `useChatMessages.ts`, all schema/type files
+- LangGraph Persistence: https://docs.langchain.com/oss/python/langgraph/persistence -- official checkpoint and thread_id semantics
+- LangGraph Persistence Deep Guide: https://pub.towardsai.net/persistence-in-langgraph-deep-practical-guide-36dc4c452c3b
+- E2B Documentation: https://e2b.dev/docs -- sandbox file upload API
+- Alembic Best Practices: https://medium.com/@pavel.loginov.dev/best-practices-for-alembic-and-sqlalchemy-73e4c8a6c205
 
-**Pitfall validation:**
-- [State of Agent Engineering](https://www.langchain.com/state-of-agent-engineering) — 89% use observability, 32% cite quality as blocker
-- [Complete LLM Pricing Comparison 2026](https://www.cloudidr.com/blog/llm-pricing-comparison-2026) — Output token pricing (3-10x input cost)
-- [Detecting and Correcting Hallucinations in LLM-Generated Code via Deterministic AST Analysis](https://arxiv.org/html/2601.19106) — 56.2% fix rate for pandas hallucinations
-- [NVIDIA Practical Security Guidance for Sandboxing Agentic Workflows](https://developer.nvidia.com/blog/practical-security-guidance-for-sandboxing-agentic-workflows-and-managing-execution-risk) — Multi-layer sandbox defense
+**From PITFALLS.md:**
+- Direct codebase analysis with line-number references
+- E2B Pricing (512 MiB RAM default): https://e2b.dev/pricing
+- E2B Custom Sandbox Compute: https://e2b.dev/blog/customize-sandbox-compute
+- LangGraph Threads Migration Tool: https://github.com/farouk09/langgraph-threads-migration
+- PostgreSQL Migration Best Practices: https://medium.com/shelf-io-engineering/how-to-safely-migrate-millions-of-rows-across-postgres-production-tables-35de77322eb0
+- PostgreSQL Relationship Migration (Miro Engineering): https://medium.com/miro-engineering/sql-migrations-in-postgresql-part-1-bc38ec1cbe75
+- Next.js Layouts and Pages: https://nextjs.org/docs/app/building-your-application/routing/pages-and-layouts
+- Next.js Layout State Reset Discussion: https://github.com/vercel/next.js/discussions/49749
 
 ### Secondary (MEDIUM confidence)
 
-- [Run Claude Code with Local & Cloud Models in 5 Minutes (Ollama, LM Studio, llama.cpp, OpenRouter)](https://medium.com/@luongnv89/run-claude-code-on-local-cloud-models-in-5-minutes-ollama-openrouter-llama-cpp-6dfeaee03cda) — Multi-LLM setup patterns (2026)
-- [The Death of Sessionless AI: How Conversation Memory Will Evolve from 2026-2030](https://medium.com/@aniruddhyak/the-death-of-sessionless-ai-how-conversation-memory-will-evolve-from-2026-2030-9afb9943bbb5) — 2026 as "Year of Context" (industry trend)
-- [Data Analytics Trends to Watch in 2026](https://immsswd.github.io/portfolio/2025/11/22/data-analytics-trends-to-watch-in-2026/) — 40% NL query adoption (industry stat)
-- [A practical guide to OpenRouter: Unified LLM APIs, model routing, and real-world use](https://medium.com/@milesk_33/a-practical-guide-to-openrouter-unified-llm-apis-model-routing-and-real-world-use-d3c4c07ed170) — OpenRouter routing patterns
-- [pandas Memory Optimization Guide](https://thinhdanggroup.github.io/pandas-memory-optimization/) — Chunking and dtype optimization strategies
+**From FEATURES.md:**
+- Julius AI multi-file analysis: https://julius.ai/articles/13-powerful-features-that-make-julius-ai-the-top-data-analysis-tool
+- Julius AI merge/join guide: https://julius.ai/guides/merging_datasets
+- ChatGPT file upload limits: https://www.datastudios.org/post/chatgpt-5-file-upload-limits-maximum-sizes-frequency-caps-and-plan-differences-in-late-2025
+- Cross-dataset merging challenges: https://dataladder.com/merging-data-from-multiple-sources/
+- AI integration across multiple data sources: https://medium.com/axel-springer-tech/ai-integration-across-multiple-data-sources-c8dbd84ffc4b
 
-### Tertiary (LOW confidence, needs validation)
+**From PITFALLS.md:**
+- Context Window Overflow Patterns (Redis): https://redis.io/blog/context-window-overflow/
+- Context Window Problem (Factory.ai): https://factory.ai/news/context-window-problem
+- Zustand Store Persistence and Versioning: https://zustand.docs.pmnd.rs/integrations/persisting-store-data
+- Zustand with Next.js App Router: https://zustand.docs.pmnd.rs/guides/nextjs
+- Pandas Scaling to Large Datasets: https://pandas.pydata.org/docs/user_guide/scale.html
 
-- Multi-LLM cost savings percentages (60-80% savings claims) — Anecdotal from blogs, needs validation with actual Spectra usage patterns
-- Context pollution complaints from ChatGPT users — Referenced in multiple blogs but quantitative data not available
-- Data-aware suggestion implementation complexity estimates — Inferred from domain intelligence requirements, not validated with examples
-- Optimal TTL for web search caching (15 minutes) — Single source recommendation, not validated across use cases
+### Tertiary (LOW confidence, verify during implementation)
+
+**From FEATURES.md:**
+- AI UX of analytics (GoodData): https://www.gooddata.com/blog/ux-of-ai-data-analytics/
+- Chat UI design trends: https://multitaskai.com/blog/chat-ui-design/
+- Session management for AI apps: https://medium.com/@aslam.develop912/master-session-management-for-ai-apps-a-practical-guide-with-backend-frontend-code-examples-cb36c676ea77
 
 ---
-
-*Research completed: 2026-02-06*
+*Research completed: 2026-02-11*
 *Ready for roadmap: yes*

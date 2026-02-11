@@ -1,199 +1,403 @@
-# Architecture Research: LangGraph Memory, Multi-LLM, and Tool Integration
+# Architecture Patterns: Multi-File Conversation Support (v0.3)
 
-**Domain:** LangGraph agent system enhancement
-**Researched:** 2026-02-06
-**Confidence:** MEDIUM-HIGH
+**Domain:** AI Data Analytics Platform - Chat-Session-Centric Multi-File Architecture
+**Researched:** 2026-02-11
+**Confidence:** HIGH (based on thorough codebase analysis + verified patterns)
+
+---
 
 ## Executive Summary
 
-This research focuses on integrating three capabilities into Spectra's existing 4-agent LangGraph system:
-1. **Memory persistence** using AsyncPostgresSaver (fixing v0.1's disabled checkpointing)
-2. **Multi-LLM support** for Ollama and OpenRouter (extending existing Anthropic/OpenAI/Google)
-3. **Tool integration** for web search (Tavily/Serper.dev)
+Spectra v0.3 restructures from a file-centric model (1 file = 1 chat) to a chat-session-centric model (1 chat = N files). This requires changes at every layer: database schema, API endpoints, LangGraph agent state, E2B sandbox execution, LangGraph checkpointing, and frontend state management.
 
-Key finding: All three features integrate cleanly with existing architecture through well-defined LangGraph extension points. The async PostgreSQL checkpointing issue from v0.1 is resolved in current LangGraph versions with AsyncPostgresSaver from `langgraph-checkpoint-postgres`.
+The current architecture has clean separation of concerns which makes this migration feasible without a full rewrite. The key architectural challenge is **multi-file context aggregation**: how to assemble data summaries, profiles, and file bytes from N files and pass them through the agent pipeline that currently assumes a single file.
 
-## Current Architecture (v0.1)
+---
 
-### System Overview
+## Current Architecture (v0.2) - Baseline
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     FastAPI Endpoints                        │
-│  (chat stream endpoint with SSE, file upload, auth)          │
-├─────────────────────────────────────────────────────────────┤
-│                      LangGraph Workflow                      │
-│  ┌─────────┐   ┌──────────┐   ┌─────────┐   ┌──────────┐   │
-│  │Onboarding│→ │  Coding  │ → │  Code   │ → │  Data    │   │
-│  │  Agent  │   │  Agent   │   │ Checker │   │ Analysis │   │
-│  └─────────┘   └──────────┘   └─────────┘   └──────────┘   │
-│       ↓              ↓             ↓              ↓          │
-│                  Shared State (TypedDict)                    │
-│  { user_query, generated_code, execution_result, ... }      │
-├─────────────────────────────────────────────────────────────┤
-│                     Supporting Services                      │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    │
-│  │LLM Factory│  │YAML Config│  │E2B Sandbox│  │PostgreSQL│   │
-│  │get_llm()  │  │(prompts)  │  │(execute) │  │(data)    │   │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘    │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Component Inventory
-
-| Component | Current Implementation | File Location |
-|-----------|------------------------|---------------|
-| Graph definition | StateGraph with 5 nodes (4 agents + halt) | `backend/app/agents/graph.py` |
-| State schema | ChatAgentState TypedDict (13 keys) | `backend/app/agents/state.py` |
-| LLM factory | Supports Anthropic, OpenAI, Google | `backend/app/agents/llm_factory.py` |
-| Config loader | YAML prompts with max_tokens per agent | `backend/app/agents/config.py` |
-| Checkpointing | **Disabled** (lines 476-480 in graph.py) | None (was PostgresSaver) |
-| Tool calling | **Not implemented** | N/A |
-| Message history | State key exists but unused | `state["messages"]` |
-
-### Current Limitations (v0.1)
-
-1. **No memory**: `checkpointer=None` in graph compilation (line 501)
-2. **Single LLM provider**: Global setting, all agents use same provider/model
-3. **No tool integration**: Agents cannot call external services
-4. **Fresh state per request**: No conversation context across queries
-5. **Async incompatibility**: Comment at line 476 mentions `NotImplementedError` with async streaming
-
-## Integration Architecture (v0.2)
-
-### System Overview with Enhancements
+### Data Model
 
 ```
-┌───────────────────────────────────────────────────────────────────┐
-│                     FastAPI Lifespan & Endpoints                  │
-│  (connection pool init, SSE streaming with thread_id)             │
-├───────────────────────────────────────────────────────────────────┤
-│                    LangGraph with Memory                          │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌──────────┐    │
-│  │ Onboarding │  │   Coding   │  │    Code    │  │   Data   │    │
-│  │   Agent    │→ │   Agent    │→ │  Checker   │→ │ Analysis │    │
-│  │ (Claude)   │  │ (OpenRouter│  │  (Claude)  │  │ (Ollama) │    │
-│  └────────────┘  └────────────┘  └────────────┘  └──────────┘    │
-│        ↓               ↓                ↓               ↓          │
-│                    Shared State (TypedDict)                        │
-│  { messages: Annotated[list, add_messages], ... }                 │
-│        ↓                                                           │
-│  ┌─────────────────────────────────────────────────────────┐      │
-│  │         AsyncPostgresSaver (checkpointer)               │      │
-│  │  thread_id: user_{user_id}_file_{file_id}              │      │
-│  │  checkpoint: JSONB state after each node               │      │
-│  └─────────────────────────────────────────────────────────┘      │
-├───────────────────────────────────────────────────────────────────┤
-│                      Enhanced Services                            │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────┐ │
-│  │Multi-LLM │  │ Agent    │  │ToolNode  │  │Connection│  │SMTP│ │
-│  │ Factory  │  │Config    │  │(web      │  │  Pool    │  │Svc │ │
-│  │(6 provs) │  │(per-agent│  │ search)  │  │(async)   │  │    │ │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  └────┘ │
-└───────────────────────────────────────────────────────────────────┘
+User --1:N--> File --1:N--> ChatMessage
+                   (file_id is the chat identity)
+                   (LangGraph thread_id = "file_{file_id}_user_{user_id}")
 ```
 
-## 1. Memory Persistence Integration
+### Key Coupling Points (What Must Change)
 
-### AsyncPostgresSaver Setup
+| Layer | Current Coupling to Single File | Impact |
+|-------|-------------------------------|--------|
+| `ChatMessage.file_id` | Messages belong to a file, not a session | Schema change |
+| `ChatAgentState.file_id` | State carries single file_id, file_path, data_summary | State schema change |
+| `agent_service.run_chat_query_stream` | Loads 1 file record, builds 1-file context | Service refactor |
+| `execute_in_sandbox` | Uploads 1 file, generates `df = pd.read_csv(...)` | Execution refactor |
+| `coding agent` prompt | `{data_profile}` is single-file JSON | Prompt change |
+| `useSSEStream.startStream` | Posts to `/chat/{file_id}/stream` | URL change |
+| `useChatMessages` | Queries by `file_id` | Key change |
+| `useTabStore` | Tabs are file-based, `currentTabId` is `fileId` | Full replacement |
+| `thread_id` | `f"file_{file_id}_user_{user_id}"` | Thread ID scheme change |
+| Dashboard layout | FileSidebar (left) + tab bar (top) + ChatInterface | Layout restructure |
 
-**Implementation pattern:** FastAPI lifespan function manages connection pool lifecycle.
+---
+
+## Target Architecture (v0.3)
+
+### Data Model Transformation
+
+```
+User --1:N--> ChatSession --M:N--> File  (via SessionFile association)
+                   |
+                   +--1:N--> ChatMessage  (messages belong to session)
+```
+
+### High-Level Component Diagram
+
+```
++----------+  +-------------------------------+  +-----------+
+| Chat     |  |  Main Content Area            |  | Linked    |
+| Sidebar  |  |                               |  | Files     |
+| (left)   |  |  +-------------------------+  |  | Panel     |
+|          |  |  | ChatView (per session)  |  |  | (right)   |
+| [New]    |  |  | - LinkedFilesBar (top)  |  |  |           |
+| [History]|  |  | - MessageList           |  |  | File 1    |
+| [Files]  |  |  | - ChatInput + Actions   |  |  | File 2    |
++----------+  |  +-------------------------+  |  +-----------+
+              +-------------------------------+
+
+Backend:
++--------------+     +-----------------+     +------------------+
+| FastAPI      |     | LangGraph       |     | E2B Sandbox      |
+| /sessions/*  |---->| Multi-file      |---->| N files uploaded  |
+| /chat/*      |     | ChatAgentState  |     | N named DFs      |
+| /files/*     |     | Coding/Analysis |     | Cross-file code  |
++--------------+     +-----------------+     +------------------+
+       |                    |
+       v                    v
++--------------+     +-----------------+
+| PostgreSQL   |     | Checkpointer    |
+| chat_sessions|     | thread_id =     |
+| session_files|     | session_{id}_   |
+| chat_messages|     | user_{id}       |
++--------------+     +-----------------+
+```
+
+---
+
+## Component Boundaries
+
+### NEW Components
+
+| Component | Layer | Responsibility | Communicates With |
+|-----------|-------|---------------|-------------------|
+| `ChatSession` model | Backend/DB | First-class chat entity with title, timestamps | `SessionFile`, `ChatMessage`, `User` |
+| `SessionFile` association | Backend/DB | Many-to-many join between sessions and files with link metadata | `ChatSession`, `File` |
+| `sessions` router | Backend/API | CRUD for chat sessions, link/unlink files | `ChatSessionService`, `FileService` |
+| `ChatSessionService` | Backend/Service | Business logic for session management | DB models, `AgentService` |
+| `ContextAssembler` | Backend/Service | Builds multi-file context for agent state from session files | `FileService`, `OnboardingAgent` |
+| `useChatSessionStore` | Frontend/Store | Zustand store replacing `useTabStore` | API client, components |
+| `ChatSidebar` | Frontend/Component | Left sidebar with chat history, "New Chat", "My Files" | `useChatSessionStore`, router |
+| `LinkedFilesPanel` | Frontend/Component | Right sidebar showing files linked to current session | Session hooks, file hooks |
+| `LinkedFilesBar` | Frontend/Component | Compact bar at top of chat showing linked file badges | Session hooks |
+| `FileManagerPage` | Frontend/Page | Full-page file listing at `/dashboard/files` route | `useFileManager` hook |
+| `FileLinkModal` | Frontend/Component | Modal to select existing files to link to session | File hooks, session hooks |
+| `useChatSessions` hook | Frontend/Hook | TanStack Query hooks for session CRUD | API client |
+
+### MODIFIED Components
+
+| Component | Current Behavior | New Behavior | Change Scope |
+|-----------|-----------------|-------------|-------------|
+| `ChatMessage` model | `file_id` FK required | `session_id` FK required, `file_id` removed | Schema change |
+| `ChatAgentState` | Single `file_id`, `file_path`, `data_summary`, `data_profile` | `session_id`, `file_contexts` list, `combined_data_summary`, `combined_data_profile` | State schema change |
+| `agent_service.run_chat_query_stream` | Loads single file, builds single-file context | Loads session + all linked files, uses `ContextAssembler` | Major refactor |
+| `execute_in_sandbox` in `graph.py` | Uploads 1 file, creates single `df` | Uploads N files, creates N named DataFrames | Major refactor |
+| `E2BSandboxRuntime` | `execute(data_file, data_filename)` | `execute_multi_file(files: list[tuple])` | Method addition |
+| `coding agent` prompt | Assumes single `df` variable | Receives multi-file profile, generates code using named DataFrames | Prompt + format change |
+| `code_checker` prompt | Validates single-df code | Validates multi-df code | Prompt change |
+| `data_analysis` prompt | Single execution context | Multi-file execution context | Prompt change |
+| `manager` prompt | Single-file routing context | Multi-file routing context | Prompt change |
+| `chat` router | Endpoints keyed by `file_id` | New endpoints keyed by `session_id` | API refactor |
+| `ChatInterface` | Receives `fileId`/`fileName` | Receives `sessionId`, fetches linked files | Major refactor |
+| `useChatMessages` hook | Queries by `file_id`, key `["chat", "messages", fileId]` | Queries by `session_id`, key `["sessions", sessionId, "messages"]` | Hook refactor |
+| `useSSEStream` hook | Posts to `/chat/{file_id}/stream` | Posts to `/chat/sessions/{session_id}/stream` | URL change |
+| `ChatService` | `list_file_messages(file_id)`, `create_message(file_id)` | `list_session_messages(session_id)`, `create_message(session_id)` | Parameter change |
+| Chat schemas | `ChatMessageResponse.file_id` | `ChatMessageResponse.session_id` | Schema change |
+| Dashboard layout | `FileSidebar` (left) + tabs (top) + content | `ChatSidebar` (left) + content + optional `LinkedFilesPanel` (right) | Layout restructure |
+| Dashboard page | Tab bar with file tabs, empty upload state | Session-based view, greeting empty state | Major refactor |
+| LangGraph thread_id | `f"file_{file_id}_user_{user_id}"` | `f"session_{session_id}_user_{user_id}"` | Thread ID change |
+| `File` model | `chat_messages` relationship | `session_files` relationship (messages go through sessions) | Relationship change |
+
+### UNCHANGED Components
+
+| Component | Why Unchanged |
+|-----------|--------------|
+| `User` model (mostly) | Add `chat_sessions` relationship back_populates only |
+| `OnboardingAgent` | Still processes one file at a time during upload |
+| `FileUploadZone` component | Upload UX stays the same, trigger context changes |
+| Authentication system | No changes needed |
+| `SandboxRuntime` protocol | Interface extends (new method), old method kept |
+| `LLM factory` | No changes needed |
+| Agent config YAML structure | Structure stays, prompt content changes |
+| `FileService` | File CRUD unchanged, still works independently |
+| Search quota system | Unchanged |
+| Context window management | Works the same, just with session-based thread IDs |
+
+---
+
+## Database Schema Design
+
+### New Tables
 
 ```python
-# backend/app/main.py or graph.py
-from contextlib import asynccontextmanager
-from psycopg_pool import AsyncConnectionPool
-from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+# backend/app/models/chat_session.py
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Manage shared resources across application lifetime."""
-    settings = get_settings()
+from sqlalchemy import String, DateTime, ForeignKey, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from datetime import datetime, timezone
+from uuid import UUID, uuid4
+from app.models.base import Base
 
-    # Initialize async connection pool
-    pool = AsyncConnectionPool(
-        conninfo=settings.database_url,
-        min_size=2,
-        max_size=10,
-        timeout=30.0,
-        kwargs={
-            "autocommit": True,
-            "row_factory": dict_row,
-        }
+class ChatSession(Base):
+    """Chat session - the primary workspace entity in v0.3."""
+    __tablename__ = "chat_sessions"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True, nullable=False
     )
-    await pool.open()
+    title: Mapped[str] = mapped_column(String(255), default="New Chat")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc)
+    )
 
-    # Initialize checkpointer and setup tables
-    checkpointer = AsyncPostgresSaver(pool)
-    await checkpointer.setup()
-
-    # Store in app state for endpoint access
-    app.state.checkpointer = checkpointer
-
-    yield
-
-    # Cleanup
-    await pool.close()
-
-app = FastAPI(lifespan=lifespan)
+    # Relationships
+    user: Mapped["User"] = relationship("User", back_populates="chat_sessions")
+    session_files: Mapped[list["SessionFile"]] = relationship(
+        "SessionFile", back_populates="session",
+        cascade="all, delete-orphan",
+        order_by="SessionFile.linked_at"
+    )
+    messages: Mapped[list["ChatMessage"]] = relationship(
+        "ChatMessage", back_populates="session",
+        cascade="all, delete-orphan",
+        order_by="ChatMessage.created_at"
+    )
 ```
 
-### Graph Compilation with Memory
-
 ```python
-# backend/app/agents/graph.py
-def build_chat_graph(checkpointer=None):
-    """Build and compile the chat analysis LangGraph workflow.
+# backend/app/models/session_file.py
 
-    Args:
-        checkpointer: Optional AsyncPostgresSaver for state persistence
-    """
-    graph = StateGraph(ChatAgentState)
+from sqlalchemy import String, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from datetime import datetime, timezone
+from uuid import UUID, uuid4
+from app.models.base import Base
 
-    # Add nodes (same as v0.1)
-    graph.add_node("coding_agent", coding_agent)
-    graph.add_node("code_checker", code_checker_node)
-    graph.add_node("execute", execute_in_sandbox)
-    graph.add_node("data_analysis", data_analysis_agent)
-    graph.add_node("halt", halt_node)
+class SessionFile(Base):
+    """Association table: ChatSession <-> File (many-to-many with metadata)."""
+    __tablename__ = "session_files"
 
-    # Add edges (same as v0.1)
-    graph.set_entry_point("coding_agent")
-    graph.add_edge("coding_agent", "code_checker")
-    graph.add_edge("execute", "data_analysis")
-    graph.set_finish_point("data_analysis")
-    graph.set_finish_point("halt")
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    session_id: Mapped[UUID] = mapped_column(
+        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
+        index=True, nullable=False
+    )
+    file_id: Mapped[UUID] = mapped_column(
+        ForeignKey("files.id", ondelete="CASCADE"),
+        index=True, nullable=False
+    )
+    linked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc)
+    )
+    # Alias: user-friendly name for the DataFrame variable
+    # Auto-generated from filename, e.g., "sales" for "Q4_2025_sales.csv"
+    alias: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
-    # Compile WITH checkpointer
-    compiled = graph.compile(checkpointer=checkpointer)
+    # Relationships
+    session: Mapped["ChatSession"] = relationship("ChatSession", back_populates="session_files")
+    file: Mapped["File"] = relationship("File", back_populates="session_files")
 
-    return compiled
+    # Same file cannot be linked twice to same session
+    __table_args__ = (
+        UniqueConstraint("session_id", "file_id", name="uq_session_file"),
+    )
 ```
 
-### State Schema Enhancement for Messages
+### Modified Tables
 
-**Change:** Add `add_messages` reducer for message history.
+**ChatMessage:** Replace `file_id` FK with `session_id` FK.
 
 ```python
-# backend/app/agents/state.py
-from typing import TypedDict, Annotated
-from langgraph.graph.message import add_messages
-from langchain_core.messages import BaseMessage
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
 
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True, nullable=False
+    )
+    # CHANGED: session_id replaces file_id
+    session_id: Mapped[UUID] = mapped_column(
+        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
+        index=True, nullable=False
+    )
+    role: Mapped[str] = mapped_column(String(20))
+    content: Mapped[str] = mapped_column(Text)
+    message_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    metadata_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc)
+    )
+
+    # CHANGED relationships
+    user: Mapped["User"] = relationship("User", back_populates="chat_messages")
+    session: Mapped["ChatSession"] = relationship("ChatSession", back_populates="messages")
+```
+
+**File model:** Replace `chat_messages` relationship with `session_files`.
+
+```python
+class File(Base):
+    # ... all existing columns unchanged ...
+
+    # CHANGED: Replace chat_messages relationship with session_files
+    session_files: Mapped[list["SessionFile"]] = relationship(
+        "SessionFile", back_populates="file",
+        cascade="all, delete-orphan"
+    )
+    # REMOVED: chat_messages relationship
+```
+
+### Migration Strategy: Two-Phase Approach
+
+**Migration 1: Add new tables, keep old columns (safe, reversible)**
+
+```python
+def upgrade():
+    # 1. Create chat_sessions table
+    op.create_table("chat_sessions",
+        sa.Column("id", sa.UUID(), primary_key=True),
+        sa.Column("user_id", sa.UUID(), sa.ForeignKey("users.id", ondelete="CASCADE"),
+                  nullable=False, index=True),
+        sa.Column("title", sa.String(255), default="New Chat"),
+        sa.Column("created_at", sa.DateTime(timezone=True)),
+        sa.Column("updated_at", sa.DateTime(timezone=True)),
+    )
+
+    # 2. Create session_files association table
+    op.create_table("session_files",
+        sa.Column("id", sa.UUID(), primary_key=True),
+        sa.Column("session_id", sa.UUID(),
+                  sa.ForeignKey("chat_sessions.id", ondelete="CASCADE"),
+                  nullable=False, index=True),
+        sa.Column("file_id", sa.UUID(),
+                  sa.ForeignKey("files.id", ondelete="CASCADE"),
+                  nullable=False, index=True),
+        sa.Column("linked_at", sa.DateTime(timezone=True)),
+        sa.Column("alias", sa.String(100), nullable=True),
+        sa.UniqueConstraint("session_id", "file_id", name="uq_session_file"),
+    )
+
+    # 3. Add session_id to chat_messages (NULLABLE initially)
+    op.add_column("chat_messages",
+        sa.Column("session_id", sa.UUID(), nullable=True))
+    op.create_foreign_key(
+        "fk_chat_messages_session_id", "chat_messages",
+        "chat_sessions", ["session_id"], ["id"], ondelete="CASCADE")
+```
+
+**Migration 2: Data migration + column swap (requires careful testing)**
+
+```python
+def upgrade():
+    conn = op.get_bind()
+
+    # For each unique (user_id, file_id) pair in chat_messages,
+    # create a ChatSession and link the file
+    results = conn.execute(text(
+        "SELECT DISTINCT user_id, file_id FROM chat_messages"
+    ))
+    for row in results:
+        session_id = str(uuid4())
+        # Create session titled after the file
+        conn.execute(text("""
+            INSERT INTO chat_sessions (id, user_id, title, created_at, updated_at)
+            SELECT :sid, :uid, f.original_filename, NOW(), NOW()
+            FROM files f WHERE f.id = :fid
+        """), {"sid": session_id, "uid": str(row.user_id), "fid": str(row.file_id)})
+
+        # Link file to session
+        conn.execute(text("""
+            INSERT INTO session_files (id, session_id, file_id, linked_at)
+            VALUES (:id, :sid, :fid, NOW())
+        """), {"id": str(uuid4()), "sid": session_id, "fid": str(row.file_id)})
+
+        # Update messages to point to session
+        conn.execute(text("""
+            UPDATE chat_messages SET session_id = :sid
+            WHERE user_id = :uid AND file_id = :fid
+        """), {"sid": session_id, "uid": str(row.user_id), "fid": str(row.file_id)})
+
+    # Make session_id NOT NULL
+    op.alter_column("chat_messages", "session_id", nullable=False)
+    # Create index for session_id queries
+    op.create_index("ix_chat_messages_session_id", "chat_messages", ["session_id"])
+    # Drop old file_id column
+    op.drop_constraint("chat_messages_file_id_fkey", "chat_messages", type_="foreignkey")
+    op.drop_index("ix_chat_messages_file_id", "chat_messages")
+    op.drop_column("chat_messages", "file_id")
+```
+
+---
+
+## LangGraph Agent State Changes
+
+### Multi-File State Schema
+
+```python
 class ChatAgentState(TypedDict):
-    """State for the Chat Agent workflow."""
+    """State for the multi-file chat analysis pipeline (v0.3)."""
 
-    # Add reducer for message history
-    messages: Annotated[list[BaseMessage], add_messages]
+    # CHANGED: Session-based identity (was file_id)
+    session_id: str
+    """Chat session UUID."""
 
-    # Existing fields (unchanged)
-    file_id: str
     user_id: str
+    """User UUID for access control."""
+
     user_query: str
-    data_summary: str
-    data_profile: str
-    user_context: str
-    file_path: str
+    """User's natural language data analysis query."""
+
+    # CHANGED: Multi-file context replaces single-file fields
+    file_contexts: list[dict]
+    """Per-file context list. Each dict contains:
+    {
+        "file_id": str,
+        "filename": str,
+        "alias": str,           # DataFrame variable name (e.g., "df_sales")
+        "file_path": str,       # Absolute path on disk
+        "data_summary": str,    # Onboarding agent summary
+        "data_profile": str,    # JSON string with column info
+        "user_context": str,    # User-provided context
+    }
+    """
+
+    combined_data_summary: str
+    """Merged summary of all linked files, formatted for prompt injection."""
+
+    combined_data_profile: str
+    """Merged data profile JSON with file boundaries clearly marked."""
+
+    # UNCHANGED: Pipeline execution fields
     generated_code: str
     validation_result: str
     validation_errors: list[str]
@@ -201,1097 +405,755 @@ class ChatAgentState(TypedDict):
     max_steps: int
     execution_result: str
     analysis: str
+    messages: Annotated[list[AnyMessage], add_messages]
+    routing_decision: RoutingDecision | None
+    previous_code: str
+    follow_up_suggestions: list[str]
+    web_search_enabled: bool
+    search_sources: list[dict]
     final_response: str
     error: str
 ```
 
-### Endpoint Integration with thread_id
+### Context Assembler Service
+
+A dedicated service builds multi-file context before graph invocation:
 
 ```python
-# backend/app/api/endpoints/chat.py
-@router.post("/stream")
-async def stream_chat(
-    request: ChatRequest,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Stream chat responses with memory persistence."""
+# backend/app/services/context_assembler.py
 
-    # Get checkpointer from app state
-    checkpointer = request.app.state.checkpointer
+import json
+import os
+from app.models.file import File
+from app.models.session_file import SessionFile
 
-    # Build graph with checkpointer
-    graph = build_chat_graph(checkpointer=checkpointer)
+class ContextAssembler:
+    """Builds aggregated multi-file context for the LangGraph agent state."""
 
-    # Construct thread_id for conversation isolation
-    thread_id = f"user_{current_user.id}_file_{request.file_id}"
+    @staticmethod
+    def build_file_contexts(
+        session_files: list[SessionFile],
+    ) -> list[dict]:
+        """Build per-file context dicts from session-file associations."""
+        contexts = []
+        for sf in session_files:
+            f = sf.file
+            alias = sf.alias or ContextAssembler._generate_alias(f.original_filename)
+            contexts.append({
+                "file_id": str(f.id),
+                "filename": f.original_filename,
+                "alias": alias,
+                "file_path": f.file_path,
+                "data_summary": f.data_summary or "",
+                "data_profile": "",  # populated separately via profiling
+                "user_context": f.user_context or "",
+            })
+        return contexts
 
-    # Invoke graph with config
-    config = {
-        "configurable": {
-            "thread_id": thread_id,
-        }
-    }
+    @staticmethod
+    def build_combined_summary(file_contexts: list[dict]) -> str:
+        """Merge per-file summaries into a combined prompt-ready string."""
+        if len(file_contexts) == 1:
+            ctx = file_contexts[0]
+            return (
+                f"**File: {ctx['filename']}** (DataFrame: `{ctx['alias']}`)\n"
+                f"{ctx['data_summary']}\n"
+                f"User context: {ctx['user_context'] or 'None'}"
+            )
 
-    # Initial state (first message or continuing conversation)
-    initial_state = {
-        "user_query": request.message,
-        "file_id": request.file_id,
-        "user_id": str(current_user.id),
-        # ... other state fields
-    }
+        parts = []
+        for i, ctx in enumerate(file_contexts, 1):
+            parts.append(
+                f"### File {i}: {ctx['filename']} (DataFrame: `{ctx['alias']}`)\n"
+                f"{ctx['data_summary']}\n"
+                f"User context: {ctx['user_context'] or 'None'}"
+            )
+        return "\n\n---\n\n".join(parts)
 
-    # Stream with memory
-    async for chunk in graph.astream(initial_state, config=config):
-        # Stream SSE events to client
-        yield format_sse_event(chunk)
+    @staticmethod
+    def build_combined_profile(file_contexts: list[dict]) -> str:
+        """Merge per-file data profiles into structured JSON for coding agent."""
+        files_data = []
+        for ctx in file_contexts:
+            profile = json.loads(ctx["data_profile"]) if ctx["data_profile"] else {}
+            files_data.append({
+                "name": ctx["alias"],
+                "filename": ctx["filename"],
+                **profile,
+            })
+
+        # Auto-detect join hints by finding matching column names
+        join_hints = ContextAssembler._detect_join_hints(files_data)
+
+        return json.dumps({
+            "files": files_data,
+            "join_hints": join_hints,
+        }, indent=2)
+
+    @staticmethod
+    def _generate_alias(filename: str) -> str:
+        """Generate a DataFrame alias from filename.
+        'Q4_2025_Sales_Data.csv' -> 'df_q4_2025_sales_data'
+        """
+        name = os.path.splitext(filename)[0]
+        # Replace spaces and hyphens with underscores, lowercase
+        alias = name.lower().replace(" ", "_").replace("-", "_")
+        # Remove non-alphanumeric characters except underscores
+        alias = "".join(c for c in alias if c.isalnum() or c == "_")
+        return f"df_{alias}"
+
+    @staticmethod
+    def _detect_join_hints(files_data: list[dict]) -> list[str]:
+        """Find columns with matching names across files for join suggestions."""
+        hints = []
+        if len(files_data) < 2:
+            return hints
+
+        for i in range(len(files_data)):
+            cols_i = set(files_data[i].get("columns", {}).keys())
+            for j in range(i + 1, len(files_data)):
+                cols_j = set(files_data[j].get("columns", {}).keys())
+                common = cols_i & cols_j
+                for col in common:
+                    hints.append(
+                        f"{files_data[i]['name']}.{col} <-> {files_data[j]['name']}.{col}"
+                    )
+        return hints
 ```
 
-### Database Schema (Auto-created by AsyncPostgresSaver)
+### Thread ID Strategy
 
-When `checkpointer.setup()` runs, LangGraph creates two tables:
+**Current:** `thread_id = f"file_{file_id}_user_{user_id}"`
+**New:** `thread_id = f"session_{session_id}_user_{user_id}"`
 
-| Table | Schema | Purpose |
-|-------|--------|---------|
-| `checkpoints` | `(thread_id TEXT, checkpoint_id UUID, checkpoint JSONB, metadata JSONB)` | Main state snapshots after each node |
-| `checkpoint_blobs` | `(thread_id TEXT, checkpoint_id UUID, channel TEXT, data BYTEA)` | Large objects (serialized messages) |
+Old checkpoints keyed by `file_*` thread IDs become orphaned. This is acceptable because:
+1. Sessions are new entities -- no collision with old thread IDs
+2. Old checkpoints can be garbage-collected with a cleanup script later
+3. No need to migrate checkpoint data (fragile, undocumented internal schema)
 
-### Configuration Options
+---
 
-```yaml
-# backend/app/config/memory.yaml (new file)
-memory:
-  enabled: true
+## E2B Sandbox Multi-File Execution
 
-  # Context window configuration
-  max_messages: 50  # Maximum messages to keep in history
-  context_window_tokens: 8000  # Approximate token limit
-
-  # Checkpoint settings
-  checkpoint_frequency: "per_node"  # Options: per_node, per_edge, manual
-
-  # Cleanup policy
-  ttl_days: 30  # Delete checkpoints older than 30 days
-  auto_cleanup: true
-```
-
-### Context Window Management
-
-**Pattern:** Implement message trimming in agent nodes.
+### Current Single-File Flow (in `execute_in_sandbox`, graph.py line 250-434)
 
 ```python
-# backend/app/agents/utils.py
-from langchain_core.messages import trim_messages
-
-def get_context_window_messages(state: ChatAgentState, max_messages: int = 50) -> list:
-    """Trim message history to fit context window.
-
-    Args:
-        state: Current graph state
-        max_messages: Maximum messages to keep
-
-    Returns:
-        Trimmed message list
-    """
-    messages = state.get("messages", [])
-
-    # Keep system messages, trim rest
-    return trim_messages(
-        messages,
-        max_tokens=8000,
-        strategy="last",
-        token_counter=len,  # Replace with actual token counter
-        include_system=True,
-    )
+# Current: Read 1 file, upload 1 file, create 1 `df`
+file_path = state.get("file_path", "")
+data_filename = os.path.basename(file_path)
+with open(file_path, "rb") as f:
+    data_file = f.read()
+# ... uploads to sandbox, generates: df = pd.read_csv('/home/user/file.csv')
 ```
 
-## 2. Multi-LLM Provider Integration
-
-### Extended LLM Factory
-
-**New providers:** Ollama (local), OpenRouter (gateway)
+### New Multi-File Flow
 
 ```python
-# backend/app/agents/llm_factory.py
-from langchain_core.language_models import BaseChatModel
-
-def get_llm(
-    provider: str,
-    model: str,
-    api_key: str,
-    **kwargs
-) -> BaseChatModel:
-    """Create LLM instance based on provider.
-
-    Supported providers:
-        - anthropic: Claude models
-        - openai: GPT models
-        - google: Gemini models
-        - ollama: Local Ollama models
-        - openrouter: Multi-model gateway
-        - groq: Fast inference (optional)
-    """
-    provider = provider.lower()
-
-    # Existing providers
-    if provider == "anthropic":
-        from langchain_anthropic import ChatAnthropic
-        return ChatAnthropic(model=model, api_key=api_key, **kwargs)
-
-    elif provider == "openai":
-        from langchain_openai import ChatOpenAI
-        return ChatOpenAI(model=model, api_key=api_key, **kwargs)
-
-    elif provider == "google":
-        from langchain_google_genai import ChatGoogleGenerativeAI
-        return ChatGoogleGenerativeAI(model=model, google_api_key=api_key, **kwargs)
-
-    # New providers for v0.2
-    elif provider == "ollama":
-        from langchain_ollama import ChatOllama
-        return ChatOllama(
-            model=model,
-            base_url=kwargs.get("base_url", "http://localhost:11434"),
-            # Note: Ollama doesn't use API keys for local deployment
-            **{k: v for k, v in kwargs.items() if k != "base_url"}
-        )
-
-    elif provider == "openrouter":
-        from langchain_openai import ChatOpenAI
-        # OpenRouter uses OpenAI-compatible API
-        return ChatOpenAI(
-            model=model,
-            api_key=api_key,
-            base_url="https://openrouter.ai/api/v1",
-            **kwargs
-        )
-
-    elif provider == "groq":
-        from langchain_groq import ChatGroq
-        return ChatGroq(model=model, api_key=api_key, **kwargs)
-
-    else:
-        raise ValueError(
-            f"Unsupported LLM provider: {provider}. "
-            f"Supported: anthropic, openai, google, ollama, openrouter, groq"
-        )
-```
-
-### Per-Agent LLM Configuration
-
-**Pattern:** Extend YAML config to include provider and model per agent.
-
-```yaml
-# backend/app/config/prompts.yaml (enhanced)
-agents:
-  onboarding:
-    system_prompt: |
-      You are a Data Onboarding Agent...
-    max_tokens: 1500
-
-    # New: per-agent LLM configuration
-    llm:
-      provider: "anthropic"
-      model: "claude-sonnet-4-20250514"
-      temperature: 0.7
-
-  coding:
-    system_prompt: |
-      Generate Python code for data analysis...
-    max_tokens: 10000
-
-    llm:
-      provider: "openrouter"
-      model: "anthropic/claude-3.7-sonnet"  # OpenRouter model path
-      temperature: 0.0  # Deterministic for code
-
-  code_checker:
-    system_prompt: |
-      You are a Code Checker Agent...
-    max_tokens: 500
-
-    llm:
-      provider: "anthropic"
-      model: "claude-sonnet-4-20250514"
-      temperature: 0.0
-
-  data_analysis:
-    system_prompt: |
-      You are a Data Analysis Agent...
-    max_tokens: 2000
-
-    llm:
-      provider: "ollama"
-      model: "llama3.2:latest"  # Local Ollama model
-      temperature: 0.5
-      base_url: "http://localhost:11434"  # Configurable Ollama endpoint
-```
-
-### Enhanced Config Loader
-
-```python
-# backend/app/agents/config.py (enhanced)
-def get_agent_llm_config(agent_name: str) -> dict:
-    """Get LLM configuration for a specific agent.
-
-    Args:
-        agent_name: Name of the agent
-
-    Returns:
-        dict: LLM config with keys: provider, model, temperature, etc.
-    """
-    prompts = load_prompts()
-
-    # Get agent config
-    agent_config = prompts["agents"].get(agent_name, {})
-
-    # Return LLM config with defaults
-    llm_config = agent_config.get("llm", {})
-
-    return {
-        "provider": llm_config.get("provider", "anthropic"),
-        "model": llm_config.get("model", "claude-sonnet-4-20250514"),
-        "temperature": llm_config.get("temperature", 0.7),
-        "base_url": llm_config.get("base_url"),  # For Ollama
-        "max_tokens": agent_config.get("max_tokens", 2000),
-    }
-```
-
-### Agent Node with Per-Node LLM
-
-```python
-# backend/app/agents/coding.py (example pattern)
-async def coding_agent(state: ChatAgentState) -> dict:
-    """Coding agent with per-agent LLM configuration."""
-
-    # Load agent-specific LLM config
-    llm_config = get_agent_llm_config("coding")
-
-    # Get API key for provider
-    settings = get_settings()
-    api_key = get_api_key_for_provider(llm_config["provider"], settings)
-
-    # Initialize LLM for this agent
-    llm = get_llm(
-        provider=llm_config["provider"],
-        model=llm_config["model"],
-        api_key=api_key,
-        temperature=llm_config["temperature"],
-        max_tokens=llm_config["max_tokens"],
-        base_url=llm_config.get("base_url"),  # For Ollama
-    )
-
-    # Load system prompt
-    system_prompt_template = get_agent_prompt("coding")
-    system_prompt = system_prompt_template.format(
-        data_profile=state["data_profile"],
-        user_context=state["user_context"],
-        allowed_libraries=", ".join(get_allowed_libraries()),
-    )
-
-    # Invoke LLM
-    messages = [
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=state["user_query"]),
-    ]
-
-    response = await llm.ainvoke(messages)
-
-    return {
-        "generated_code": response.content,
-    }
-```
-
-### API Key Management
-
-```python
-# backend/app/agents/utils.py
-def get_api_key_for_provider(provider: str, settings: Settings) -> str:
-    """Get API key for the specified provider.
-
-    Args:
-        provider: Provider name (anthropic, openai, google, openrouter, groq)
-        settings: Application settings
-
-    Returns:
-        API key string (or None for Ollama)
-
-    Raises:
-        ValueError: If provider requires API key but none configured
-    """
-    # Ollama doesn't need API key for local deployment
-    if provider == "ollama":
-        return None
-
-    key_map = {
-        "anthropic": settings.anthropic_api_key,
-        "openai": settings.openai_api_key,
-        "google": settings.google_api_key,
-        "openrouter": settings.openrouter_api_key,
-        "groq": settings.groq_api_key,
-    }
-
-    api_key = key_map.get(provider)
-
-    if not api_key:
-        raise ValueError(
-            f"No API key configured for provider: {provider}. "
-            f"Set environment variable: {provider.upper()}_API_KEY"
-        )
-
-    return api_key
-```
-
-### Environment Variables
-
-```bash
-# .env (enhanced)
-# Existing providers
-ANTHROPIC_API_KEY=sk-ant-...
-OPENAI_API_KEY=sk-...
-GOOGLE_API_KEY=...
-
-# New providers for v0.2
-OPENROUTER_API_KEY=sk-or-...
-GROQ_API_KEY=gsk_...
-OLLAMA_BASE_URL=http://localhost:11434  # Optional override
-```
-
-## 3. Tool Integration (Web Search)
-
-### Tool Definition
-
-```python
-# backend/app/agents/tools.py (new file)
-from langchain_community.tools import TavilySearchResults
-from langchain_community.tools import DuckDuckGoSearchResults
-from typing import Literal
-
-def get_web_search_tool(provider: Literal["tavily", "serper", "duckduckgo"] = "tavily"):
-    """Get web search tool instance.
-
-    Args:
-        provider: Search provider (tavily, serper, duckduckgo)
-
-    Returns:
-        LangChain tool instance
-    """
+async def execute_in_sandbox(state: ChatAgentState) -> dict | Command:
+    """Execute code with multiple data files in E2B sandbox."""
+    writer = get_stream_writer()
     settings = get_settings()
 
-    if provider == "tavily":
-        return TavilySearchResults(
-            api_key=settings.tavily_api_key,
-            max_results=5,
-            search_depth="advanced",
-        )
+    file_contexts = state.get("file_contexts", [])
+    if not file_contexts:
+        # Fallback: no files linked
+        writer({"type": "error", "event": "error",
+                "message": "No files linked to this chat session."})
+        return Command(goto="halt", update={
+            "error": "no_files_linked",
+            "execution_result": "Error: No data files available",
+        })
 
-    elif provider == "serper":
-        from langchain_community.utilities import GoogleSerperAPIWrapper
-        from langchain_core.tools import Tool
+    # Read all files from disk
+    file_data = []
+    for ctx in file_contexts:
+        file_path = ctx["file_path"]
+        filename = os.path.basename(file_path)
+        alias = ctx["alias"]
+        try:
+            with open(file_path, "rb") as f:
+                file_data.append({
+                    "bytes": f.read(),
+                    "filename": filename,
+                    "alias": alias,
+                })
+        except (FileNotFoundError, IOError) as e:
+            writer({"type": "error", "event": "error",
+                    "message": f"Cannot read file: {filename}"})
+            return Command(goto="halt", update={
+                "error": "file_read_error",
+                "execution_result": f"Error: Cannot read {filename}: {e}",
+            })
 
-        search = GoogleSerperAPIWrapper(
-            serper_api_key=settings.serper_api_key,
-            k=5,
-        )
+    # Build loading preamble: create named DataFrames
+    loading_lines = ["import pandas as pd", "import json", ""]
+    for fd in file_data:
+        ext = os.path.splitext(fd["filename"])[1].lower()
+        sandbox_path = f"/home/user/{fd['filename']}"
+        if ext in ('.xlsx', '.xls'):
+            loading_lines.append(f'{fd["alias"]} = pd.read_excel("{sandbox_path}")')
+        else:
+            loading_lines.append(
+                f'try:\n'
+                f'    {fd["alias"]} = pd.read_csv("{sandbox_path}", encoding="utf-8")\n'
+                f'except UnicodeDecodeError:\n'
+                f'    try:\n'
+                f'        {fd["alias"]} = pd.read_csv("{sandbox_path}", encoding="latin-1")\n'
+                f'    except UnicodeDecodeError:\n'
+                f'        {fd["alias"]} = pd.read_csv("{sandbox_path}", encoding="cp1252")'
+            )
 
-        return Tool(
-            name="web_search",
-            description="Search the web for current information",
-            func=search.run,
-        )
+    # Backward compatibility: single file also gets `df` alias
+    if len(file_data) == 1:
+        loading_lines.append(f'df = {file_data[0]["alias"]}')
 
-    elif provider == "duckduckgo":
-        return DuckDuckGoSearchResults(
-            max_results=5,
-            # No API key needed
-        )
+    preamble = "\n".join(loading_lines) + "\n\n"
+    full_code = preamble + state.get("generated_code", "")
 
-    else:
-        raise ValueError(f"Unsupported search provider: {provider}")
+    # Execute with all files
+    runtime = E2BSandboxRuntime(timeout_seconds=settings.sandbox_timeout_seconds)
+    result = await asyncio.to_thread(
+        runtime.execute_multi_file,
+        code=full_code,
+        timeout=float(settings.sandbox_timeout_seconds),
+        files=[(fd["bytes"], fd["filename"]) for fd in file_data],
+    )
+    # ... result handling same as current execute_in_sandbox
 ```
 
-### ToolNode Integration
-
-**Pattern:** Add ToolNode to graph for agents that need tool calling.
+### SandboxRuntime Extension
 
 ```python
-# backend/app/agents/graph.py (enhanced)
-from langgraph.prebuilt import ToolNode
-from app.agents.tools import get_web_search_tool
+# Add new method to E2BSandboxRuntime (keep existing execute() for compatibility)
 
-def build_chat_graph(checkpointer=None):
-    """Build and compile the chat analysis LangGraph workflow."""
-
-    # Initialize tools
-    search_tool = get_web_search_tool("tavily")
-    tools = [search_tool]
-    tool_node = ToolNode(tools)
-
-    graph = StateGraph(ChatAgentState)
-
-    # Add nodes
-    graph.add_node("coding_agent", coding_agent)
-    graph.add_node("code_checker", code_checker_node)
-    graph.add_node("execute", execute_in_sandbox)
-    graph.add_node("data_analysis", data_analysis_agent)
-    graph.add_node("halt", halt_node)
-
-    # Add tool node for data analysis agent
-    graph.add_node("tools", tool_node)
-
-    # Add edges
-    graph.set_entry_point("coding_agent")
-    graph.add_edge("coding_agent", "code_checker")
-    graph.add_edge("execute", "data_analysis")
-
-    # Add conditional edge for tool calling
-    graph.add_conditional_edges(
-        "data_analysis",
-        should_call_tools,  # Routing function
-        {
-            "tools": "tools",
-            "finish": END,
-        }
-    )
-    graph.add_edge("tools", "data_analysis")  # Return to agent after tool use
-
-    graph.set_finish_point("data_analysis")
-    graph.set_finish_point("halt")
-
-    compiled = graph.compile(checkpointer=checkpointer)
-
-    return compiled
-
-def should_call_tools(state: ChatAgentState) -> Literal["tools", "finish"]:
-    """Determine if agent needs to call tools.
-
-    Checks if last message has tool_calls.
-    """
-    messages = state.get("messages", [])
-
-    if not messages:
-        return "finish"
-
-    last_message = messages[-1]
-
-    # Check if LLM requested tool calls
-    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-        return "tools"
-
-    return "finish"
-```
-
-### Agent with Tool Binding
-
-```python
-# backend/app/agents/data_analysis.py (enhanced)
-async def data_analysis_agent(state: ChatAgentState) -> dict:
-    """Data Analysis agent with web search tool."""
-
-    # Load LLM config
-    llm_config = get_agent_llm_config("data_analysis")
-    api_key = get_api_key_for_provider(llm_config["provider"], settings)
-
-    llm = get_llm(
-        provider=llm_config["provider"],
-        model=llm_config["model"],
-        api_key=api_key,
-        temperature=llm_config["temperature"],
-    )
-
-    # Bind tools to LLM
-    tools = [get_web_search_tool("tavily")]
-    llm_with_tools = llm.bind_tools(tools)
-
-    # Load system prompt
-    system_prompt_template = get_agent_prompt("data_analysis")
-    system_prompt = system_prompt_template.format(
-        user_query=state["user_query"],
-        executed_code=state["generated_code"],
-        execution_result=state["execution_result"],
-    )
-
-    # Build messages with context
-    messages = [
-        SystemMessage(content=system_prompt),
-    ]
-
-    # Add conversation history if available
-    if state.get("messages"):
-        messages.extend(state["messages"])
-
-    # Add current query
-    messages.append(HumanMessage(content="Analyze the results and provide insights."))
-
-    # Invoke LLM (may return tool calls)
-    response = await llm_with_tools.ainvoke(messages)
-
-    # Update state with new message
-    return {
-        "analysis": response.content if response.content else "",
-        "messages": [response],  # Will be appended by add_messages reducer
-    }
-```
-
-### Tool Configuration
-
-```yaml
-# backend/app/config/tools.yaml (new file)
-tools:
-  web_search:
-    enabled: true
-    provider: "tavily"  # Options: tavily, serper, duckduckgo
-
-    # Provider-specific settings
-    tavily:
-      api_key_env: "TAVILY_API_KEY"
-      max_results: 5
-      search_depth: "advanced"
-
-    serper:
-      api_key_env: "SERPER_API_KEY"
-      max_results: 5
-
-    duckduckgo:
-      max_results: 5
-      # No API key needed
-
-  # Future tools
-  calculator:
-    enabled: false
-
-  python_repl:
-    enabled: false
-```
-
-## 4. SMTP Email Service Integration
-
-### Async SMTP Service
-
-**Library:** `aiosmtplib` for async email sending (replacing Mailgun API)
-
-```python
-# backend/app/services/email.py (rewritten)
-import logging
-from typing import Optional
-import aiosmtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-
-from app.config import Settings
-
-logger = logging.getLogger(__name__)
-
-async def send_password_reset_email(
-    to_email: str,
-    reset_link: str,
-    settings: Settings
-) -> bool:
-    """Send password reset email via SMTP.
+def execute_multi_file(
+    self,
+    code: str,
+    timeout: float = 60.0,
+    files: list[tuple[bytes, str]] | None = None,
+) -> ExecutionResult:
+    """Execute code with multiple data files uploaded to sandbox.
 
     Args:
-        to_email: Recipient email address
-        reset_link: Password reset URL with token
-        settings: Application settings
-
-    Returns:
-        True if email sent successfully, False otherwise
+        code: Full Python code including file loading preamble
+        timeout: Maximum execution time
+        files: List of (file_bytes, filename) tuples
     """
-    # Check if SMTP is configured
-    if not settings.smtp_host or not settings.smtp_username:
-        logger.warning(
-            f"SMTP not configured. Would send reset link to {to_email}: {reset_link}"
-        )
-        return True
+    start_time = time.time()
+    settings = get_settings()
 
     try:
-        # Compose email
-        message = MIMEMultipart("alternative")
-        message["Subject"] = "Spectra - Password Reset Request"
-        message["From"] = settings.email_from
-        message["To"] = to_email
+        with Sandbox.create(
+            timeout=int(timeout),
+            api_key=settings.e2b_api_key
+        ) as sandbox:
+            # Upload all files (E2B has no batch API, sequential upload)
+            if files:
+                for file_bytes, filename in files:
+                    sandbox.files.write(f"/home/user/{filename}", file_bytes)
 
-        # HTML body
-        html_body = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <h2>Password Reset Request</h2>
-            <p>You requested to reset your password for your Spectra account.</p>
-            <p>Click the link below to reset your password:</p>
-            <p>
-                <a href="{reset_link}"
-                   style="display: inline-block; padding: 10px 20px;
-                          background-color: #007bff; color: white;
-                          text-decoration: none; border-radius: 5px;">
-                    Reset Password
-                </a>
-            </p>
-            <p>Or copy and paste this link into your browser:</p>
-            <p style="word-break: break-all;">{reset_link}</p>
-            <p><strong>This link will expire in 10 minutes.</strong></p>
-            <p>If you did not request this password reset, please ignore this email.</p>
-            <hr>
-            <p style="color: #666; font-size: 12px;">
-                This is an automated email from Spectra. Please do not reply.
-            </p>
-        </body>
-        </html>
-        """
+            # Execute code
+            execution = sandbox.run_code(code, timeout=timeout)
 
-        # Attach HTML part
-        html_part = MIMEText(html_body, "html")
-        message.attach(html_part)
-
-        # Send via aiosmtplib
-        await aiosmtplib.send(
-            message,
-            hostname=settings.smtp_host,
-            port=settings.smtp_port,
-            username=settings.smtp_username,
-            password=settings.smtp_password,
-            use_tls=settings.smtp_use_tls,
-            start_tls=settings.smtp_start_tls,
-        )
-
-        logger.info(f"Password reset email sent to {to_email} via SMTP")
-        return True
-
+            # ... same result parsing as existing execute() method
     except Exception as e:
-        logger.error(f"Error sending password reset email via SMTP: {e}")
-        return False
+        # ... same error handling
 ```
 
-### SMTP Configuration
+### Combined Data Profile Format
 
-```python
-# backend/app/config.py (add SMTP settings)
-class Settings(BaseSettings):
-    # ... existing settings ...
+The `combined_data_profile` injected into the coding agent prompt:
 
-    # SMTP settings (new for v0.2)
-    smtp_host: str = Field(default="", env="SMTP_HOST")
-    smtp_port: int = Field(default=587, env="SMTP_PORT")
-    smtp_username: str = Field(default="", env="SMTP_USERNAME")
-    smtp_password: str = Field(default="", env="SMTP_PASSWORD")
-    smtp_use_tls: bool = Field(default=True, env="SMTP_USE_TLS")
-    smtp_start_tls: bool = Field(default=True, env="SMTP_START_TLS")
-    email_from: str = Field(default="noreply@spectra.com", env="EMAIL_FROM")
-```
-
-### Environment Variables
-
-```bash
-# .env (SMTP settings)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USERNAME=your-email@gmail.com
-SMTP_PASSWORD=your-app-password
-SMTP_USE_TLS=true
-SMTP_START_TLS=true
-EMAIL_FROM=noreply@spectra.com
-```
-
-## Data Flow Changes
-
-### Request Flow with Memory
-
-```
-[User sends query via SSE endpoint]
-    ↓
-[Endpoint constructs thread_id: user_{id}_file_{file_id}]
-    ↓
-[Graph.astream(initial_state, config={"configurable": {"thread_id": ...}})]
-    ↓
-[AsyncPostgresSaver loads checkpoint for thread_id]
-    ↓
-[Graph executes nodes with restored state + new query]
-    ↓
-    ┌──────────────────────────────────────┐
-    │ Node 1: coding_agent                 │
-    │ - Loads agent-specific LLM (YAML)   │
-    │ - Invokes LLM with context           │
-    │ - Returns {generated_code: "..."}   │
-    └──────────────────────────────────────┘
-    ↓ [AsyncPostgresSaver saves checkpoint]
-    ┌──────────────────────────────────────┐
-    │ Node 2: code_checker                 │
-    │ - Loads agent-specific LLM (YAML)   │
-    │ - Validates code                     │
-    │ - Returns routing Command            │
-    └──────────────────────────────────────┘
-    ↓ [AsyncPostgresSaver saves checkpoint]
-    ┌──────────────────────────────────────┐
-    │ Node 3: execute                      │
-    │ - Runs code in E2B sandbox           │
-    │ - Returns {execution_result: "..."}  │
-    └──────────────────────────────────────┘
-    ↓ [AsyncPostgresSaver saves checkpoint]
-    ┌──────────────────────────────────────┐
-    │ Node 4: data_analysis                │
-    │ - Loads agent-specific LLM (YAML)   │
-    │ - Binds web search tool              │
-    │ - Invokes LLM (may call tool)        │
-    │ - Returns {analysis: "...", messages}│
-    └──────────────────────────────────────┘
-    ↓ [AsyncPostgresSaver saves final checkpoint]
-[SSE stream completes]
-    ↓
-[Next query loads checkpoint and continues conversation]
-```
-
-### State Management with Reducers
-
-**Key insight:** `add_messages` reducer enables message appending instead of overwriting.
-
-```python
-# State update example
-state_before = {
-    "messages": [
-        SystemMessage("You are an analyst"),
-        HumanMessage("What is the average?"),
-        AIMessage("The average is 42"),
-    ],
-    "user_query": "What is the average?",
-}
-
-# Node returns new message
-node_output = {
-    "messages": [HumanMessage("Now show the max")],
-    "user_query": "Now show the max",
-}
-
-# With add_messages reducer, messages are appended
-state_after = {
-    "messages": [
-        SystemMessage("You are an analyst"),
-        HumanMessage("What is the average?"),
-        AIMessage("The average is 42"),
-        HumanMessage("Now show the max"),  # Appended, not replaced
-    ],
-    "user_query": "Now show the max",  # Overwritten (no reducer)
+```json
+{
+  "files": [
+    {
+      "name": "df_sales",
+      "filename": "Q4_2025_sales.csv",
+      "columns": {
+        "order_id": {"dtype": "int64", "sample": [1001, 1002, 1003]},
+        "customer_id": {"dtype": "int64", "sample": [501, 502, 503]},
+        "revenue": {"dtype": "float64", "sample": [150.00, 200.50, 75.25]}
+      },
+      "row_count": 5000
+    },
+    {
+      "name": "df_customers",
+      "filename": "customers_master.xlsx",
+      "columns": {
+        "customer_id": {"dtype": "int64", "sample": [501, 502, 503]},
+        "region": {"dtype": "object", "sample": ["East", "West", "North"]}
+      },
+      "row_count": 1200
+    }
+  ],
+  "join_hints": [
+    "df_sales.customer_id <-> df_customers.customer_id"
+  ]
 }
 ```
 
-## Integration Points
+The `join_hints` are auto-detected by `ContextAssembler._detect_join_hints()` -- matching column names across files gives the coding agent structural awareness.
 
-### New Components
+---
 
-| Component | Purpose | Dependencies | File Location |
-|-----------|---------|--------------|---------------|
-| AsyncPostgresSaver | Memory persistence | psycopg-pool, langgraph-checkpoint-postgres | `app/main.py` (lifespan) |
-| AsyncConnectionPool | DB connection pooling | psycopg-pool | `app/main.py` (lifespan) |
-| Enhanced LLM factory | Multi-provider support | langchain-ollama, langchain-openai (for OpenRouter) | `app/agents/llm_factory.py` |
-| Per-agent config loader | Load LLM config from YAML | PyYAML | `app/agents/config.py` |
-| Tool definitions | Web search tools | langchain-community | `app/agents/tools.py` (new) |
-| ToolNode | Execute tools in graph | langgraph.prebuilt | `app/agents/graph.py` |
-| Async SMTP service | Email sending | aiosmtplib | `app/services/email.py` |
-| Context window trimmer | Message history management | langchain-core | `app/agents/utils.py` (new) |
+## Agent Prompt Changes
 
-### Modified Components
+### Coding Agent: Multi-File Awareness
 
-| Component | Change | Reason |
-|-----------|--------|--------|
-| `graph.py` | Add checkpointer parameter to build_chat_graph() | Enable memory |
-| `graph.py` | Add ToolNode and conditional edges | Enable tool calling |
-| `state.py` | Add `Annotated[list, add_messages]` to messages field | Enable message appending |
-| `config.py` | Add get_agent_llm_config() function | Per-agent LLM config |
-| `prompts.yaml` | Add llm section per agent | Per-agent provider/model |
-| Agent nodes | Load LLM from config, not global settings | Per-agent LLM support |
-| Agent nodes | Add tool binding for relevant agents | Tool integration |
-| `main.py` | Add lifespan function for connection pool | Memory initialization |
-| Chat endpoint | Pass checkpointer to build_chat_graph(), add thread_id to config | Memory persistence |
-| `email.py` | Replace Mailgun API with aiosmtplib | SMTP integration |
+```yaml
+coding:
+  system_prompt: |
+    Generate Python code for data analysis.
 
-## Build Order (Dependency-Aware)
+    **Available DataFrames:**
+    {data_profile}
 
-### Phase 1: Memory Foundation
-1. **Install dependencies**: `langgraph-checkpoint-postgres`, `psycopg-pool`
-2. **Add state reducer**: Modify `state.py` to add `Annotated[list, add_messages]`
-3. **Create lifespan function**: Initialize AsyncConnectionPool and AsyncPostgresSaver
-4. **Update graph compilation**: Pass checkpointer to `build_chat_graph()`
-5. **Update endpoints**: Add thread_id to config, pass checkpointer
-6. **Test**: Verify checkpoints are created in PostgreSQL
+    Each file is loaded as a separate DataFrame with the variable name shown above.
+    For cross-file analysis, use merge/join operations between DataFrames.
 
-### Phase 2: Multi-LLM Support
-1. **Install dependencies**: `langchain-ollama`
-2. **Extend LLM factory**: Add Ollama and OpenRouter providers
-3. **Enhance YAML config**: Add llm section per agent in `prompts.yaml`
-4. **Create config loader**: Add `get_agent_llm_config()` function
-5. **Update agent nodes**: Load LLM from config instead of global settings
-6. **Add environment variables**: `OPENROUTER_API_KEY`, `OLLAMA_BASE_URL`
-7. **Test**: Verify each agent uses configured provider
+    **User context:** {user_context}
 
-### Phase 3: Tool Integration
-1. **Install dependencies**: `langchain-community`, `tavily-python` (or `google-search-results`)
-2. **Create tool definitions**: Add `tools.py` with web search tool
-3. **Add ToolNode to graph**: Import and initialize ToolNode
-4. **Add conditional routing**: Add should_call_tools() function
-5. **Bind tools to agents**: Update data_analysis agent to bind tools
-6. **Add tool config**: Create `tools.yaml` with provider settings
-7. **Test**: Verify agent can call web search tool
+    **Rules:**
+    - Use exact DataFrame variable names as shown (e.g., df_sales, df_customers)
+    - Use exact column names from the profile (case-sensitive)
+    - For cross-file joins: pd.merge(df_a, df_b, on='common_column')
+    - Convert results to Python types: int(), float(), str()
+    - For DataFrame/Series results: use .to_dict('records')
+    - End with: print(json.dumps({"result": result}))
+    - Libraries allowed: {allowed_libraries}
+    - Use .fillna(0) for missing values
+    - NEVER check if DataFrames exist or use locals()/globals()
 
-### Phase 4: SMTP Email
-1. **Install dependencies**: `aiosmtplib`
-2. **Rewrite email service**: Replace Mailgun API with aiosmtplib
-3. **Add SMTP settings**: Update `config.py` with SMTP fields
-4. **Update environment**: Add SMTP variables to `.env`
-5. **Test**: Send test email via SMTP
+    **Single-file example:**
+    ```python
+    import json
+    result = int(df_sales['revenue'].sum())
+    print(json.dumps({"result": result}))
+    ```
 
-### Phase 5: Context Window Management
-1. **Create utils module**: Add `trim_messages()` wrapper
-2. **Add context window config**: Create `memory.yaml` with limits
-3. **Update agent nodes**: Call trim_messages() before LLM invocation
-4. **Test**: Verify message history is trimmed
+    **Cross-file example:**
+    ```python
+    import json
+    merged = pd.merge(df_sales, df_customers, on='customer_id')
+    result = merged.groupby('region')['revenue'].sum().reset_index().to_dict('records')
+    print(json.dumps({"result": result}))
+    ```
 
-## Migration Strategy
-
-### Backward Compatibility
-
-**Goal:** v0.2 changes should not break v0.1 functionality.
-
-| Feature | v0.1 Behavior | v0.2 Behavior | Compatibility Strategy |
-|---------|---------------|---------------|------------------------|
-| Memory | Disabled (checkpointer=None) | Enabled (AsyncPostgresSaver) | Graceful: graph works with or without checkpointer |
-| LLM provider | Global setting (all agents use same) | Per-agent config (YAML) | Default: if no llm config in YAML, fall back to global |
-| Tools | Not used | data_analysis agent has tools | Additive: other agents unchanged |
-| Email | Mailgun API (dev mode logs) | SMTP (aiosmtplib) | Config-based: if no SMTP settings, log to console |
-
-### Rollout Plan
-
-1. **Deploy memory first**: Enables conversation context (high value)
-2. **Deploy multi-LLM second**: Enables cost optimization and experimentation
-3. **Deploy tools third**: Enables web search (additive feature)
-4. **Deploy SMTP last**: Production email (replaces dev mode)
-
-## Architectural Patterns to Follow
-
-### Pattern 1: Agent-Agnostic Tool Binding
-
-**What:** Bind tools at graph-level, not hard-coded in agent nodes.
-
-**Why:** Makes it easy to add/remove tools without changing agent code.
-
-**Implementation:**
-```python
-# Good: tools configured at graph level
-tools = [get_web_search_tool("tavily")]
-llm_with_tools = llm.bind_tools(tools)
-
-# Bad: hard-coded tool binding in agent
-llm_with_tools = llm.bind_tools([TavilySearchResults(api_key="...")])
+    Return only code, no explanations.
 ```
 
-### Pattern 2: Config-Driven LLM Selection
+### Code Checker: Multi-DataFrame Validation
 
-**What:** LLM provider and model come from YAML, not code.
-
-**Why:** Enables experimentation without code changes.
-
-**Implementation:**
-```python
-# Good: config-driven
-llm_config = get_agent_llm_config("coding")
-llm = get_llm(provider=llm_config["provider"], model=llm_config["model"], ...)
-
-# Bad: hard-coded provider
-llm = ChatAnthropic(model="claude-sonnet-4-20250514", ...)
+Add to the code checker prompt:
+```
+8. If multiple DataFrames are available, does the code use the correct DataFrame variable names?
+9. For cross-file operations, are merge/join keys valid columns in both DataFrames?
 ```
 
-### Pattern 3: Lifespan Resource Management
+### Manager Agent: Multi-File Context
 
-**What:** Initialize connection pools in FastAPI lifespan, not per-request.
-
-**Why:** Connection pooling is expensive; should be shared across requests.
-
-**Implementation:**
-```python
-# Good: lifespan manages pool
-@asynccontextmanager
-async def lifespan(app):
-    pool = AsyncConnectionPool(...)
-    await pool.open()
-    app.state.pool = pool
-    yield
-    await pool.close()
-
-# Bad: per-request pool creation
-async def endpoint():
-    pool = AsyncConnectionPool(...)  # Creates new pool every request
+The manager routing prompt should include file count and names:
+```
+**Session Context:**
+- Files linked: {file_count} ({file_names})
+- Messages in history: {msg_count}
+- Has previous code: {has_code}
 ```
 
-### Pattern 4: Graceful Degradation
+---
 
-**What:** Features work even if optional components are missing.
+## API Endpoint Design
 
-**Why:** Makes deployment flexible and testing easier.
+### New Session Endpoints
 
-**Implementation:**
 ```python
-# Good: graceful fallback
-if not settings.smtp_host:
-    logger.warning("SMTP not configured, logging to console")
-    return True
+# backend/app/routers/sessions.py
 
-# Bad: crash if not configured
-await aiosmtplib.send(...)  # Crashes if SMTP not configured
+router = APIRouter(prefix="/sessions", tags=["Sessions"])
+
+POST   /sessions/                              # Create new chat session
+GET    /sessions/                              # List user's sessions (chat history sidebar)
+GET    /sessions/{session_id}                  # Get session details + linked files
+PATCH  /sessions/{session_id}                  # Update session (title)
+DELETE /sessions/{session_id}                  # Delete session + all messages
+
+POST   /sessions/{session_id}/files            # Link file(s) to session
+DELETE /sessions/{session_id}/files/{file_id}  # Unlink file from session
+POST   /sessions/{session_id}/generate-title   # Auto-generate title from first query
 ```
+
+### Modified Chat Endpoints (Session-Based)
+
+```python
+# backend/app/routers/chat.py -- session-based versions
+
+GET    /chat/sessions/{session_id}/messages         # List messages
+POST   /chat/sessions/{session_id}/stream           # Stream AI query
+GET    /chat/sessions/{session_id}/context-usage     # Context window usage
+POST   /chat/sessions/{session_id}/trim-context      # Trim context
+```
+
+### Session List Response Shape
+
+```python
+class ChatSessionListItem(BaseModel):
+    id: UUID
+    title: str
+    created_at: datetime
+    updated_at: datetime
+    file_count: int
+    message_count: int
+    last_message_preview: str | None  # First 100 chars of last message
+
+class ChatSessionDetail(BaseModel):
+    id: UUID
+    title: str
+    created_at: datetime
+    updated_at: datetime
+    files: list[SessionFileResponse]  # Linked files with aliases
+
+class SessionFileResponse(BaseModel):
+    file_id: UUID
+    filename: str
+    alias: str | None
+    file_type: str
+    linked_at: datetime
+    has_summary: bool
+```
+
+---
+
+## Frontend Architecture Changes
+
+### State Management: ChatSessionStore Replaces TabStore
+
+```typescript
+// frontend/src/stores/chatSessionStore.ts
+
+interface ChatSessionStore {
+  currentSessionId: string | null;
+  setCurrentSession: (sessionId: string | null) => void;
+}
+
+export const useChatSessionStore = create<ChatSessionStore>((set) => ({
+  currentSessionId: null,
+  setCurrentSession: (sessionId) => set({ currentSessionId: sessionId }),
+}));
+```
+
+The store is minimal because TanStack Query handles session list caching and refetching. The store only tracks which session is currently active (needed for sidebar highlighting and URL sync).
+
+### TanStack Query Key Structure
+
+```typescript
+// NEW keys
+["sessions"]                                    // session list for sidebar
+["sessions", sessionId]                         // session detail + linked files
+["sessions", sessionId, "messages"]             // session messages
+["sessions", sessionId, "context-usage"]        // context window usage
+
+// UNCHANGED keys
+["files"]                                       // user's file list
+["files", fileId, "summary"]                    // file summary (for info modal)
+```
+
+### New Hooks
+
+```typescript
+// frontend/src/hooks/useChatSessions.ts
+
+export function useChatSessions()                      // List all sessions
+export function useChatSession(sessionId: string)      // Single session + files
+export function useCreateSession()                     // Mutation: create session
+export function useDeleteSession()                     // Mutation: delete session
+export function useUpdateSessionTitle()                // Mutation: update title
+export function useLinkFile()                          // Mutation: link file to session
+export function useUnlinkFile()                        // Mutation: unlink file
+export function useGenerateSessionTitle()              // Mutation: auto-title
+
+// MODIFIED hooks
+export function useChatMessages(sessionId: string | null)  // Changed param
+export function useAddLocalMessage()                        // Changed: uses sessionId
+export function useInvalidateChatMessages()                 // Changed: query key
+// useSSEStream.startStream(sessionId, message, webSearchEnabled) -- changed param
+```
+
+### Route Structure
+
+```
+/dashboard                        -> Empty state with greeting
+/dashboard/chat/{sessionId}       -> Specific chat session
+/dashboard/files                  -> My Files management page
+```
+
+Navigation uses Next.js App Router. `sessionId` comes from URL params.
+
+### Layout Restructure
+
+**Current layout** (`DashboardLayout` in `frontend/src/app/(dashboard)/layout.tsx`):
+```
+Header
++--------+----------------------------------+
+| File   | Tab Bar (file tabs)              |
+| Side   | +----------------------------+   |
+| bar    | | ChatInterface (per file)   |   |
+| 260px  | +----------------------------+   |
++--------+----------------------------------+
+```
+
+**New layout:**
+```
+Header
++--------+-------------------------------+---------+
+| Chat   | Main Content Area             | Linked  |
+| Side   |                               | Files   |
+| bar    | (dynamic based on route)      | Panel   |
+| 260px  |                               | 240px   |
+|        | /dashboard -> Empty greeting  | (cond)  |
+| [New]  | /dashboard/chat/:id -> Chat   |         |
+| [Hist] | /dashboard/files -> Files     |         |
+| [Files]|                               |         |
++--------+-------------------------------+---------+
+```
+
+The right panel (`LinkedFilesPanel`) is **conditional** -- only shows when a chat session is active and has linked files. On the Files page, it is hidden.
+
+### Component Tree
+
+```
+DashboardLayout
+  +-- Header (logo, user menu) [MODIFIED: same structure]
+  +-- ChatSidebar (left, 260px) [NEW: replaces FileSidebar]
+  |     +-- NewChatButton [NEW]
+  |     +-- ChatHistoryList [NEW: session list, sorted by updated_at]
+  |     +-- Separator
+  |     +-- MyFilesButton [NEW: navigates to /dashboard/files]
+  +-- MainContent (flex-1)
+  |     +-- ChatPage (for /dashboard/chat/:sessionId) [MODIFIED from DashboardPage]
+  |     |     +-- LinkedFilesBar (top of chat, shows file badges) [NEW]
+  |     |     +-- MessageList [MODIFIED: sessionId-based]
+  |     |     +-- ChatInput [MODIFIED: add file action button]
+  |     |     |     +-- AddFileDropdown [NEW: upload or link existing]
+  |     |     |     +-- SearchToggle [UNCHANGED]
+  |     |     +-- LinkedFilesPanel (right sidebar, collapsible) [NEW]
+  |     +-- FileManagerPage (for /dashboard/files) [NEW]
+  |     |     +-- FileList [MODIFIED from FileSidebar's file list]
+  |     |     +-- FileUploadButton [REUSE FileUploadZone]
+  |     |     +-- FileActions (delete, download, start chat) [NEW]
+  |     +-- EmptyState (for /dashboard) [MODIFIED: greeting message]
+  +-- Dialogs/Modals
+        +-- FileUploadZone [REUSE existing]
+        +-- FileLinkModal [NEW: select existing files to link]
+        +-- FileInfoModal [REUSE existing]
+```
+
+---
+
+## Data Flow: Complete Multi-File Chat Query
+
+```
+1. User sends message in session with 2 linked files
+   POST /chat/sessions/{session_id}/stream
+   Body: {content: "Compare sales by region", web_search_enabled: false}
+
+2. Chat Router verifies session ownership
+   -> Load session via ChatSessionService
+   -> Verify session.user_id == current_user.id
+
+3. AgentService.run_chat_query_stream()
+   a. Load session + eager-load session_files -> files
+   b. Verify all linked files have data_summary (onboarded)
+   c. For each file: generate data_profile via OnboardingAgent.profile_data()
+   d. ContextAssembler.build_file_contexts(session_files)
+   e. ContextAssembler.build_combined_summary(file_contexts)
+   f. ContextAssembler.build_combined_profile(file_contexts)
+   g. Build initial_state with multi-file context
+   h. thread_id = f"session_{session_id}_user_{user_id}"
+   i. graph.aupdate_state(config, {messages: [HumanMessage(query)]})
+   j. graph.astream(initial_state, config)
+
+4. LangGraph Pipeline
+   Manager -> routes (MEMORY_SUFFICIENT / CODE_MODIFICATION / NEW_ANALYSIS)
+   Coding Agent -> sees combined_data_profile, generates multi-df code
+   Code Checker -> validates multi-df references
+   Execute -> uploads all files to E2B, runs code with named DataFrames
+   DA Agent -> interprets results in multi-file context
+
+5. Save messages with session_id (not file_id)
+   ChatService.create_message(session_id=..., ...)
+
+6. Frontend receives SSE events, renders in ChatView
+```
+
+---
+
+## Patterns to Follow
+
+### Pattern 1: Context Assembler (Dedicated Multi-File Aggregation)
+
+**What:** A dedicated service class that takes session files and produces aggregated context for the agent state.
+
+**When:** Every time a chat query is initiated.
+
+**Why:** Keeps aggregation logic in one testable place. Prevents `agent_service` from becoming a god function. Makes it easy to add features like join hint detection, profile compression, or context budget allocation.
+
+### Pattern 2: Session-First, Files-Second (Lazy Initialization)
+
+**What:** Sessions start empty (no files). Files are linked explicitly before the first AI query. The first AI response triggers auto-title generation.
+
+**When:** User creates new chat, uploads a file, or links an existing file.
+
+**Why:** Matches ChatGPT-style UX from requirements. Sessions can exist in "empty" state. File linking is a separate action from session creation.
+
+### Pattern 3: Backward-Compatible DataFrame Naming
+
+**What:** When a session has exactly 1 file, create both the named DataFrame (e.g., `df_sales`) AND the generic `df` alias. When multiple files exist, only use named DataFrames.
+
+**When:** Sandbox code preamble generation.
+
+**Why:** Single-file sessions should feel identical to v0.2. The `df` alias means existing prompt patterns and any code the user has seen continues to work.
+
+### Pattern 4: Additive Two-Phase Migration
+
+**What:** Phase 1 adds new tables and columns (nullable). Phase 2 migrates data and removes old columns. Never drop old schema in the same migration that adds new schema.
+
+**When:** Database migration from v0.2 to v0.3.
+
+**Why:** Allows rollback if migration fails. Data migration is the riskiest step -- separating it from schema changes reduces blast radius.
+
+### Pattern 5: File Limit Enforcement at API Level
+
+**What:** Cap at 10 files per session. Enforce in `POST /sessions/{id}/files`.
+
+**When:** File linking API endpoint.
+
+**Why:** Prevents context window overflow (10 files x ~4K tokens/file = 40K tokens of context, approaching model limits). Also prevents sandbox timeout (uploading 20+ files adds significant startup time).
+
+---
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Synchronous DB Operations in Async Context
+### Anti-Pattern 1: Storing File Bytes in LangGraph State
 
-**What:** Using PostgresSaver (sync) instead of AsyncPostgresSaver in async FastAPI.
+**What:** Putting actual file content (bytes or DataFrames) into `ChatAgentState`.
 
-**Why:** Blocks event loop, causes poor performance and potential deadlocks.
+**Why bad:** State is serialized to PostgreSQL checkpoints via `AsyncPostgresSaver`. Large files (100MB each x N files) would make checkpoints enormous, slow checkpoint writes, and potentially exceed JSONB/BYTEA limits.
 
-**Instead:**
-```python
-# Good: async checkpointer
-from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-checkpointer = AsyncPostgresSaver(async_pool)
+**Instead:** Store only metadata (paths, summaries, profiles) in state. Read file bytes from disk only at execution time inside `execute_in_sandbox`.
 
-# Bad: sync checkpointer in async app
-from langgraph.checkpoint.postgres import PostgresSaver
-checkpointer = PostgresSaver(sync_conn)  # Blocks event loop
+### Anti-Pattern 2: Concatenating All Files Into One DataFrame
+
+**What:** Auto-merging all linked files into a single `df` before sending to the agent.
+
+**Why bad:** Files may have completely different schemas. A sales CSV and a customer list have no common structure. Concatenation destroys semantic distinction and makes cross-file joins impossible.
+
+**Instead:** Each file becomes a separate named DataFrame. The coding agent decides how to combine them based on the user's query and join hints.
+
+### Anti-Pattern 3: Auto-Creating Sessions on Every Upload
+
+**What:** Implicitly creating a new chat session whenever a file is uploaded.
+
+**Why bad:** Requirements say files live independently ("My Files" management). Users may upload files for later use without wanting to start a chat.
+
+**Instead:** Session creation is explicit: "New Chat" button, or "Start Chat" from the file upload completion flow. The upload-to-chat flow creates a session + links the file + navigates to the session.
+
+### Anti-Pattern 4: Migrating LangGraph Checkpoint Data
+
+**What:** Trying to modify `checkpoint_blobs` or `checkpoints` tables to match new state schema.
+
+**Why bad:** LangGraph's `AsyncPostgresSaver` manages its own internal tables. The serialization format is undocumented and version-coupled. Manipulating it risks corruption.
+
+**Instead:** Let old checkpoints (keyed by `file_*` thread IDs) become orphans. New sessions get fresh checkpoints (keyed by `session_*` thread IDs). Run a cleanup script later to delete `file_*` rows from checkpoint tables.
+
+### Anti-Pattern 5: Routing All Chat Endpoints Through Sessions First
+
+**What:** Requiring a session to exist before any chat message can be sent, even for the upload-and-chat flow.
+
+**Why bad:** Creates extra API round-trips. Upload -> Create Session -> Link File -> Send Message is 4 calls.
+
+**Instead:** The upload-and-chat flow should be a single compound operation: `POST /files/upload-and-chat` that creates the file, creates a session, links them, and returns the session ID. The frontend navigates to the session after upload.
+
+---
+
+## Scalability Considerations
+
+| Concern | 1 file/session | 5 files/session | 10 files/session |
+|---------|---------------|-----------------|-----------------|
+| Context tokens | ~2-4K per file summary | ~10-20K tokens | ~20-40K -- may approach model limits |
+| Sandbox startup | ~3s (1 file upload) | ~5s (5 sequential uploads) | ~8-10s (consider parallel writes) |
+| Agent code complexity | Simple single-df | Moderate join operations | Complex multi-join -- agent may need guidance |
+| Data profile size | ~500 tokens | ~2.5K tokens | ~5K tokens in prompt |
+
+**Recommendations:**
+- Hard limit: 10 files per session (enforced at API level)
+- Soft limit: 5 files recommended (show warning above 5)
+- For sessions approaching context limits, compress data profiles (fewer sample rows, drop low-cardinality columns from profile)
+
+---
+
+## Build Order (Dependency-Aware)
+
+The following dependency graph determines the safe build order:
+
+```
+Phase A: Database Foundation
+  1. ChatSession + SessionFile models
+  2. Alembic Migration 1 (add tables, add nullable session_id to chat_messages)
+  3. ChatSessionService (CRUD for sessions, link/unlink files)
+  4. Sessions router (API endpoints)
+  5. Alembic Migration 2 (data migration, make session_id NOT NULL, drop file_id)
+  6. ChatService refactor (session_id-based queries)
+  7. Chat schemas update (session_id in response)
+
+Phase B: Agent Pipeline (depends on A.1-A.3)
+  8. ContextAssembler service
+  9. ChatAgentState schema changes (multi-file fields)
+  10. Prompt updates (coding, code_checker, manager, data_analysis)
+  11. E2B sandbox multi-file execution (execute_multi_file)
+  12. agent_service refactor (session-based, uses ContextAssembler)
+  13. Chat router refactor (session-based stream endpoint)
+  14. Thread ID migration (session_* pattern)
+
+Phase C: Frontend Structure (can start parallel with B)
+  15. Route structure (/dashboard/chat/:sessionId, /dashboard/files)
+  16. ChatSessionStore (Zustand, replaces TabStore)
+  17. useChatSessions hooks (TanStack Query)
+  18. ChatSidebar component
+  19. Layout restructure (sidebar + main + right panel)
+
+Phase D: Frontend Features (depends on C + B.13)
+  20. ChatView (session-based ChatInterface)
+  21. LinkedFilesBar + LinkedFilesPanel
+  22. FileManagerPage (/dashboard/files)
+  23. FileLinkModal (link existing files to session)
+  24. AddFileDropdown in ChatInput
+  25. useChatMessages refactor (sessionId-based)
+  26. useSSEStream refactor (session-based URL)
+  27. Upload-and-chat flow integration
+
+Phase E: Polish
+  28. Auto-title generation
+  29. Empty state / greeting UX
+  30. Light/dark mode
+  31. Migration testing + cleanup script for old checkpoints
 ```
 
-### Anti-Pattern 2: Unbounded Message History
+**Critical path:** A.1 -> A.2 -> A.3 -> B.8 -> B.9 -> B.12 -> B.13 -> D.20 -> D.26
 
-**What:** Storing all messages without trimming, causing context overflow.
+**Parallelizable:**
+- Phase C (frontend structure) can proceed alongside Phase B (backend agent changes)
+- They only converge at Phase D when the frontend needs working API endpoints
 
-**Why:** Exceeds model context limits, increases latency and cost.
-
-**Instead:**
-```python
-# Good: trim messages
-from langchain_core.messages import trim_messages
-messages = trim_messages(state["messages"], max_tokens=8000)
-
-# Bad: pass all messages
-messages = state["messages"]  # Can exceed context limit
-```
-
-### Anti-Pattern 3: API Keys in Code
-
-**What:** Hard-coding API keys or putting them in YAML config files.
-
-**Why:** Security risk if code is committed to git.
-
-**Instead:**
-```python
-# Good: environment variables
-api_key = settings.tavily_api_key  # Loaded from .env
-
-# Bad: hard-coded in YAML
-tavily:
-  api_key: "tvly-abc123..."  # Committed to git
-```
-
-### Anti-Pattern 4: Global LLM Instance
-
-**What:** Creating single LLM instance shared by all agents.
-
-**Why:** Prevents per-agent configuration (provider, model, temperature).
-
-**Instead:**
-```python
-# Good: per-agent LLM
-async def coding_agent(state):
-    llm = get_llm(**get_agent_llm_config("coding"))
-    ...
-
-# Bad: global LLM
-LLM = ChatAnthropic(...)  # All agents use same LLM
-```
-
-## Scaling Considerations
-
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| 0-100 users | Single server, local Ollama optional, default PostgreSQL pool (min=2, max=10) |
-| 100-1k users | Increase pool size (max=50), add Redis for session caching, separate Ollama to dedicated server |
-| 1k-10k users | Add connection pooler (PgBouncer), horizontal scaling of FastAPI workers, CDN for static assets, consider managed Ollama (e.g., Replicate) |
-| 10k+ users | Multi-region deployment, read replicas for PostgreSQL, async task queue for tool calls, LLM gateway for rate limiting and caching |
-
-### First Bottleneck: Database Connections
-
-**Symptom:** Connection pool exhaustion under load
-
-**Solution:**
-1. Increase AsyncConnectionPool max_size
-2. Add PgBouncer for connection pooling
-3. Monitor `checkpoints` table size, implement TTL cleanup
-
-### Second Bottleneck: LLM API Rate Limits
-
-**Symptom:** 429 errors from LLM providers
-
-**Solution:**
-1. Implement retry with exponential backoff
-2. Add LLM gateway (LiteLLM, OpenRouter) for fallback routing
-3. Cache LLM responses for identical queries
-4. Use faster models (Groq, OpenRouter) for non-critical agents
-
-## Dependencies
-
-### New Packages for v0.2
-
-```toml
-# pyproject.toml or requirements.txt
-
-# Memory persistence
-langgraph-checkpoint-postgres = "^2.0"
-psycopg = {extras = ["pool"], version = "^3.2"}
-psycopg-pool = "^3.2"
-
-# Multi-LLM support
-langchain-ollama = "^0.2"
-# OpenRouter uses langchain-openai with custom base_url
-
-# Tool integration
-langchain-community = "^0.3"
-tavily-python = "^0.5"  # or google-search-results for Serper
-
-# SMTP email
-aiosmtplib = "^3.0"
-```
+---
 
 ## Sources
 
-**Memory Persistence:**
-- [Simple LangGraph Implementation with Memory AsyncSqliteSaver Checkpointer — FastAPI](https://medium.com/@devwithll/simple-langgraph-implementation-with-memory-asyncsqlitesaver-checkpointer-fastapi-54f4e4879a2e)
-- [langgraph-checkpoint-postgres · PyPI](https://pypi.org/project/langgraph-checkpoint-postgres/)
-- [Internals of Langgraph Postgres Checkpointer (AsyncPostgresSaver)](https://blog.lordpatil.com/posts/langgraph-postgres-checkpointer/)
-- [Understanding Memory Management in LangGraph: A Practical Guide](https://pub.towardsai.net/understanding-memory-management-in-langgraph-a-practical-guide-for-genai-students-b3642c9ea7e1)
-- [Mastering LangGraph Checkpointing: Best Practices for 2025](https://sparkco.ai/blog/mastering-langgraph-checkpointing-best-practices-for-2025)
-
-**Multi-LLM Support:**
-- [Build a Multi-LLM AI Agent with Kong AI Gateway & LangGraph](https://konghq.com/blog/engineering/build-a-multi-llm-ai-agent-with-kong-ai-gateway-and-langgraph)
-- [LangGraph: Multi-Agent Workflows](https://blog.langchain.com/langgraph-multi-agent-workflows/)
-- [ChatOllama integration - Docs by LangChain](https://docs.langchain.com/oss/python/integrations/chat/ollama)
-- [LangChain Integration | OpenRouter SDK Support](https://openrouter.ai/docs/guides/community/langchain)
-- [OpenRouter with LangChain](https://medium.com/@arth2048/openrouter-with-langchain-0eab702b9977)
-
-**State Management:**
-- [LangGraph Notes: State Management](https://medium.com/@omeryalcin48/langgraph-notes-state-management-62ea5b5a5cdd)
-- [Building AI Agents Using LangGraph: Part 8 — Understanding Reducers and State Updates](https://harshaselvi.medium.com/building-ai-agents-using-langgraph-part-8-understanding-reducers-and-state-updates-c8056963a42c)
-- [Mastering LangGraph State Management in 2025](https://sparkco.ai/blog/mastering-langgraph-state-management-in-2025)
-
-**Tool Integration:**
-- [Building Tool Calling Agents with LangGraph: A Complete Guide](https://sangeethasaravanan.medium.com/building-tool-calling-agents-with-langgraph-a-complete-guide-ebdcdea8f475)
-- [Tavily search integration - Docs by LangChain](https://docs.langchain.com/oss/javascript/integrations/tools/tavily_search)
-- [Adding tools to your LangGraph Chatbots | Beginner's Guide](https://www.codersarts.com/post/adding-tools-to-your-langgraph-chatbots-beginner-s-guide)
-
-**SMTP Email:**
-- [aiosmtplib · PyPI](https://pypi.org/project/aiosmtplib/)
-- [GitHub - cole/aiosmtplib: asyncio smtplib implementation](https://github.com/cole/aiosmtplib)
-- [Sending Emails with Python FastAPI: A Quick Guide](https://mailmug.net/blog/fastapi-mail/)
-
-**Connection Pooling:**
-- [psycopg_pool – Connection pool implementations](https://www.psycopg.org/psycopg3/docs/api/pool.html)
-- [asyncpg Usage — asyncpg Documentation](https://magicstack.github.io/asyncpg/current/usage.html)
-- [Asynchronous Postgres with Python, FastAPI, and Psycopg 3](https://medium.com/@benshearlaw/asynchronous-postgres-with-python-fastapi-and-psycopg-3-fafa5faa2c08)
-
----
-*Architecture research for: Spectra v0.2 Intelligence & Integration*
-*Researched: 2026-02-06*
+- Codebase analysis: Direct inspection of all source files in `backend/app/` and `frontend/src/`
+- Requirements: `/requirements/milestone-03-req.md` (direct inspection)
+- [LangGraph State Management Patterns](https://sparkco.ai/blog/mastering-langgraph-state-management-in-2025) - TypedDict state schema design
+- [LangGraph Persistence Deep Guide](https://pub.towardsai.net/persistence-in-langgraph-deep-practical-guide-36dc4c452c3b) - Thread ID and checkpoint patterns
+- [LangGraph Persistence Official Docs](https://docs.langchain.com/oss/python/langgraph/persistence) - Checkpoint and thread_id semantics
+- [E2B Documentation](https://e2b.dev/docs) - Sandbox file upload API, sandbox.files.write
+- [E2B Code Interpreter SDK](https://pypi.org/project/e2b-code-interpreter/) - Multi-file sandbox patterns
+- [Alembic Best Practices](https://medium.com/@pavel.loginov.dev/best-practices-for-alembic-and-sqlalchemy-73e4c8a6c205) - Two-phase migration patterns

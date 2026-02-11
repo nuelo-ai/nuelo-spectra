@@ -1,401 +1,307 @@
-# Feature Research: AI-Powered Data Analytics Platform
+# Feature Landscape: Multi-File Conversation Support (v0.3)
 
-**Domain:** AI-powered data analytics platform (v0.2 intelligence features: agent memory, query suggestions, web search tools, multi-LLM)
-**Researched:** 2026-02-06 (Updated for v0.2 milestone)
+**Domain:** AI-powered data analytics platform -- chat-session-centric UX with multi-file linking
+**Researched:** 2026-02-11
 **Confidence:** MEDIUM-HIGH
+**Supersedes:** Previous FEATURES.md (v0.2 intelligence features, 2026-02-06)
+
+---
 
 ## Executive Summary
 
-This research focuses on v0.2 intelligence features that enhance the existing Spectra platform (v0.1 shipped 2026-02-06). v0.1 established core functionality (file upload, 4-agent AI system, Data Cards). v0.2 adds intelligence: conversation memory, smart query suggestions, web search capabilities, and multi-LLM provider flexibility.
+This research maps the feature landscape for Spectra v0.3, which restructures the platform from a file-tab-centric model (each file has its own chat) to a chat-session-centric model (ChatGPT-style, where conversations are independent entities that can reference multiple files). This is the most architecturally significant change since v0.1, affecting the data model, agent pipeline, frontend layout, and UX paradigm.
 
-**Key findings:**
-- **Conversation memory** is now table stakes (2026 = "Year of Context"), but session-scoped memory avoids ChatGPT's context pollution problems
-- **Query suggestions** must be data-aware (not generic templates) to provide value; grouped presentation reduces cognitive load
-- **Web search integration** differentiates Spectra from pure code interpreters, enabling benchmarking use cases
-- **Multi-LLM flexibility** is a major commercial differentiator (cost optimization + data privacy via local Ollama)
+**Key findings from ecosystem research:**
 
-**Competitive positioning:** Bridge gap between consumer tools (ChatGPT: cheap but locked-in) and enterprise BI (ThoughtSpot: powerful but enterprise-only). Target: prosumer/SMB segment wanting flexibility + transparency + cost control.
+- **Chat-session-centric UX is now the dominant pattern** across AI tools (ChatGPT, Claude, Gemini, Julius AI). Spectra's current file-tab model is the minority approach. Migrating is not a differentiator -- it is catching up to table stakes.
+- **Multi-file context per conversation** is where the real value lies. Julius AI supports multiple files per conversation with cross-dataset analysis. ChatGPT allows up to 10 file attachments per message. This is the feature that transforms Spectra from "single-file Q&A" to "multi-source analytics workspace."
+- **Chat history sidebar with chronological grouping** (Today, This Week, This Month) is the universal pattern adopted by ChatGPT, Claude, Gemini, and virtually every modern AI chat tool. PatternFly has formalized this into a reusable component pattern.
+- **The hardest engineering problem is not UI -- it is multi-file agent context.** The existing LangGraph pipeline assumes single-file context (one file_id, one data_summary, one file_path). Extending to N files requires changes to the agent state schema, sandbox file handling, code generation prompts, and memory checkpointing.
+- **"My Files" as a separate management screen** is standard in tools that decouple files from conversations (Google Drive model). It must feel lightweight -- not a separate app -- with quick actions: upload, view context, start chat, delete, download.
 
----
-
-## Feature Landscape
-
-### Table Stakes (Users Expect These)
-
-Features users assume exist. Missing these makes v0.2 intelligence update feel incomplete.
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| **Conversation context within session** | Users expect "add a column" to work without re-explaining dataset. ChatGPT has memory. ThoughtSpot maintains context. Industry standard in 2026. | MEDIUM | Requires LangChain checkpointing with PostgreSQL (already in codebase, disabled in v0.1). Context window management (85% warning, truncation) needed. Common pattern: ConversationSummaryBufferMemory hybrid. |
-| **Context cleared on tab close** | Prevents context pollution across unrelated analyses. Users understand browser tabs = isolated sessions. Julius AI uses notebooks (similar pattern). | LOW | Session ID tied to browser tab. Warning dialog before close. Standard UX pattern. Avoids ChatGPT's cross-conversation pollution problem. |
-| **Natural language query interface** | 40% of analytics queries in 2026 use natural language. ChatGPT Code Interpreter, Julius AI, ThoughtSpot all use NL. Non-negotiable for "accessible to non-technical users" positioning. | LOW | **Already implemented in v0.1.** Table stakes confirmed. No new work required. |
-| **Basic query suggestions** | Empty chat feels intimidating. Julius AI, ThoughtSpot, ChatGPT all show starter prompts. Users expect guidance on "what can I ask?" Reduces blank-page anxiety. | MEDIUM | Must be data-aware (based on actual dataset structure), not generic. 5-6 suggestions grouped by intent. Generated by Onboarding Agent during profiling (extends existing v0.1 profiling). |
-| **Transparent AI operations** | Users need to see what the AI is doing. DataChat documents "every step in plain English." Julius AI shows notebooks. ChatGPT shows code. Trust = transparency. | LOW | **Already implemented via SSE streaming in v0.1.** Extend to show web search queries and sources. Builds on existing infrastructure. |
-| **Real-Time Streaming Responses** | Modern UX expectation - users accustomed to ChatGPT-style streaming, not "loading..." spinners | HIGH | **Already implemented in v0.1 (FastAPI StreamingResponse + SSE).** Poor streaming = poor UX in 2026. Table stakes confirmed. |
-| **Interactive Visualizations** | Expected standard - static charts feel dated, users expect hover tooltips, zoom, pan capabilities | MEDIUM | **Already implemented in v0.1 (Plotly in Data Cards).** Table stakes confirmed. |
-
-**v0.2 Insight:** Most table stakes features already exist from v0.1 (NL queries, streaming, visualizations, transparency). v0.2 adds missing intelligence layer: memory and suggestions.
+**Competitive context:** Julius AI (closest competitor) already supports multi-file conversations with cross-dataset merge/join. ChatGPT supports file attachments within conversations. Spectra v0.2's file-tab model is a known limitation blocking competitive parity. v0.3 closes this gap.
 
 ---
 
-## Differentiators (Competitive Advantage)
+## Table Stakes
 
-Features that set Spectra apart. Not required, but create competitive moats for v0.2.
+Features users expect from a chat-based analytics tool in 2026. Missing any of these makes Spectra feel incomplete or dated.
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| **Multi-LLM provider flexibility** | Power users optimize cost/performance per agent. Use cheap local Ollama for simple tasks, powerful Claude/GPT-4 for complex analysis. **Julius AI: single model. ChatGPT: OpenAI only. Spectra: choice.** | HIGH | Requires abstraction layer (OpenRouter + Ollama). Per-agent config in YAML. OpenRouter gives access to 100+ models (DeepSeek, Claude, GPT-4). Ollama supports local + cloud variants. **Major commercial differentiator** for enterprises with cost sensitivity or data privacy requirements. |
-| **Per-agent LLM configuration** | Different agents need different capabilities. Coding Agent needs strong reasoning (Claude Sonnet 4.5). Code Checker can use faster, cheaper model. Onboarding Agent needs instruction-following. **Optimize spend without sacrificing quality.** | MEDIUM | YAML config per agent. Dependency on multi-LLM foundation. Enables "smart spending" narrative. Competitive advantage for commercial customers who monitor LLM costs. |
-| **Data-aware smart suggestions** | Generic suggestions ("show me summary statistics") are weak. **Spectra suggestions based on actual data structure**: "Compare TikTok campaign performance to industry benchmarks" (because dataset has TikTok column). ThoughtSpot Answer Explorer does this. | HIGH | Onboarding Agent analyzes schema + content during upload (v0.1 capability). Extend to generate suggestions, not rebuild profiling. Requires domain intelligence. **Major wow factor.** Differentiates from generic templates. |
-| **Grouped query suggestions** | Random list of 6 suggestions = cognitive overload. **Three clear categories** (General Analysis, Benchmarking, Trend/Predictive) = users immediately understand analysis types available. Julius AI lacks grouping. ChatGPT lacks grouping. | LOW | Pure UX win. Groups already defined in requirements (2-3 per category). Easy implementation, high perceived value. Information architecture advantage. |
-| **Web search for benchmarking** | When user asks "how does my campaign compare to industry average," AI needs external data. **ChatGPT Code Interpreter: no web search. Julius AI: database connectors, not web. Spectra: web search integration.** ThoughtSpot Spotter 3 (2026) integrates external sources. | MEDIUM | Serper.dev integration (~150ms response time, 2,500 free searches for testing). Only enabled for Analyst agent. Show sources transparently. **Critical differentiator vs pure code interpreters.** Enables benchmarking use cases competitors can't handle. |
-| **Streaming web search transparency** | When AI searches web, show the query + sources in real-time via SSE. Users see "Searching web for 'TikTok CTR benchmarks 2026'..." then see source links in response. **Trust through visibility.** | LOW | Leverages existing v0.1 SSE infrastructure. Serper.dev returns sources. Display in Data Card citations section. Extension of existing transparency model. |
-| **Session-scoped memory with clear boundaries** | ChatGPT has persistent memory across all chats (confusing context pollution). **Spectra: memory per tab, cleared on close.** Matches user mental model: browser tab = workspace. Julius AI uses notebooks (similar pattern). | LOW | Architectural decision, not feature bloat. Clean UX. Avoids ChatGPT's context pollution problem (users complain about AI mixing unrelated contexts). |
-| **Configurable context windows** | Different users have different needs. Enterprises may want larger context for complex multi-step analyses. Individual users may prefer faster, cheaper (smaller context). **Flexibility = commercial appeal.** | LOW | YAML config. Warning at 85% threshold. Industry standard (LangChain patterns). Governance-friendly. Enables cost control for commercial customers. |
-| **Sandboxed Python Execution** | Security + capability - competitors hide generated code or use SQL only. Transparent Python execution with multi-layer isolation (E2B sandbox) | HIGH | **Differentiator from v0.1: show AND execute code safely.** Most platforms either show code (no execution) or execute invisibly (no transparency). Full pipeline = competitive advantage. v0.2 maintains this advantage. |
-| **Multi-Agent Orchestration** | Quality + specialization - supervisor coordinates specialized agents (onboarding, coding, checking, analysis) for higher accuracy | HIGH | **Core v0.1 differentiator maintained in v0.2.** Most platforms use single-agent. Multi-agent with code checker reduces hallucinations 60-80%. LangGraph supervisor pattern. Visible quality difference. |
-
-**v0.2 Insight:** Multi-LLM flexibility is the headline differentiator for v0.2. Combined with data-aware suggestions and web search, Spectra occupies unique market position: flexible, transparent, intelligence-enhanced analytics.
+| Feature | Why Expected | Complexity | Dependencies on Existing |
+|---------|--------------|------------|--------------------------|
+| **Chat session as primary entity** | ChatGPT, Claude, Gemini all center on "conversations," not files. Users now expect to create a chat, then bring context into it. File-first is the exception, not the norm. | HIGH | Requires new `ChatSession` model, migration of existing `ChatMessage` from `file_id` FK to `session_id` FK, new frontend routing (`/chat/[sessionId]` instead of file tabs), replacement of `tabStore` with `sessionStore`. |
+| **Chat history sidebar** | Every major AI chat tool has a left sidebar listing past conversations grouped chronologically (Today, Yesterday, This Week, This Month, Older). Users expect to click a conversation to resume it. PatternFly has formalized this as a standard component pattern. | MEDIUM | Replaces current `FileSidebar` component. Requires new API endpoint `GET /sessions` with pagination. Must integrate with existing auth (user isolation). Session titles auto-generated from first user message or AI summary. |
+| **New Chat button** | Universal affordance in AI chat tools. Prominent button at top of sidebar. Creates empty session, optionally with file prompt. | LOW | Trivial UI addition once session model exists. Route to new empty session state. |
+| **File linking to chat sessions** | Users must be able to attach files to conversations. At minimum: select from previously uploaded files. This is the core mechanism that replaces file tabs. At least one file required before chatting (per requirements). | HIGH | Requires new `session_files` junction table (many-to-many). File selection modal showing user's uploaded files. API endpoint to link/unlink files from sessions. Agent pipeline must receive list of file contexts instead of single file. |
+| **File upload within chat** | ChatGPT allows file attachment via button below input. Drag-and-drop onto chat area is expected. Upload triggers onboarding, then links to current session. | MEDIUM | Reuses existing `FileUploadZone` component and onboarding pipeline. New: trigger from chat input area (not just sidebar), auto-link to current session after onboarding completes. Drag-drop overlay on chat area. |
+| **Linked files displayed in session** | Users need to see which files are attached to current conversation. ChatGPT shows file chips/pills in the message. Claude shows project files in sidebar. Requirements specify: display at top of chat or in right sidebar with (i) icon for context. | LOW-MEDIUM | File pill/badge components showing filename + info icon. Click (i) opens existing `FileInfoModal`. Could be a horizontal strip above chat or a collapsible right panel. |
+| **Session title auto-generation** | ChatGPT auto-titles conversations from first message. Users expect this. Manual rename is a nice-to-have but auto-title is table stakes. | LOW | Generate title from first user query (truncate to 50 chars) or ask LLM for a 3-5 word summary. Store as `title` field on `ChatSession` model. |
+| **"My Files" management screen** | When files are decoupled from conversations, users need a dedicated place to see all their files. Standard pattern: list view with upload, delete, download, view context, start new chat actions. Google Drive / Dropbox model. | MEDIUM | New route `/files` with new page component. Reuses existing `FileService` APIs (`list_user_files`, `delete_file`, `download_file`). New: "Start Chat" action that creates session + links file. Grid or list view with sort/filter. |
+| **Preserve existing conversation memory** | v0.2 already has multi-turn memory via LangGraph PostgreSQL checkpointing. v0.3 must preserve this. Thread IDs need to change from `file_{id}_user_{id}` to `session_{id}`. | MEDIUM | Migration of checkpoint thread IDs. Existing conversations from v0.2 either migrated (create session per file) or archived. LangGraph checkpointer config update. |
+| **Single-file analysis (baseline)** | Even with multi-file support, most conversations will reference one file. The single-file path must remain fast and simple. No regression from v0.2. | LOW | Existing agent pipeline works for single file. Multi-file is additive, not replacing. Ensure single-file path has zero overhead from multi-file abstractions. |
 
 ---
 
-## Anti-Features (Commonly Requested, Often Problematic)
+## Differentiators
 
-Features that seem good but create problems. Document to prevent scope creep in v0.2.
+Features that set Spectra apart from competitors. Not expected, but create meaningful value.
 
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| **Persistent memory across all sessions** | "ChatGPT remembers me, why doesn't Spectra?" Users want convenience of never re-explaining preferences. | **Context pollution:** Mixing contexts from Dataset A (sales data) and Dataset B (marketing data) creates nonsensical responses. Token bloat (larger context = higher latency 500ms+ at 100k tokens, higher cost). Summarization loses critical details ("context poisoning"). ChatGPT users actively complain about unwanted context bleeding. | **Session-scoped memory (per tab).** Clear mental model: tab close = context reset with warning. Users control boundaries. Defer cross-session memory to v2+ after validating single-session intelligence. |
-| **Unlimited context window** | "Let me upload entire conversation history." Users think bigger context = better AI. | **Performance degradation:** Larger context = higher latency (500ms+ at 100k tokens) and cost ($$$). Summarization becomes necessary, losing details. LangChain docs: "more tokens ≠ better results." Common misconception that large context windows eliminate need for memory management. | **Configurable context with 85% warning.** Truncate oldest messages with summaries. Manage expectations. LangChain ConversationSummaryBufferMemory hybrid approach (buffer recent, summarize old). |
-| **Save every Data Card automatically** | "I want to review all past analyses." Users want searchable history of every query. | **Storage bloat:** 1000 queries/user/month = massive DB growth. Users rarely revisit 90% of queries. Implementation complexity (Collections, search, organization). **v0.1 explicitly deferred Collections to v2.** v0.2 should not expand scope into Collections. | **Real-time analysis focus.** Export important results (CSV/Markdown already in v0.1). Collections in v2 after validation. v0.2 = intelligence, not storage. |
-| **AI generates visualizations automatically** | "Julius AI makes charts, why doesn't Spectra?" Users want pretty charts without asking. | **Relevance problem:** Auto-generating charts often creates wrong viz type. Bar chart for time series. Pie chart for 20 categories. User must still guide. **Visualization Agent deferred to v2 in PROJECT.md for good reason.** v0.2 scope = intelligence, not visualization. | **Let users request specific viz types** ("show this as a line chart"). Better signal-to-noise. Add Visualization Agent in v2 after validating core accuracy. v0.2 maintains existing v0.1 Plotly capabilities (sufficient). |
-| **Integration with every data source** | "Connect to my Salesforce/Snowflake/BigQuery." Users want to skip upload step. | **Connector hell:** Each integration = authentication, rate limits, schema mapping, maintenance. 10 integrations = 10x support burden. API changes break product. **PROJECT.md: "File upload only for v1."** v0.2 should not expand into connectors. | **File upload (Excel/CSV) sufficient for MVP.** Validates core AI accuracy without integration complexity. Add connectors in v2 based on validated demand. v0.2 = intelligence layer, not data ingestion overhaul. |
-| **Real-time collaboration** | "Can my team and I analyze data together?" Users want Google Docs-style collaboration. | **Scope explosion:** Real-time presence, conflict resolution, permissions, shared context. Massive implementation complexity. Not validated as user need. **Single-user v1 sufficient for validation.** v0.2 adds intelligence, not collaboration architecture. | **Deferred to v2+.** Export and share results via CSV/Markdown (v0.1 capability). Email reports. Validate single-user workflow with v0.2 intelligence first. Session-scoped memory conflicts with multi-user shared state anyway. |
-| **Model fine-tuning per user** | "Can the AI learn my company's terminology?" Users want customized AI. | **Data requirements:** Fine-tuning needs 1000+ examples. Long training cycles. Version control nightmare. Prompt engineering achieves 80% of benefits with YAML config (already Spectra's approach). Multi-LLM flexibility in v0.2 provides model choice without fine-tuning complexity. | **Externalized prompts in YAML (v0.1 pattern).** User context during upload ("Industry: Healthcare"). Few-shot examples in system prompts. Multi-LLM in v0.2 lets users choose models trained for their domain (e.g., DeepSeek for code, Claude for reasoning). Achieves personalization without fine-tuning burden. |
-| **Advanced web search tools** | "Use web search for images, news, videos, maps." Serper.dev supports all these. Users want full search API capabilities. | **Feature bloat:** v0.2 goal = validate benchmarking use case (text search sufficient). Images/news/videos add complexity without validated value. Analyst agent needs text-based context ("TikTok CTR benchmarks"), not multimedia. Premature optimization. | **Web search only (text results) for v0.2.** Serper.dev supports advanced features, but defer until usage patterns observed. Add after validating basic web search value. Risk: building capabilities users don't need. |
+| Feature | Value Proposition | Complexity | Dependencies on Existing |
+|---------|-------------------|------------|--------------------------|
+| **Cross-file analysis (joins/merges)** | Ask "Compare sales data from Q1.csv with Q2.csv" and get a merged analysis. Julius AI supports this. ChatGPT Code Interpreter supports this with uploaded files. This is the killer feature that justifies the multi-file architecture. | HIGH | Agent state must include multiple file paths and data profiles. Coding Agent prompts must instruct pandas merge/join operations. Sandbox must receive all linked files. Data Analysis Agent must understand multi-source context. Significant prompt engineering. |
+| **Right sidebar file context panel** | Dedicated panel showing linked files with summaries, column info, row counts. Always visible during chat. More discoverable than hidden modals. Like VS Code's Explorer panel or Notion's page properties. | MEDIUM | New `FileContextPanel` component. Collapsible right sidebar (3-column layout: chat history / main chat / file context). Responsive: collapses to overlay on smaller screens. Shows file metadata from existing `data_summary`. |
+| **File linking "link existing" flow** | Quick modal to browse and link already-uploaded files. Includes search/filter, file type indicators, preview of data summary. Avoids re-uploading same file for different analyses. | MEDIUM | File picker modal with search. API: `POST /sessions/{id}/files/{file_id}`. UI: dropdown from "Add File" button below chat input with "Upload new" and "Link existing" options. |
+| **Chat session rename** | Right-click or inline edit to rename conversations. Helps organize analysis threads. Claude and ChatGPT both support this. | LOW | Inline edit on sidebar item. API: `PATCH /sessions/{id}` with `title` field. Standard UX pattern. |
+| **Chat session delete** | Remove old conversations from history. Conversations pile up fast. Must confirm before delete (destructive action). | LOW | Dropdown menu on sidebar item. API: `DELETE /sessions/{id}` with cascade to messages and file links. Confirmation dialog. |
+| **Drag-and-drop file onto chat** | Drop a file directly onto the chat area to upload and link in one step. ChatGPT supports this. Reduces friction for adding context mid-conversation. | MEDIUM | Global drag overlay on chat area. Detect `dragenter`/`dragleave`/`drop` events. On drop: trigger upload flow, then auto-link to current session. Reuse `FileUploadZone` logic with new visual treatment. |
+| **Smart file suggestion in empty chat** | When starting a new chat with no files, suggest recently uploaded or frequently used files. Reduces clicks to start analyzing. | LOW | Query recent files from `FileService`. Display as clickable cards in empty chat state. One click to link and start. |
+| **Session-level query suggestions** | Extend v0.2's data-aware suggestions to work with multi-file context. Suggest cross-file queries when multiple files are linked ("Compare column X from File A with column Y from File B"). | HIGH | Requires new suggestion generation that considers all linked files' schemas. Must detect joinable columns (same name or similar content). Prompt engineering for cross-file suggestion generation. |
+| **Light/dark mode toggle** | Explicitly requested in requirements. Modern UX expectation. Most AI tools support theme switching. | LOW | Tailwind dark mode classes (already partially supported via `shadcn/ui` components). Theme toggle in settings or header. Persist preference in localStorage. |
 
-**v0.2 Insight:** Anti-features are especially dangerous in intelligence milestone. Focus on core: memory + suggestions + web search + multi-LLM. Resist temptation to add Collections, Visualization Agent, data connectors, collaboration. Those are separate milestones.
+---
+
+## Anti-Features
+
+Features to explicitly NOT build in v0.3. Building these would waste effort, add complexity, or create UX problems.
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| **Automatic cross-file joins without user intent** | Silently merging datasets leads to wrong results. Schema mismatches, duplicate columns, Cartesian products. Users must explicitly ask for cross-file operations. Research shows key mismatch is the #1 cross-dataset pitfall. | Let the AI agent perform joins only when the user explicitly asks. Never auto-merge on session creation. Show files as separate contexts until user requests comparison. |
+| **Real-time collaborative editing** | Multi-user on same session adds massive complexity (CRDT/OT, conflict resolution, presence indicators). Not in requirements. Not expected for analytics tools. | Single-user sessions. Per-user file/session isolation (already exists). Collaboration is a future milestone, not v0.3. |
+| **File versioning** | Tracking file revisions adds storage cost and UX complexity. Users upload new files, they don't update existing ones. | Each upload is a new file. Users can delete old versions. No version history tracking. |
+| **Folder/directory organization for files** | Over-engineering file management. Users will have 5-50 files, not thousands. Folders add navigation depth without value at this scale. | Flat file list with sort by date/name/type. Search/filter is sufficient for expected file counts. |
+| **Conversation branching/forking** | ChatGPT experimented with edit-and-branch. Extremely complex UX and data model. Not requested. Confuses most users. | Linear conversation history. Users can start a new chat to explore a different direction. Copy previous context forward if needed. |
+| **Inline file editing/spreadsheet view** | Building a spreadsheet editor is a massive scope expansion. Not what users come to Spectra for. | Show data previews (read-only tables from existing DataCard). Link out to original file download for editing. |
+| **Embedding/vector search across files** | RAG-style search across all uploaded files is architecturally different from structured data analysis. Would require vector DB, embeddings pipeline, retrieval chain. Different product direction. | Spectra analyzes structured data via code execution. Cross-file works through pandas operations in sandbox, not semantic search. Keep focused on tabular data analysis. |
+| **Session sharing via URL** | Public links to sessions create security concerns (data exposure). Not in requirements. | Sessions are private to authenticated user. Export results (existing DataCard export) for sharing. |
 
 ---
 
 ## Feature Dependencies
 
-Critical for v0.2 roadmap phase ordering.
-
 ```
-[v0.1 Foundation] ← (Already shipped 2026-02-06)
-    ├──> Authentication + Database
-    ├──> File Upload + Data Profiling
-    ├──> 4-Agent System (Onboarding, Coding, Code Checker, Data Analysis)
-    ├──> SSE Streaming + Data Cards
-    └──> PostgreSQL with LangChain integration (checkpointing disabled)
-
-[Multi-LLM Provider Support] ← (v0.2 Phase 1)
-    ├──requires──> OpenRouter Integration
-    ├──requires──> Ollama Integration
-    ├──requires──> Abstraction Layer (unified API for agent calls)
-    └──enables──> Per-Agent LLM Configuration
-
-[Per-Agent LLM Configuration] ← (v0.2 Phase 1)
-    ├──requires──> Multi-LLM Provider Support
-    ├──requires──> YAML Config Extension (agent_configs.yaml)
-    └──enables──> Cost Optimization Narrative
-
-[Session Memory] ← (v0.2 Phase 2)
-    ├──requires──> PostgreSQL Checkpointing (exists, needs re-enabling)
-    ├──requires──> Context Window Management (85% warning, truncation)
-    ├──requires──> Tab-close Warning Dialog
-    └──enables──> Multi-turn Conversations
-
-[Smart Query Suggestions] ← (v0.2 Phase 3)
-    ├──requires──> Data Profiling (v0.1: already exists)
-    ├──requires──> Onboarding Agent Schema Analysis (v0.1: already exists)
-    ├──enhances──> User Onboarding Experience
-    └──independent──> Can develop in parallel with Web Search
-
-[Web Search Tool] ← (v0.2 Phase 4)
-    ├──requires──> Serper.dev API Integration
-    ├──requires──> Tool Binding in LangChain (Analyst agent only)
-    ├──requires──> SSE Extension (show search queries/sources)
-    └──enables──> Benchmarking Queries
-
-[Data-Aware Suggestions] ← (v0.2.x - Fast Follower)
-    ├──requires──> Smart Query Suggestions (basic version)
-    ├──requires──> Domain Intelligence in Onboarding Agent
-    ├──conflicts──> Generic Template Suggestions
-    └──enhances──> Differentiation (defer to v0.2.1 if complexity high)
-
-[Context Summarization] ← (v0.2.x - Fast Follower)
-    ├──requires──> Session Memory (basic version)
-    ├──requires──> ConversationSummaryBufferMemory (LangChain)
-    └──enhances──> Robustness at Scale (defer to v0.2.2)
+                    ChatSession Model (DB)
+                    /        |          \
+                   /         |           \
+    Chat History Sidebar   Session-File   "My Files" Screen
+          |              Junction Table        |
+          |               /    |    \          |
+     Session CRUD     Link   Unlink  Upload+Link
+          |            File   File   in Chat
+          |               \    |    /
+          |            Agent Pipeline
+          |            Multi-File Support
+          |               /         \
+          |     Cross-File       Right Sidebar
+          |     Analysis         File Context Panel
+          |         |
+          |   Multi-File Sandbox
+          |   (upload N files)
+          |
+    Auto-Title Generation
+          |
+    Session Rename/Delete
 ```
 
-### Dependency Notes
+**Critical path (must be sequential):**
+1. `ChatSession` model + `session_files` junction table (DB migration)
+2. Session CRUD APIs (create, list, get, update, delete)
+3. File linking APIs (link, unlink files to sessions)
+4. Agent pipeline multi-file support (state schema, sandbox, prompts)
+5. Frontend session-centric layout (sidebar, main chat, file context)
 
-- **Multi-LLM foundation must come first:** Per-agent config, cost optimization narrative, and local Ollama option all depend on multi-LLM abstraction layer. Phase 1 priority.
-- **Session memory is independent:** Can develop in parallel with multi-LLM. PostgreSQL checkpointing already exists (disabled in v0.1). Re-enable with safeguards. Phase 2.
-- **Query suggestions extend v0.1 profiling:** Onboarding Agent already analyzes data structure. Generate suggestions during profiling. Low dependency risk. Phase 3.
-- **Web search is isolated:** Serper.dev integration + LangChain tool binding. Only Analyst agent gets access. Can develop in parallel with suggestions. Phase 4.
-- **Data-aware suggestions are enhancement:** Basic (generic) suggestions sufficient for v0.2.0. Data-aware intelligence is fast follower for v0.2.1.
-- **Context summarization is optimization:** Truncation + warning sufficient for v0.2.0. Summarization improves experience but not required for launch.
-
----
-
-## MVP Definition (v0.2 Context)
-
-### Launch With (v0.2.0)
-
-Minimum viable intelligence features to enhance existing v0.1 platform. Focus: memory + suggestions + web search + multi-LLM.
-
-**Must-Have for v0.2:**
-- [x] **Session-scoped conversation memory** — Core UX improvement. Users can say "add a column" without re-explaining. Matches user mental model (tab = session). Enables multi-turn conversations. **Without this, v0.2 adds no conversational intelligence.** Re-enable PostgreSQL checkpointing (exists in codebase, disabled in v0.1).
-- [x] **Tab-close context warning** — Prevents accidental context loss. Low complexity, high UX value. Standard browser pattern. "Closing this tab will clear your conversation context. Continue?"
-- [x] **Configurable context window size** — Governance-friendly. Enterprises need cost control. YAML config (e.g., `max_tokens: 4096`), warning at 85%, truncation strategy. Industry standard. LangChain ConversationBufferWindowMemory.
-- [x] **Basic query suggestions (5-6 per dataset)** — Solves "blank page intimidation." Guides users on what's possible. Grouped into 3 categories for clarity (2 General Analysis, 2 Benchmarking, 2 Trend/Predictive). Generated during upload (Onboarding Agent extends v0.1 profiling).
-- [x] **Web search tool for Analyst agent** — Enables benchmarking queries ("compare my CTR to industry average"). **Key differentiator vs pure code interpreters.** Serper.dev = 2,500 free searches for testing, then $50/50k queries ($1/1k). Essential for commercial positioning. Show query + sources via SSE.
-- [x] **Multi-LLM provider support (OpenRouter + Ollama)** — **Major commercial differentiator.** Enterprises optimize cost. Power users want choice. OpenRouter = 100+ models (DeepSeek, Claude, GPT-4, etc.). Ollama = local/cloud flexibility (no data leaves premises for privacy-sensitive use cases). Validates market fit for "LLM-agnostic analytics."
-- [x] **Per-agent LLM configuration** — Completes multi-LLM value prop. "Use cheap model for Code Checker, powerful model for Coding Agent." Enables smart spending narrative. Configurable via YAML (non-technical users don't see complexity). Example: `coding_agent: {provider: openrouter, model: anthropic/claude-sonnet-4.5}`.
-- [x] **SMTP email service** — Production-ready password reset. Migrate from Mailgun API to standard SMTP (host, port, username, password, TLS in config). Disable dev mode (console logs) when SMTP configured. Not intelligence feature, but required for production v0.2 release.
-
-**Why These Features:**
-- **Memory (session-scoped):** Enables conversational intelligence. Differentiates from stateless queries. Users can build on previous questions.
-- **Query suggestions (grouped, basic):** Reduces friction. Shows capabilities immediately. Guides non-technical users.
-- **Web search (Analyst agent):** Unique capability vs competitors. Enables benchmarking (external context + internal data).
-- **Multi-LLM (OpenRouter + Ollama):** Headline commercial differentiator. Cost control + data privacy + flexibility. Target: enterprises with LLM strategy.
-- **Per-agent config:** Completes multi-LLM narrative. "Optimize per agent, not blanket model choice."
-- **SMTP:** Production hygiene. v0.1 had Mailgun API (not configurable). v0.2 = self-hosted friendly.
-
-### Defer to v0.2.x (Fast Followers)
-
-Features to add once core v0.2.0 is validated. Build confidence in foundational intelligence before layering enhancements.
-
-- [ ] **Data-aware smart suggestions** — Upgrade from generic suggestions to dataset-specific intelligence. "Compare TikTok campaign to industry benchmarks" (because dataset has TikTok column). **High perceived value, but dependent on domain intelligence working well.** Risk: complexity. Add v0.2.1 after basic suggestions validate UX pattern. Requires Onboarding Agent to understand column semantics (not just types).
-- [ ] **Context summarization strategies** — When context exceeds limit, summarize oldest exchanges instead of truncating. LangChain ConversationSummaryBufferMemory. **Adds robustness but not critical for v0.2.0 launch** (truncation + warning sufficient). Add v0.2.2 after observing context usage patterns.
-- [ ] **Web search result caching** — Serper.dev calls cost money. Cache results for common queries ("TikTok CTR benchmarks 2026"). 15-minute TTL. **Low priority for v0.2.0** (2,500 free searches sufficient for testing). Add v0.2.3 after web search usage patterns observed. Redis or in-memory cache.
-- [ ] **LLM provider fallback logic** — If primary model (e.g., Claude Sonnet 4.5) is down, fall back to secondary (e.g., GPT-4). **Adds reliability.** Implement v0.2.2 after multi-LLM foundation stable. Requires error detection + retry logic.
-- [ ] **Streaming transparency for web search** — Show "Searching web for '[query]'..." in real-time SSE. Display sources in Data Card citations. **Builds trust.** Leverage existing SSE infrastructure. Add v0.2.1 after core web search working. Low complexity, high polish value.
-- [ ] **Context window usage analytics** — Track 85% warnings, truncation events. Help users understand context consumption. **Governance feature.** Add v0.2.3 after memory usage patterns observed. Informs future optimizations.
-
-### Explicitly Out of Scope (v2+)
-
-Features to defer until v0.2 intelligence validated. Separate milestones, not fast followers.
-
-**Not Building in v0.2:**
-- [ ] **Persistent memory across sessions** — Deferred until user research validates need. **Risk: context pollution.** Complexity: memory isolation, summarization, retrieval architecture (pgvector semantic search). ChatGPT has this but users complain about context pollution. v2+ feature after validating session-scoped intelligence.
-- [ ] **Fine-tuning per user/organization** — Defer until validated demand. **Complexity: training pipelines, data requirements (1000+ examples), version control.** Prompt engineering + YAML config + multi-LLM choice achieves 80% of benefits. v2+ if commercial customers demand it.
-- [ ] **Advanced web search tools** — Serper.dev supports images, news, videos, maps. **v0.2.0: web search only.** Expand v2+ after usage patterns observed. Risk: feature bloat without validated use cases.
-- [ ] **Collections and saved Data Cards** — Deferred from v0.1. **Requires search, organization, tagging.** Build v2+ after real-time analysis workflow validated. Users export important results (CSV/Markdown). v0.2 = intelligence, not storage/organization.
-- [ ] **Visualization Agent** — Deferred from v0.1. **Auto-generate charts.** Complexity: chart type selection, relevance. Focus v0.2 on intelligence (memory, suggestions, search, multi-LLM), not presentation. v2+ feature.
-- [ ] **Real-time collaboration** — Not validated need. **Massive complexity: presence, conflict resolution, shared context, permissions.** Defer indefinitely. Single-user focus for v0.2. Session-scoped memory conflicts with multi-user shared state anyway.
-- [ ] **Custom data connectors** — Salesforce, Snowflake, BigQuery, APIs. **v0.2: file upload only.** Validate core analytics accuracy + intelligence features before integration complexity. v2+ based on validated demand.
-
-**v0.2 Discipline:** Intelligence features only. No Collections, no Visualization Agent, no data connectors, no collaboration. These are separate value propositions requiring separate milestones.
+**Can be parallelized:**
+- "My Files" screen (independent of session-centric chat)
+- Light/dark mode (independent CSS/theme work)
+- Chat session rename/delete (after session model exists)
+- Drag-and-drop upload in chat (after basic upload-in-chat works)
 
 ---
 
-## Feature Prioritization Matrix
+## MVP Recommendation
 
-| Feature | User Value | Implementation Cost | Priority | v0.2 Status |
-|---------|------------|---------------------|----------|-------------|
-| **Session-scoped memory** | HIGH (enables conversational UX) | MEDIUM (PostgreSQL checkpointing exists, needs re-enabling) | **P1** | **v0.2.0** |
-| **Tab-close warning** | MEDIUM (prevents accidents) | LOW (browser API) | **P1** | **v0.2.0** |
-| **Basic query suggestions** | HIGH (reduces friction, guides users) | MEDIUM (Onboarding Agent extension) | **P1** | **v0.2.0** |
-| **Web search tool** | HIGH (benchmarking = differentiation) | MEDIUM (Serper.dev + LangChain tool binding) | **P1** | **v0.2.0** |
-| **Multi-LLM providers** | HIGH (commercial appeal, cost control) | HIGH (abstraction layer, testing multiple providers) | **P1** | **v0.2.0** |
-| **Per-agent LLM config** | MEDIUM (completes multi-LLM value) | LOW (YAML config, depends on multi-LLM) | **P1** | **v0.2.0** |
-| **Configurable context window** | MEDIUM (governance, cost control) | LOW (YAML config, LangChain window management) | **P1** | **v0.2.0** |
-| **SMTP email service** | HIGH (production requirement) | LOW (standard SMTP config) | **P1** | **v0.2.0** |
-| **Data-aware suggestions** | HIGH (wow factor, differentiation) | HIGH (domain intelligence, edge cases, semantic understanding) | **P2** | v0.2.1 |
-| **Context summarization** | MEDIUM (robustness at scale) | MEDIUM (LangChain ConversationSummaryBufferMemory) | **P2** | v0.2.2 |
-| **Web search caching** | LOW (cost optimization, premature) | LOW (Redis/in-memory cache, 15min TTL) | **P2** | v0.2.3 |
-| **LLM fallback logic** | MEDIUM (reliability, error handling) | MEDIUM (error detection, retry with alternate model) | **P2** | v0.2.2 |
-| **Streaming web search transparency** | MEDIUM (trust, UX polish, sources display) | LOW (SSE extension, leverage existing infrastructure) | **P2** | v0.2.1 |
-| **Context usage analytics** | LOW (governance feature, observability) | LOW (tracking, dashboard for admin) | **P3** | v0.2.3 |
-| **Persistent cross-session memory** | LOW (unvalidated need, high risk of pollution) | HIGH (pgvector architecture, isolation, summarization, retrieval) | **P3** | v2.0+ |
-| **Fine-tuning** | LOW (prompt engineering sufficient) | HIGH (training infra, 1000+ examples, version control) | **P3** | v2.0+ |
-| **Advanced web search** | LOW (niche use cases, unvalidated) | MEDIUM (Serper.dev feature expansion: images, news, videos) | **P3** | v2.0+ |
-| **Collections** | MEDIUM (power user feature, storage/organization) | HIGH (search, tagging, organization, UI overhaul) | **P3** | v2.0+ |
-| **Visualization Agent** | MEDIUM (polish, not accuracy/intelligence) | HIGH (chart logic, type selection, relevance) | **P3** | v2.0+ |
-| **Data connectors** | MEDIUM (future revenue opportunity, enterprise feature) | HIGH (per-connector complexity, auth, maintenance) | **P3** | v2.0+ |
-| **Real-time collaboration** | LOW (not validated, conflicts with session memory) | VERY HIGH (presence, sync, permissions, shared context) | **Defer** | Not planned |
+### Must Have (v0.3 Core)
 
-**Priority Key:**
-- **P1 (Must Have for v0.2.0):** Core intelligence features that define the milestone. Memory + suggestions + web search + multi-LLM + SMTP.
-- **P2 (Should Have for v0.2.x):** Fast followers that enhance core features once validated. Add incrementally based on feedback.
-- **P3 (Nice to Have for v2.0+):** Defer until product-market fit established. Separate milestones.
+Prioritize these features in this order:
 
-**Cost-Value Insight for v0.2:**
-- **High Value, Low Cost:** Tab-close warning, per-agent config, configurable context window, SMTP - **ship in v0.2.0**
-- **High Value, Medium Cost:** Session memory (re-enable existing), basic suggestions (extend profiling), web search (Serper.dev) - **core v0.2.0**
-- **High Value, High Cost:** Multi-LLM (abstraction layer), data-aware suggestions (domain intelligence) - **multi-LLM in v0.2.0, data-aware defer to v0.2.1**
-- **Low Value, High Cost:** Persistent cross-session memory (context pollution risk), fine-tuning (prompt engineering sufficient) - **defer indefinitely**
+1. **ChatSession data model + migration** -- Foundation for everything else. New `chat_sessions` table, `session_files` junction table. Migrate existing `ChatMessage` from `file_id` to `session_id`. Create migration script that auto-creates sessions for existing file conversations.
+
+2. **Session CRUD + file linking APIs** -- Backend endpoints for creating sessions, listing user sessions, linking/unlinking files. These APIs unblock all frontend work.
+
+3. **Chat history sidebar** -- Replace `FileSidebar` with session-list sidebar. Chronological grouping (Today, This Week, This Month, Older). New Chat button. Click to load session.
+
+4. **File linking UX in chat** -- "Add File" button below chat input with dropdown (Upload new / Link existing). File picker modal for linking existing files. Linked file pills/badges displayed above chat area.
+
+5. **Agent pipeline multi-file adaptation** -- Extend `ChatAgentState` to accept list of files. Modify `run_chat_query_stream` to load all linked file contexts. Sandbox receives all file data. Coding Agent prompt updated for multi-file awareness.
+
+6. **"My Files" management screen** -- Dedicated route for file list, upload, delete, download, view context, start new chat. Reuses existing file service layer.
+
+7. **Single-file compatibility** -- Ensure the common case (one file per session) works with zero friction. Auto-link file when session is created from "My Files" or direct upload.
+
+### Defer to Later
+
+- **Cross-file joins/analysis** -- Complex prompt engineering. Ship multi-file linking first, add cross-file intelligence iteratively. v0.3.1 or v0.4.
+- **Right sidebar file context panel** -- Nice-to-have. Start with file pills above chat area + existing modal on click. Full sidebar panel in v0.3.1.
+- **Session-level multi-file query suggestions** -- Requires cross-file schema analysis. Ship single-file suggestions (already working from v0.2) first.
+- **Smart file suggestion in empty chat** -- Low priority UX polish. Empty state can show "Upload or link a file to get started" prompt.
 
 ---
 
-## Competitor Feature Analysis
+## Detailed Feature Specifications
 
-Comparison with major platforms to identify v0.2 positioning.
+### 1. Chat Session Model
 
-| Feature | ChatGPT Code Interpreter | Julius AI | ThoughtSpot | **Spectra v0.2** | Our Differentiator |
-|---------|--------------------------|-----------|-------------|------------------|-------------------|
-| **Conversation Memory** | Persistent across all chats (context pollution risk) | Session-based via notebooks | Context within search session | **Session-scoped per tab** (clear boundaries, warning on close) | Avoids ChatGPT's pollution problem while maintaining intelligence |
-| **Query Suggestions** | Generic starter prompts, no data awareness | Starter prompts, limited grouping | AI-suggested searches (Answer Explorer), data-aware | **Basic: grouped by intent. v0.2.1: data-aware** | Grouped presentation (General, Benchmarking, Predictive) reduces cognitive load |
-| **Web Search** | No web search in Code Interpreter (only code execution) | Live database connectors (not web search) | Spotter 3 integrates external sources (2026) | **Serper.dev integration** (transparent sources, benchmarking focus) | Bridges internal data + external context. Benchmarking use case. |
-| **Multi-LLM Support** | OpenAI only (locked ecosystem) | Single model (provider unclear) | ThoughtSpot proprietary (no choice) | **OpenRouter (100+ models) + Ollama** (local/cloud) | **Major differentiator.** Cost control + data privacy + flexibility. |
-| **Per-Agent Config** | N/A (single model for all operations) | N/A (single model) | Spotter agents (not user-configurable) | **YAML config per agent** (Coding, Checking, Analysis, Onboarding) | Optimize cost per agent. Cheap for simple tasks, powerful for complex. |
-| **File Size Limit** | 50MB | 32GB (major advantage) | N/A (connected data, unlimited) | 50MB (v0.1, matches ChatGPT) | Julius AI wins on file size. Not v0.2 priority. |
-| **Transparency** | Shows code, execution results (black box for model reasoning) | Notebooks document workflow | Documents steps in plain English | **SSE streaming** (thinking process, code, web search, sources) | v0.1 foundation maintained. v0.2 extends to web search transparency. |
-| **Cost Control** | Fixed ($20/month ChatGPT Plus, no control) | Subscription tiers (no per-agent control) | Enterprise pricing (opaque) | **Configurable** (context window, LLM choice per agent, Ollama local = $0) | **v0.2 headline feature:** granular cost control. Enterprises optimize spend. |
-| **Data Privacy** | OpenAI terms (data processed by OpenAI) | Julius AI terms (data processed by Julius) | Enterprise deployment (on-premises options) | **Local Ollama option** (no data leaves premises) | **v0.2 differentiator:** privacy-sensitive use cases (healthcare, finance). |
-| **Code Execution** | E2B Cloud (sandboxed) | Sandboxed (details unclear) | Server-side (closed) | **E2B sandbox** (gVisor + Docker, v0.1) | v0.1 foundation maintained. Not v0.2 focus. |
-| **Multi-Agent System** | Single agent (GPT-4) | Single agent (or multi-agent unclear) | Spotter agents (platform-level, not user-visible) | **Supervisor + 4 specialized agents** (v0.1) | v0.1 foundation maintained. Not v0.2 focus. Competitive advantage continues. |
+**What exists today:**
+- `ChatMessage` has direct `file_id` FK (one file per conversation)
+- `tabStore` manages open file tabs in frontend
+- Thread ID format: `file_{file_id}_user_{user_id}`
+- No concept of "session" independent of file
 
-**Key Competitive Insights for v0.2:**
+**What needs to change:**
+- New `ChatSession` table: `id`, `user_id`, `title`, `created_at`, `updated_at`
+- New `session_files` junction table: `session_id`, `file_id`, `linked_at`
+- `ChatMessage` changes: add `session_id` FK, make `file_id` FK nullable
+- LangGraph thread ID changes to: `session_{session_id}`
+- Migration: For each unique `(user_id, file_id)` pair in existing messages, create a session and link the file
 
-1. **vs. ChatGPT Code Interpreter:**
-   - **Spectra wins:** Session-scoped memory (vs context pollution), multi-LLM flexibility (vs OpenAI lock-in), web search (vs code-only), data-aware suggestions (vs generic), per-agent optimization (vs one-model-fits-all)
-   - **ChatGPT wins:** Brand recognition, GPT-4 reasoning power, established user base
-   - **Spectra edge v0.2:** Commercial customers prioritize **cost control** (multi-LLM, configurable context) and **data privacy** (Ollama local). ChatGPT = consumer product, no flexibility.
+**Complexity:** HIGH -- touches data model, migration, agent pipeline, and frontend state.
 
-2. **vs. Julius AI:**
-   - **Spectra wins:** Multi-LLM flexibility (vs locked provider), web search (vs database connectors only), per-agent optimization (vs single model), transparent LLM choice (vs black box)
-   - **Julius AI wins:** 32GB file limit (vs Spectra 50MB), established data analysis brand, mature notebooks feature
-   - **Spectra edge v0.2:** Julius AI locked to single LLM provider. **Spectra = flexibility.** Target: enterprises with LLM strategy, cost consciousness, or need for local deployment.
+### 2. Chat History Sidebar
 
-3. **vs. ThoughtSpot:**
-   - **Spectra wins:** Accessible pricing (vs enterprise-only), simpler deployment, multi-LLM choice (vs proprietary), local Ollama option (vs cloud-only or expensive on-prem), transparent operations (vs black box Spotter agents)
-   - **ThoughtSpot wins:** Mature enterprise features (governance, semantic layer), Spotter agents ecosystem, connected data sources (50+ connectors), Answer Explorer intelligence (more mature than Spectra suggestions)
-   - **Spectra edge v0.2:** ThoughtSpot = enterprise BI replacement (6-figure deals). **Spectra = accessible AI analytics** (prosumer/SMB, $10-50/month target). Different market segments. ThoughtSpot validates AI analytics demand at high end; Spectra targets underserved mid-market.
+**Industry pattern (from research):**
+- Left sidebar, collapsible
+- Grouped by time: Today, Yesterday, This Week, This Month, Older
+- Each item: session title (truncated), optional file icon
+- Right-click or hover: rename, delete actions
+- "New Chat" button at top (prominent, blue/primary color)
+- Optional search input for filtering conversations
+- PatternFly formalized: drawer overlay in default mode, inline in fullscreen
 
-**Competitive Positioning Statement for v0.2:**
+**Implementation for Spectra:**
+- Replace `FileSidebar` component entirely with shadcn/ui Sidebar
+- New `AppSidebar` component with SidebarProvider for state management
+- API: `GET /sessions?page=1&limit=50` with date-based grouping in frontend
+- Session items show: title, linked file count badge, timestamp
+- Collapsible on mobile (SidebarTrigger button)
+- Cookie-based sidebar collapse state persistence (built into shadcn Sidebar)
 
-*"Spectra is LLM-agnostic AI analytics for commercial teams who need flexibility, transparency, and cost control. Unlike ChatGPT (OpenAI lock-in, no cost control) or Julius AI (single model, no flexibility) or ThoughtSpot (enterprise-only pricing), Spectra lets you choose LLMs per agent (OpenRouter: 100+ models; Ollama: local privacy), optimize costs (cheap models for simple tasks, powerful for complex), and maintain transparency (see what the AI is doing, including web searches). Target: prosumer and SMB teams ($10-50/month) who outgrew ChatGPT but can't justify ThoughtSpot."*
+**Complexity:** MEDIUM -- mostly frontend UI work, straightforward API.
+
+### 3. File Linking in Chat
+
+**How ChatGPT does it:**
+- Paperclip/attachment icon next to message input
+- Click opens file picker (local files)
+- Files appear as chips in message input area
+- Up to 10 files per message
+
+**How Spectra should do it (per requirements):**
+- "Add File" button below chat input (next to send button area)
+- Click shows dropdown: "Upload new file" / "Link existing file"
+- "Upload new file": triggers existing upload + onboarding flow, then auto-links
+- "Link existing file": opens modal with user's file list, search, click to link
+- Linked files shown as horizontal strip above chat (or in right panel)
+- Each file pill: filename + (i) icon for context modal
+- Files can be unlinked (x button on pill)
+
+**Complexity:** MEDIUM -- UI components are straightforward, backend linking API is simple.
+
+### 4. Agent Pipeline Multi-File Support
+
+**What exists today:**
+- `ChatAgentState` has single `file_id`, `data_summary`, `data_profile`, `file_path`
+- `run_chat_query_stream` loads one file record
+- Sandbox receives one data file
+- Coding Agent prompt references "the dataset" (singular)
+- Thread ID: `file_{file_id}_user_{user_id}`
+
+**What needs to change:**
+- `ChatAgentState` extended: `file_ids: list[str]`, `file_paths: list[str]`, `data_summaries: list[str]`, `data_profiles: list[str]`
+- `run_chat_query_stream` loads all linked files for session
+- Sandbox receives multiple data files (one per linked file)
+- Coding Agent prompt updated: "You have access to the following datasets: df_1 (filename.csv): {summary}, df_2 (filename2.xlsx): {summary}"
+- Code generation must use named DataFrames (df_1, df_2, etc.) instead of single `df`
+- File loading code in sandbox prepends N DataFrame reads instead of one
+- Thread ID: `session_{session_id}`
+
+**Complexity:** HIGH -- touches the entire agent pipeline. Most complex feature in v0.3.
+
+### 5. "My Files" Management Screen
+
+**Industry pattern:**
+- Grid or list view of all files
+- Sort by: date uploaded, filename, file size, type
+- Actions per file: view context, start new chat, download, delete
+- Upload button (triggers existing upload flow)
+- File type icons (CSV, XLSX)
+- File size display (human-readable)
+- Empty state: "No files yet. Upload your first dataset."
+
+**Implementation for Spectra:**
+- New route: `/dashboard/files` (within dashboard layout)
+- Left sidebar "My Files" button navigates here
+- Reuses existing `FileService` APIs (already has list, delete)
+- New: "Start Chat" action creates session + links file + navigates to chat
+- Table view using existing `@tanstack/react-table` with columns: Name, Type, Size, Uploaded, Actions
+- Search/filter by filename
+
+**Complexity:** MEDIUM -- mostly frontend. Backend APIs largely exist.
 
 ---
 
-## User Journey Feature Mapping (v0.2 Enhancements)
+## Complexity Budget
 
-How v0.2 intelligence features enhance the v0.1 user workflow.
+| Feature Category | Estimated Complexity | Risk Level |
+|-----------------|---------------------|------------|
+| Data model migration (sessions, junction table) | HIGH | HIGH -- breaking change to existing schema |
+| Agent pipeline multi-file support | HIGH | HIGH -- touches entire AI pipeline |
+| Chat history sidebar | MEDIUM | LOW -- well-understood UI pattern |
+| File linking UX | MEDIUM | LOW -- straightforward UI |
+| "My Files" screen | MEDIUM | LOW -- reuses existing APIs |
+| File upload in chat (button + drag-drop) | MEDIUM | MEDIUM -- drag-drop edge cases |
+| Cross-file analysis | HIGH | HIGH -- prompt engineering, schema detection |
+| Right sidebar file panel | MEDIUM | LOW -- UI component work |
+| Light/dark mode | LOW | LOW -- Tailwind dark mode |
+| Session rename/delete | LOW | LOW -- CRUD operations |
 
-### Stage 1: Onboarding (First 5 Minutes)
+**Total budget estimate:** This is a significant milestone. The two HIGH-risk items (data model migration and agent pipeline multi-file support) are on the critical path and cannot be parallelized. Plan for these first, with generous time buffers.
 
-**v0.1 Flow:** Auth → Upload → Profiling → See AI summary
+---
 
-**v0.2 Enhancement:**
-- **Query suggestions appear immediately after profiling** — User sees "What you can ask" with 6 grouped suggestions (2 General Analysis, 2 Benchmarking, 2 Trend/Predictive). Reduces "blank page anxiety."
-- **Onboarding Agent uses configured LLM** — Enterprise can use cheap local Ollama model for profiling (cost control). Power users can use fast OpenRouter model (performance).
+## Competitive Landscape for These Features
 
-**Impact:** Faster time-to-first-query. User sees capabilities immediately via suggestions.
-
-### Stage 2: Exploration (First Session)
-
-**v0.1 Flow:** Query → Code Gen → Execute → Data Card → Repeat (each query independent, no context)
-
-**v0.2 Enhancement:**
-- **Session memory enables multi-turn conversations** — User asks "Show me sales by region." Then "Add a column for growth percentage." AI understands "the previous result" without re-explaining. Conversational intelligence.
-- **Web search for benchmarking** — User asks "How does my TikTok CTR compare to industry average?" Analyst agent searches web via Serper.dev, finds benchmarks, compares to user's data. Shows sources. **Unique capability vs competitors.**
-- **Different LLMs per agent** — Coding Agent uses powerful Claude Sonnet 4.5 (accuracy), Code Checker uses cheaper GPT-4o-mini (sufficient for validation). Cost optimized.
-
-**Impact:** 10x improvement in conversational flow. Benchmarking queries now possible (web search). Cost per query reduced (multi-LLM optimization).
-
-### Stage 3: Trust Building (First Week)
-
-**v0.1 Flow:** User verifies code, exports results, returns
-
-**v0.2 Enhancement:**
-- **Context window warnings** — User gets warning at 85% context consumption: "Your conversation is getting long. Continue (older messages will be removed) or start a new tab?" Transparent cost management.
-- **Web search sources displayed** — When AI uses web search, Data Card shows "Sources: [link1], [link2], [link3]." User verifies external data. Builds trust in benchmarking accuracy.
-- **LLM choice visibility** — User sees in settings: "Coding Agent: Claude Sonnet 4.5. Code Checker: GPT-4o-mini." Understands cost tradeoffs. Can switch to local Ollama for privacy-sensitive datasets.
-
-**Impact:** User trusts AI more (transparent sources, LLM choices visible). Understands cost model (context warnings, LLM per agent).
-
-### Stage 4: Habit Formation (First Month)
-
-**v0.1 Flow:** User returns for new analyses, uploads new files
-
-**v0.2 Enhancement:**
-- **Query suggestions guide repeat usage** — Each new file shows smart suggestions. User learns patterns ("Oh, I can ask for predictive analysis").
-- **Multi-LLM optimization becomes habit** — User switches to local Ollama for internal HR data (privacy). Uses OpenRouter DeepSeek for cheap exploratory queries, Claude for final reports. **Cost-conscious workflow.**
-- **Session memory reduces repetition** — User builds complex multi-step analyses in single tab. "Show sales. Now filter to Q4. Now add growth rate. Now compare to last year." Each step builds on previous. No re-uploading or re-explaining.
-
-**Impact:** User returns more frequently (lower friction via session memory + suggestions). Cost per session reduces (multi-LLM optimization). Differentiation becomes clear (no competitor offers this flexibility).
-
-### Stage 5: Advocacy (Ongoing)
-
-**v0.1 Flow:** User exports results, emails to team
-
-**v0.2 Enhancement:**
-- **Cost savings story** — User tells colleagues: "I used Spectra with local Ollama for HR data (privacy) and only paid for Claude when I needed complex analysis. Saved 60% vs ChatGPT Plus where every query uses GPT-4."
-- **Benchmarking capability story** — User tells colleagues: "Spectra found industry CTR benchmarks automatically and compared to our data. ChatGPT Code Interpreter can't do that."
-- **Flexibility story** — User tells colleagues: "I can switch to DeepSeek for coding tasks (cheaper) or Claude for reasoning. Not locked into OpenAI like ChatGPT."
-
-**Impact:** v0.2 creates **advocacy narratives** (cost savings, benchmarking, flexibility) that v0.1 lacked. Commercial differentiators become word-of-mouth drivers.
+| Feature | ChatGPT | Claude | Julius AI | Spectra v0.2 | Spectra v0.3 Target |
+|---------|---------|--------|-----------|---------------|-------------------|
+| Chat-session-centric | Yes | Yes | Yes | NO (file tabs) | Yes |
+| Multi-file per session | Yes (10/msg) | Yes (Projects) | Yes | NO | Yes |
+| Chat history sidebar | Yes (grouped) | Yes (grouped) | Limited | NO | Yes (grouped) |
+| Cross-file analysis | Yes (code interp) | Limited | Yes (merge/join) | NO | Partial (v0.3.1) |
+| File management screen | No (in-chat only) | No (Projects) | Limited | Sidebar list | Yes (dedicated) |
+| File context panel | No | Artifacts sidebar | Limited | Modal only | Right sidebar |
+| Drag-drop file in chat | Yes | Yes | Yes | NO | Yes |
+| Auto-title sessions | Yes | Yes | No | N/A | Yes |
+| Dark mode | Yes | Yes | Yes | NO | Yes |
 
 ---
 
 ## Sources
 
-### High Confidence (Official Documentation & 2026 Industry Reports)
+### High Confidence (Official docs, established patterns)
+- PatternFly Chatbot Conversation History: https://www.patternfly.org/patternfly-ai/chatbot/chatbot-conversation-history/
+- OpenAI File Uploads FAQ: https://help.openai.com/en/articles/8555545-file-uploads-faq
+- OpenAI UX Principles: https://developers.openai.com/apps-sdk/concepts/ux-principles/
+- LangGraph State Management: https://sparkco.ai/blog/mastering-langgraph-state-management-in-2025
 
-**AI Memory & Context:**
-- [AI Memory vs. Context Understanding: The Next Frontier for Enterprise AI](https://www.sphereinc.com/blogs/ai-memory-and-context/) - 2026 memory architecture trends
-- [The Death of Sessionless AI: How Conversation Memory Will Evolve from 2026–2030](https://medium.com/@aniruddhyak/the-death-of-sessionless-ai-how-conversation-memory-will-evolve-from-2026-2030-9afb9943bbb5) - 2026 as "Year of Context"
-- [Inside ChatGPT's Memory: How the Most Sophisticated Memory System in AI Really Works](https://medium.com/aimonks/inside-chatgpts-memory-how-the-most-sophisticated-memory-system-in-ai-really-works-f2b3f32d86b3) - ChatGPT memory implementation
-- [Context Engineering - Short-Term Memory Management with Sessions from OpenAI Agents SDK](https://cookbook.openai.com/examples/agents_sdk/session_memory) - Session memory patterns
-- [What Is AI Agent Memory? Types, Tradeoffs and Implementation](https://www.techtarget.com/searchenterpriseai/tip/What-is-AI-agent-memory-Types-tradeoffs-and-implementation) - Memory architecture tradeoffs
-- [Beyond Short-term Memory: The 3 Types of Long-term Memory AI Agents Need](https://machinelearningmastery.com/beyond-short-term-memory-the-3-types-of-long-term-memory-ai-agents-need/) - Memory types
-- [Memory overview - LangChain Docs](https://docs.langchain.com/oss/python/langgraph/memory) - LangChain memory implementation
+### Medium Confidence (Verified across multiple sources)
+- Julius AI multi-file analysis: https://julius.ai/articles/13-powerful-features-that-make-julius-ai-the-top-data-analysis-tool
+- Julius AI merge/join guide: https://julius.ai/guides/merging_datasets
+- ChatGPT file upload limits: https://www.datastudios.org/post/chatgpt-5-file-upload-limits-maximum-sizes-frequency-caps-and-plan-differences-in-late-2025
+- Cross-dataset merging challenges: https://dataladder.com/merging-data-from-multiple-sources/
+- AI integration across multiple data sources: https://medium.com/axel-springer-tech/ai-integration-across-multiple-data-sources-c8dbd84ffc4b
+- Conversational AI UI comparison: https://intuitionlabs.ai/articles/conversational-ai-ui-comparison-2025
+- Data table UX patterns: https://www.pencilandpaper.io/articles/ux-pattern-analysis-enterprise-data-tables
 
-**Context Management:**
-- [Context Management for Deep Agents](https://blog.langchain.com/context-management-for-deepagents/) - Advanced context strategies
-- [Context Window Management Strategies](https://apxml.com/courses/langchain-production-llm/chapter-3-advanced-memory-management/context-window-management) - Window management patterns
-- [LangChain Checkpointing Reference](https://reference.langchain.com/python/langgraph/checkpoints/) - PostgreSQL checkpointing
-
-**Query Suggestions & Analytics:**
-- [ThoughtSpot AI-suggested searches](https://docs.thoughtspot.com/cloud/latest/search-ai-suggested) - Industry implementation
-- [ThoughtSpot automates full platform with new Spotter agents](https://www.techtarget.com/searchbusinessanalytics/news/366636078/ThoughtSpot-automates-full-platform-with-new-Spotter-agents) - Spotter 3 capabilities (2026)
-- [Best Data Analysis Tools in 2026: Complete Comparison Guide](https://www.findanomaly.ai/best-data-analysis-tools-2026) - Industry landscape
-- [Data Analytics Trends to Watch in 2026](https://immsswd.github.io/portfolio/2025/11/22/data-analytics-trends-to-watch-in-2026/) - 40% NL query adoption
-
-**Web Search & Tools:**
-- [Serper - The World's Fastest and Cheapest Google Search API](https://serper.dev/) - Official docs (1-2s response, $1/1k queries)
-- [Serper - Google Search API - LangChain](https://python.langchain.com/docs/integrations/providers/google_serper/) - LangChain integration
-- [Node: Web Search Agent](https://ai-sdk.dev/cookbook/node/web-search-agent) - Implementation patterns
-- [7 Free Web Search APIs for AI Agents](https://www.kdnuggets.com/7-free-web-search-apis-for-ai-agents) - Alternatives comparison
-- [SerperDevWebSearch | Haystack Documentation](https://docs.haystack.deepset.ai/docs/serperdevwebsearch) - Haystack integration example
-
-**Multi-LLM & Providers:**
-- [Run Claude Code with Local & Cloud Models in 5 Minutes (Ollama, LM Studio, llama.cpp, OpenRouter)](https://medium.com/@luongnv89/run-claude-code-on-local-cloud-models-in-5-minutes-ollama-openrouter-llama-cpp-6dfeaee03cda) - 2026 multi-LLM setup
-- [Provider Routing | OpenRouter Documentation](https://openrouter.ai/docs/guides/routing/provider-selection) - OpenRouter routing
-- [A practical guide to OpenRouter: Unified LLM APIs, model routing, and real-world use](https://medium.com/@milesk_33/a-practical-guide-to-openrouter-unified-llm-apis-model-routing-and-real-world-use-d3c4c07ed170) - OpenRouter patterns
-- [Creating Free, Local AI Agents with OpenRouter, Ollama, and CrewAI](https://spr.com/free-local-ai-agents-with-openrouter-ollama-and-crewai/) - Combined usage pattern
-- [Compare Ollama vs. OpenRouter in 2026](https://slashdot.org/software/comparison/Ollama-vs-OpenRouter/) - Comparison
-
-**Competitive Analysis:**
-- [Julius AI vs ChatGPT: I Found the Clear Winner for 2026](https://dhruvirzala.com/julius-ai-vs-chatgpt/) - Feature comparison
-- [Julius AI vs. ChatGPT: What's Better for Data Analysis and You?](https://julius.ai/articles/julius-ai-vs-chatgpt) - Official comparison
-- [ChatGPT data analysis vs Julius AI: a side-by-side comparison for 2025](https://deepnote.com/compare/chatgpt-vs-juliusai) - Detailed feature matrix
-- [DataChat](https://datachat.ai/) - Transparency focus ("documents every step")
-- [2026 Analytics Trends: Beware the Growing Gap Between AI and Action](https://www.blastx.com/insights/2026-analytics-trends-beware-gap-between-ai-and-action) - Market analysis
-
-### Medium Confidence (Industry Analysis, Multiple Sources)
-
-- Session-based vs persistent memory tradeoffs: Multiple sources agree session memory avoids pollution, but single-source details on performance metrics
-- 40% NL query adoption: Cited by multiple 2026 trend reports, but original research not linked
-- Multi-LLM cost savings: Anecdotal (blogs, case studies) rather than rigorous benchmarks
-- Query suggestion effectiveness: ThoughtSpot validates pattern, but ROI metrics not public
-- Serper.dev performance claims: Official documentation (1-2s), but third-party benchmarks not found
-
-### Low Confidence (Requires Validation)
-
-- Specific multi-LLM cost savings percentages (60-80% savings claims): Anecdotal, needs validation with actual Spectra usage
-- Data-aware suggestion implementation complexity: Estimated HIGH based on domain intelligence requirements, but not validated
-- Context pollution complaints from ChatGPT users: Referenced in blogs, but quantitative data not available
-- Web search benchmarking use case frequency: Assumed common based on user stories, but not validated with data
-
----
-
-*Feature research for: Spectra v0.2 Intelligence & Integration*
-*Researched: 2026-02-06*
-*Confidence: MEDIUM-HIGH - Cross-referenced 35+ sources from 2025-2026. HIGH confidence on memory/multi-LLM/web search patterns (official docs, multiple sources). MEDIUM confidence on commercial impact claims (anecdotal, needs validation). Recommendations based on validated industry patterns + competitive gaps.*
+### Low Confidence (Single-source, verify during implementation)
+- AI UX of analytics (GoodData): https://www.gooddata.com/blog/ux-of-ai-data-analytics/
+- Chat UI design trends: https://multitaskai.com/blog/chat-ui-design/
+- Session management for AI apps: https://medium.com/@aslam.develop912/master-session-management-for-ai-apps-a-practical-guide-with-backend-frontend-code-examples-cb36c676ea77

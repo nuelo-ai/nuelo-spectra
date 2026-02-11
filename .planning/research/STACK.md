@@ -1,487 +1,506 @@
-# Stack Research: v0.2 Intelligence & Integration
+# Technology Stack: v0.3 Multi-File Conversation Support
 
-**Domain:** AI-powered data analytics platform (LangGraph agent enhancements)
-**Researched:** 2026-02-06
-**Confidence:** HIGH
+**Project:** Spectra - AI-powered data analytics platform
+**Researched:** 2026-02-11
+**Confidence:** HIGH (existing stack validated in production, additions are well-understood patterns)
 
 ## Overview
 
-This research focuses on stack additions needed for v0.2 features. The existing stack (FastAPI, PostgreSQL, LangGraph, LangChain, E2B, Next.js) is validated and remains unchanged. We're adding:
+This research focuses exclusively on stack changes needed for v0.3 multi-file conversation support. The existing stack (FastAPI, PostgreSQL, SQLAlchemy, LangGraph, E2B, Next.js 16, React 19, TanStack Query, shadcn/ui, Zustand) is validated and unchanged. The v0.3 transformation is primarily **architectural and schema-level** -- not a library addition problem.
 
-1. **Memory persistence** - Fix PostgreSQL checkpointing for conversation context
-2. **Multi-LLM providers** - Support Ollama (local/remote) and OpenRouter (gateway)
-3. **Per-agent LLM config** - Different models for different agents
-4. **Web search tool** - Serper.dev integration for Analyst agent
-5. **Production SMTP** - Replace Mailgun API with standard SMTP
+Key insight: **v0.3 requires zero new backend dependencies and minimal frontend additions.** The transformation is about restructuring data models, API routes, frontend navigation, and agent state -- all achievable with the existing stack.
+
+## What Changes (and What Does Not)
+
+### Does NOT Change
+- FastAPI backend framework
+- PostgreSQL database
+- SQLAlchemy ORM
+- Alembic migrations
+- LangGraph agent orchestration
+- E2B sandbox execution
+- All 5 LLM providers
+- Next.js 16 / React 19 / TanStack Query
+- JWT authentication
+- SSE streaming
+- Tailwind CSS 4
+
+### Changes Required
+
+| Layer | What Changes | Why |
+|-------|-------------|-----|
+| Database schema | New `chat_sessions` table, new `session_files` junction table, `chat_messages.file_id` becomes nullable + add `session_id` | Chat sessions become first-class entities decoupled from files |
+| Backend API routes | New `/sessions/*` router, modify `/chat/*` to use session_id, new file-linking endpoints | Chat-centric API replacing file-centric API |
+| LangGraph state | `ChatAgentState` gains multi-file fields (`file_ids`, `data_summaries`, `file_paths`), thread_id changes from `file_{id}_user_{id}` to `session_{id}` | Agent must reference multiple files in one conversation |
+| Frontend state | Replace `tabStore` with `sessionStore`, new `chatSessionStore` for sidebar navigation | Chat-session-centric navigation replacing file-tab-centric |
+| Frontend layout | Replace `FileSidebar` with chat history sidebar, add right panel for linked files, new "My Files" page | ChatGPT-style layout |
+| Frontend components | New shadcn/ui components: `sidebar`, `resizable`, `sheet` | Collapsible sidebar, resizable panels, file context panel |
+
+---
 
 ## Recommended Stack Additions
 
-### Memory Persistence
+### Frontend: shadcn/ui Components (3 new components)
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| langgraph-checkpoint-postgres | 3.0.4+ | Async PostgreSQL checkpointing for LangGraph | Official LangGraph persistence layer. v3.0.4 (Jan 31, 2026) fixes async issues. Uses psycopg3 with proper async support. Already in pyproject.toml at v2.0.0 - needs upgrade. |
-| psycopg[binary] | 3.3+ | PostgreSQL async driver (required by checkpoint lib) | Required dependency for AsyncPostgresSaver. Faster than pure-Python version. Binary wheels available for easy install. |
+| Component | Install Command | Purpose | Why Needed |
+|-----------|----------------|---------|------------|
+| Sidebar | `npx shadcn@latest add sidebar` | Collapsible left sidebar with chat history + "My Files" navigation | shadcn/ui's official Sidebar component provides SidebarProvider, collapsible state, cookie persistence, keyboard shortcuts, and mobile responsiveness out of the box. The current `FileSidebar` is a custom div -- this replaces it with a proper composable sidebar. |
+| Resizable | `npx shadcn@latest add resizable` | Three-panel layout: left sidebar + main chat + right file context panel | Built on react-resizable-panels v4.5.0. Provides ResizablePanelGroup, ResizablePanel, ResizableHandle with drag mechanics, keyboard accessibility, min/max constraints, and layout persistence. Essential for the right sidebar file context panel that users can resize. |
+| Sheet | `npx shadcn@latest add sheet` | Mobile-friendly slide-over panel for file context on small screens | Extends Dialog to display content as a side panel. Used as a responsive fallback -- on desktop the file context panel is a resizable panel, on mobile it becomes a Sheet slide-over. Also useful for file selection modals. |
 
-**Rationale:** v0.1 disabled PostgreSQL checkpointing due to async compatibility issues. LangGraph's AsyncPostgresSaver (v3.0+) properly supports async/await patterns with FastAPI. The key is using `autocommit=True` and `row_factory=dict_row` when creating connections manually. This enables conversation memory across sessions within the same thread (chat tab).
+**Rationale for shadcn/ui Sidebar over custom div:** The current `FileSidebar` is a plain 260px div. The v0.3 sidebar is more complex: it needs collapsible state, "New Chat" button, grouped chat history (Today/Yesterday/This Week), "My Files" navigation item, and responsive behavior. shadcn/ui's Sidebar component handles all of this with cookie-based state persistence and accessible keyboard navigation.
 
-**Integration point:** Graph compilation with `checkpointer=AsyncPostgresSaver(...)`. Threads map to chat tabs (thread_id = chat_id). Closing tab clears thread.
+**Rationale for Resizable over fixed layout:** The v0.3 layout has three regions (left sidebar, main chat, right file panel). Fixed widths waste space on large screens and break on small ones. react-resizable-panels provides drag handles, min/max constraints, and persists user-preferred sizes via localStorage.
 
-### Multi-LLM Provider Support
+### Frontend: No New npm Dependencies Required
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| langchain-ollama | 1.0.1+ | Official Ollama integration for LangChain | Official LangChain package (Dec 2025). Supports ChatOllama with streaming, tool binding, multi-modal. Works with local (http://localhost:11434) or remote Ollama instances. |
-| ollama | 0.6.1+ | Python client for Ollama API (optional) | Useful for model management (pull, list, delete) outside LangChain. Not required if only using ChatOllama for inference. |
-| langchain-openai | (existing) | OpenRouter integration via OpenAI-compatible API | Already installed. OpenRouter implements OpenAI-compatible API. Use ChatOpenAI with `base_url="https://openrouter.ai/api/v1"`. |
+The resizable panels library (`react-resizable-panels`) is automatically installed by `npx shadcn@latest add resizable`. No manual npm install needed beyond the shadcn CLI commands above.
 
-**Rationale:**
-- **Ollama** enables cost-effective local models (DeepSeek-R1, Llama, Qwen) and remote Ollama servers. ChatOllama from langchain-ollama provides native LangChain integration.
-- **OpenRouter** acts as gateway to 100+ models (Claude, GPT, Gemini, DeepSeek via API). Uses existing langchain-openai with custom base_url - no new dependencies needed.
+**What about Zustand?** Already installed (v5.0.11). The `persist` middleware (from `zustand/middleware`) will be used for the new session store to persist the active session ID across page reloads. No version change needed.
 
-**Integration point:** Agent configuration in YAML. Each agent specifies provider (anthropic/openai/ollama/openrouter) and model. LangGraph nodes instantiate appropriate ChatModel based on config.
+**What about next-themes?** Already installed (v0.4.6). Supports the light/dark mode toggle requirement.
 
-### Web Search Tool
+**What about date formatting for chat history grouping?** Use native `Intl.RelativeTimeFormat` and `Date` methods. No date-fns or dayjs needed for simple "Today/Yesterday/This Week" grouping.
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| langchain-community | 0.4.1+ | Provides GoogleSerperAPIWrapper for Serper.dev | Official LangChain community integrations. Includes Serper tool via `load_tools(["google-serper"])`. Well-maintained, 2500 free searches on Serper.dev. |
+---
 
-**Rationale:** Serper.dev is fast, cheap Google Search API ($0.001/search vs $0.002+ for SerpAPI). LangChain has native integration via GoogleSerperAPIWrapper. Returns answer boxes, knowledge graphs, organic results. Perfect for Analyst agent benchmarking queries ("compare my sales to industry average").
+## Backend: No New Dependencies Required
 
-**Integration point:** Tool binding on Analyst agent node. Set `SERPER_API_KEY` env var. Agent automatically uses tool when query requires external data.
+### Database Schema Changes (SQLAlchemy + Alembic)
 
-### Production SMTP
+All schema changes use existing SQLAlchemy ORM and Alembic migrations. No new packages needed.
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| aiosmtplib | 5.1.0+ | Async SMTP client for Python | Production-stable (Jan 25, 2026), zero dependencies, Python 3.10+. Native async/await for FastAPI. More explicit control than fastapi-mail wrapper. |
-| jinja2 | 3.1+ | Email template rendering | Industry standard for Python templating. Already used in LangChain/LangGraph config. Simple, fast, well-documented. |
-
-**Rationale:**
-- **aiosmtplib** provides direct async SMTP control. Simpler than fastapi-mail (which wraps aiosmtplib anyway). Production-ready (v5.x), MIT license, comprehensive typing.
-- **Jinja2** already in ecosystem (LangChain dependency). Familiar template syntax for HTML emails.
-- **Why not fastapi-mail?** Adds unnecessary abstraction. We only need password reset emails - aiosmtplib + jinja2 is lighter and more maintainable.
-
-**Integration point:** SMTP config in settings (host, port, username, password, use_tls). Jinja2 templates in `backend/app/templates/emails/`. Helper function `send_email(to, subject, template, context)`.
-
-## Supporting Libraries
-
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| psycopg[binary] | 3.3+ | PostgreSQL driver for checkpoint persistence | Required by langgraph-checkpoint-postgres. Install with binary wheels for performance. |
-| httpx | 0.27+ (existing) | HTTP client for API calls | Already installed. Used for Serper.dev API if needed outside LangChain wrapper. |
-| pyyaml | 6.0+ (existing) | YAML config parsing | Already installed. Used for agent LLM configuration files. |
-
-## Installation
-
-```bash
-# Memory persistence (upgrade existing)
-pip install --upgrade langgraph-checkpoint-postgres>=3.0.4
-pip install psycopg[binary]>=3.3
-
-# Multi-LLM providers
-pip install langchain-ollama>=1.0.1
-pip install ollama>=0.6.1  # Optional, for model management
-
-# Web search tool
-pip install langchain-community>=0.4.1
-
-# Production SMTP
-pip install aiosmtplib>=5.1.0
-pip install jinja2>=3.1.0  # May already be installed via dependencies
-```
-
-## Alternatives Considered
-
-| Recommended | Alternative | When to Use Alternative |
-|-------------|-------------|-------------------------|
-| AsyncPostgresSaver | Redis checkpointing (langgraph-checkpoint-redis) | If needing <1ms read/write latency or cross-process state sharing. Overkill for single-server deployment. |
-| AsyncPostgresSaver | InMemorySaver | Development/testing only. State lost on restart. Not for production. |
-| langchain-ollama | Direct Ollama REST API | If avoiding LangChain abstractions. Loses tool binding, streaming support. |
-| OpenRouter via ChatOpenAI | Individual provider packages (langchain-google-genai, etc) | If using only one provider. OpenRouter gives flexibility without package sprawl. |
-| aiosmtplib | fastapi-mail | If needing bulk emails, attachments, complex templates. Too heavy for password resets. |
-| aiosmtplib | smtplib (sync) | Never. FastAPI is async - sync SMTP blocks event loop. |
-| Serper.dev | SerpAPI | If needing advanced features (location-based, images). More expensive ($0.002+/search). |
-
-## What NOT to Use
-
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| langgraph-checkpoint-postgres v2.0.x | Async compatibility issues in v2.x (reported in v0.1). Known bugs with connection handling. | langgraph-checkpoint-postgres v3.0.4+. Fixed in v3.x releases. |
-| smtplib (synchronous) | Blocks FastAPI async event loop. Causes performance degradation under load. | aiosmtplib for proper async support. |
-| InMemorySaver in production | State lost on server restart. No conversation persistence. | AsyncPostgresSaver with PostgreSQL. |
-| langchain-community chat models | Deprecated in favor of dedicated packages (langchain-ollama, etc). | Use official provider packages. |
-| Custom Serper HTTP client | Reinventing the wheel. LangChain integration handles errors, retries, parsing. | GoogleSerperAPIWrapper from langchain-community. |
-
-## Configuration Patterns
-
-### Memory Persistence Pattern
+**New model: `ChatSession`**
 
 ```python
-from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from psycopg import AsyncConnection
-from psycopg.rows import dict_row
+# backend/app/models/chat_session.py
+class ChatSession(Base):
+    __tablename__ = "chat_sessions"
 
-# Create checkpointer with connection pool
-async with await AsyncConnection.connect(
-    DATABASE_URL,
-    autocommit=True,
-    row_factory=dict_row
-) as conn:
-    checkpointer = AsyncPostgresSaver(conn)
-    await checkpointer.setup()  # Create tables on first run
-
-    # Compile graph with checkpointer
-    graph = workflow.compile(checkpointer=checkpointer)
-
-    # Use thread_id for session persistence
-    config = {"configurable": {"thread_id": chat_tab_id}}
-    result = await graph.ainvoke(input, config=config)
-```
-
-### Per-Agent LLM Configuration Pattern
-
-```yaml
-# config/agents.yaml
-agents:
-  coding_agent:
-    provider: anthropic
-    model: claude-sonnet-4.5-20250929
-    temperature: 0.0
-
-  code_checker_agent:
-    provider: openai
-    model: gpt-4o
-    temperature: 0.0
-
-  analysis_agent:
-    provider: openrouter
-    model: anthropic/claude-3.7-sonnet
-    temperature: 0.3
-
-  onboarding_agent:
-    provider: ollama
-    model: deepseek-r1:8b
-    base_url: http://localhost:11434  # or remote Ollama server
-    temperature: 0.5
-```
-
-```python
-# In agent node function
-from langchain_anthropic import ChatAnthropic
-from langchain_openai import ChatOpenAI
-from langchain_ollama import ChatOllama
-
-def create_llm(config: dict):
-    """Factory function to create LLM based on config"""
-    provider = config["provider"]
-
-    if provider == "anthropic":
-        return ChatAnthropic(model=config["model"], temperature=config["temperature"])
-    elif provider == "openai":
-        return ChatOpenAI(model=config["model"], temperature=config["temperature"])
-    elif provider == "openrouter":
-        return ChatOpenAI(
-            model=config["model"],
-            base_url="https://openrouter.ai/api/v1",
-            api_key=os.getenv("OPENROUTER_API_KEY"),
-            temperature=config["temperature"]
-        )
-    elif provider == "ollama":
-        return ChatOllama(
-            model=config["model"],
-            base_url=config.get("base_url", "http://localhost:11434"),
-            temperature=config["temperature"]
-        )
-```
-
-### Web Search Tool Pattern
-
-```python
-from langchain_community.utilities import GoogleSerperAPIWrapper
-from langchain_community.agent_toolkits import load_tools
-
-# Option 1: Direct wrapper
-search = GoogleSerperAPIWrapper()
-results = await search.arun("industry average conversion rate for e-commerce 2026")
-
-# Option 2: As agent tool
-tools = load_tools(["google-serper"])  # Requires SERPER_API_KEY env var
-analyst_llm = ChatAnthropic(model="claude-sonnet-4.5").bind_tools(tools)
-```
-
-### SMTP Email Pattern
-
-```python
-import aiosmtplib
-from jinja2 import Environment, FileSystemLoader
-from email.message import EmailMessage
-
-async def send_email(to: str, subject: str, template: str, context: dict):
-    """Send HTML email using SMTP"""
-    # Load template
-    env = Environment(loader=FileSystemLoader("app/templates/emails"))
-    template_obj = env.get_template(f"{template}.html")
-    html_content = template_obj.render(**context)
-
-    # Create message
-    message = EmailMessage()
-    message["From"] = settings.SMTP_FROM
-    message["To"] = to
-    message["Subject"] = subject
-    message.set_content(html_content, subtype="html")
-
-    # Send via SMTP
-    await aiosmtplib.send(
-        message,
-        hostname=settings.SMTP_HOST,
-        port=settings.SMTP_PORT,
-        username=settings.SMTP_USERNAME,
-        password=settings.SMTP_PASSWORD,
-        use_tls=settings.SMTP_USE_TLS
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc)
     )
 
-# Usage
-await send_email(
-    to="user@example.com",
-    subject="Reset Your Password",
-    template="reset_password",
-    context={"reset_link": "https://app.com/reset?token=..."}
+    # Relationships
+    user: Mapped["User"] = relationship(back_populates="chat_sessions")
+    files: Mapped[list["File"]] = relationship(
+        secondary="session_files", back_populates="sessions"
+    )
+    messages: Mapped[list["ChatMessage"]] = relationship(
+        back_populates="session", cascade="all, delete-orphan"
+    )
+```
+
+**New association table: `session_files`**
+
+```python
+# backend/app/models/session_file.py
+session_files = Table(
+    "session_files",
+    Base.metadata,
+    Column("session_id", ForeignKey("chat_sessions.id", ondelete="CASCADE"), primary_key=True),
+    Column("file_id", ForeignKey("files.id", ondelete="CASCADE"), primary_key=True),
+    Column("linked_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
 )
 ```
 
-## Version Compatibility
+**Why `secondary` Table (not Association Object):** The session-file relationship only needs the link itself plus a timestamp. No additional columns (like "role" or "order") are needed. SQLAlchemy's `secondary` pattern handles INSERT/DELETE automatically when objects are added/removed from the collection. If we later need ordering, we can add a `position` column and migrate to an Association Object pattern.
 
-| Package | Compatible With | Notes |
-|---------|-----------------|-------|
-| langgraph-checkpoint-postgres 3.0.4 | langgraph>=1.0.7, psycopg>=3.3 | Requires psycopg3 (not psycopg2). Use binary wheels for performance. |
-| langchain-ollama 1.0.1 | langchain-core>=0.3.0, Python 3.10+ | Works with existing LangChain ecosystem. |
-| langchain-community 0.4.1 | langchain-core>=0.3.0 | May have breaking changes on minor releases (0.x series). Pin versions. |
-| aiosmtplib 5.1.0 | Python 3.10+ | Zero dependencies. Production-stable (5.x). |
-| psycopg[binary] 3.3 | PostgreSQL 9.5-18, Python 3.9+ | Binary wheels for Linux/macOS/Windows. Faster than pure-Python. |
+**Modified model: `ChatMessage`**
 
-**Critical compatibility notes:**
+```python
+# Modify existing chat_message.py
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
 
-1. **PostgreSQL checkpointing:** langgraph-checkpoint-postgres v3.0+ requires psycopg3 (not psycopg2 or asyncpg). The existing `asyncpg>=0.29.0` in pyproject.toml is used by SQLAlchemy, not by checkpointer. Both can coexist.
+    # ... existing fields ...
+    session_id: Mapped[UUID] = mapped_column(
+        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
+        index=True, nullable=False
+    )
+    file_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("files.id", ondelete="SET NULL"),
+        index=True, nullable=True  # Changed from NOT NULL
+    )
+    # file_id becomes nullable because messages belong to sessions,
+    # not files. A message may reference no specific file (general chat).
 
-2. **Python version:** aiosmtplib requires Python 3.10+. Existing requirement is `>=3.12`, so no conflict.
+    # New relationship
+    session: Mapped["ChatSession"] = relationship(back_populates="messages")
+```
 
-3. **LangChain ecosystem:** All LangChain packages (langchain-ollama, langchain-community, langchain-anthropic, langchain-openai) work with langchain-core>=0.3.0 (currently installed).
+### API Route Changes (FastAPI)
 
-4. **Ollama server:** langchain-ollama client is independent of Ollama server version. Ollama server must be installed separately (not a Python package).
+No new packages. New router file + modifications to existing routers.
 
-## Environment Variables Required
+**New router: `backend/app/routers/sessions.py`**
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `POST /sessions/` | Create | Create new chat session (optionally with file_ids) |
+| `GET /sessions/` | List | List user's chat sessions (for sidebar, ordered by updated_at desc) |
+| `GET /sessions/{session_id}` | Detail | Get session with linked files |
+| `DELETE /sessions/{session_id}` | Delete | Delete session and all its messages |
+| `PATCH /sessions/{session_id}` | Update | Update session title |
+| `POST /sessions/{session_id}/files` | Link | Link existing file(s) to session |
+| `DELETE /sessions/{session_id}/files/{file_id}` | Unlink | Remove file from session |
+
+**Modified router: `backend/app/routers/chat.py`**
+
+| Current | New | Change |
+|---------|-----|--------|
+| `GET /chat/{file_id}/messages` | `GET /chat/{session_id}/messages` | Key lookup changes from file_id to session_id |
+| `POST /chat/{file_id}/stream` | `POST /chat/{session_id}/stream` | Stream queries now scoped to session |
+| `GET /chat/{file_id}/context-usage` | `GET /chat/{session_id}/context-usage` | Context is per-session |
+| `POST /chat/{file_id}/trim-context` | `POST /chat/{session_id}/trim-context` | Trim is per-session |
+
+### LangGraph State Changes
+
+No new packages. Modify `ChatAgentState` and `agent_service.py`.
+
+**Modified state: `ChatAgentState`**
+
+```python
+class ChatAgentState(TypedDict):
+    # CHANGED: single file_id -> list of file_ids
+    file_ids: list[str]          # Was: file_id: str
+    file_paths: list[str]        # Was: file_path: str
+    data_summaries: list[str]    # Was: data_summary: str
+    data_profiles: list[str]     # Was: data_profile: str
+    user_contexts: list[str]     # Was: user_context: str
+
+    # CHANGED: session-based thread ID
+    session_id: str              # New: replaces implicit file-based thread_id
+
+    # UNCHANGED: all other fields remain the same
+    user_id: str
+    user_query: str
+    generated_code: str
+    # ... rest unchanged ...
+```
+
+**Thread ID change:**
+```python
+# v0.2 (current):
+thread_id = f"file_{file_id}_user_{user_id}"
+
+# v0.3 (new):
+thread_id = f"session_{session_id}"
+```
+
+**Agent prompt changes:** The Coding Agent and Data Analysis Agent prompts must be updated to receive context from multiple files. The prompt template will iterate over all linked files' summaries and profiles.
+
+**Execution changes:** The `execute_in_sandbox` node currently uploads one file. For multi-file, it must upload all linked files to the E2B sandbox. The coding agent's file-loading preamble must reference all files.
+
+### Migration Strategy (Alembic)
+
+Single Alembic migration with the following operations:
+
+1. Create `chat_sessions` table
+2. Create `session_files` junction table
+3. Add `session_id` column to `chat_messages` (nullable initially)
+4. Data migration: For each existing (user_id, file_id) pair in chat_messages, create a ChatSession and link the file
+5. Set `session_id` NOT NULL after data migration
+6. Make `chat_messages.file_id` nullable
+7. Change `chat_messages.file_id` ondelete from CASCADE to SET NULL
+
+---
+
+## Frontend Architecture Changes
+
+### State Management (Zustand)
+
+**Replace `tabStore.ts` with `sessionStore.ts`:**
+
+```typescript
+// stores/sessionStore.ts
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+
+interface SessionStore {
+  activeSessionId: string | null;
+  setActiveSession: (sessionId: string | null) => void;
+}
+
+export const useSessionStore = create<SessionStore>()(
+  persist(
+    (set) => ({
+      activeSessionId: null,
+      setActiveSession: (sessionId) => set({ activeSessionId: sessionId }),
+    }),
+    { name: "spectra-session" }
+  )
+);
+```
+
+**Why persist middleware?** Unlike tabs (ephemeral), the active session should survive page reloads. User expects to return to their last conversation. Cookie-based persistence (via shadcn Sidebar's built-in mechanism) handles sidebar collapse state; localStorage (via Zustand persist) handles active session ID.
+
+### TanStack Query Keys
+
+```typescript
+// New query key patterns:
+["sessions"]                          // List all sessions
+["sessions", sessionId]               // Single session detail
+["sessions", sessionId, "files"]      // Files linked to session
+["chat", "messages", sessionId]       // Messages for session (was fileId)
+["files"]                             // All user files (unchanged)
+["files", fileId, "summary"]          // File summary (unchanged)
+```
+
+### Routing (Next.js App Router)
+
+```
+Current:
+  /dashboard                         -> DashboardPage (tab-based)
+
+v0.3:
+  /dashboard                         -> New chat (empty state with greeting)
+  /dashboard/chat/[sessionId]        -> Chat session view
+  /dashboard/files                   -> My Files management page
+```
+
+**Why dynamic routes for sessions?** Enables direct linking to conversations (shareable URLs later), browser back/forward navigation between sessions, and page-level code splitting. The current approach of switching state within a single page breaks browser navigation expectations.
+
+### Component Tree (New Layout)
+
+```
+DashboardLayout
+  +-- SidebarProvider (shadcn/ui)
+  |   +-- AppSidebar (left)
+  |   |   +-- SidebarHeader: "Spectra" logo + "New Chat" button
+  |   |   +-- SidebarContent
+  |   |   |   +-- SidebarGroup: "Chat History"
+  |   |   |   |   +-- ChatHistoryList (grouped by Today/Yesterday/This Week)
+  |   |   |   +-- SidebarGroup: "Navigation"
+  |   |   |       +-- "My Files" nav item
+  |   |   +-- SidebarFooter: User menu
+  |   +-- SidebarInset (main content)
+  |       +-- ResizablePanelGroup (horizontal)
+  |           +-- ResizablePanel (main chat area)
+  |           |   +-- ChatInterface (modified for session-centric)
+  |           +-- ResizableHandle
+  |           +-- ResizablePanel (right sidebar: linked files)
+  |               +-- LinkedFilesPanel
+  |                   +-- FileChip per linked file
+  |                   +-- "Add File" button
+  |                   +-- FileContextDrawer (expandable per file)
+```
+
+---
+
+## Supporting Libraries (Already Installed)
+
+| Library | Current Version | Role in v0.3 | Notes |
+|---------|----------------|--------------|-------|
+| `zustand` | ^5.0.11 | Session store with `persist` middleware | No change needed. Persist middleware built-in. |
+| `@tanstack/react-query` | ^5.90.20 | Session queries, file queries, message queries | No change needed. New query keys for sessions. |
+| `radix-ui` | ^1.4.3 | Primitives for new shadcn components (sidebar, resizable, sheet) | Already using unified package. New components auto-import from it. |
+| `lucide-react` | ^0.563.0 | Icons for sidebar, file chips, navigation | New icons: `MessageSquare`, `FolderOpen`, `Link`, `Plus`, `PanelRightOpen` |
+| `next-themes` | ^0.4.6 | Light/dark mode toggle | Already installed. Wire into sidebar footer settings. |
+| `sonner` | ^2.0.7 | Toast notifications for file link/unlink actions | Already installed. No change needed. |
+| `react-dropzone` | ^14.4.0 | File upload (drag & drop in chat + My Files page) | Already installed. Reuse `FileUploadZone` component. |
+| `class-variance-authority` | ^0.7.1 | Variant styling for new components | Already installed. Used by shadcn/ui components. |
+
+---
+
+## Alternatives Considered
+
+| Category | Recommended | Alternative | Why Not Alternative |
+|----------|-------------|-------------|---------------------|
+| Left sidebar | shadcn/ui Sidebar | Custom div (current approach) | Current FileSidebar is a plain div with no collapse, no responsive behavior, no keyboard shortcuts. shadcn Sidebar provides all of these plus cookie state persistence. |
+| Right panel | shadcn/ui Resizable + Panel | Fixed-width div | Users need control over panel width. Fixed layout wastes space on wide screens. Resizable is more professional. |
+| Right panel (mobile) | shadcn/ui Sheet | Always-visible panel | On mobile, a fixed right panel would leave no room for chat. Sheet slides over as needed. |
+| Session state | Zustand persist | URL-only (no store) | Active session ID in URL handles routing, but sidebar highlight state, collapse state, etc. benefit from Zustand. Both are needed: URL for routing, Zustand for UI state. |
+| Chat history grouping | Native Intl.RelativeTimeFormat | date-fns / dayjs | "Today", "Yesterday", "This Week" grouping is 10 lines of native JS. No dependency needed for this. |
+| File-session relationship | SQLAlchemy secondary table | Association Object | No extra columns needed beyond FK pair + timestamp. secondary is simpler and auto-manages inserts/deletes. |
+| Chat session routing | Dynamic routes `/chat/[sessionId]` | Client-side state switching | Dynamic routes enable browser back/forward, deep linking, and page-level code splitting. State switching (current tab approach) breaks navigation. |
+
+---
+
+## What NOT to Add
+
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| `react-sidebar` or similar npm package | shadcn/ui Sidebar covers all needs natively with Radix primitives | `npx shadcn@latest add sidebar` |
+| `date-fns` or `dayjs` | Only need simple date grouping (Today/Yesterday/etc.) | Native `Intl.RelativeTimeFormat` + `Date` |
+| `react-dnd` or drag-and-drop library | No drag reordering of files or sessions in v0.3 requirements | Not needed |
+| `socket.io` or WebSocket library | SSE streaming (existing) handles all real-time needs | Existing `sse-starlette` + `useSSEStream` hook |
+| `react-router` | Next.js App Router handles all routing | Next.js built-in routing |
+| Additional ORM library | SQLAlchemy 2.0 handles all new models/relationships | Existing SQLAlchemy |
+| Redis for session state | PostgreSQL checkpointing + Zustand persist handle everything | Existing AsyncPostgresSaver + Zustand |
+| `@tanstack/react-virtual` | Chat message lists won't be long enough to need virtualization in v0.3 | Standard scroll. Reconsider if sessions exceed 500+ messages. |
+
+---
+
+## Installation
+
+### Frontend (3 shadcn/ui components)
 
 ```bash
-# Memory persistence (existing PostgreSQL)
-DATABASE_URL=postgresql+asyncpg://user:pass@localhost/spectra
-
-# Multi-LLM providers
-ANTHROPIC_API_KEY=sk-ant-...  # Existing
-OPENAI_API_KEY=sk-...  # Existing
-OPENROUTER_API_KEY=sk-or-...  # New
-OLLAMA_BASE_URL=http://localhost:11434  # Optional, defaults to localhost
-
-# Web search
-SERPER_API_KEY=...  # Get from serper.dev (2500 free credits)
-
-# SMTP email
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USERNAME=noreply@spectra.com
-SMTP_PASSWORD=...
-SMTP_FROM=Spectra <noreply@spectra.com>
-SMTP_USE_TLS=true
+cd frontend
+npx shadcn@latest add sidebar
+npx shadcn@latest add resizable
+npx shadcn@latest add sheet
 ```
 
-## Migration from v0.1
+These commands will:
+1. Add component files to `src/components/ui/`
+2. Install `react-resizable-panels` as a dependency (for Resizable)
+3. No other npm dependencies added
 
-### Memory Persistence
+### Backend (no new packages)
 
-**v0.1 state:** PostgreSQL checkpointing disabled in code due to async issues.
-
-**v0.2 changes:**
-1. Upgrade `langgraph-checkpoint-postgres` from 2.0.0 to 3.0.4
-2. Add `psycopg[binary]>=3.3`
-3. Enable checkpointing with `AsyncPostgresSaver`
-4. Map thread_id to chat_tab_id for session persistence
-5. Clear thread when tab closes (warn user before closing)
-
-**No database migration needed.** AsyncPostgresSaver creates its own tables (checkpoints, checkpoint_writes).
-
-### Multi-LLM Providers
-
-**v0.1 state:** Single provider per environment (ANTHROPIC_API_KEY or OPENAI_API_KEY).
-
-**v0.2 changes:**
-1. Add `langchain-ollama>=1.0.1`
-2. Move LLM config from env vars to YAML
-3. Implement LLM factory function (`create_llm(config)`)
-4. Update each agent node to load config and create appropriate ChatModel
-
-**Backward compatible:** Existing API keys still work. New keys (OPENROUTER_API_KEY) optional until agents configured to use them.
-
-### Web Search Tool
-
-**v0.1 state:** No web search capability.
-
-**v0.2 changes:**
-1. Add `langchain-community>=0.4.1`
-2. Set `SERPER_API_KEY` env var
-3. Bind `google-serper` tool to Analyst agent
-4. Agent automatically invokes when query needs external data
-
-**No breaking changes.** Tool is opt-in via agent configuration.
-
-### SMTP Email
-
-**v0.1 state:** Mailgun API for password resets. Dev mode logs to console.
-
-**v0.2 changes:**
-1. Add `aiosmtplib>=5.1.0`
-2. Create Jinja2 email templates
-3. Replace Mailgun API calls with `send_email()` helper
-4. Set SMTP env vars
-5. Remove Mailgun dependency and API key
-
-**Breaking change:** Requires SMTP configuration. No automatic fallback. Dev mode should use tools like Mailpit or MailHog for local SMTP testing.
-
-## Deployment Considerations
-
-### Docker
-
-Add to backend Dockerfile:
-```dockerfile
-# Install dependencies for memory persistence
-RUN pip install --no-cache-dir psycopg[binary]>=3.3
-
-# No additional system dependencies needed
-# (psycopg binary wheels include libpq)
+```bash
+# No new pip installs needed for v0.3
+# All schema changes use existing SQLAlchemy + Alembic
 ```
 
-### Ollama
+### Database Migration
 
-For local Ollama:
-```yaml
-# docker-compose.yml
-services:
-  ollama:
-    image: ollama/ollama:latest
-    volumes:
-      - ollama-data:/root/.ollama
-    ports:
-      - "11434:11434"
-
-  backend:
-    environment:
-      - OLLAMA_BASE_URL=http://ollama:11434
+```bash
+cd backend
+alembic revision --autogenerate -m "add_chat_sessions_and_multi_file_support"
+alembic upgrade head
 ```
 
-For remote Ollama: Set `OLLAMA_BASE_URL` to remote server URL.
+---
 
-### SMTP Testing (Development)
+## Integration Points
 
-Use Mailpit for local SMTP testing:
-```yaml
-# docker-compose.yml
-services:
-  mailpit:
-    image: axllent/mailpit:latest
-    ports:
-      - "1025:1025"  # SMTP
-      - "8025:8025"  # Web UI
+### 1. Session Creation Flow
 
-  backend:
-    environment:
-      - SMTP_HOST=mailpit
-      - SMTP_PORT=1025
-      - SMTP_USE_TLS=false
+```
+User clicks "New Chat" -> POST /sessions/ -> Returns session_id
+  -> Frontend navigates to /dashboard/chat/{session_id}
+  -> Empty chat with greeting + "Link a file" prompt
+  -> User uploads/links file -> POST /sessions/{session_id}/files
+  -> File onboarding runs (existing flow)
+  -> Chat ready for queries
 ```
 
-Access web UI at http://localhost:8025 to view sent emails.
+### 2. Multi-File Agent Context
 
-## Testing Strategy
+```
+User sends query in session with 3 linked files
+  -> Backend loads all 3 files' data_summary + data_profile
+  -> Builds combined prompt: "You have access to 3 datasets: [file1: summary], [file2: summary], [file3: summary]"
+  -> Agent generates code that loads all 3 files
+  -> E2B sandbox receives all 3 data files
+  -> Code can reference df1, df2, df3 (or named by filename)
+```
 
-### Memory Persistence
+### 3. Thread ID Migration
 
-1. Create chat tab, send message
-2. Get checkpoint via `checkpointer.aget(thread_id)`
-3. Verify state saved
-4. Send follow-up message referencing first message
-5. Verify context maintained
-6. Simulate tab close (delete thread)
-7. Verify subsequent messages don't have context
+```
+v0.2 checkpoints: thread_id = "file_{file_id}_user_{user_id}"
+v0.3 checkpoints: thread_id = "session_{session_id}"
 
-### Multi-LLM Providers
+Migration: Old checkpoints become orphaned (acceptable -- users start fresh sessions).
+No need to migrate checkpoint data.
+```
 
-1. Configure different agents with different providers
-2. Send queries that trigger each agent
-3. Verify correct model used (check LangSmith traces)
-4. Test Ollama with local server
-5. Test OpenRouter with multiple models
-6. Verify cost tracking per provider
+### 4. Chat History Sidebar
 
-### Web Search Tool
+```
+GET /sessions/ returns:
+[
+  { id, title, updated_at, file_count, preview_message }
+]
 
-1. Send query requiring external data ("industry average sales")
-2. Verify Serper API called (check logs)
-3. Verify results incorporated into response
-4. Test with API key missing (should fail gracefully)
-5. Monitor Serper credit usage
+Frontend groups by date:
+  Today: [session1, session2]
+  Yesterday: [session3]
+  This Week: [session4, session5]
 
-### SMTP Email
+Title auto-generated from first user message (truncated)
+  or explicit rename via PATCH /sessions/{id}
+```
 
-1. Trigger password reset
-2. Verify email sent (check Mailpit web UI in dev)
-3. Verify HTML rendering correct
-4. Test with invalid SMTP credentials (should fail gracefully)
-5. Test with various SMTP providers (Gmail, SendGrid, AWS SES)
+---
 
-## Cost Analysis
+## Configuration Changes
 
-| Feature | Cost | Notes |
-|---------|------|-------|
-| Memory persistence | $0 | Uses existing PostgreSQL. ~1KB per checkpoint. |
-| Ollama (local) | $0 | Runs on server. GPU recommended for speed. |
-| Ollama (remote) | Variable | Depends on hosting provider. |
-| OpenRouter | $0.0001-0.03/1K tokens | Model-dependent. DeepSeek-R1 very cheap (~$0.0001/1K). |
-| Serper.dev | $0.001/search | 2500 free credits. Then $50/50K searches. |
-| SMTP | $0-10/month | Gmail (free for low volume), SendGrid (free tier 100/day), AWS SES ($0.10/1K). |
+### Backend Settings (app/config.py)
 
-**v0.2 cost impact:** Minimal if using Ollama for most agents. Serper only used when needed. SMTP negligible.
+```python
+# New settings for multi-file support
+max_files_per_session: int = 10  # Limit linked files per session
+max_total_file_size_mb: int = 100  # Total file size limit per session
+session_title_max_length: int = 100  # Auto-generated title length
+```
+
+### Frontend Environment
+
+No new environment variables needed. All API endpoints use the same base URL.
+
+---
+
+## Version Compatibility
+
+| Existing Package | Current Version | v0.3 Compatible | Notes |
+|-----------------|-----------------|-----------------|-------|
+| Next.js | 16.1.6 | Yes | Dynamic routes supported |
+| React | 19.2.3 | Yes | No React-specific changes |
+| shadcn/ui (radix-ui) | 1.4.3 | Yes | New components install via CLI |
+| zustand | 5.0.11 | Yes | persist middleware available in 5.x |
+| @tanstack/react-query | 5.90.20 | Yes | New query keys, same patterns |
+| SQLAlchemy | 2.0+ | Yes | Many-to-many secondary table pattern supported |
+| FastAPI | 0.115+ | Yes | New routers, same patterns |
+| LangGraph | 1.0.7+ | Yes | State changes are backward-compatible |
+| langgraph-checkpoint-postgres | 2.0.0+ | Yes | Thread ID format change only |
+
+---
+
+## Risk Assessment
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|------------|
+| Alembic data migration corrupts existing messages | Low | High | Write migration as reversible. Test on DB copy first. Back up production DB before running. |
+| Multi-file agent prompts exceed context window | Medium | Medium | Implement summary truncation. Limit files per session (10). Monitor token counts per prompt. |
+| E2B sandbox file upload time increases with multiple files | Low | Low | Files are small (CSV/Excel). Upload in parallel via threads. Set reasonable timeout. |
+| shadcn Sidebar conflicts with existing layout | Low | Low | Full layout rewrite planned anyway. No incremental integration concerns. |
+| Old LangGraph checkpoints break with new thread_id format | None | None | Old checkpoints simply become unreachable. New sessions create new checkpoints. |
+
+---
 
 ## Sources
 
-**Memory Persistence:**
-- [LangGraph Checkpointing Documentation](https://docs.langchain.com/oss/python/langgraph/persistence)
-- [langgraph-checkpoint-postgres PyPI](https://pypi.org/project/langgraph-checkpoint-postgres/)
-- [Mastering LangGraph Checkpointing: Best Practices for 2025](https://sparkco.ai/blog/mastering-langgraph-checkpointing-best-practices-for-2025)
-- [Harnessing the Power of LangGraph Checkpoint With PostgreSQL](https://www.oreateai.com/blog/harnessing-the-power-of-langgraph-checkpoint-with-postgresql/68853ebedf7b26456aa5bff751d06842)
+**shadcn/ui Components:**
+- [Sidebar Component](https://ui.shadcn.com/docs/components/radix/sidebar) -- Official shadcn/ui documentation
+- [Resizable Component](https://ui.shadcn.com/docs/components/radix/resizable) -- Built on react-resizable-panels
+- [Sheet Component](https://ui.shadcn.com/docs/components/radix/sheet) -- Side panel overlay
+- [Sidebar Building Blocks](https://ui.shadcn.com/blocks/sidebar) -- Pre-built sidebar examples
+- [February 2026 Radix UI Unified Package](https://ui.shadcn.com/docs/changelog/2026-02-radix-ui) -- Unified import pattern
 
-**Multi-LLM Providers:**
-- [Ollama Python library GitHub](https://github.com/ollama/ollama-python)
-- [langchain-ollama PyPI](https://pypi.org/project/langchain-ollama/)
-- [ChatOllama LangChain Integration](https://docs.langchain.com/oss/python/integrations/chat/ollama)
-- [OpenRouter LangChain Integration](https://openrouter.ai/docs/guides/community/langchain)
-- [LangGraph Configuration Guide](https://www.baihezi.com/mirrors/langgraph/how-tos/configuration/index.html)
+**react-resizable-panels:**
+- [npm: react-resizable-panels](https://www.npmjs.com/package/react-resizable-panels) -- v4.5.0 (current)
+- [GitHub: bvaughn/react-resizable-panels](https://github.com/bvaughn/react-resizable-panels) -- Source and API docs
 
-**Web Search Tool:**
-- [Serper LangChain Integration](https://docs.langchain.com/oss/python/integrations/providers/google_serper)
-- [Serper.dev Official Site](https://serper.dev/)
-- [langchain-community PyPI](https://pypi.org/project/langchain-community/)
+**Zustand:**
+- [Persist Middleware](https://zustand.docs.pmnd.rs/middlewares/persist) -- Official Zustand v5 documentation
 
-**SMTP Email:**
-- [aiosmtplib PyPI](https://pypi.org/project/aiosmtplib/)
-- [aiosmtplib Documentation](https://aiosmtplib.readthedocs.io/)
-- [FastAPI Email Templates Guide](https://sabuhish.github.io/fastapi-mail/)
-- [Python SMTP Tutorial 2026](https://mailtrap.io/blog/smtplib/)
+**SQLAlchemy:**
+- [Many-to-Many Relationships](https://docs.sqlalchemy.org/en/20/orm/basic_relationships.html) -- Secondary table pattern
+- [Association Object Pattern](https://docs.sqlalchemy.org/en/20/orm/basic_relationships.html#many-to-many) -- When extra columns needed
 
-**Performance & Compatibility:**
-- [Psycopg 3 vs Asyncpg](https://fernandoarteaga.dev/blog/psycopg-vs-asyncpg/)
-- [LangChain 1.0 Release](https://blog.langchain.com/langchain-langgraph-1dot0/)
+**LangGraph:**
+- [Thread-Based State Management](https://medium.com/@vinodkrane/mastering-persistence-in-langgraph-checkpoints-threads-and-beyond-21e412aaed60) -- Thread isolation patterns
+- [State Management Best Practices](https://medium.com/@bharatraj1918/langgraph-state-management-part-1-how-langgraph-manages-state-for-multi-agent-workflows-da64d352c43b) -- Multi-agent state
+
+**Next.js:**
+- [Dynamic Route Segments](https://nextjs.org/docs/app/api-reference/file-conventions/dynamic-routes) -- App Router dynamic routes
 
 ---
-*Stack research for: Spectra v0.2 Intelligence & Integration*
-*Researched: 2026-02-06*
-*Confidence: HIGH - All versions verified from official sources (PyPI, official docs)*
+*Stack research for: Spectra v0.3 Multi-File Conversation Support*
+*Researched: 2026-02-11*
+*Confidence: HIGH -- All recommendations use existing dependencies or official shadcn/ui components. No speculative packages.*
