@@ -9,13 +9,13 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 ## Current Position
 
-Phase: 16 - Frontend Restructure (Session-Centric UX)
-Plan: 03 of 03 (WelcomeScreen & LinkedFilesPanel) — CHECKPOINT (human verification pending)
-Status: Executing Phase 16 — plan 03 tasks 1-2 complete, awaiting human verification of full UX flow
+Phase: 16 - Frontend Restructure (Session-Centric UX) — COMPLETE
+Plan: 03 of 03 (WelcomeScreen & LinkedFilesPanel) — COMPLETE
+Status: Phase 16 complete — all 3 plans executed, session-centric UX fully built. Human verification deferred to Phase 18.
 Branch: develop (fresh from master for v0.3)
-Last activity: 2026-02-11 — Completed 16-03-PLAN.md tasks 1-2
+Last activity: 2026-02-11 — Completed Phase 16
 
-Progress: [█████████████████████████████░░░░] 90% (2.67/3 plans complete in Phase 16)
+Progress: [████████████████████████████████] 100% (3/3 plans complete in Phase 16)
 
 ## Performance Metrics
 
@@ -31,7 +31,7 @@ Progress: [███████████████████████
 - Total commits: 110
 
 **Velocity (v0.3):**
-- Total plans completed: 8
+- Total plans completed: 10
 - Phase 14 Plan 01: 3 min, 2 tasks, 7 files
 - Phase 14 Plan 02: 4 min, 2 tasks, 3 files
 - Phase 14 Plan 03: 3 min, 2 tasks, 5 files
@@ -128,7 +128,7 @@ See also: PROJECT.md Key Decisions table for milestone-level decisions.
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: 16-03-PLAN.md Task 3 checkpoint (human verification of full UX flow)
-Resume with: Human verifies 10-step UX flow, then approve to complete Phase 16
-Next decision: After Phase 16 approval, proceed to Phase 17 (File Management)
+Stopped at: Phase 16 complete — all plans executed
+Resume with: Plan Phase 17 (File Management & Linking)
+Next decision: Phase 16 complete — session-centric UX built (sidebar, routes, welcome screen, linked files panel, chat migration). Human verification deferred to Phase 18 comprehensive test. Ready for Phase 17 (File Management & Linking).
 UI directive: Use Frontend Design skill (/frontend-design) for UI work in Phases 16, 17, 18

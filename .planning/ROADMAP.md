@@ -97,9 +97,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 16-01-PLAN.md — Session state layer (store, hooks, types) and left sidebar components
-- [ ] 16-02-PLAN.md — Dashboard layout restructure, session routes, chat migration to session-based
-- [ ] 16-03-PLAN.md — Welcome screen, linked files right panel, human verification
+- [x] 16-01-PLAN.md — Session state layer (store, hooks, types) and left sidebar components
+- [x] 16-02-PLAN.md — Dashboard layout restructure, session routes, chat migration to session-based
+- [x] 16-03-PLAN.md — Welcome screen, linked files right panel, human verification
 
 **Success Criteria:**
 1. User sees left sidebar with "New Chat" button, chronological chat history, and "My Files" button
@@ -167,6 +167,6 @@ Plans:
 | 13. Migrate Web Search (Tavily) | v0.2 | 2/2 | Complete | 2026-02-09 |
 | 14. Database Foundation & Migration | v0.3 | 4/4 | Complete | 2026-02-11 |
 | 15. Agent System Enhancement | v0.3 | 3/3 | Complete | 2026-02-11 |
-| 16. Frontend Restructure | v0.3 | 0/3 | Pending | — |
+| 16. Frontend Restructure | v0.3 | 3/3 | Complete | 2026-02-11 |
 | 17. File Management & Linking | v0.3 | 0/? | Pending | — |
 | 18. Integration & Polish | v0.3 | 0/? | Pending | — |
