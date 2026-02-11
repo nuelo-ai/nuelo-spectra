@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { FileSpreadsheet, FileText, Info, X } from "lucide-react";
 import { useUnlinkFile } from "@/hooks/useSessionMutations";
-import { FileInfoModal } from "@/components/file/FileInfoModal";
+import { FileContextModal } from "@/components/file/FileContextModal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -117,13 +117,11 @@ export function FileCard({ file, sessionId }: FileCardProps) {
         </div>
       </div>
 
-      {/* File info modal */}
-      {showInfoModal && (
-        <FileInfoModal
-          fileId={file.id}
-          onClose={() => setShowInfoModal(false)}
-        />
-      )}
+      {/* File context modal */}
+      <FileContextModal
+        fileId={showInfoModal ? file.id : null}
+        onClose={() => setShowInfoModal(false)}
+      />
     </>
   );
 }

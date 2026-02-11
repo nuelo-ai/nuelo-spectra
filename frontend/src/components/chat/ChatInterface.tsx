@@ -1,20 +1,29 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useDropzone } from "react-dropzone";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   useChatMessages,
   useAddLocalMessage,
 } from "@/hooks/useChatMessages";
 import { useSSEStream } from "@/hooks/useSSEStream";
 import { useSearchToggle } from "@/hooks/useSearchToggle";
+import { useFiles } from "@/hooks/useFileManager";
+import { useLinkFile } from "@/hooks/useSessionMutations";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { TypingIndicator } from "./TypingIndicator";
 import { DataCard } from "./DataCard";
-import { Globe, PanelRightOpen, PanelRightClose } from "lucide-react";
+import { Globe, PanelRightOpen, PanelRightClose, Upload } from "lucide-react";
 import { useSessionStore } from "@/stores/sessionStore";
 import { useSessionDetail } from "@/hooks/useChatSessions";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FileLinkingDropdown } from "@/components/file/FileLinkingDropdown";
+import { FileUploadZone } from "@/components/file/FileUploadZone";
+import type { FileListItem } from "@/types/file";
 
 interface ChatInterfaceProps {
   sessionId: string;
@@ -46,6 +55,62 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
   } = useSSEStream();
 
   const searchToggle = useSearchToggle();
+
+  // Drag-and-drop upload state
+  const queryClient = useQueryClient();
+  const { data: allFiles } = useFiles();
+  const { mutate: linkFile } = useLinkFile();
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const prevFileIdsRef = useRef<Set<string>>(new Set());
+
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      if (acceptedFiles.length === 0) return;
+      // Snapshot current file IDs before opening upload dialog
+      prevFileIdsRef.current = new Set(allFiles?.map((f) => f.id) || []);
+      setShowUploadDialog(true);
+    },
+    [allFiles]
+  );
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    noClick: true,
+    noKeyboard: true,
+    accept: {
+      "text/csv": [".csv"],
+      "application/vnd.ms-excel": [".xls"],
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
+        ".xlsx",
+      ],
+    },
+    maxSize: 50 * 1024 * 1024, // 50MB
+    multiple: false,
+  });
+
+  const handleDragUploadComplete = async () => {
+    setShowUploadDialog(false);
+    await queryClient.invalidateQueries({ queryKey: ["files"] });
+    await queryClient.refetchQueries({ queryKey: ["files"] });
+    const updatedFiles = queryClient.getQueryData<FileListItem[]>(["files"]);
+    if (updatedFiles) {
+      const newFiles = updatedFiles.filter(
+        (f) => !prevFileIdsRef.current.has(f.id)
+      );
+      for (const newFile of newFiles) {
+        linkFile(
+          { sessionId, fileId: newFile.id },
+          {
+            onSuccess: () =>
+              toast.success(
+                `${newFile.original_filename} linked to session`
+              ),
+            onError: (error: Error) => toast.error(error.message),
+          }
+        );
+      }
+    }
+  };
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -232,7 +297,34 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
   const showEmptyState = !hasMessages && !isStreaming;
 
   return (
-    <div className="flex flex-col h-full">
+    <div {...getRootProps()} className="flex flex-col h-full relative">
+      <input {...getInputProps()} />
+
+      {/* Drag-and-drop overlay */}
+      {isDragActive && (
+        <div className="absolute inset-0 z-50 bg-primary/5 border-2 border-dashed border-primary rounded-lg flex items-center justify-center backdrop-blur-sm">
+          <div className="text-center">
+            <Upload className="h-12 w-12 mx-auto mb-2 text-primary" />
+            <p className="text-base font-medium text-primary">
+              Drop file to upload and link
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              CSV, Excel files up to 50MB
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Upload dialog for drag-and-drop */}
+      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Upload File</DialogTitle>
+          </DialogHeader>
+          <FileUploadZone onUploadComplete={handleDragUploadComplete} />
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <div className="px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
@@ -507,6 +599,14 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
             onSearchToggle={searchToggle.toggle}
             searchConfigured={searchToggle.isConfigured}
             searchQuotaExceeded={searchToggle.isQuotaExceeded}
+            leftSlot={
+              <FileLinkingDropdown
+                sessionId={sessionId}
+                linkedFileIds={
+                  sessionDetail?.files?.map((f) => f.id) ?? []
+                }
+              />
+            }
           />
         </div>
       </div>

@@ -7,6 +7,7 @@ import { useSSEStream } from "@/hooks/useSSEStream";
 import { useSearchToggle } from "@/hooks/useSearchToggle";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { QuerySuggestions } from "@/components/chat/QuerySuggestions";
+import { FileLinkingDropdown } from "@/components/file/FileLinkingDropdown";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Sparkles } from "lucide-react";
@@ -105,6 +106,14 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
             onSearchToggle={searchToggle.toggle}
             searchConfigured={searchToggle.isConfigured}
             searchQuotaExceeded={searchToggle.isQuotaExceeded}
+            leftSlot={
+              sessionId ? (
+                <FileLinkingDropdown
+                  sessionId={sessionId}
+                  linkedFileIds={linkedFiles.map((f) => f.id)}
+                />
+              ) : undefined
+            }
           />
         </div>
       </div>

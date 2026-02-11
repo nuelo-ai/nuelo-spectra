@@ -18,6 +18,8 @@ interface ChatInputProps {
   searchConfigured?: boolean;
   /** Whether daily search quota is exceeded */
   searchQuotaExceeded?: boolean;
+  /** Optional content rendered in the toolbar row (e.g., paperclip button) */
+  leftSlot?: React.ReactNode;
 }
 
 /**
@@ -32,6 +34,7 @@ export function ChatInput({
   onSearchToggle,
   searchConfigured = false,
   searchQuotaExceeded = false,
+  leftSlot,
 }: ChatInputProps) {
   const [message, setMessage] = useState("");
 
@@ -88,8 +91,10 @@ export function ChatInput({
           <Send className="h-5 w-5" />
         </Button>
       </div>
-      {/* Search toggle row */}
+      {/* Toolbar row */}
       <div className="flex items-center gap-2">
+        {leftSlot}
+        {leftSlot && <div className="h-4 w-px bg-border" />}
         <button
           type="button"
           role="switch"
