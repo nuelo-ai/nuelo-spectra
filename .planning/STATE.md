@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 ## Current Position
 
 Phase: 15 - Agent System Enhancement (Multi-File Support)
-Plan: 01 of 03 (Context Assembler Service) — COMPLETE
-Status: Plan 15-01 complete — ready for Plan 15-02
+Plan: 02 of 03 (Agent State & Prompts) — COMPLETE
+Status: Plan 15-02 complete — ready for Plan 15-03
 Branch: develop (fresh from master for v0.3)
-Last activity: 2026-02-11 — Completed 15-01-PLAN.md
+Last activity: 2026-02-11 — Completed 15-02-PLAN.md
 
-Progress: [██████████░░░░░░░░░░░░░░░░░░░░░░] 33% (1/3 plans complete in Phase 15)
+Progress: [█████████████████████░░░░░░░░░░░] 67% (2/3 plans complete in Phase 15)
 
 ## Performance Metrics
 
@@ -31,13 +31,14 @@ Progress: [██████████░░░░░░░░░░░░░
 - Total commits: 110
 
 **Velocity (v0.3):**
-- Total plans completed: 5
+- Total plans completed: 6
 - Phase 14 Plan 01: 3 min, 2 tasks, 7 files
 - Phase 14 Plan 02: 4 min, 2 tasks, 3 files
 - Phase 14 Plan 03: 3 min, 2 tasks, 5 files
 - Phase 14 Plan 04: 4 min, 2 tasks, 3 files
 - Phase 15 Plan 01: 3 min, 2 tasks, 2 files
-- Total commits: 10
+- Phase 15 Plan 02: 2 min, 2 tasks, 2 files
+- Total commits: 12
 
 ## Accumulated Context
 
@@ -77,6 +78,12 @@ Progress: [██████████░░░░░░░░░░░░░
 - Join hints sorted by column name for deterministic output
 - Fail-whole-query: all files must exist and be onboarded, otherwise ValueError
 
+**Phase 15-02 (Agent State & Prompts):**
+- New state fields use default-compatible types (str='', list=[], None) so state.get() works without migration
+- session_id added to TypedDict to make existing agent_service.py usage explicit
+- Coding prompt uses {multi_file_context} placeholder that is empty string for single-file (no conditional logic needed)
+- Join hint confirmation is mandatory before agent generates cross-file merge code
+
 See also: PROJECT.md Key Decisions table for milestone-level decisions.
 
 ### Pending Todos
@@ -93,8 +100,8 @@ See also: PROJECT.md Key Decisions table for milestone-level decisions.
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed 15-01-PLAN.md (Context Assembler Service)
-Resume with: Execute Phase 15 Plan 02 (Coding Agent & Manager Agent multi-file updates)
-Next decision: Plan 15-01 complete — ContextAssembler service and settings.yaml created. Ready for Plan 15-02 (prompt updates for multi-file code generation and routing).
-Note: ContextAssembler provides progressive token budget reduction (full -> no_samples -> no_stats -> minimal), join hint detection with type mismatch warnings, and df_ variable name sanitization with collision handling. settings.yaml supersedes Phase 14 hard-coded 10-file limit with configurable default of 5.
+Stopped at: Completed 15-02-PLAN.md (Agent State & Prompts)
+Resume with: Execute Phase 15 Plan 03 (Agent Pipeline Integration)
+Next decision: Plan 15-02 complete — ChatAgentState extended with multi-file fields, prompts updated with dual-mode templates. Ready for Plan 15-03 (wire ContextAssembler into agent pipeline, populate template variables).
+Note: State fields (multi_file_context, file_metadata, session_files, session_id) and prompt templates ({multi_file_context}, {session_files}) are the contract between Plans 01/02 and Plan 03. Plan 03 will populate these in agent_service.py, coding.py, and manager.py.
 UI directive: Use Frontend Design skill (/frontend-design) for UI work in Phases 16, 17, 18
