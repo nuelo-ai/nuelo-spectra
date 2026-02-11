@@ -161,8 +161,9 @@ async def run_chat_query(
     """
     # Load file record based on session_id or file_id
     if session_id:
-        # Session-based flow: get first linked file from session
+        # Session-based flow: assemble multi-file context via ContextAssembler
         from app.services.chat_session import ChatSessionService
+        from app.services.context_assembler import ContextAssembler
         session = await ChatSessionService.get_user_session(db, session_id, user_id)
         if not session:
             raise HTTPException(
@@ -174,8 +175,16 @@ async def run_chat_query(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No files linked to this session"
             )
-        # Use first file's data for now (multi-file context assembly is Phase 15)
+        # Use first file as primary (for legacy fields)
         file_record = session.files[0]
+
+        # Assemble multi-file context -- fail with clear error if any file is missing/unreadable
+        assembler = ContextAssembler()
+        file_ids = [f.id for f in session.files]
+        try:
+            context_result = await assembler.assemble(db, file_ids, user_id)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
     else:
         # File-based flow: get file directly (backward compatibility)
         file_record = await FileService.get_user_file(db, file_id, user_id)
@@ -210,6 +219,25 @@ async def run_chat_query(
     # first query (no checkpoint) is safe.
     from langchain_core.messages import HumanMessage
 
+    # Build multi-file fields based on session vs file flow
+    if session_id:
+        multi_file_context = context_result["context_string"]
+        file_metadata = [
+            {
+                "id": f["id"],
+                "name": f["name"],
+                "var_name": f["var_name"],
+                "file_path": next(sf.file_path for sf in session.files if str(sf.id) == f["id"]),
+                "file_type": next(sf.file_type for sf in session.files if str(sf.id) == f["id"]),
+            }
+            for f in context_result["files"]
+        ]
+        session_files = [f.original_filename for f in session.files]
+    else:
+        multi_file_context = ""
+        file_metadata = []
+        session_files = []
+
     initial_state = {
         "file_id": str(file_record.id),  # Always use actual file_id for execution
         "user_id": str(user_id),
@@ -228,6 +256,10 @@ async def run_chat_query(
         "web_search_enabled": web_search_enabled,
         "search_sources": [],
         "session_id": str(session_id) if session_id else None,
+        # Multi-file fields (empty defaults for single-file backward compatibility)
+        "multi_file_context": multi_file_context,
+        "file_metadata": file_metadata,
+        "session_files": session_files,
     }
 
     # Add new user message to checkpoint using aupdate_state
@@ -363,8 +395,9 @@ async def run_chat_query_stream(
 
     # Load file record based on session_id or file_id
     if session_id:
-        # Session-based flow: get first linked file from session
+        # Session-based flow: assemble multi-file context via ContextAssembler
         from app.services.chat_session import ChatSessionService
+        from app.services.context_assembler import ContextAssembler
         session = await ChatSessionService.get_user_session(db, session_id, user_id)
         if not session:
             logger.error(f"Session not found: session_id={session_id}, user_id={user_id}")
@@ -376,8 +409,17 @@ async def run_chat_query_stream(
                 "message": "No files linked to this session"
             }
             return
-        # Use first file's data for now (multi-file context assembly is Phase 15)
+        # Use first file as primary (for legacy fields)
         file_record = session.files[0]
+
+        # Assemble multi-file context -- fail with clear error if any file is missing/unreadable
+        assembler = ContextAssembler()
+        file_ids = [f.id for f in session.files]
+        try:
+            context_result = await assembler.assemble(db, file_ids, user_id)
+        except ValueError as e:
+            yield {"type": "error", "message": str(e)}
+            return
     else:
         # File-based flow: get file directly (backward compatibility)
         file_record = await FileService.get_user_file(db, file_id, user_id)
@@ -427,6 +469,25 @@ async def run_chat_query_stream(
     # first query (no checkpoint) is safe.
     from langchain_core.messages import HumanMessage
 
+    # Build multi-file fields based on session vs file flow
+    if session_id:
+        multi_file_context = context_result["context_string"]
+        file_metadata = [
+            {
+                "id": f["id"],
+                "name": f["name"],
+                "var_name": f["var_name"],
+                "file_path": next(sf.file_path for sf in session.files if str(sf.id) == f["id"]),
+                "file_type": next(sf.file_type for sf in session.files if str(sf.id) == f["id"]),
+            }
+            for f in context_result["files"]
+        ]
+        session_files = [f.original_filename for f in session.files]
+    else:
+        multi_file_context = ""
+        file_metadata = []
+        session_files = []
+
     initial_state = {
         "file_id": str(file_record.id),  # Always use actual file_id for execution
         "user_id": str(user_id),
@@ -446,6 +507,10 @@ async def run_chat_query_stream(
         "web_search_enabled": web_search_enabled,
         "search_sources": [],
         "session_id": str(session_id) if session_id else None,
+        # Multi-file fields (empty defaults for single-file backward compatibility)
+        "multi_file_context": multi_file_context,
+        "file_metadata": file_metadata,
+        "session_files": session_files,
     }
 
     # Add new user message to checkpoint using aupdate_state
