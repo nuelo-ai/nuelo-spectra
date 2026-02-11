@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 ## Current Position
 
 Phase: 16 - Frontend Restructure (Session-Centric UX)
-Plan: 02 of 03 (Dashboard Layout & Session Migration) — COMPLETE
-Status: Executing Phase 16 — plan 02 complete, session routes and ChatInterface migrated
+Plan: 03 of 03 (WelcomeScreen & LinkedFilesPanel) — CHECKPOINT (human verification pending)
+Status: Executing Phase 16 — plan 03 tasks 1-2 complete, awaiting human verification of full UX flow
 Branch: develop (fresh from master for v0.3)
-Last activity: 2026-02-11 — Completed 16-02-PLAN.md
+Last activity: 2026-02-11 — Completed 16-03-PLAN.md tasks 1-2
 
-Progress: [██████████████████████░░░░░░░░░░░] 67% (2/3 plans complete in Phase 16)
+Progress: [█████████████████████████████░░░░] 90% (2.67/3 plans complete in Phase 16)
 
 ## Performance Metrics
 
@@ -41,7 +41,8 @@ Progress: [██████████████████████░
 - Phase 15 Plan 03: 3 min, 2 tasks, 6 files
 - Phase 16 Plan 01: 4 min, 2 tasks, 13 files
 - Phase 16 Plan 02: 4 min, 2 tasks, 10 files
-- Total commits: 18
+- Phase 16 Plan 03: 3 min, 2 tasks, 7 files
+- Total commits: 20
 
 ## Accumulated Context
 
@@ -105,6 +106,12 @@ Progress: [██████████████████████░
 - Legacy dashboard page converted to redirect stub instead of deletion (preserves bookmarks)
 - Empty state simplified to generic message (WelcomeScreen replaces QuerySuggestions in Plan 03)
 
+**Phase 16-03 (WelcomeScreen & LinkedFilesPanel):**
+- New session page auto-creates session on mount and redirects to /sessions/[id] for consistent sessionId availability
+- Session page shows WelcomeScreen when zero messages, transitions to ChatInterface when messages exist
+- Right panel toggle in ChatInterface header shows file count badge from session detail
+- FileCard action buttons (info, remove) appear on hover for cleaner visual
+
 See also: PROJECT.md Key Decisions table for milestone-level decisions.
 
 ### Pending Todos
@@ -121,7 +128,7 @@ See also: PROJECT.md Key Decisions table for milestone-level decisions.
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed 16-02-PLAN.md (Dashboard Layout & Session Migration)
-Resume with: Execute 16-03-PLAN.md (WelcomeScreen & Session Creation Flow)
-Next decision: Session routes and ChatInterface migrated. Plan 03 adds WelcomeScreen to /sessions/new page.
+Stopped at: 16-03-PLAN.md Task 3 checkpoint (human verification of full UX flow)
+Resume with: Human verifies 10-step UX flow, then approve to complete Phase 16
+Next decision: After Phase 16 approval, proceed to Phase 17 (File Management)
 UI directive: Use Frontend Design skill (/frontend-design) for UI work in Phases 16, 17, 18
