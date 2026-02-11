@@ -1,0 +1,10 @@
+# Multi-file session settings
+session:
+  max_files_per_session: 5          # Default max files (user decision: 5)
+  max_files_ceiling: 10             # Absolute ceiling (user decision: 10)
+  max_total_file_size_mb: 50        # Max combined file size in MB (user decision: 50)
+
+# Context assembly settings
+context_assembler:
+  token_budget: 8000               # Max tokens for assembled context (research recommendation)
+  safety_margin: 0.2               # 20% safety margin for non-OpenAI tokenizers
