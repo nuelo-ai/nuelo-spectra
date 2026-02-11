@@ -122,3 +122,22 @@ class ChatAgentState(TypedDict):
 
     error: str
     """Error message if workflow fails, empty string if successful."""
+
+    multi_file_context: str
+    """Assembled multi-file context string from ContextAssembler (markdown-formatted).
+    Contains file profiles, column metadata, and join hints within token budget.
+    Empty string for single-file (legacy) queries."""
+
+    file_metadata: list[dict]
+    """Per-file metadata for sandbox execution: [{id, name, var_name, file_path, file_type}].
+    Used by execute_in_sandbox to selectively load only needed files.
+    Empty list for single-file queries."""
+
+    session_files: list[str]
+    """List of filenames linked to the current session (e.g., ["sales.csv", "customers.xlsx"]).
+    Passed to Manager Agent's system prompt for routing context.
+    Empty list for single-file queries."""
+
+    session_id: str | None
+    """Session UUID string if session-based flow, None for file-based (legacy) flow.
+    Already used in agent_service.py initial_state but not in TypedDict."""
