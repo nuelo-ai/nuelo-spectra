@@ -70,6 +70,13 @@ Plans:
 
 **Requirements:** LINK-06
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 15-01-PLAN.md — ContextAssembler service and settings.yaml configuration
+- [ ] 15-02-PLAN.md — ChatAgentState multi-file fields and agent prompt updates
+- [ ] 15-03-PLAN.md — Agent pipeline integration (service, sandbox, routing, limits)
+
 **Success Criteria:**
 1. User can ask "compare data from sales.csv with customers.xlsx" and agent generates code referencing both files
 2. Agent-generated Python code uses named DataFrames (df_sales, df_customers) not generic df
@@ -152,7 +159,7 @@ Plans:
 | 12. Production Email | v0.2 | 2/2 | Complete | 2026-02-09 |
 | 13. Migrate Web Search (Tavily) | v0.2 | 2/2 | Complete | 2026-02-09 |
 | 14. Database Foundation & Migration | v0.3 | 4/4 | Complete | 2026-02-11 |
-| 15. Agent System Enhancement | v0.3 | 0/? | Pending | — |
+| 15. Agent System Enhancement | v0.3 | 0/3 | Planned | — |
 | 16. Frontend Restructure | v0.3 | 0/? | Pending | — |
 | 17. File Management & Linking | v0.3 | 0/? | Pending | — |
 | 18. Integration & Polish | v0.3 | 0/? | Pending | — |
