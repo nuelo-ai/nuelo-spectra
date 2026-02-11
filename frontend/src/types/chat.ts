@@ -5,7 +5,8 @@
 
 export interface ChatMessageResponse {
   id: string;
-  file_id: string;
+  file_id: string | null;
+  session_id?: string;
   role: string;
   content: string;
   message_type: string | null;

@@ -4,33 +4,26 @@ import { useEffect, useRef, useState } from "react";
 import {
   useChatMessages,
   useAddLocalMessage,
-  useInvalidateChatMessages,
 } from "@/hooks/useChatMessages";
 import { useSSEStream } from "@/hooks/useSSEStream";
 import { useSearchToggle } from "@/hooks/useSearchToggle";
-import { useTabCloseWarning } from "@/hooks/useTabCloseWarning";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { TypingIndicator } from "./TypingIndicator";
 import { DataCard } from "./DataCard";
-import { ContextUsage } from "./ContextUsage";
-import { QuerySuggestions } from "./QuerySuggestions";
 import { Globe } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
-import { apiClient } from "@/lib/api-client";
-import { useFileSummary } from "@/hooks/useFileManager";
 
 interface ChatInterfaceProps {
-  fileId: string;
-  fileName: string;
+  sessionId: string;
+  sessionTitle: string;
 }
 
 /**
- * Complete chat interface for a file tab.
+ * Complete chat interface for a session.
  * Manages message history, streaming, and user input.
  */
-export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
-  const { data: chatData, isLoading, refetch } = useChatMessages(fileId);
+export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
+  const { data: chatData, isLoading, refetch } = useChatMessages(sessionId);
   const addLocalMessage = useAddLocalMessage();
 
   const {
@@ -61,13 +54,8 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
   // Suggestion input state for non-auto-send mode
   const [suggestionInput, setSuggestionInput] = useState<string | undefined>(undefined);
 
-  // Fetch file summary for query suggestions
-  const { data: summaryData } = useFileSummary(fileId);
-
-  // Tab close warning when there's conversation context
+  // Messages from chat data
   const messages = chatData?.messages || [];
-  const hasContext = messages.length > 2;  // More than initial greeting
-  useTabCloseWarning(hasContext);
 
   // Scroll to bottom helper
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
@@ -131,10 +119,10 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
 
   const handleSend = async (message: string) => {
     // Optimistically add user message
-    addLocalMessage(fileId, message);
+    addLocalMessage(sessionId, message);
 
     // Start streaming AI response with search flag
-    await startStream(fileId, message, searchToggle.enabled);
+    await startStream(sessionId, message, searchToggle.enabled);
   };
 
   const toggleCardCollapse = (messageId: string) => {
@@ -149,14 +137,13 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
     });
   };
 
+  // TODO: Phase 18 - Migrate trim-context to session-based endpoint
   const handleTrimContext = async () => {
     try {
-      const res = await apiClient.post(`/chat/${fileId}/trim-context`, {});
-      if (res.ok) {
-        setShowTrimDialog(false);
-        // Refetch messages to reflect trimmed state
-        refetch();
-      }
+      // NOTE: trim-context endpoint still uses file-based URL.
+      // This will be migrated to session-based in Phase 18.
+      console.warn('[ChatInterface] trim-context not yet available for session-based flow');
+      setShowTrimDialog(false);
     } catch (e) {
       console.error("Failed to trim context:", e);
     }
@@ -243,12 +230,8 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
       {/* Header */}
       <div className="px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <h2 className="text-lg font-semibold truncate">{fileName}</h2>
-          <ContextUsage
-            fileId={fileId}
-            messageCount={messages.length}
-            onLimitExceeded={() => setShowTrimDialog(true)}
-          />
+          <h2 className="text-lg font-semibold truncate">{sessionTitle}</h2>
+          {/* TODO: Phase 18 - Migrate ContextUsage to session-based endpoint */}
         </div>
       </div>
 
@@ -299,41 +282,23 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
 
           {/* Empty state */}
           {showEmptyState && (
-            <>
-              {summaryData?.query_suggestions?.categories &&
-              summaryData.query_suggestions.categories.length > 0 ? (
-                <QuerySuggestions
-                  categories={summaryData.query_suggestions.categories}
-                  onSelect={(suggestion) => {
-                    const autoSend = summaryData.suggestion_auto_send ?? true;
-                    if (autoSend) {
-                      handleSend(suggestion);
-                    } else {
-                      setSuggestionInput(suggestion);
-                    }
-                  }}
-                  autoSend={summaryData.suggestion_auto_send ?? true}
-                />
-              ) : (
-                <div className="flex items-center justify-center min-h-[60vh] p-8 text-center">
-                  <div className="max-w-md opacity-60" style={{ animation: "var(--animate-fadeIn)" }}>
-                    <div className="mb-4">
-                      <div className="h-16 w-16 rounded-full gradient-primary mx-auto mb-3 flex items-center justify-center">
-                        <span className="text-2xl text-white">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-muted-foreground font-medium">
-                      Ask a question about your data to get started
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Your AI assistant will analyze your data and provide insights
-                    </p>
+            <div className="flex items-center justify-center min-h-[60vh] p-8 text-center">
+              <div className="max-w-md opacity-60" style={{ animation: "var(--animate-fadeIn)" }}>
+                <div className="mb-4">
+                  <div className="h-16 w-16 rounded-full gradient-primary mx-auto mb-3 flex items-center justify-center">
+                    <span className="text-2xl text-white">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    </span>
                   </div>
                 </div>
-              )}
-            </>
+                <p className="text-muted-foreground font-medium">
+                  Ask a question about your data to get started
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Your AI assistant will analyze your data and provide insights
+                </p>
+              </div>
+            </div>
           )}
 
           {/* Message list */}
@@ -385,7 +350,7 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
                           <ChatMessage
                             message={{
                               id: "streaming",
-                              file_id: fileId,
+                              file_id: null,
                               role: "assistant",
                               content: analysisText,
                               message_type: null,
@@ -442,7 +407,7 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
                         <ChatMessage
                           message={{
                             id: "streaming",
-                            file_id: fileId,
+                            file_id: null,
                             role: "assistant",
                             content: streamedText,
                             message_type: null,
@@ -470,7 +435,7 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
               <ChatMessage
                 message={{
                   id: "error",
-                  file_id: fileId,
+                  file_id: null,
                   role: "assistant",
                   content: "Something went wrong. Please try again.",
                   message_type: "error",
