@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 ## Current Position
 
 Phase: 14 - Database Foundation & Migration
-Plan: 01 of 04 (ChatSession Model & Schemas) — COMPLETE
+Plan: 02 of 04 (Migration Scripts) — COMPLETE
 Status: Executing phase plans
 Branch: develop (fresh from master for v0.3)
-Last activity: 2026-02-11 — Completed 14-01-PLAN.md
+Last activity: 2026-02-11 — Completed 14-02-PLAN.md
 
-Progress: [███░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 25% (1/4 plans complete in Phase 14)
+Progress: [██████░░░░░░░░░░░░░░░░░░░░░░░░] 50% (2/4 plans complete in Phase 14)
 
 ## Performance Metrics
 
@@ -31,9 +31,10 @@ Progress: [███░░░░░░░░░░░░░░░░░░░░
 - Total commits: 110
 
 **Velocity (v0.3):**
-- Total plans completed: 1
+- Total plans completed: 2
 - Phase 14 Plan 01: 3 min, 2 tasks, 7 files
-- Total commits: 2
+- Phase 14 Plan 02: 4 min, 2 tasks, 3 files
+- Total commits: 4
 
 ## Accumulated Context
 
@@ -45,6 +46,12 @@ Progress: [███░░░░░░░░░░░░░░░░░░░░
 - File-to-Session M2M has no cascade delete from File side (deleting file removes associations, not sessions)
 - Association tables use SQLAlchemy Core Table, not ORM class
 - TYPE_CHECKING imports avoid circular dependencies
+
+**Phase 14-02 (Migration Scripts):**
+- Use session_files table for checkpoint migration (covers files with no messages)
+- Preserve orphaned checkpoints for deleted files (harmless, age out naturally)
+- Make file_id nullable with SET NULL on delete (DATA-06 requirement)
+- Checkpoint downgrade raises NotImplementedError (requires backup restoration)
 
 See also: PROJECT.md Key Decisions table for milestone-level decisions.
 
@@ -62,8 +69,8 @@ See also: PROJECT.md Key Decisions table for milestone-level decisions.
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed Phase 14 Plan 01 (ChatSession Model & Schemas)
-Resume with: Execute Phase 14 Plan 02 (Migration Script)
+Stopped at: Completed Phase 14 Plan 02 (Migration Scripts)
+Resume with: Execute Phase 14 Plan 03 (Session Service)
 Next decision: Continue executing Phase 14 plans sequentially
-Note: Phase 14 Plan 01 complete - ChatSession models and schemas ready for migration script
+Note: Phase 14 Plan 02 complete - Database fully migrated to session-based model, all data accessible via sessions
 UI directive: Use Frontend Design skill (/frontend-design) for UI work in Phases 16, 17, 18
