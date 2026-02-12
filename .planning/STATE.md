@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** v0.3 Gap Closure — Phase 19 in progress
+**Current focus:** v0.3 Gap Closure — Phase 19 COMPLETE
 
 ## Current Position
 
 Phase: 19 - v0.3 Gap Closure
-Plan: 02 of 03 (FileCard File Size, Tooltip & Bulk Delete Fixes) — COMPLETE
-Status: Plan 19-02 complete. File size on cards, Radix Tooltip on disabled remove, bulk delete fixed. 6 of 9 UAT gaps closed.
+Plan: 03 of 03 (Drag-Drop File Upload & Sidebar Auto-Open) — COMPLETE
+Status: Phase 19 complete. All 9 v0.3 UAT gaps closed. Ready for full UAT retest.
 Branch: develop (fresh from master for v0.3)
-Last activity: 2026-02-12 — Completed Plan 19-02
+Last activity: 2026-02-12 — Completed Plan 19-03
 
-Progress: [█████████████████████░░░░░░░░░░░] 67% (2/3 plans complete in Phase 19)
+Progress: [████████████████████████████████] 100% (3/3 plans complete in Phase 19)
 
 ## Performance Metrics
 
@@ -51,6 +51,7 @@ Progress: [█████████████████████░░
 - Total commits: 32
 - Phase 19 Plan 01: 2 min, 2 tasks, 3 files
 - Phase 19 Plan 02: 2 min, 2 tasks, 4 files
+- Phase 19 Plan 03: 4 min, 2 tasks, 5 files
 
 ## Accumulated Context
 
@@ -169,6 +170,11 @@ Progress: [█████████████████████░░
 - Bulk delete uses rowSelection keys directly as UUIDs since getRowId returns row.id
 - Disabled button tooltip pattern: wrap disabled button in <span> inside TooltipTrigger to intercept hover through pointer-events-none
 
+**Phase 19-03 (Drag-Drop File Upload & Sidebar Auto-Open):**
+- initialFiles prop with useRef guard prevents double-processing in React Strict Mode
+- WelcomeScreen uses separate dragUploadDialogOpen state to avoid conflicts with paperclip upload dialog
+- setRightPanelOpen(true) NOT added to WelcomeScreen since it has no right panel (pre-message state)
+
 See also: PROJECT.md Key Decisions table for milestone-level decisions.
 
 ### Pending Todos
@@ -185,7 +191,7 @@ See also: PROJECT.md Key Decisions table for milestone-level decisions.
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 19-02-PLAN.md
-Resume with: Execute 19-03-PLAN.md (final gap closure plan)
-Next decision: Continue with Plan 19-03 (sidebar auto-open, onboarding delay, drag-drop)
+Stopped at: Completed 19-03-PLAN.md (Phase 19 complete)
+Resume with: Full v0.3 UAT retest — all 9 gaps closed
+Next decision: Run 25-test UAT suite to verify v0.3 milestone completion
 UI directive: Use Frontend Design skill (/frontend-design) for UI work in Phases 16, 17, 18, 19
