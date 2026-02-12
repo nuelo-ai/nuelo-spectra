@@ -4,7 +4,7 @@
 
 - ✅ **v0.1 Beta MVP** — Phases 1-6 (shipped 2026-02-06)
 - ✅ **v0.2 Intelligence & Integration** — Phases 7-13 (shipped 2026-02-10)
-- 🚧 **v0.3 Multi-file Conversation Support** — Phases 14-19 (in progress)
+- ✅ **v0.3 Multi-file Conversation Support** — Phases 14-19 (shipped 2026-02-12)
 
 ## Phases
 
@@ -171,9 +171,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 19-01-PLAN.md — Sidebar UX fixes (double-click rename, logo, collapsed state)
-- [ ] 19-02-PLAN.md — FileCard fixes (file size display, tooltip, bulk delete)
-- [ ] 19-03-PLAN.md — Drag-drop file forwarding and sidebar auto-open on link
+- [x] 19-01-PLAN.md — Sidebar UX fixes (double-click rename, logo, collapsed state)
+- [x] 19-02-PLAN.md — FileCard fixes (file size display, tooltip, bulk delete)
+- [x] 19-03-PLAN.md — Drag-drop file forwarding and sidebar auto-open on link
 
 **Success Criteria:**
 1. All 25 v0.3 UAT tests pass
@@ -203,4 +203,4 @@ Plans:
 | 16. Frontend Restructure | v0.3 | 3/3 | Complete | 2026-02-11 |
 | 17. File Management & Linking | v0.3 | 3/3 | Complete | 2026-02-11 |
 | 18. Integration & Polish | v0.3 | 3/3 | Complete | 2026-02-11 |
-| 19. v0.3 Gap Closure | v0.3 | 0/3 | In Progress | — |
+| 19. v0.3 Gap Closure | v0.3 | 3/3 | Complete | 2026-02-12 |
