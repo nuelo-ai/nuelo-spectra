@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronsUpDown, Settings, LogOut } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useTheme } from "next-themes";
+import { ChevronsUpDown, Settings, LogOut, Moon, Sun } from "lucide-react";
 import {
   SidebarMenu,
   SidebarMenuItem,
@@ -27,6 +29,12 @@ import { useAuth } from "@/hooks/useAuth";
 export function UserSection() {
   const { user, logout } = useAuth();
   const { isMobile } = useSidebar();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   if (!user) return null;
 
@@ -96,6 +104,19 @@ export function UserSection() {
                 Settings
               </Link>
             </DropdownMenuItem>
+            {mounted && (
+              <DropdownMenuItem
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="cursor-pointer"
+              >
+                {theme === "dark" ? (
+                  <Sun className="mr-2 h-4 w-4" />
+                ) : (
+                  <Moon className="mr-2 h-4 w-4" />
+                )}
+                {theme === "dark" ? "Light mode" : "Dark mode"}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={logout}
