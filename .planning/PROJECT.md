@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Spectra is an AI-powered data analytics platform that transforms how users interact with their data. Users upload datasets (Excel/CSV), ask questions in natural language through a conversational chat interface, and receive instant insights presented as interactive Data Cards. A 5-agent AI system with intelligent query routing generates validated Python code in a secure sandbox, with multi-turn conversation memory, web search integration, and smart query suggestions. The platform supports 5 LLM providers with per-agent configuration, making it adaptable to different deployment scenarios.
+Spectra is an AI-powered data analytics platform that transforms how users interact with their data. Users upload datasets (Excel/CSV), create chat sessions, link multiple files, and ask questions in natural language — receiving instant insights as interactive Data Cards. A ChatGPT-style session-centric UX with sidebar navigation enables multi-file conversations and cross-file analysis. A 5-agent AI system with intelligent query routing generates validated Python code in a secure sandbox, with multi-turn conversation memory, web search integration, and smart query suggestions. The platform supports 5 LLM providers with per-agent configuration and features dark/light theme toggle.
 
 ## Core Value
 
@@ -13,39 +13,34 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 **GitHub:** https://github.com/marwazihs/nuelo-spectra.git (private)
 **Remote:** origin
 **Branch:** master
-**Latest Tag:** v0.2 (2026-02-10)
-
-## Current Milestone: v0.3 Multi-file Conversation Support
-
-**Goal:** Restructure the UX from file-tab-centric to chat-session-centric, enabling multi-file conversations and cross-file analysis
-
-**Target features:**
-- Chat-centric architecture (sessions independent of files, ChatGPT-style)
-- Multi-file linking per conversation for cross-file analysis
-- File upload and link within chat sessions
-- Dedicated "My Files" management screen
-- Sidebar-based chat history navigation
-- Right sidebar panel for linked file context
+**Latest Tag:** v0.3 (2026-02-12)
 
 ## Current State
 
-**Shipped:** v0.2 Intelligence & Integration (2026-02-10)
-**Status:** Defining v0.3 requirements
-**Codebase:** 15,478 LOC (6,574 Python app + 2,077 Python tests + 6,827 TypeScript/TSX)
-**Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily (backend), Next.js 16 + React 19 + TanStack + shadcn/ui (frontend)
+**Shipped:** v0.3 Multi-file Conversation Support (2026-02-12)
+**Status:** Planning next milestone
+**Codebase:** 20,896 LOC (8,589 Python app + 2,077 Python tests + 10,230 TypeScript/TSX)
+**Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily (backend), Next.js 16 + React 19 + TanStack + Zustand + shadcn/ui + next-themes (frontend)
 
 **What works:**
 - ✅ Complete authentication system with JWT, refresh tokens, and SMTP password reset
 - ✅ File upload with AI-powered data profiling (Excel/CSV up to 50MB)
-- ✅ Multi-file management with tabbed interface and independent chat histories
+- ✅ ChatGPT-style session-centric UX with sidebar navigation and chronological chat history
+- ✅ Multi-file linking per session with cross-file analysis (ContextAssembler + named DataFrames)
+- ✅ My Files screen with TanStack Table, drag-and-drop upload, bulk delete, download, and Start Chat
+- ✅ In-chat file linking via paperclip button, file selection modal, and drag-and-drop overlay
+- ✅ Right sidebar panel showing linked files with info and remove actions
+- ✅ File requirement enforcement (at least one file per session) with dual feedback
+- ✅ LLM-powered session title auto-generation with manual rename lock
 - ✅ 5-agent AI system (Onboarding, Manager, Coding, Code Checker, Data Analysis) with LangGraph orchestration
 - ✅ Multi-turn conversation memory with PostgreSQL checkpointing and token counting
 - ✅ Manager Agent with intelligent 3-path query routing (MEMORY_SUFFICIENT, CODE_MODIFICATION, NEW_ANALYSIS)
-- ✅ Smart query suggestions on new chat tabs and follow-up chips on DataCards
+- ✅ Smart query suggestions on welcome screen and follow-up chips on DataCards
 - ✅ Tavily-powered web search tool with transparent source citations and quota tracking
 - ✅ 5 LLM providers (Anthropic, OpenAI, Google, Ollama, OpenRouter) with per-agent YAML config
 - ✅ Real-time SSE streaming showing AI thinking process
 - ✅ Interactive Data Cards with sortable tables, code display, and CSV/Markdown exports
+- ✅ Dark/light theme toggle with Nord palette (persists across sessions)
 - ✅ Production SMTP email service with DB-backed single-use password reset tokens
 
 **Known limitations:**
@@ -53,7 +48,7 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 - Basic mobile responsiveness (functional but not optimized)
 - No query safety filter in Manager Agent (PII extraction, prompt injection not blocked)
 - Agent JSON responses not using Pydantic structured output (inconsistent across providers)
-- File-tab-centric UX limits multi-file analysis (v0.3 addresses this)
+- No Docker deployment package yet (local development only)
 
 ## Requirements
 
@@ -188,9 +183,62 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **v0.2 Total: 54/54 requirements satisfied (100%)**
 
+**v0.3 Multi-file Conversation Support — Shipped 2026-02-12**
+
+**Chat Sessions (9/9):**
+- ✓ User can create a new chat session from the left sidebar "New Chat" button — v0.3
+- ✓ User is greeted with a welcome screen when opening a new chat session — v0.3
+- ✓ User must link at least one file to a chat session before sending messages — v0.3
+- ✓ User can view chat history in the left sidebar grouped chronologically — v0.3
+- ✓ User can click a chat from the sidebar to open that session — v0.3
+- ✓ Chat sessions persist across browser sessions — v0.3
+- ✓ User can have multiple independent chat sessions — v0.3
+- ✓ Chat session title is auto-generated from the first user message — v0.3
+- ✓ User is greeted with a new chat session upon login — v0.3
+
+**File Linking (8/8):**
+- ✓ User can upload a new file within a chat session via paperclip button — v0.3
+- ✓ User can link an existing file to a chat session via file selection modal — v0.3
+- ✓ User can drag and drop a file into the chat session to upload and link — v0.3
+- ✓ Linked files displayed in collapsible right sidebar panel — v0.3
+- ✓ User can view file context via info icon on each linked file — v0.3
+- ✓ AI agents can perform cross-file analysis across all linked files — v0.3
+- ✓ User can add additional files to an existing chat session — v0.3
+- ✓ Maximum 10 files per session enforced at API level — v0.3
+
+**File Management (7/7):**
+- ✓ User can access "My Files" screen from the left sidebar — v0.3
+- ✓ User can view all uploaded files with metadata (name, size, type, date) — v0.3
+- ✓ User can upload a new file from My Files screen — v0.3
+- ✓ User can view file context/details from My Files — v0.3
+- ✓ User can start a new chat session with a selected file from My Files — v0.3
+- ✓ User can delete a file from My Files with confirmation — v0.3
+- ✓ User can download a previously uploaded file — v0.3
+
+**Layout & Navigation (5/5):**
+- ✓ Left sidebar with New Chat, chat history, and My Files — v0.3
+- ✓ Main content area displays active chat or My Files — v0.3
+- ✓ Right sidebar panel shows linked files (collapsible) — v0.3
+- ✓ File-tab navigation replaced by sidebar session navigation — v0.3
+- ✓ Left sidebar is collapsible — v0.3
+
+**Data Model & Backend (6/6):**
+- ✓ Chat sessions as first-class database entities — v0.3
+- ✓ Many-to-many file-session relationship — v0.3
+- ✓ Chat messages belong to sessions (not files) — v0.3
+- ✓ v0.2 conversations migrated to session model — v0.3
+- ✓ LangGraph checkpoints preserved during migration — v0.3
+- ✓ File deletion removes from sessions but preserves messages — v0.3
+
+**Appearance (2/2):**
+- ✓ Light/dark theme toggle — v0.3
+- ✓ Theme preference persists across sessions — v0.3
+
+**v0.3 Total: 37/37 requirements satisfied (100%)**
+
 ### Active
 
-(v0.3 requirements being defined — see `.planning/REQUIREMENTS.md`)
+(Next milestone requirements to be defined — run `/gsd:new-milestone`)
 
 ### Out of Scope
 
@@ -209,6 +257,9 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 - **Cross-session memory persistence** — Context pollution risk; session-scoped memory by design
 - **Query safety filter** — Block PII extraction, prompt injection (deferred to future milestone)
 - **Pydantic structured output for agents** — Eliminate inconsistent JSON across providers (deferred to future milestone)
+- **Automatic cross-file joins without user intent** — Schema mismatches and Cartesian products risk wrong results
+- **Conversation branching/forking** — Complex UX and data model, not requested
+- **Folder/directory organization for files** — Over-engineering for 5-50 files
 
 ## Context
 
@@ -231,10 +282,10 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **Technical ecosystem:**
 - Backend: Python (FastAPI, LangGraph, LangChain, pandas, tiktoken, aiosmtplib, tavily-python)
-- Frontend: Next.js 16 (React 19, TanStack Query, shadcn/ui)
+- Frontend: Next.js 16 (React 19, TanStack Query, Zustand, shadcn/ui, next-themes)
 - Agent framework: LangGraph with PostgreSQL checkpointing (AsyncPostgresSaver)
 - LLM providers: Anthropic (default), OpenAI, Google, Ollama, OpenRouter
-- Deployment: Docker-based, separate containers for frontend, backend, and AI agent engine
+- Deployment: Docker-based (package not yet created)
 
 ## Constraints
 
@@ -251,7 +302,7 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | 4 AI agents for v0.1 (skip Visualization) | Timeline constraint. Core agents are critical to accuracy. | ✓ Good — expanded to 5 agents in v0.2 with Manager Agent |
 | Email auth only (defer Google OAuth) | Reduces complexity, faster to ship | ✓ Good — no user demand for OAuth yet |
 | Skip email verification for v1 | Let users in immediately | ✓ Good — reduces signup friction |
-| Tabbed file interface with per-file chat history | More intuitive than shared history | ⚠️ Revisit — replacing with chat-session-centric UX in v0.3 |
+| Tabbed file interface with per-file chat history | More intuitive than shared history | ✓ Replaced — session-centric UX shipped in v0.3 |
 | Session-scoped memory (no cross-session) | Avoid context pollution, clean slate per tab | ✓ Good — users get clean analysis per session |
 | Manager Agent for query routing | Reduce response time ~40%, skip code gen for simple queries | ✓ Good — MEMORY_SUFFICIENT path is significantly faster |
 | Tavily over Serper.dev for web search | Serper returns URLs only; Tavily returns full page content | ✓ Good — higher quality analysis with actual content |
@@ -261,9 +312,13 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | LLM-generated query suggestions | Dataset-specific, not hardcoded templates | ✓ Good — suggestions reflect actual data structure |
 | Local file storage (defer S3) | Simpler deployment, fewer dependencies | — Pending |
 | Skip billing for v1 | Need product validation first | — Pending |
-| Chat-session-centric UX (v0.3) | Enable multi-file analysis, ChatGPT-style conversations | — Pending |
-| Cross-file analysis support | AI can reference all linked files in a single query | — Pending |
-| At least one file required per chat | Prevents empty chats, maintains data analysis focus | — Pending |
+| Chat-session-centric UX (v0.3) | Enable multi-file analysis, ChatGPT-style conversations | ✓ Good — ChatGPT-style sidebar + sessions shipped, UAT passed |
+| Cross-file analysis support | AI can reference all linked files in a single query | ✓ Good — ContextAssembler with named DataFrames and join hints works well |
+| At least one file required per chat | Prevents empty chats, maintains data analysis focus | ✓ Good — dual feedback (toast + inline warning) provides clear UX |
+| Session-based thread IDs for LangGraph | Enable session-scoped memory independent of files | ✓ Good — migration preserved all v0.2 conversation history |
+| Nord palette for dark theme | Professional, muted aesthetic for dark mode | ✓ Good — consistent across all UI surfaces |
+| Eager session creation on file link | Create session when file is linked at /sessions/new (not on first message) | ✓ Good — enables sidebar to open and file panel to render immediately |
+| sessionStorage for cross-navigation state | Pass sidebar-open flag across router.replace navigations | ✓ Good — reliable mechanism where Zustand state may not persist |
 
 ---
-*Last updated: 2026-02-11 after v0.3 Multi-file Conversation Support milestone started*
+*Last updated: 2026-02-12 after v0.3 Multi-file Conversation Support milestone completed*
