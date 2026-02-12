@@ -116,6 +116,20 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevStreamingRef = useRef(isStreaming);
+  const pendingStreamHandled = useRef(false);
+
+  // Pick up pending stream from WelcomeScreen handoff
+  useEffect(() => {
+    if (pendingStreamHandled.current || isStreaming) return;
+    const pending = sessionStorage.getItem("spectra_pending_stream");
+    if (!pending) return;
+
+    pendingStreamHandled.current = true;
+    const { message, searchEnabled } = JSON.parse(pending);
+    sessionStorage.removeItem("spectra_pending_stream");
+
+    startStream(sessionId, message, searchEnabled);
+  }, [sessionId, startStream, isStreaming]);
 
   // Track which cards are collapsed (by message ID)
   const [collapsedCards, setCollapsedCards] = useState<Set<string>>(new Set());
@@ -157,12 +171,9 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
     const streamJustCompleted = prevStreamingRef.current && !isStreaming && !streamError;
 
     if (streamJustCompleted) {
-      console.log('[ChatInterface] Stream completed, refetching messages...');
-
       // Immediately refetch messages from server and wait for completion
       (async () => {
         const result = await refetch();
-        console.log('[ChatInterface] Messages refetched successfully:', result);
 
         // Reset stream state only after messages are loaded
         resetStream();
@@ -225,18 +236,15 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
   const getStreamingDataCard = () => {
     if (!isStreaming) return null;
 
-    console.log('[ChatInterface] getStreamingDataCard called, events:', events.length, 'isStreaming:', isStreaming);
-
     // Extract query brief from first user message in stream
     const queryBrief = "Analyzing your request...";
 
     // Check if we have execution result in node_complete events
     let tableData: { columns: string[]; rows: Record<string, any>[] } | undefined = undefined;
     const executionEvent = events.find((e) => e.type === "node_complete" && e.node === "execute");
-    console.log('[ChatInterface] executionEvent:', executionEvent ? 'found' : 'not found');
-    if (executionEvent?.data?.execution_result) {
+    if (executionEvent?.execution_result) {
       // Parse execution result for table
-      const result = executionEvent.data.execution_result;
+      const result = executionEvent.execution_result;
       if (typeof result === "string") {
         try {
           const parsed = JSON.parse(result);
@@ -255,30 +263,27 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
     // Extract generated code from coding_agent node
     let generatedCode: string | undefined = undefined;
     const codingEvent = events.find((e) => e.type === "node_complete" && e.node === "coding_agent");
-    if (codingEvent?.data?.generated_code) {
-      generatedCode = codingEvent.data.generated_code;
+    if (codingEvent?.generated_code) {
+      generatedCode = codingEvent.generated_code;
     }
-    console.log('[ChatInterface] generatedCode:', generatedCode ? 'found' : 'not found');
 
-    // Extract analysis/explanation from data_analysis node
+    // Extract analysis/explanation from da_response node
     let explanation = streamedText || undefined;
     const analysisEvent = events.find((e) => e.type === "node_complete" && e.node === "da_response");
-    if (analysisEvent?.data?.analysis) {
-      explanation = analysisEvent.data.analysis;
+    if (analysisEvent?.analysis) {
+      explanation = analysisEvent.analysis;
     }
-    console.log('[ChatInterface] explanation:', explanation ? 'found' : 'not found');
 
-    // Extract follow-up suggestions from data_analysis node_complete event
+    // Extract follow-up suggestions from da_response node_complete event
     let followUpSuggestions: string[] | undefined = undefined;
-    if (analysisEvent?.data?.follow_up_suggestions) {
-      followUpSuggestions = analysisEvent.data.follow_up_suggestions;
+    if (analysisEvent?.follow_up_suggestions) {
+      followUpSuggestions = analysisEvent.follow_up_suggestions;
     }
 
     // Extract search sources from da_response node_complete event
     let searchSources: { title: string; url: string }[] | undefined = undefined;
-    const daResponseEvent = events.find((e) => e.type === "node_complete" && e.node === "da_response");
-    if (daResponseEvent?.data?.search_sources && daResponseEvent.data.search_sources.length > 0) {
-      searchSources = daResponseEvent.data.search_sources;
+    if (analysisEvent?.search_sources && analysisEvent.search_sources.length > 0) {
+      searchSources = analysisEvent.search_sources;
     } else if (streamSearchSources.length > 0) {
       searchSources = streamSearchSources;
     }
@@ -447,7 +452,7 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
                   ) || events.some(
                     (e) =>
                       e.type === "node_complete" &&
-                      e.data?.routing_decision?.route === "MEMORY_SUFFICIENT"
+                      e.routing_decision?.route === "MEMORY_SUFFICIENT"
                   );
 
                   // Memory route: render analysis as plain text message (no DataCard)
@@ -456,13 +461,13 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
                       (e) => e.type === "node_complete" && e.node === "da_response"
                     );
                     const analysisText =
-                      analysisEvent?.data?.analysis ||
-                      analysisEvent?.data?.final_response ||
+                      analysisEvent?.analysis ||
+                      analysisEvent?.final_response ||
                       streamedText;
 
                     // Extract follow-up suggestions from da_response event
                     const followUpSuggestions: string[] | undefined =
-                      analysisEvent?.data?.follow_up_suggestions;
+                      analysisEvent?.follow_up_suggestions;
 
                     if (analysisText) {
                       return (
@@ -507,7 +512,7 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
                   const hasStructuredNode = events.some(
                     (e) =>
                       e.type === "node_complete" &&
-                      (e.node === "execute" || e.node === "coding" || e.node === "data_analysis")
+                      (e.node === "execute" || e.node === "coding_agent" || e.node === "da_response")
                   );
 
                   if (streamedText || events.some((e) => e.type === "node_complete")) {

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessionDetail } from "@/hooks/useChatSessions";
 import { useCreateSession, useLinkFile } from "@/hooks/useSessionMutations";
-import { useSSEStream } from "@/hooks/useSSEStream";
+import { useAddLocalMessage } from "@/hooks/useChatMessages";
 import { useSearchToggle } from "@/hooks/useSearchToggle";
 import { useFiles, useRecentFiles } from "@/hooks/useFileManager";
 import { ChatInput } from "@/components/chat/ChatInput";
@@ -59,7 +59,7 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
   const { data: sessionDetail } = useSessionDetail(sessionId ?? null);
   const createSession = useCreateSession();
   const { mutateAsync: linkFileAsync } = useLinkFile();
-  const { startStream } = useSSEStream();
+  const addLocalMessage = useAddLocalMessage();
   const searchToggle = useSearchToggle();
   const creatingSession = useRef(false);
 
@@ -74,6 +74,9 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
   const pendingMessageSent = useRef(false);
 
   // Auto-send pending message after lazy session creation + navigation
+  // Instead of starting the stream here (which gets killed on unmount),
+  // we store pending stream info and add an optimistic message so ChatInterface
+  // picks up the stream after it mounts.
   useEffect(() => {
     if (!sessionId || pendingMessageSent.current) return;
     const linkedFileCount = sessionDetail?.files?.length ?? 0;
@@ -82,19 +85,17 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
     const pendingMessage = sessionStorage.getItem("spectra_pending_message");
     if (!pendingMessage) return;
 
-    console.log("[WelcomeScreen] Auto-sending pending message:", {
-      sessionId,
-      linkedFileCount,
-      message: pendingMessage.slice(0, 50),
-    });
-
     pendingMessageSent.current = true;
     const searchEnabled = sessionStorage.getItem("spectra_pending_search") === "1";
     sessionStorage.removeItem("spectra_pending_message");
     sessionStorage.removeItem("spectra_pending_search");
 
-    startStream(sessionId, pendingMessage, searchEnabled);
-  }, [sessionId, sessionDetail?.files?.length, startStream]);
+    sessionStorage.setItem("spectra_pending_stream", JSON.stringify({
+      message: pendingMessage,
+      searchEnabled,
+    }));
+    addLocalMessage(sessionId, pendingMessage);
+  }, [sessionId, sessionDetail?.files?.length, addLocalMessage]);
 
   const firstName = user?.first_name || "there";
   const linkedFiles = sessionDetail?.files ?? [];
@@ -143,42 +144,25 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
   };
 
   const handleSend = async (message: string) => {
-    console.log("[WelcomeScreen] handleSend called", {
-      message: message.slice(0, 50),
-      sessionId,
-      pendingFileIds,
-      hasLinkedFiles,
-      linkedFilesCount: linkedFiles.length,
-      creatingSession: creatingSession.current,
-    });
-
-    // Case 1: No session yet — create session, link pending files, then send
+    // Case 1: No session yet — create session, link pending files, then navigate
     if (!sessionId) {
       if (pendingFileIds.length === 0) {
-        console.log("[WelcomeScreen] BLOCKED: no pending files");
         toast.info("Please add a file first to start analyzing your data", {
           duration: 4000,
         });
         return;
       }
 
-      if (creatingSession.current) {
-        console.log("[WelcomeScreen] BLOCKED: already creating session");
-        return;
-      }
+      if (creatingSession.current) return;
       creatingSession.current = true;
 
       try {
-        console.log("[WelcomeScreen] Creating session...");
         const newSession = await createSession.mutateAsync("New Chat");
-        console.log("[WelcomeScreen] Session created:", newSession.id);
 
         // Link all pending files
         for (const fileId of pendingFileIds) {
-          console.log("[WelcomeScreen] Linking file:", fileId);
           await linkFileAsync({ sessionId: newSession.id, fileId });
         }
-        console.log("[WelcomeScreen] All files linked, navigating...");
 
         // Store message for auto-send after navigation (component unmounts on navigate)
         sessionStorage.setItem("spectra_pending_message", message);
@@ -196,16 +180,18 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
 
     // Case 2: Session exists but no linked files
     if (!hasLinkedFiles) {
-      console.log("[WelcomeScreen] BLOCKED: session exists but no linked files");
       toast.info("Please add a file first to start analyzing your data", {
         duration: 4000,
       });
       return;
     }
 
-    // Case 3: Session exists and has linked files — start streaming
-    console.log("[WelcomeScreen] Starting stream for session:", sessionId);
-    await startStream(sessionId, message, searchToggle.enabled);
+    // Case 3: Session exists and has linked files — delegate stream to ChatInterface
+    sessionStorage.setItem("spectra_pending_stream", JSON.stringify({
+      message,
+      searchEnabled: searchToggle.enabled,
+    }));
+    addLocalMessage(sessionId!, message);
   };
 
   return (

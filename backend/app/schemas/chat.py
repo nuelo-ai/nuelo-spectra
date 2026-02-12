@@ -26,8 +26,8 @@ class ChatMessageResponse(BaseModel):
     """Response schema for a chat message."""
 
     id: UUID
-    file_id: UUID
-    session_id: UUID | None = None  # Nullable for backward compatibility
+    file_id: UUID | None = None  # Nullable for session-based messages
+    session_id: UUID | None = None
     role: str
     content: str
     message_type: str | None

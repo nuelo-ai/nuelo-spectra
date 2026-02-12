@@ -73,11 +73,18 @@ export interface StreamEvent {
   text?: string;
   attempt?: number;
   max_attempts?: number;
-  data?: Record<string, any>;
   route?: string;
+  // Fields from node_complete events (top-level, not nested under data)
+  generated_code?: string;
+  execution_result?: string;
+  analysis?: string;
+  final_response?: string;
+  error?: string;
   routing_decision?: {
     route: string;
     reasoning: string;
     context_summary: string;
   };
+  follow_up_suggestions?: string[];
+  search_sources?: SearchSource[];
 }

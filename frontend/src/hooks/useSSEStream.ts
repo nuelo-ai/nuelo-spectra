@@ -189,13 +189,13 @@ export function useSSEStream() {
                     case "node_complete":
                       // Node completion stored in events array
                       // Extract search sources from da_response node_complete
-                      if (event.node === "da_response" && event.data?.search_sources) {
-                        newState.searchSources = event.data.search_sources;
+                      if (event.node === "da_response" && event.search_sources) {
+                        newState.searchSources = event.search_sources;
                       }
                       break;
 
                     case "completed":
-                      newState.completedData = event.data || null;
+                      newState.completedData = null;
                       newState.isStreaming = false;
                       newState.currentStatus = null;
                       break;
