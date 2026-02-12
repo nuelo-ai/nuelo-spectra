@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** v0.3 Gap Closure — Phase 19 COMPLETE
+**Current focus:** v0.3 Gap Closure — Phase 19 UAT retest gap fixes
 
 ## Current Position
 
 Phase: 19 - v0.3 Gap Closure
-Plan: 03 of 03 (Drag-Drop File Upload & Sidebar Auto-Open) — COMPLETE
-Status: Phase 19 complete. All 9 v0.3 UAT gaps closed. Ready for full UAT retest.
+Plan: 04 of 05 (Drag-Drop Analyzing Hang & Sidebar Auto-Open) — COMPLETE
+Status: Plan 19-04 complete. 1 plan remaining (19-05).
 Branch: develop (fresh from master for v0.3)
-Last activity: 2026-02-12 — Completed Plan 19-03
+Last activity: 2026-02-12 — Completed Plan 19-04
 
-Progress: [████████████████████████████████] 100% (3/3 plans complete in Phase 19)
+Progress: [█████████████████████████░░░░░░░] 80% (4/5 plans complete in Phase 19)
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Progress: [███████████████████████
 - Phase 19 Plan 01: 2 min, 2 tasks, 3 files
 - Phase 19 Plan 02: 2 min, 2 tasks, 4 files
 - Phase 19 Plan 03: 4 min, 2 tasks, 5 files
+- Phase 19 Plan 04: 2 min, 2 tasks, 2 files
 
 ## Accumulated Context
 
@@ -175,6 +176,11 @@ Progress: [███████████████████████
 - WelcomeScreen uses separate dragUploadDialogOpen state to avoid conflicts with paperclip upload dialog
 - setRightPanelOpen(true) NOT added to WelcomeScreen since it has no right panel (pre-message state)
 
+**Phase 19-04 (Drag-Drop Analyzing Hang & Sidebar Auto-Open):**
+- setTimeout(0) is minimal fix for Strict Mode MutationObserver disconnection (matches ChatInterface.tsx pattern)
+- setRightPanelOpen(true) called before router.replace in handleSend so Zustand state persists across navigation
+- Phase 19-03 decision that WelcomeScreen has no right panel was incorrect -- WelcomeScreen links files to existing sessions too
+
 See also: PROJECT.md Key Decisions table for milestone-level decisions.
 
 ### Pending Todos
@@ -191,7 +197,7 @@ See also: PROJECT.md Key Decisions table for milestone-level decisions.
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 19-03-PLAN.md (Phase 19 complete)
-Resume with: Full v0.3 UAT retest — all 9 gaps closed
-Next decision: Run 25-test UAT suite to verify v0.3 milestone completion
+Stopped at: Completed 19-04-PLAN.md
+Resume with: Execute Plan 19-05 or full v0.3 UAT retest
+Next decision: Execute remaining Plan 19-05 then run UAT retest
 UI directive: Use Frontend Design skill (/frontend-design) for UI work in Phases 16, 17, 18, 19
