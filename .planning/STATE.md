@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** v0.3 Multi-file Conversation Support — Phase 18 in progress
+**Current focus:** v0.3 Multi-file Conversation Support — Phase 18 COMPLETE
 
 ## Current Position
 
-Phase: 18 - Integration & Polish
-Plan: 02 of 03 (Light/Dark Theme Toggle) — COMPLETE
-Status: Plan 18-02 complete. Light/dark theme toggle with system default and localStorage persistence.
+Phase: 18 - Integration & Polish — COMPLETE
+Plan: 03 of 03 (LLM Session Title Auto-Generation) — COMPLETE
+Status: Phase 18 complete. All 3 plans finished. LLM-based session title auto-generation with manual rename lock.
 Branch: develop (fresh from master for v0.3)
-Last activity: 2026-02-12 — Completed Plan 18-02
+Last activity: 2026-02-12 — Completed Plan 18-03
 
-Progress: [█████████████████████░░░░░░░░░░░] 67% (2/3 plans complete in Phase 18)
+Progress: [████████████████████████████████] 100% (3/3 plans complete in Phase 18)
 
 ## Performance Metrics
 
@@ -47,7 +47,8 @@ Progress: [█████████████████████░░
 - Phase 17 Plan 03: 3 min, 2 tasks, 6 files
 - Phase 18 Plan 01: 2 min, 2 tasks, 4 files
 - Phase 18 Plan 02: 2 min, 2 tasks, 2 files
-- Total commits: 30
+- Phase 18 Plan 03: 4 min, 2 tasks, 9 files
+- Total commits: 32
 
 ## Accumulated Context
 
@@ -148,6 +149,14 @@ Progress: [█████████████████████░░
 - mounted state check on theme toggle prevents hydration mismatch (theme-dependent icons differ between SSR and client)
 - class-based dark mode via ThemeProvider attribute="class" activates existing .dark CSS variables in globals.css
 
+**Phase 18-03 (LLM Session Title Auto-Generation):**
+- POST /sessions/{id}/generate-title accepts no request body (security: prevents LLM proxy abuse)
+- Service reads first user message from DB (not from client input) and truncates to 500 chars (defense in depth)
+- user_modified=True set on manual rename, auto-generation skips if user_modified is true
+- Title generation fails silently (session keeps "New Chat" title, error logged but not shown to user)
+- Frontend ref guard (titleGenerated.current) prevents duplicate generation calls during re-renders
+- Title generation triggers when messages >= 2, title is "New Chat", and user_modified is false
+
 See also: PROJECT.md Key Decisions table for milestone-level decisions.
 
 ### Pending Todos
@@ -164,7 +173,7 @@ See also: PROJECT.md Key Decisions table for milestone-level decisions.
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 18-02-PLAN.md
-Resume with: Execute Plan 18-03
-Next decision: Continue with Plan 18-03 (next plan in Phase 18)
+Stopped at: Completed 18-03-PLAN.md
+Resume with: Phase 18 complete. Begin milestone v0.3 completion review or next milestone planning.
+Next decision: Milestone v0.3 complete -- review and merge to master, or plan next milestone
 UI directive: Use Frontend Design skill (/frontend-design) for UI work in Phases 16, 17, 18
