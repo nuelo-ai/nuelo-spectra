@@ -137,37 +137,40 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Nord Polar Night — surface layers */
+  --background: #2E3440;
+  --foreground: #ECEFF4;
+  --card: #3B4252;
+  --card-foreground: #ECEFF4;
+  --popover: #3B4252;
+  --popover-foreground: #ECEFF4;
+  --primary: #D8DEE9;
+  --primary-foreground: #2E3440;
+  --secondary: #434C5E;
+  --secondary-foreground: #D8DEE9;
+  --muted: #3B4252;
+  --muted-foreground: #8892A4;
+  --accent: #434C5E;
+  --accent-foreground: #D8DEE9;
+  --destructive: #BF616A;
+  --border: #434C5E;
+  --input: #434C5E;
+  --ring: #4C566A;
+  /* Nord Aurora — data visualization */
+  --chart-1: #88C0D0;
+  --chart-2: #A3BE8C;
+  --chart-3: #EBCB8B;
+  --chart-4: #B48EAD;
+  --chart-5: #BF616A;
+  /* Sidebar — deepest layer */
+  --sidebar: #2E3440;
+  --sidebar-foreground: #D8DEE9;
+  --sidebar-primary: #D8DEE9;
+  --sidebar-primary-foreground: #2E3440;
+  --sidebar-accent: #3B4252;
+  --sidebar-accent-foreground: #D8DEE9;
+  --sidebar-border: #3B4252;
+  --sidebar-ring: #4C566A;
 }
 
 @layer base {
@@ -190,17 +193,29 @@
     animation-delay: 400ms;
   }
 
-  /* Gradient utilities for vibrant aesthetic */
+  /* Gradient utilities — charcoal for light, Nord tonal for dark */
   .gradient-primary {
-    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+    background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  }
+
+  .dark .gradient-primary {
+    background: linear-gradient(135deg, #4C566A 0%, #3B4252 100%);
   }
 
   .gradient-bg {
-    background: linear-gradient(180deg, oklch(1 0 0) 0%, oklch(0.99 0.002 264) 100%);
+    background: linear-gradient(180deg, oklch(1 0 0) 0%, oklch(0.98 0 0) 100%);
+  }
+
+  .dark .gradient-bg {
+    background: linear-gradient(180deg, #2E3440 0%, #2B3039 100%);
   }
 
   .gradient-accent {
-    background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 50%, #f59e0b 100%);
+    background: linear-gradient(135deg, #4b5563 0%, #374151 50%, #1f2937 100%);
+  }
+
+  .dark .gradient-accent {
+    background: linear-gradient(135deg, #4C566A 0%, #434C5E 50%, #3B4252 100%);
   }
 
   /* Skeleton loading with shimmer effect */
@@ -218,9 +233,9 @@
   .dark .skeleton {
     background: linear-gradient(
       90deg,
-      oklch(0.269 0 0) 0%,
-      oklch(0.3 0 0) 50%,
-      oklch(0.269 0 0) 100%
+      #3B4252 0%,
+      #434C5E 50%,
+      #3B4252 100%
     );
     background-size: 200% 100%;
   }

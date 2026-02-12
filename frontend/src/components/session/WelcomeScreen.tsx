@@ -317,8 +317,8 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
         <div className="max-w-2xl w-full space-y-8 text-center">
           {/* Subtle decorative element */}
           <div className="flex justify-center">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-blue-500/10 border border-indigo-500/20 flex items-center justify-center">
-              <Sparkles className="h-6 w-6 text-indigo-500/70" />
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-gray-200/60 to-gray-300/40 dark:from-[#434C5E]/40 dark:to-[#3B4252]/40 border border-gray-300/50 dark:border-[#4C566A]/50 flex items-center justify-center">
+              <Sparkles className="h-6 w-6 text-gray-500 dark:text-[#D8DEE9]/70" />
             </div>
           </div>
 

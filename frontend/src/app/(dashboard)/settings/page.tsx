@@ -24,7 +24,7 @@ export default function SettingsPage() {
               Back to Dashboard
             </Button>
           </Link>
-          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-blue-500 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-gray-800 to-gray-600 dark:from-[#ECEFF4] dark:to-[#D8DEE9] bg-clip-text text-transparent">
             Settings
           </h1>
           <p className="text-muted-foreground">

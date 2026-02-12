@@ -63,7 +63,7 @@ export function UserSection() {
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 shrink-0 rounded-lg">
-                <AvatarFallback className="rounded-lg bg-gradient-to-br from-indigo-500 to-blue-500 text-white text-xs">
+                <AvatarFallback className="rounded-lg gradient-primary text-white text-xs">
                   {getInitials()}
                 </AvatarFallback>
               </Avatar>
@@ -85,7 +85,7 @@ export function UserSection() {
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarFallback className="rounded-lg bg-gradient-to-br from-indigo-500 to-blue-500 text-white text-xs">
+                  <AvatarFallback className="rounded-lg gradient-primary text-white text-xs">
                     {getInitials()}
                   </AvatarFallback>
                 </Avatar>
