@@ -177,8 +177,8 @@ Plans:
 - [x] 19-03-PLAN.md — Drag-drop file forwarding and sidebar auto-open on link
 - [x] 19-04-PLAN.md — Fix drag-drop analyzing hang (setTimeout deferral) and sidebar auto-open on WelcomeScreen
 - [x] 19-05-PLAN.md — Move Spectra branding from sidebar to main content headers
-- [ ] 19-06-PLAN.md — Widen upload modal to match info modal width (sm:max-w-4xl)
-- [ ] 19-07-PLAN.md — Continue to Chat redirect from My Files + sidebar auto-open on new session
+- [x] 19-06-PLAN.md — Widen upload modal to match info modal width (sm:max-w-4xl)
+- [x] 19-07-PLAN.md — Continue to Chat redirect from My Files + sidebar auto-open on new session
 
 **Success Criteria:**
 1. All v0.3 UAT tests pass
@@ -210,4 +210,4 @@ Plans:
 | 16. Frontend Restructure | v0.3 | 3/3 | Complete | 2026-02-11 |
 | 17. File Management & Linking | v0.3 | 3/3 | Complete | 2026-02-11 |
 | 18. Integration & Polish | v0.3 | 3/3 | Complete | 2026-02-11 |
-| 19. v0.3 Gap Closure | v0.3 | 5/7 | In Progress | — |
+| 19. v0.3 Gap Closure | v0.3 | 7/7 | Complete | 2026-02-12 |
