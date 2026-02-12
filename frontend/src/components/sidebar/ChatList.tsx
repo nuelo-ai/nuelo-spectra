@@ -50,7 +50,7 @@ export function ChatList() {
     return (
       <SidebarGroup>
         <SidebarGroupContent>
-          <div className="flex flex-col items-center gap-2 px-2 py-8 text-center">
+          <div className="flex flex-col items-center gap-2 px-2 py-8 text-center group-data-[collapsible=icon]:hidden">
             <MessageSquare className="h-8 w-8 text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground">
               No conversations yet

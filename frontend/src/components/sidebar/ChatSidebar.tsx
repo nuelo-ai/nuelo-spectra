@@ -36,6 +36,12 @@ export function ChatSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r">
       <SidebarHeader>
+        <div className="flex items-center gap-2 px-2 py-1.5 group-data-[collapsible=icon]:hidden">
+          <div className="h-7 w-7 rounded-lg gradient-primary flex items-center justify-center">
+            <span className="text-sm font-bold text-white">S</span>
+          </div>
+          <span className="font-semibold text-sm tracking-tight">Spectra</span>
+        </div>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
