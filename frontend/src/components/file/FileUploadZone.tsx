@@ -114,10 +114,15 @@ export function FileUploadZone({ onUploadComplete, initialFiles }: FileUploadZon
   );
 
   // Auto-trigger upload when initialFiles are provided (from parent drag-drop)
+  // setTimeout(0) defers execution past React Strict Mode unmount-remount cycle
+  // so the MutationObserver stays subscribed when onDrop fires
   useEffect(() => {
     if (initialFiles && initialFiles.length > 0 && !initialProcessed.current && uploadStage === "idle") {
-      initialProcessed.current = true;
-      onDrop(initialFiles);
+      const timer = setTimeout(() => {
+        initialProcessed.current = true;
+        onDrop(initialFiles);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [initialFiles, onDrop, uploadStage]);
 
