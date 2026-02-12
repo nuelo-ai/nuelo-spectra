@@ -63,7 +63,9 @@ agents:
     model: claude-sonnet-4-20250514
     temperature: 0.0
     system_prompt: |
-      Generate Python code for data analysis. The dataframe `df` is already loaded.
+      Generate Python code for data analysis.
+
+      {multi_file_context}
 
       **Dataset columns and types:**
       {data_profile}
@@ -79,17 +81,30 @@ agents:
       - Use .fillna(0) for missing values
       - NEVER check if df exists or use locals()/globals()
 
-      **Example:**
+      **Multi-file rules (when multiple DataFrames are available):**
+      - Use exact variable names shown above (e.g., df_sales, df_customers)
+      - Only load/use DataFrames you actually need for this specific query
+      - For joins: pd.merge(df_a, df_b, on='column_name')
+      - IMPORTANT: If join hints are shown in the context above, you MUST present them to the user first and ask for confirmation before writing any code that performs cross-file joins or merges. Say something like: "I noticed these files share some columns that could be used to join them: [list hints]. Would you like me to proceed with joining on [column]?" Only generate join/merge code AFTER the user confirms.
+      - If the user has already confirmed a specific join in this conversation, proceed without asking again.
+
+      **File awareness rules:**
+      - If the user's query references a file name that is NOT in the list of available DataFrames above, respond with: "That file isn't part of this session. The files currently available are: [list files]." Do NOT attempt to generate code for files not in the session.
+      - If a new file appears in the session that you haven't seen in previous messages of this conversation, briefly acknowledge it: "I see [filename] has been added to the session. It contains [brief description from context]." Then proceed to answer the user's question.
+
+      **Single-file example:**
       ```python
       import json
       result = int(df['sales'].sum())
       print(json.dumps({{"result": result}}))
       ```
 
-      **Example with DataFrame result:**
+      **Multi-file example:**
       ```python
       import json
-      result = df.groupby('category')['sales'].sum().reset_index().to_dict('records')
+      import pandas as pd
+      merged = pd.merge(df_sales, df_customers, on='customer_id', how='inner')
+      result = merged.groupby('region')['revenue'].sum().to_dict()
       print(json.dumps({{"result": result}}))
       ```
 
@@ -120,6 +135,8 @@ agents:
       6. Are numpy/pandas types converted to Python native types before json.dumps?
       7. Does the code end with: print(json.dumps({{"result": result}})) to output structured JSON?
       8. If result is a DataFrame/Series, is it converted to dict/list before json.dumps?
+      9. If multiple DataFrames are used, are they using the correct variable names (df_sales, etc.)?
+      10. If a join/merge is performed, is the join column valid and join type specified?
 
       If the code is VALID, respond with exactly: VALID
       If the code has issues, respond with:
@@ -155,6 +172,13 @@ agents:
          - First query in conversation, or completely different analysis
          - No relevant previous code to build upon
          - Examples: "Show sales by region", "Calculate correlation", "Start fresh"
+
+      **Session Files:** {session_files}
+      When session files are listed, consider which files are relevant to the query:
+      - If user references specific files, ensure routing accounts for them
+      - Cross-file queries that reference the same files analyzed before can use MEMORY_SUFFICIENT
+      - If new files have been added since last analysis, prefer NEW_ANALYSIS for queries involving those files
+      - If the user mentions a file name that doesn't match any file in the session files list, route to data_analysis agent and let it explain that the file isn't part of the session
 
       **Rules:**
       - Choose the FASTEST route that correctly answers the query
@@ -208,3 +232,20 @@ agents:
       Return ONLY the JSON object. No text before or after.
 
     max_tokens: 3000
+
+  title_generator:
+    provider: ollama
+    model: llama3.2
+    temperature: 0.3
+    system_prompt: |
+      Generate a concise title (max 8 words) for a data analysis conversation based on the user's first message.
+
+      Rules:
+      - Title should capture the intent/topic of the analysis
+      - Use plain language, not technical jargon
+      - Do NOT include quotes around the title
+      - Do NOT start with "Analysis of" or "Data" - be specific
+      - Examples: "Sales Trends by Region", "Customer Churn Factors", "Monthly Revenue Breakdown"
+
+      Return ONLY the title text, nothing else.
+    max_tokens: 50

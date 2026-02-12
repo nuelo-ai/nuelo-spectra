@@ -6,9 +6,13 @@ from typing import TYPE_CHECKING
 
 from app.models.base import Base
 
+# Import association table for M2M relationship
+from app.models.chat_session import session_files
+
 if TYPE_CHECKING:
     from app.models.user import User
     from app.models.chat_message import ChatMessage
+    from app.models.chat_session import ChatSession
 
 
 class File(Base):
@@ -46,4 +50,9 @@ class File(Base):
         "ChatMessage",
         back_populates="file",
         cascade="all, delete-orphan"
+    )
+    sessions: Mapped[list["ChatSession"]] = relationship(
+        "ChatSession",
+        secondary=session_files,
+        back_populates="files"
     )

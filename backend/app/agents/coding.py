@@ -170,7 +170,8 @@ async def coding_agent(state: ChatAgentState) -> dict:
     system_prompt = system_prompt_template.format(
         data_profile=state.get("data_profile", "{}"),
         user_context=state.get("user_context", "No additional context provided"),
-        allowed_libraries=allowed_libs_str
+        allowed_libraries=allowed_libs_str,
+        multi_file_context=state.get("multi_file_context", ""),
     )
 
     # Initialize LLM using per-agent config

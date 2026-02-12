@@ -124,11 +124,12 @@ async def update_user_context(
 
 async def run_chat_query(
     db: AsyncSession,
-    file_id: UUID,
+    file_id: UUID | None,
     user_id: UUID,
     user_query: str,
     checkpointer=None,
     web_search_enabled: bool = False,
+    session_id: UUID | None = None,
 ) -> dict:
     """Run chat query through the full agent pipeline.
 
@@ -138,13 +139,18 @@ async def run_chat_query(
     3. Save user message and agent response to chat history
     4. Return structured response with code, execution result, and analysis
 
+    Supports both file-based (legacy) and session-based (v0.3) flows:
+    - If session_id provided: uses session-based thread_id, saves messages with session_id
+    - If session_id is None: uses file-based thread_id, saves messages with file_id (backward compat)
+
     Args:
         db: Database session
-        file_id: File UUID
+        file_id: File UUID (optional if session_id provided)
         user_id: User UUID (for access control)
         user_query: User's natural language query
         checkpointer: Optional PostgreSQL checkpointer
         web_search_enabled: Whether web search is enabled for this query
+        session_id: Optional Session UUID (v0.3 multi-file conversations)
 
     Returns:
         dict: Agent response with user_query, generated_code, execution_result,
@@ -153,13 +159,40 @@ async def run_chat_query(
     Raises:
         HTTPException: If file not found or not yet onboarded (data_summary is None)
     """
-    # Load file record with access control
-    file_record = await FileService.get_user_file(db, file_id, user_id)
-    if not file_record:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="File not found"
-        )
+    # Load file record based on session_id or file_id
+    if session_id:
+        # Session-based flow: assemble multi-file context via ContextAssembler
+        from app.services.chat_session import ChatSessionService
+        from app.services.context_assembler import ContextAssembler
+        session = await ChatSessionService.get_user_session(db, session_id, user_id)
+        if not session:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Session not found"
+            )
+        if not session.files:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No files linked to this session"
+            )
+        # Use first file as primary (for legacy fields)
+        file_record = session.files[0]
+
+        # Assemble multi-file context -- fail with clear error if any file is missing/unreadable
+        assembler = ContextAssembler()
+        file_ids = [f.id for f in session.files]
+        try:
+            context_result = await assembler.assemble(db, file_ids, user_id)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    else:
+        # File-based flow: get file directly (backward compatibility)
+        file_record = await FileService.get_user_file(db, file_id, user_id)
+        if not file_record:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="File not found"
+            )
 
     # Check that onboarding has completed
     if file_record.data_summary is None:
@@ -171,8 +204,11 @@ async def run_chat_query(
     # Get or create compiled graph with checkpointer
     graph = get_or_create_graph(checkpointer)
 
-    # Build thread ID for per-file per-user memory isolation
-    thread_id = f"file_{file_id}_user_{user_id}"
+    # Build thread ID based on session_id or file_id
+    if session_id:
+        thread_id = f"session_{session_id}_user_{user_id}"
+    else:
+        thread_id = f"file_{file_id}_user_{user_id}"
     config = {"configurable": {"thread_id": thread_id}}
 
     # Build initial state: per-query fields only.
@@ -183,8 +219,27 @@ async def run_chat_query(
     # first query (no checkpoint) is safe.
     from langchain_core.messages import HumanMessage
 
+    # Build multi-file fields based on session vs file flow
+    if session_id:
+        multi_file_context = context_result["context_string"]
+        file_metadata = [
+            {
+                "id": f["id"],
+                "name": f["name"],
+                "var_name": f["var_name"],
+                "file_path": next(sf.file_path for sf in session.files if str(sf.id) == f["id"]),
+                "file_type": next(sf.file_type for sf in session.files if str(sf.id) == f["id"]),
+            }
+            for f in context_result["files"]
+        ]
+        session_files = [f.original_filename for f in session.files]
+    else:
+        multi_file_context = ""
+        file_metadata = []
+        session_files = []
+
     initial_state = {
-        "file_id": str(file_id),
+        "file_id": str(file_record.id),  # Always use actual file_id for execution
         "user_id": str(user_id),
         "user_query": user_query,
         "data_summary": file_record.data_summary,
@@ -200,6 +255,11 @@ async def run_chat_query(
         "previous_code": "",
         "web_search_enabled": web_search_enabled,
         "search_sources": [],
+        "session_id": str(session_id) if session_id else None,
+        # Multi-file fields (empty defaults for single-file backward compatibility)
+        "multi_file_context": multi_file_context,
+        "file_metadata": file_metadata,
+        "session_files": session_files,
     }
 
     # Add new user message to checkpoint using aupdate_state
@@ -216,38 +276,66 @@ async def run_chat_query(
     if web_search_enabled:
         await _track_search_quota(db, user_id)
 
-    # Save user message to chat history
-    await ChatService.create_message(
-        db,
-        file_id,
-        user_id,
-        user_query,
-        role="user"
-    )
+    # Save user message to chat history (session-based or file-based)
+    if session_id:
+        await ChatService.create_session_message(
+            db,
+            session_id,
+            user_id,
+            user_query,
+            role="user"
+        )
+    else:
+        await ChatService.create_message(
+            db,
+            file_id,
+            user_id,
+            user_query,
+            role="user"
+        )
 
     # Serialize routing_decision for metadata storage
     rd = result.get("routing_decision")
     routing_meta = rd.model_dump() if hasattr(rd, "model_dump") else (rd or {})
 
-    # Save assistant response with metadata
+    # Save assistant response with metadata (session-based or file-based)
     final_response_text = result.get("final_response") or result.get("analysis", "")
-    await ChatService.create_message(
-        db,
-        file_id,
-        user_id,
-        final_response_text,
-        role="assistant",
-        message_type="agent_response",
-        metadata_json={
-            "generated_code": result.get("generated_code"),
-            "execution_result": result.get("execution_result"),
-            "error_count": result.get("error_count", 0),
-            "error": result.get("error"),
-            "routing_decision": routing_meta,
-            "search_sources": result.get("search_sources", []),
-            "follow_up_suggestions": result.get("follow_up_suggestions", []),
-        }
-    )
+    if session_id:
+        await ChatService.create_session_message(
+            db,
+            session_id,
+            user_id,
+            final_response_text,
+            role="assistant",
+            message_type="agent_response",
+            metadata_json={
+                "generated_code": result.get("generated_code"),
+                "execution_result": result.get("execution_result"),
+                "error_count": result.get("error_count", 0),
+                "error": result.get("error"),
+                "routing_decision": routing_meta,
+                "search_sources": result.get("search_sources", []),
+                "follow_up_suggestions": result.get("follow_up_suggestions", []),
+            }
+        )
+    else:
+        await ChatService.create_message(
+            db,
+            file_id,
+            user_id,
+            final_response_text,
+            role="assistant",
+            message_type="agent_response",
+            metadata_json={
+                "generated_code": result.get("generated_code"),
+                "execution_result": result.get("execution_result"),
+                "error_count": result.get("error_count", 0),
+                "error": result.get("error"),
+                "routing_decision": routing_meta,
+                "search_sources": result.get("search_sources", []),
+                "follow_up_suggestions": result.get("follow_up_suggestions", []),
+            }
+        )
 
     # Return structured response
     return {
@@ -262,11 +350,12 @@ async def run_chat_query(
 
 async def run_chat_query_stream(
     db: AsyncSession,
-    file_id: UUID,
+    file_id: UUID | None,
     user_id: UUID,
     user_query: str,
     checkpointer=None,
     web_search_enabled: bool = False,
+    session_id: UUID | None = None,
 ) -> AsyncGenerator[dict, None]:
     """Run chat query through agent pipeline and yield SSE events.
 
@@ -283,13 +372,18 @@ async def run_chat_query_stream(
     Chat history is saved atomically on successful stream completion with metadata.
     Failed streams save nothing to the database (clean failure state per CONTEXT.md).
 
+    Supports both file-based (legacy) and session-based (v0.3) flows:
+    - If session_id provided: uses session-based thread_id, saves messages with session_id
+    - If session_id is None: uses file-based thread_id, saves messages with file_id (backward compat)
+
     Args:
         db: Database session (used for initial file validation only)
-        file_id: File UUID
+        file_id: File UUID (optional if session_id provided)
         user_id: User UUID (for access control)
         user_query: User's natural language query
         checkpointer: Optional PostgreSQL checkpointer
         web_search_enabled: Whether web search is enabled for this query
+        session_id: Optional Session UUID (v0.3 multi-file conversations)
 
     Yields:
         dict: Event dictionaries with type, message, and event-specific fields
@@ -297,14 +391,42 @@ async def run_chat_query_stream(
     Raises:
         Yields error event dict (does not raise exceptions)
     """
-    logger.info(f"Starting chat stream for file_id={file_id}, user_id={user_id}, query={user_query[:50]}...")
+    logger.info(f"Starting chat stream for session_id={session_id}, file_id={file_id}, user_id={user_id}, query={user_query[:50]}...")
 
-    # Load file record with access control (uses injected db for quick read)
-    file_record = await FileService.get_user_file(db, file_id, user_id)
-    if not file_record:
-        logger.error(f"File not found: file_id={file_id}, user_id={user_id}")
-        yield {"type": "error", "message": "File not found"}
-        return
+    # Load file record based on session_id or file_id
+    if session_id:
+        # Session-based flow: assemble multi-file context via ContextAssembler
+        from app.services.chat_session import ChatSessionService
+        from app.services.context_assembler import ContextAssembler
+        session = await ChatSessionService.get_user_session(db, session_id, user_id)
+        if not session:
+            logger.error(f"Session not found: session_id={session_id}, user_id={user_id}")
+            yield {"type": "error", "message": "Session not found"}
+            return
+        if not session.files:
+            yield {
+                "type": "error",
+                "message": "No files linked to this session"
+            }
+            return
+        # Use first file as primary (for legacy fields)
+        file_record = session.files[0]
+
+        # Assemble multi-file context -- fail with clear error if any file is missing/unreadable
+        assembler = ContextAssembler()
+        file_ids = [f.id for f in session.files]
+        try:
+            context_result = await assembler.assemble(db, file_ids, user_id)
+        except ValueError as e:
+            yield {"type": "error", "message": str(e)}
+            return
+    else:
+        # File-based flow: get file directly (backward compatibility)
+        file_record = await FileService.get_user_file(db, file_id, user_id)
+        if not file_record:
+            logger.error(f"File not found: file_id={file_id}, user_id={user_id}")
+            yield {"type": "error", "message": "File not found"}
+            return
 
     # Check that onboarding has completed
     if file_record.data_summary is None:
@@ -332,8 +454,11 @@ async def run_chat_query_stream(
     # Get or create compiled graph with checkpointer
     graph = get_or_create_graph(checkpointer)
 
-    # Build thread ID for per-file per-user memory isolation
-    thread_id = f"file_{file_id}_user_{user_id}"
+    # Build thread ID based on session_id or file_id
+    if session_id:
+        thread_id = f"session_{session_id}_user_{user_id}"
+    else:
+        thread_id = f"file_{file_id}_user_{user_id}"
     config = {"configurable": {"thread_id": thread_id}}
 
     # Build initial state: per-query fields only.
@@ -344,8 +469,27 @@ async def run_chat_query_stream(
     # first query (no checkpoint) is safe.
     from langchain_core.messages import HumanMessage
 
+    # Build multi-file fields based on session vs file flow
+    if session_id:
+        multi_file_context = context_result["context_string"]
+        file_metadata = [
+            {
+                "id": f["id"],
+                "name": f["name"],
+                "var_name": f["var_name"],
+                "file_path": next(sf.file_path for sf in session.files if str(sf.id) == f["id"]),
+                "file_type": next(sf.file_type for sf in session.files if str(sf.id) == f["id"]),
+            }
+            for f in context_result["files"]
+        ]
+        session_files = [f.original_filename for f in session.files]
+    else:
+        multi_file_context = ""
+        file_metadata = []
+        session_files = []
+
     initial_state = {
-        "file_id": str(file_id),
+        "file_id": str(file_record.id),  # Always use actual file_id for execution
         "user_id": str(user_id),
         "user_query": user_query,
         "data_summary": file_record.data_summary,
@@ -362,6 +506,11 @@ async def run_chat_query_stream(
         "previous_code": "",
         "web_search_enabled": web_search_enabled,
         "search_sources": [],
+        "session_id": str(session_id) if session_id else None,
+        # Multi-file fields (empty defaults for single-file backward compatibility)
+        "multi_file_context": multi_file_context,
+        "file_metadata": file_metadata,
+        "session_files": session_files,
     }
 
     # Add new user message to checkpoint using aupdate_state
@@ -423,34 +572,60 @@ async def run_chat_query_stream(
                 await _track_search_quota(quota_db, user_id)
 
         async with async_session_maker() as save_db:
-            # Save user message
-            await ChatService.create_message(
-                save_db, file_id, user_id, user_query, role="user"
-            )
+            # Save user message (session-based or file-based)
+            if session_id:
+                await ChatService.create_session_message(
+                    save_db, session_id, user_id, user_query, role="user"
+                )
+            else:
+                await ChatService.create_message(
+                    save_db, file_id, user_id, user_query, role="user"
+                )
+
             # Serialize routing_decision for metadata storage
             rd = final_state.get("routing_decision")
             routing_meta = rd.model_dump() if hasattr(rd, "model_dump") else (rd or {})
 
-            # Save assistant response with stream metadata
+            # Save assistant response with stream metadata (session-based or file-based)
             response_text = final_state.get("final_response") or final_state.get("analysis", "")
-            await ChatService.create_message(
-                save_db, file_id, user_id, response_text,
-                role="assistant",
-                message_type="agent_response",
-                metadata_json={
-                    "generated_code": final_state.get("generated_code"),
-                    "execution_result": final_state.get("execution_result"),
-                    "error_count": final_state.get("error_count", 0),
-                    "routing_decision": routing_meta,
-                    "follow_up_suggestions": final_state.get("follow_up_suggestions", []),
-                    "search_sources": final_state.get("search_sources", []),
-                    "stream_metadata": {
-                        "duration_ms": elapsed_ms,
-                        "retry_count": final_state.get("error_count", 0),
-                        "error": final_state.get("error"),
+            if session_id:
+                await ChatService.create_session_message(
+                    save_db, session_id, user_id, response_text,
+                    role="assistant",
+                    message_type="agent_response",
+                    metadata_json={
+                        "generated_code": final_state.get("generated_code"),
+                        "execution_result": final_state.get("execution_result"),
+                        "error_count": final_state.get("error_count", 0),
+                        "routing_decision": routing_meta,
+                        "follow_up_suggestions": final_state.get("follow_up_suggestions", []),
+                        "search_sources": final_state.get("search_sources", []),
+                        "stream_metadata": {
+                            "duration_ms": elapsed_ms,
+                            "retry_count": final_state.get("error_count", 0),
+                            "error": final_state.get("error"),
+                        }
                     }
-                }
-            )
+                )
+            else:
+                await ChatService.create_message(
+                    save_db, file_id, user_id, response_text,
+                    role="assistant",
+                    message_type="agent_response",
+                    metadata_json={
+                        "generated_code": final_state.get("generated_code"),
+                        "execution_result": final_state.get("execution_result"),
+                        "error_count": final_state.get("error_count", 0),
+                        "routing_decision": routing_meta,
+                        "follow_up_suggestions": final_state.get("follow_up_suggestions", []),
+                        "search_sources": final_state.get("search_sources", []),
+                        "stream_metadata": {
+                            "duration_ms": elapsed_ms,
+                            "retry_count": final_state.get("error_count", 0),
+                            "error": final_state.get("error"),
+                        }
+                    }
+                )
 
         # Yield completion event
         yield {

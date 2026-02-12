@@ -28,10 +28,10 @@ export default function AuthLayout({
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 via-slate-50 to-gray-100 dark:from-[#2E3440] dark:via-[#2E3440] dark:to-[#3B4252]">
       <div className="w-full max-w-md px-6">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 dark:from-[#ECEFF4] dark:to-[#D8DEE9] bg-clip-text text-transparent">
             Spectra
           </h1>
           <p className="mt-2 text-muted-foreground">

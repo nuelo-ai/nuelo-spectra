@@ -5,6 +5,7 @@ from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, Form, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from app.config import get_settings
@@ -135,6 +136,48 @@ async def get_file(
         )
 
     return FileDetailResponse.model_validate(file)
+
+
+@router.get("/{file_id}/download")
+async def download_file(
+    file_id: UUID,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> FileResponse:
+    """Download a file by returning it as a FileResponse.
+
+    Sets Content-Disposition header with original filename.
+
+    Args:
+        file_id: File UUID
+        current_user: Authenticated user
+        db: Database session
+
+    Returns:
+        FileResponse with file content
+
+    Raises:
+        HTTPException: 404 if file not found or doesn't exist on disk
+    """
+    file = await FileService.get_user_file(db, file_id, current_user.id)
+    if file is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File not found"
+        )
+
+    file_path = Path(file.file_path)
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File not found on disk"
+        )
+
+    return FileResponse(
+        path=str(file_path),
+        filename=file.original_filename,
+        media_type="application/octet-stream",
+    )
 
 
 @router.delete("/{file_id}", status_code=status.HTTP_204_NO_CONTENT)

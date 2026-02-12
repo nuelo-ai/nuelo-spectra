@@ -14,6 +14,8 @@ import { apiClient } from "@/lib/api-client";
 
 interface FileUploadZoneProps {
   onUploadComplete?: () => void;
+  onContinueToChat?: (fileId: string, fileName: string) => void;
+  initialFiles?: File[];
 }
 
 type UploadStage = "idle" | "uploading" | "analyzing" | "ready";
@@ -21,7 +23,7 @@ type UploadStage = "idle" | "uploading" | "analyzing" | "ready";
 /**
  * Drag-and-drop file upload zone with staged progress indicators
  */
-export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
+export function FileUploadZone({ onUploadComplete, onContinueToChat, initialFiles }: FileUploadZoneProps) {
   const queryClient = useQueryClient();
   const { mutate: uploadFile } = useUploadFile();
   const { openTab } = useTabStore();
@@ -50,6 +52,9 @@ export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
       setProgress(100);
     }
   }, [uploadStage, summary?.data_summary]);
+
+  // Guard ref for initialFiles processing
+  const initialProcessed = useRef(false);
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -108,6 +113,19 @@ export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
     },
     [uploadFile, queryClient]
   );
+
+  // Auto-trigger upload when initialFiles are provided (from parent drag-drop)
+  // setTimeout(0) defers execution past React Strict Mode unmount-remount cycle
+  // so the MutationObserver stays subscribed when onDrop fires
+  useEffect(() => {
+    if (initialFiles && initialFiles.length > 0 && !initialProcessed.current && uploadStage === "idle") {
+      const timer = setTimeout(() => {
+        initialProcessed.current = true;
+        onDrop(initialFiles);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [initialFiles, onDrop, uploadStage]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -255,9 +273,13 @@ export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
                         // Sidebar will catch up via refetchInterval fallback
                       }
 
-                      // Step 3: Open file tab
+                      // Step 3: Navigate to chat with file
                       if (uploadedFileId) {
-                        openTab(uploadedFileId, uploadedFileName);
+                        if (onContinueToChat) {
+                          onContinueToChat(uploadedFileId, uploadedFileName);
+                        } else {
+                          openTab(uploadedFileId, uploadedFileName);
+                        }
                       }
                     } catch (error) {
                       console.error("Continue to Chat handler error:", error);

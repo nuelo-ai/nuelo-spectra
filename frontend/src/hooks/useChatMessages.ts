@@ -3,24 +3,24 @@ import { apiClient } from "@/lib/api-client";
 import { ChatMessageList, ChatMessageResponse } from "@/types/chat";
 
 /**
- * TanStack Query hook for fetching chat message history for a file.
+ * TanStack Query hook for fetching chat message history for a session.
  */
-export function useChatMessages(fileId: string | null) {
+export function useChatMessages(sessionId: string | null) {
   return useQuery({
-    queryKey: ["chat", "messages", fileId],
+    queryKey: ["session", "messages", sessionId],
     queryFn: async (): Promise<ChatMessageList> => {
-      if (!fileId) {
-        throw new Error("File ID is required");
+      if (!sessionId) {
+        throw new Error("Session ID is required");
       }
 
-      const response = await apiClient.get(`/chat/${fileId}/messages`);
+      const response = await apiClient.get(`/sessions/${sessionId}/messages`);
       if (!response.ok) {
         throw new Error("Failed to fetch chat messages");
       }
 
       return response.json();
     },
-    enabled: !!fileId,
+    enabled: !!sessionId,
     refetchOnWindowFocus: true,
   });
 }
@@ -32,10 +32,10 @@ export function useChatMessages(fileId: string | null) {
 export function useAddLocalMessage() {
   const queryClient = useQueryClient();
 
-  return (fileId: string, message: string) => {
+  return (sessionId: string, message: string) => {
     const optimisticMessage: ChatMessageResponse = {
       id: `temp-${Date.now()}`,
-      file_id: fileId,
+      file_id: null,
       role: "user",
       content: message,
       message_type: null,
@@ -44,7 +44,7 @@ export function useAddLocalMessage() {
     };
 
     queryClient.setQueryData<ChatMessageList>(
-      ["chat", "messages", fileId],
+      ["session", "messages", sessionId],
       (old) => {
         if (!old) {
           return {
@@ -69,9 +69,9 @@ export function useAddLocalMessage() {
 export function useInvalidateChatMessages() {
   const queryClient = useQueryClient();
 
-  return async (fileId: string) => {
+  return async (sessionId: string) => {
     await queryClient.refetchQueries({
-      queryKey: ["chat", "messages", fileId],
+      queryKey: ["session", "messages", sessionId],
       exact: true,
     });
   };

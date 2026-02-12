@@ -1,37 +1,47 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useDropzone } from "react-dropzone";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   useChatMessages,
   useAddLocalMessage,
-  useInvalidateChatMessages,
 } from "@/hooks/useChatMessages";
 import { useSSEStream } from "@/hooks/useSSEStream";
 import { useSearchToggle } from "@/hooks/useSearchToggle";
-import { useTabCloseWarning } from "@/hooks/useTabCloseWarning";
+import { useFiles } from "@/hooks/useFileManager";
+import { useLinkFile } from "@/hooks/useSessionMutations";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { TypingIndicator } from "./TypingIndicator";
 import { DataCard } from "./DataCard";
-import { ContextUsage } from "./ContextUsage";
-import { QuerySuggestions } from "./QuerySuggestions";
-import { Globe } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
-import { apiClient } from "@/lib/api-client";
-import { useFileSummary } from "@/hooks/useFileManager";
+import { Globe, PanelRightOpen, PanelRightClose, Upload } from "lucide-react";
+import { useSessionStore } from "@/stores/sessionStore";
+import { useSessionDetail } from "@/hooks/useChatSessions";
+import { Button } from "@/components/ui/button";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FileLinkingDropdown } from "@/components/file/FileLinkingDropdown";
+import { FileUploadZone } from "@/components/file/FileUploadZone";
+import type { FileListItem } from "@/types/file";
 
 interface ChatInterfaceProps {
-  fileId: string;
-  fileName: string;
+  sessionId: string;
+  sessionTitle: string;
 }
 
 /**
- * Complete chat interface for a file tab.
+ * Complete chat interface for a session.
  * Manages message history, streaming, and user input.
  */
-export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
-  const { data: chatData, isLoading, refetch } = useChatMessages(fileId);
+export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
+  const { data: chatData, isLoading, refetch } = useChatMessages(sessionId);
   const addLocalMessage = useAddLocalMessage();
+  const { data: sessionDetail } = useSessionDetail(sessionId);
+  const rightPanelOpen = useSessionStore((s) => s.rightPanelOpen);
+  const toggleRightPanel = useSessionStore((s) => s.toggleRightPanel);
+  const setRightPanelOpen = useSessionStore((s) => s.setRightPanelOpen);
 
   const {
     isStreaming,
@@ -48,9 +58,92 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
 
   const searchToggle = useSearchToggle();
 
+  // Drag-and-drop upload state
+  const queryClient = useQueryClient();
+  const { data: allFiles } = useFiles();
+  const { mutate: linkFile } = useLinkFile();
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [droppedFiles, setDroppedFiles] = useState<File[]>([]);
+  const prevFileIdsRef = useRef<Set<string>>(new Set());
+
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      if (acceptedFiles.length === 0) return;
+      // Snapshot current file IDs before opening upload dialog
+      prevFileIdsRef.current = new Set(allFiles?.map((f) => f.id) || []);
+      setDroppedFiles(acceptedFiles);
+      setShowUploadDialog(true);
+    },
+    [allFiles]
+  );
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    noClick: true,
+    noKeyboard: true,
+    accept: {
+      "text/csv": [".csv"],
+      "application/vnd.ms-excel": [".xls"],
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
+        ".xlsx",
+      ],
+    },
+    maxSize: 50 * 1024 * 1024, // 50MB
+    multiple: false,
+  });
+
+  const handleDragUploadComplete = async () => {
+    setShowUploadDialog(false);
+    setDroppedFiles([]);
+    await queryClient.invalidateQueries({ queryKey: ["files"] });
+    await queryClient.refetchQueries({ queryKey: ["files"] });
+    const updatedFiles = queryClient.getQueryData<FileListItem[]>(["files"]);
+    if (updatedFiles) {
+      const newFiles = updatedFiles.filter(
+        (f) => !prevFileIdsRef.current.has(f.id)
+      );
+      for (const newFile of newFiles) {
+        linkFile(
+          { sessionId, fileId: newFile.id },
+          {
+            onSuccess: () => {
+              toast.success(
+                `${newFile.original_filename} linked to session`
+              );
+              setRightPanelOpen(true);
+            },
+            onError: (error: Error) => toast.error(error.message),
+          }
+        );
+      }
+    }
+  };
+
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevStreamingRef = useRef(isStreaming);
+
+  // Pick up pending stream from WelcomeScreen handoff.
+  // Uses setTimeout(0) to survive React Strict Mode double-mount cycle:
+  // Without delay, Strict Mode cleanup aborts the in-flight stream before
+  // the second mount can pick it up (sessionStorage already consumed, ref guard blocks retry).
+  useEffect(() => {
+    if (isStreaming) return;
+    const pending = sessionStorage.getItem("spectra_pending_stream");
+    if (!pending) return;
+
+    const { message, searchEnabled } = JSON.parse(pending);
+
+    const timer = setTimeout(() => {
+      const stillPending = sessionStorage.getItem("spectra_pending_stream");
+      if (stillPending) {
+        sessionStorage.removeItem("spectra_pending_stream");
+        startStream(sessionId, message, searchEnabled);
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [sessionId, startStream, isStreaming]);
 
   // Track which cards are collapsed (by message ID)
   const [collapsedCards, setCollapsedCards] = useState<Set<string>>(new Set());
@@ -61,13 +154,8 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
   // Suggestion input state for non-auto-send mode
   const [suggestionInput, setSuggestionInput] = useState<string | undefined>(undefined);
 
-  // Fetch file summary for query suggestions
-  const { data: summaryData } = useFileSummary(fileId);
-
-  // Tab close warning when there's conversation context
+  // Messages from chat data
   const messages = chatData?.messages || [];
-  const hasContext = messages.length > 2;  // More than initial greeting
-  useTabCloseWarning(hasContext);
 
   // Scroll to bottom helper
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
@@ -97,12 +185,9 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
     const streamJustCompleted = prevStreamingRef.current && !isStreaming && !streamError;
 
     if (streamJustCompleted) {
-      console.log('[ChatInterface] Stream completed, refetching messages...');
-
       // Immediately refetch messages from server and wait for completion
       (async () => {
         const result = await refetch();
-        console.log('[ChatInterface] Messages refetched successfully:', result);
 
         // Reset stream state only after messages are loaded
         resetStream();
@@ -131,10 +216,10 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
 
   const handleSend = async (message: string) => {
     // Optimistically add user message
-    addLocalMessage(fileId, message);
+    addLocalMessage(sessionId, message);
 
     // Start streaming AI response with search flag
-    await startStream(fileId, message, searchToggle.enabled);
+    await startStream(sessionId, message, searchToggle.enabled);
   };
 
   const toggleCardCollapse = (messageId: string) => {
@@ -149,14 +234,13 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
     });
   };
 
+  // TODO: Phase 18 - Migrate trim-context to session-based endpoint
   const handleTrimContext = async () => {
     try {
-      const res = await apiClient.post(`/chat/${fileId}/trim-context`, {});
-      if (res.ok) {
-        setShowTrimDialog(false);
-        // Refetch messages to reflect trimmed state
-        refetch();
-      }
+      // NOTE: trim-context endpoint still uses file-based URL.
+      // This will be migrated to session-based in Phase 18.
+      console.warn('[ChatInterface] trim-context not yet available for session-based flow');
+      setShowTrimDialog(false);
     } catch (e) {
       console.error("Failed to trim context:", e);
     }
@@ -166,18 +250,15 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
   const getStreamingDataCard = () => {
     if (!isStreaming) return null;
 
-    console.log('[ChatInterface] getStreamingDataCard called, events:', events.length, 'isStreaming:', isStreaming);
-
     // Extract query brief from first user message in stream
     const queryBrief = "Analyzing your request...";
 
     // Check if we have execution result in node_complete events
     let tableData: { columns: string[]; rows: Record<string, any>[] } | undefined = undefined;
     const executionEvent = events.find((e) => e.type === "node_complete" && e.node === "execute");
-    console.log('[ChatInterface] executionEvent:', executionEvent ? 'found' : 'not found');
-    if (executionEvent?.data?.execution_result) {
+    if (executionEvent?.execution_result) {
       // Parse execution result for table
-      const result = executionEvent.data.execution_result;
+      const result = executionEvent.execution_result;
       if (typeof result === "string") {
         try {
           const parsed = JSON.parse(result);
@@ -196,30 +277,27 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
     // Extract generated code from coding_agent node
     let generatedCode: string | undefined = undefined;
     const codingEvent = events.find((e) => e.type === "node_complete" && e.node === "coding_agent");
-    if (codingEvent?.data?.generated_code) {
-      generatedCode = codingEvent.data.generated_code;
+    if (codingEvent?.generated_code) {
+      generatedCode = codingEvent.generated_code;
     }
-    console.log('[ChatInterface] generatedCode:', generatedCode ? 'found' : 'not found');
 
-    // Extract analysis/explanation from data_analysis node
+    // Extract analysis/explanation from da_response node
     let explanation = streamedText || undefined;
     const analysisEvent = events.find((e) => e.type === "node_complete" && e.node === "da_response");
-    if (analysisEvent?.data?.analysis) {
-      explanation = analysisEvent.data.analysis;
+    if (analysisEvent?.analysis) {
+      explanation = analysisEvent.analysis;
     }
-    console.log('[ChatInterface] explanation:', explanation ? 'found' : 'not found');
 
-    // Extract follow-up suggestions from data_analysis node_complete event
+    // Extract follow-up suggestions from da_response node_complete event
     let followUpSuggestions: string[] | undefined = undefined;
-    if (analysisEvent?.data?.follow_up_suggestions) {
-      followUpSuggestions = analysisEvent.data.follow_up_suggestions;
+    if (analysisEvent?.follow_up_suggestions) {
+      followUpSuggestions = analysisEvent.follow_up_suggestions;
     }
 
     // Extract search sources from da_response node_complete event
     let searchSources: { title: string; url: string }[] | undefined = undefined;
-    const daResponseEvent = events.find((e) => e.type === "node_complete" && e.node === "da_response");
-    if (daResponseEvent?.data?.search_sources && daResponseEvent.data.search_sources.length > 0) {
-      searchSources = daResponseEvent.data.search_sources;
+    if (analysisEvent?.search_sources && analysisEvent.search_sources.length > 0) {
+      searchSources = analysisEvent.search_sources;
     } else if (streamSearchSources.length > 0) {
       searchSources = streamSearchSources;
     }
@@ -239,16 +317,71 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
   const showEmptyState = !hasMessages && !isStreaming;
 
   return (
-    <div className="flex flex-col h-full">
+    <div {...getRootProps()} className="flex flex-col h-full relative">
+      <input {...getInputProps()} />
+
+      {/* Drag-and-drop overlay */}
+      {isDragActive && (
+        <div className="absolute inset-0 z-50 bg-primary/5 border-2 border-dashed border-primary rounded-lg flex items-center justify-center backdrop-blur-sm">
+          <div className="text-center">
+            <Upload className="h-12 w-12 mx-auto mb-2 text-primary" />
+            <p className="text-base font-medium text-primary">
+              Drop file to upload and link
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              CSV, Excel files up to 50MB
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Upload dialog for drag-and-drop */}
+      <Dialog open={showUploadDialog} onOpenChange={(open) => {
+        setShowUploadDialog(open);
+        if (!open) setDroppedFiles([]);
+      }}>
+        <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Upload File</DialogTitle>
+          </DialogHeader>
+          <FileUploadZone
+            onUploadComplete={handleDragUploadComplete}
+            initialFiles={droppedFiles.length > 0 ? droppedFiles : undefined}
+          />
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <div className="px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <h2 className="text-lg font-semibold truncate">{fileName}</h2>
-          <ContextUsage
-            fileId={fileId}
-            messageCount={messages.length}
-            onLimitExceeded={() => setShowTrimDialog(true)}
-          />
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className="-ml-1" />
+            <div className="h-7 w-7 rounded-lg gradient-primary flex items-center justify-center shrink-0">
+              <span className="text-sm font-bold text-white">S</span>
+            </div>
+            <span className="font-semibold text-sm tracking-tight shrink-0">Spectra</span>
+            <span className="text-muted-foreground/40 shrink-0">|</span>
+            <h2 className="text-lg font-semibold truncate">{sessionTitle}</h2>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* TODO: Phase 18 - Migrate ContextUsage to session-based endpoint */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-muted-foreground hover:text-foreground"
+              onClick={toggleRightPanel}
+              title={rightPanelOpen ? "Close linked files" : "Open linked files"}
+            >
+              {rightPanelOpen ? (
+                <PanelRightClose className="h-4 w-4" />
+              ) : (
+                <PanelRightOpen className="h-4 w-4" />
+              )}
+              <span className="text-xs">
+                Files{sessionDetail?.files?.length ? ` (${sessionDetail.files.length})` : ""}
+              </span>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -299,41 +432,23 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
 
           {/* Empty state */}
           {showEmptyState && (
-            <>
-              {summaryData?.query_suggestions?.categories &&
-              summaryData.query_suggestions.categories.length > 0 ? (
-                <QuerySuggestions
-                  categories={summaryData.query_suggestions.categories}
-                  onSelect={(suggestion) => {
-                    const autoSend = summaryData.suggestion_auto_send ?? true;
-                    if (autoSend) {
-                      handleSend(suggestion);
-                    } else {
-                      setSuggestionInput(suggestion);
-                    }
-                  }}
-                  autoSend={summaryData.suggestion_auto_send ?? true}
-                />
-              ) : (
-                <div className="flex items-center justify-center min-h-[60vh] p-8 text-center">
-                  <div className="max-w-md opacity-60" style={{ animation: "var(--animate-fadeIn)" }}>
-                    <div className="mb-4">
-                      <div className="h-16 w-16 rounded-full gradient-primary mx-auto mb-3 flex items-center justify-center">
-                        <span className="text-2xl text-white">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-muted-foreground font-medium">
-                      Ask a question about your data to get started
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Your AI assistant will analyze your data and provide insights
-                    </p>
+            <div className="flex items-center justify-center min-h-[60vh] p-8 text-center">
+              <div className="max-w-md opacity-60" style={{ animation: "var(--animate-fadeIn)" }}>
+                <div className="mb-4">
+                  <div className="h-16 w-16 rounded-full gradient-primary mx-auto mb-3 flex items-center justify-center">
+                    <span className="text-2xl text-white">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    </span>
                   </div>
                 </div>
-              )}
-            </>
+                <p className="text-muted-foreground font-medium">
+                  Ask a question about your data to get started
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Your AI assistant will analyze your data and provide insights
+                </p>
+              </div>
+            </div>
           )}
 
           {/* Message list */}
@@ -362,7 +477,7 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
                   ) || events.some(
                     (e) =>
                       e.type === "node_complete" &&
-                      e.data?.routing_decision?.route === "MEMORY_SUFFICIENT"
+                      e.routing_decision?.route === "MEMORY_SUFFICIENT"
                   );
 
                   // Memory route: render analysis as plain text message (no DataCard)
@@ -371,13 +486,13 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
                       (e) => e.type === "node_complete" && e.node === "da_response"
                     );
                     const analysisText =
-                      analysisEvent?.data?.analysis ||
-                      analysisEvent?.data?.final_response ||
+                      analysisEvent?.analysis ||
+                      analysisEvent?.final_response ||
                       streamedText;
 
                     // Extract follow-up suggestions from da_response event
                     const followUpSuggestions: string[] | undefined =
-                      analysisEvent?.data?.follow_up_suggestions;
+                      analysisEvent?.follow_up_suggestions;
 
                     if (analysisText) {
                       return (
@@ -385,7 +500,7 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
                           <ChatMessage
                             message={{
                               id: "streaming",
-                              file_id: fileId,
+                              file_id: null,
                               role: "assistant",
                               content: analysisText,
                               message_type: null,
@@ -422,7 +537,7 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
                   const hasStructuredNode = events.some(
                     (e) =>
                       e.type === "node_complete" &&
-                      (e.node === "execute" || e.node === "coding" || e.node === "data_analysis")
+                      (e.node === "execute" || e.node === "coding_agent" || e.node === "da_response")
                   );
 
                   if (streamedText || events.some((e) => e.type === "node_complete")) {
@@ -442,7 +557,7 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
                         <ChatMessage
                           message={{
                             id: "streaming",
-                            file_id: fileId,
+                            file_id: null,
                             role: "assistant",
                             content: streamedText,
                             message_type: null,
@@ -470,7 +585,7 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
               <ChatMessage
                 message={{
                   id: "error",
-                  file_id: fileId,
+                  file_id: null,
                   role: "assistant",
                   content: "Something went wrong. Please try again.",
                   message_type: "error",
@@ -488,7 +603,7 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
 
       {/* Status indicator - fixed at bottom */}
       {currentStatus && (
-        <div className="border-t bg-muted/50 py-2" style={{ animation: "var(--animate-slideUp)" }}>
+        <div className="bg-muted/50 py-2" style={{ animation: "var(--animate-slideUp)" }}>
           <div className="max-w-3xl mx-auto px-4">
             <div className="flex items-center gap-2">
               {currentSearchQuery ? (
@@ -508,7 +623,7 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
       )}
 
       {/* Chat input - fixed at bottom */}
-      <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="bg-muted/50">
         <div className="max-w-3xl mx-auto px-4 py-4">
           <ChatInput
             onSend={handleSend}
@@ -518,6 +633,15 @@ export function ChatInterface({ fileId, fileName }: ChatInterfaceProps) {
             onSearchToggle={searchToggle.toggle}
             searchConfigured={searchToggle.isConfigured}
             searchQuotaExceeded={searchToggle.isQuotaExceeded}
+            linkedFileIds={sessionDetail?.files?.map((f) => f.id) ?? []}
+            leftSlot={
+              <FileLinkingDropdown
+                sessionId={sessionId}
+                linkedFileIds={
+                  sessionDetail?.files?.map((f) => f.id) ?? []
+                }
+              />
+            }
           />
         </div>
       </div>

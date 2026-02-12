@@ -9,6 +9,7 @@ from app.models.base import Base
 if TYPE_CHECKING:
     from app.models.file import File
     from app.models.chat_message import ChatMessage
+    from app.models.chat_session import ChatSession
 
 
 class User(Base):
@@ -40,6 +41,11 @@ class User(Base):
     )
     chat_messages: Mapped[list["ChatMessage"]] = relationship(
         "ChatMessage",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    chat_sessions: Mapped[list["ChatSession"]] = relationship(
+        "ChatSession",
         back_populates="user",
         cascade="all, delete-orphan"
     )

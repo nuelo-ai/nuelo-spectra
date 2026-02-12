@@ -81,8 +81,11 @@ async def manager_node(
     llm = get_llm(provider=provider, model=model, api_key=api_key, **kwargs)
     structured_llm = llm.with_structured_output(RoutingDecision)
 
-    # Load system prompt from YAML
-    system_prompt = get_agent_prompt("manager")
+    # Load system prompt from YAML and format with session files
+    session_files = state.get("session_files", [])
+    session_files_text = ", ".join(session_files) if session_files else "Single file mode"
+    system_prompt_template = get_agent_prompt("manager")
+    system_prompt = system_prompt_template.format(session_files=session_files_text)
 
     # Get routing context messages limit from YAML config (default: 10)
     prompts = load_prompts()
@@ -120,6 +123,7 @@ async def manager_node(
     result_snippet = previous_result[:1000] if previous_result else "None"
     routing_prompt = (
         f"**Current User Query:** {state.get('user_query', '')}\n\n"
+        f"**Session Files:** {session_files_text}\n\n"
         f"**Conversation Context:**\n"
         f"- Messages in history: {len(messages)}\n"
         f"- Has previous code: {has_previous_code}\n"

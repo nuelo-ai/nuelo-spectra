@@ -79,3 +79,44 @@
 
 ---
 
+
+## v0.3 Multi-file Conversation Support (Shipped: 2026-02-12)
+
+**Delivered:** Restructured UX from file-tab-centric to chat-session-centric, enabling multi-file conversations and cross-file analysis with ChatGPT-style navigation
+
+**Phases completed:** 14-19 (23 plans total)
+
+**Key accomplishments:**
+
+- Migrated database from file-centric to session-centric architecture with ChatSession model, M2M file-session linking, and three-part Alembic migration chain preserving all v0.2 conversation history
+- Built ContextAssembler service enabling cross-file analysis with progressive token budget, join hint detection, and dual-mode single/multi-file agent pipeline
+- Restructured frontend to ChatGPT-style session-centric UX with Zustand session store, shadcn sidebar navigation, chronological chat history grouping, and linked files right panel
+- Implemented My Files screen with TanStack Table, drag-and-drop upload, bulk operations, file download, and "Start Chat" action linking files to new sessions
+- Added dark/light theme toggle (Nord palette), file requirement enforcement with dual feedback, last-file protection, and LLM-powered session title auto-generation
+- Closed all 9 UAT gaps including sidebar double-click rename, drag-drop file forwarding, bulk delete UUID fix, Spectra branding placement, and sidebar auto-open on file link
+
+**Stats:**
+
+- 8,589 lines of Python (app) + 2,077 lines of Python (tests)
+- 10,230 lines of TypeScript/TSX (frontend)
+- 20,896 total lines of code
+- 6 phases, 23 plans executed
+- 117 commits over 3 days (Feb 10-12, 2026)
+- 159 files changed (+26,349 / -3,347 lines)
+
+**Git range:** `v0.2` → `e4b9bb1 (Phase 19 final)`
+
+**Requirements:** 37/37 satisfied (100%)
+- Chat Sessions: 9/9 (CHAT)
+- File Linking: 8/8 (LINK)
+- File Management: 7/7 (FILE)
+- Layout & Navigation: 5/5 (NAV)
+- Data Model & Backend: 6/6 (DATA)
+- Appearance: 2/2 (THEME)
+
+**Testing:** UAT 25 tests (16 initial pass + 9 gaps closed in Phase 19), all passing after gap closure
+
+**What's next:** v0.4 will be defined via `/gsd:new-milestone`
+
+---
+

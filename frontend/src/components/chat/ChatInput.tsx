@@ -2,7 +2,8 @@
 
 import { useState, useEffect, KeyboardEvent } from "react";
 import TextareaAutosize from "react-textarea-autosize";
-import { Send, Globe } from "lucide-react";
+import { Send, Globe, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 interface ChatInputProps {
@@ -18,6 +19,10 @@ interface ChatInputProps {
   searchConfigured?: boolean;
   /** Whether daily search quota is exceeded */
   searchQuotaExceeded?: boolean;
+  /** Optional content rendered in the toolbar row (e.g., paperclip button) */
+  leftSlot?: React.ReactNode;
+  /** IDs of files currently linked to the session */
+  linkedFileIds?: string[];
 }
 
 /**
@@ -32,8 +37,11 @@ export function ChatInput({
   onSearchToggle,
   searchConfigured = false,
   searchQuotaExceeded = false,
+  leftSlot,
+  linkedFileIds = [],
 }: ChatInputProps) {
   const [message, setMessage] = useState("");
+  const [noFilesWarning, setNoFilesWarning] = useState(false);
 
   // When initialValue changes externally, populate the input
   useEffect(() => {
@@ -42,11 +50,24 @@ export function ChatInput({
     }
   }, [initialValue]);
 
+  // Auto-clear warning when files become linked
+  useEffect(() => {
+    if (linkedFileIds.length > 0) {
+      setNoFilesWarning(false);
+    }
+  }, [linkedFileIds]);
+
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       const trimmed = message.trim();
       if (trimmed && !disabled) {
+        if (linkedFileIds.length === 0) {
+          toast.error("Link at least one file before sending a message");
+          setNoFilesWarning(true);
+          return;
+        }
+        setNoFilesWarning(false);
         onSend(trimmed);
         setMessage("");
       }
@@ -57,6 +78,12 @@ export function ChatInput({
   const handleSend = () => {
     const trimmed = message.trim();
     if (trimmed && !disabled) {
+      if (linkedFileIds.length === 0) {
+        toast.error("Link at least one file before sending a message");
+        setNoFilesWarning(true);
+        return;
+      }
+      setNoFilesWarning(false);
       onSend(trimmed);
       setMessage("");
     }
@@ -88,8 +115,10 @@ export function ChatInput({
           <Send className="h-5 w-5" />
         </Button>
       </div>
-      {/* Search toggle row */}
+      {/* Toolbar row */}
       <div className="flex items-center gap-2">
+        {leftSlot}
+        {leftSlot && <div className="h-4 w-px bg-border" />}
         <button
           type="button"
           role="switch"
@@ -121,6 +150,12 @@ export function ChatInput({
           </span>
         )}
       </div>
+      {noFilesWarning && (
+        <div className="flex items-center gap-2 text-sm text-destructive px-1">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>Link at least one file to start chatting</span>
+        </div>
+      )}
     </div>
   );
 }
