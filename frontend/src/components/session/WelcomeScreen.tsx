@@ -7,6 +7,7 @@ import { useCreateSession, useLinkFile } from "@/hooks/useSessionMutations";
 import { useAddLocalMessage } from "@/hooks/useChatMessages";
 import { useSearchToggle } from "@/hooks/useSearchToggle";
 import { useFiles, useRecentFiles } from "@/hooks/useFileManager";
+import { useSessionStore } from "@/stores/sessionStore";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { QuerySuggestions } from "@/components/chat/QuerySuggestions";
 import { FileLinkingDropdown } from "@/components/file/FileLinkingDropdown";
@@ -63,6 +64,7 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
   const addLocalMessage = useAddLocalMessage();
   const searchToggle = useSearchToggle();
   const creatingSession = useRef(false);
+  const setRightPanelOpen = useSessionStore((s) => s.setRightPanelOpen);
 
   // Pending file tracking for pre-session state
   const [pendingFileIds, setPendingFileIds] = useState<string[]>([]);
@@ -186,7 +188,10 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
         // Session exists: link files directly via API
         for (const newFile of newFiles) {
           linkFileAsync({ sessionId, fileId: newFile.id })
-            .then(() => toast.success(`${newFile.original_filename} linked to session`))
+            .then(() => {
+              toast.success(`${newFile.original_filename} linked to session`);
+              setRightPanelOpen(true);
+            })
             .catch((error: Error) => toast.error(error.message));
         }
       } else {
@@ -221,6 +226,9 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
         for (const fileId of pendingFileIds) {
           await linkFileAsync({ sessionId: newSession.id, fileId });
         }
+
+        // Open right panel so it's visible when session page loads
+        setRightPanelOpen(true);
 
         // Store message for auto-send after navigation (component unmounts on navigate)
         sessionStorage.setItem("spectra_pending_message", message);
