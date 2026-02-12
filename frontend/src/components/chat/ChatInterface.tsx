@@ -356,6 +356,11 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="-ml-1" />
+            <div className="h-7 w-7 rounded-lg gradient-primary flex items-center justify-center shrink-0">
+              <span className="text-sm font-bold text-white">S</span>
+            </div>
+            <span className="font-semibold text-sm tracking-tight shrink-0">Spectra</span>
+            <span className="text-muted-foreground/40 shrink-0">|</span>
             <h2 className="text-lg font-semibold truncate">{sessionTitle}</h2>
           </div>
           <div className="flex items-center gap-2">

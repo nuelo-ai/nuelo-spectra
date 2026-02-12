@@ -275,9 +275,15 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
         </div>
       )}
 
-      {/* Sidebar toggle */}
+      {/* Sidebar toggle with branding */}
       <div className="px-4 py-3">
-        <SidebarTrigger className="-ml-1" />
+        <div className="flex items-center gap-2">
+          <SidebarTrigger className="-ml-1" />
+          <div className="h-7 w-7 rounded-lg gradient-primary flex items-center justify-center shrink-0">
+            <span className="text-sm font-bold text-white">S</span>
+          </div>
+          <span className="font-semibold text-sm tracking-tight">Spectra</span>
+        </div>
       </div>
 
       {/* Main content area — centered greeting */}
