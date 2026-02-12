@@ -57,6 +57,7 @@ export function ChatListItem({ session, isActive }: ChatListItemProps) {
   const [editValue, setEditValue] = React.useState(session.title);
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const clickTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Focus input when entering edit mode
   React.useEffect(() => {
@@ -66,14 +67,32 @@ export function ChatListItem({ session, isActive }: ChatListItemProps) {
     }
   }, [isEditing]);
 
+  // Clean up click timer on unmount
+  React.useEffect(() => {
+    return () => {
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleClick = () => {
     if (!isEditing) {
-      setCurrentSession(session.id);
-      router.push(`/sessions/${session.id}`);
+      // Delay navigation to allow double-click to cancel it
+      clickTimerRef.current = setTimeout(() => {
+        clickTimerRef.current = null;
+        setCurrentSession(session.id);
+        router.push(`/sessions/${session.id}`);
+      }, 250);
     }
   };
 
   const handleStartRename = () => {
+    // Cancel pending single-click navigation (double-click scenario)
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+    }
     setEditValue(session.title);
     setIsEditing(true);
   };
@@ -143,6 +162,7 @@ export function ChatListItem({ session, isActive }: ChatListItemProps) {
               tooltip={session.title}
               isActive={isActive}
               onClick={handleClick}
+              onDoubleClick={handleStartRename}
             >
               <MessageSquare className="shrink-0" />
               {isExpanded && (
