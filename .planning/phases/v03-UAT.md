@@ -3,18 +3,17 @@ status: testing
 phase: v0.3-multi-file-conversation-support
 source: 14-01-SUMMARY.md, 14-02-SUMMARY.md, 14-03-SUMMARY.md, 14-04-SUMMARY.md, 15-01-SUMMARY.md, 15-02-SUMMARY.md, 15-03-SUMMARY.md, 16-01-SUMMARY.md, 16-02-SUMMARY.md, 16-03-SUMMARY.md, 17-01-SUMMARY.md, 17-02-SUMMARY.md, 17-03-SUMMARY.md, 18-01-SUMMARY.md, 18-02-SUMMARY.md, 18-03-SUMMARY.md
 started: 2026-02-11T22:00:00Z
-updated: 2026-02-11T22:00:00Z
+updated: 2026-02-12T15:00:00Z
 ---
 
 ## Current Test
 
-number: 3
-name: File requirement enforcement — can't send without files
+number: 1
+name: Left sidebar shows session list with New Chat button
 expected: |
-  In the new session (no files linked), type a message and press Enter or click Send.
-  You should see a toast error "Link at least one file before sending a message" AND
-  a persistent inline warning with an alert icon below the input saying "Link at least one file to start chatting".
-  The message is NOT sent. You can still type freely.
+  After logging in, you see a collapsible left sidebar with a "New Chat" button,
+  chronological session list (grouped by time), "My Files" link, and user profile
+  section at the bottom. No file tabs visible.
 awaiting: user response
 
 ## Tests
@@ -22,14 +21,12 @@ awaiting: user response
 ### 1. Left sidebar shows session list with New Chat button
 expected: After logging in, you see a collapsible left sidebar with a "New Chat" button, chronological session list (grouped by time), "My Files" link, and user profile section at the bottom. No file tabs visible.
 result: issue
-reported: "Sidebar collapse button is not shown, can't collapse the sidebar. Chat session list can't be tested (no previous sessions). My Files link present. User profile dropdown works. No file tabs visible."
+reported: "Sidebar layout mostly correct (collapsible, New Chat button, My Files, user profile, no file tabs). BUT: every page load auto-creates a new empty session, causing 'New Chat' entries to pile up in sidebar. Sessions should only be created when user sends first message, not on load."
 severity: major
 
 ### 2. Create new chat session and see welcome screen
 expected: Click "New Chat" in sidebar. A new session appears in sidebar as "New Chat". Main area shows a personalized welcome screen with "Hi {your name}!" greeting. Chat input is active and ready to type.
-result: issue
-reported: "Error 'Not Found' when clicking New Chat — POST /sessions/ returns 404. Welcome screen shows from login but not from New Chat click. Paperclip button not shown (no sessionId due to creation failure). Root cause: backend/app/main.py includes chat_sessions.router with prefix='/api', making endpoint /api/sessions/ while frontend calls /sessions/"
-severity: blocker
+result: [pending]
 
 ### 3. File requirement enforcement — can't send without files
 expected: In the new session (no files linked), type a message and press Enter or click Send. You should see a toast error "Link at least one file before sending a message" AND a persistent inline warning with an alert icon below the input saying "Link at least one file to start chatting". The message is NOT sent. You can still type freely.
@@ -127,31 +124,18 @@ result: [pending]
 
 total: 25
 passed: 0
-issues: 2
-pending: 23
+issues: 1
+pending: 24
 skipped: 0
 
 ## Gaps
 
-- truth: "Left sidebar has a collapse control to toggle to narrow icon-only mode"
+- truth: "Sessions are only created intentionally, not on every page load"
   status: failed
-  reason: "User reported: Sidebar collapse button is not shown, can't collapse the sidebar"
+  reason: "User reported: every page load auto-creates a new empty session, causing 'New Chat' entries to pile up in sidebar. Sessions should only be created when user sends first message, not on load."
   severity: major
   test: 1
   root_cause: ""
   artifacts: []
   missing: []
-  debug_session: ""
-
-- truth: "New Chat button creates a session and navigates to it with welcome screen and paperclip button"
-  status: failed
-  reason: "User reported: POST /sessions/ returns 404 Not Found. Root cause: chat_sessions.router mounted with prefix='/api' in main.py, making endpoint /api/sessions/ while frontend calls /sessions/. Paperclip not shown because no sessionId."
-  severity: blocker
-  test: 2
-  root_cause: "backend/app/main.py line 274: include_router(chat_sessions.router, prefix='/api') — /api prefix is wrong, all other routers have no prefix"
-  artifacts:
-    - path: "backend/app/main.py"
-      issue: "chat_sessions.router included with prefix='/api' unlike all other routers"
-  missing:
-    - "Remove prefix='/api' from chat_sessions.router include"
   debug_session: ""
