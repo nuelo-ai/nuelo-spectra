@@ -10,6 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useFiles, useRecentFiles } from "@/hooks/useFileManager";
 import { useLinkFile } from "@/hooks/useSessionMutations";
+import { useSessionStore } from "@/stores/sessionStore";
 import { FileSelectionModal } from "./FileSelectionModal";
 import { FileUploadZone } from "./FileUploadZone";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,7 @@ export function FileLinkingDropdown({
   const { data: files } = useFiles();
   const { data: recentFiles } = useRecentFiles(5);
   const { mutate: linkFile } = useLinkFile();
+  const setRightPanelOpen = useSessionStore((s) => s.setRightPanelOpen);
 
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectionModalOpen, setSelectionModalOpen] = useState(false);
@@ -75,8 +77,10 @@ export function FileLinkingDropdown({
         linkFile(
           { sessionId, fileId: newFile.id },
           {
-            onSuccess: () =>
-              toast.success(`${newFile.original_filename} linked to session`),
+            onSuccess: () => {
+              toast.success(`${newFile.original_filename} linked to session`);
+              setRightPanelOpen(true);
+            },
             onError: (error: Error) => toast.error(error.message),
           }
         );
@@ -88,7 +92,10 @@ export function FileLinkingDropdown({
     linkFile(
       { sessionId, fileId },
       {
-        onSuccess: () => toast.success("File linked to session"),
+        onSuccess: () => {
+          toast.success("File linked to session");
+          setRightPanelOpen(true);
+        },
         onError: (error: Error) => toast.error(error.message),
       }
     );
@@ -98,7 +105,10 @@ export function FileLinkingDropdown({
     linkFile(
       { sessionId, fileId },
       {
-        onSuccess: () => toast.success(`${filename} linked to session`),
+        onSuccess: () => {
+          toast.success(`${filename} linked to session`);
+          setRightPanelOpen(true);
+        },
         onError: (error: Error) => toast.error(error.message),
       }
     );

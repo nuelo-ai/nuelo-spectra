@@ -41,6 +41,7 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
   const { data: sessionDetail } = useSessionDetail(sessionId);
   const rightPanelOpen = useSessionStore((s) => s.rightPanelOpen);
   const toggleRightPanel = useSessionStore((s) => s.toggleRightPanel);
+  const setRightPanelOpen = useSessionStore((s) => s.setRightPanelOpen);
 
   const {
     isStreaming,
@@ -105,10 +106,12 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
         linkFile(
           { sessionId, fileId: newFile.id },
           {
-            onSuccess: () =>
+            onSuccess: () => {
               toast.success(
                 `${newFile.original_filename} linked to session`
-              ),
+              );
+              setRightPanelOpen(true);
+            },
             onError: (error: Error) => toast.error(error.message),
           }
         );
