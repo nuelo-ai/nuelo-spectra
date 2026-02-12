@@ -1,6 +1,6 @@
 # Spectra
 
-AI-powered conversational data analytics platform. Upload CSV or Excel files, ask questions in natural language, and receive instant insights with full code transparency.
+AI-powered conversational data analytics platform. Create chat sessions, link multiple files, ask questions in natural language, and receive instant insights with full code transparency and cross-file analysis.
 
 ## What is Spectra?
 
@@ -8,6 +8,7 @@ Spectra bridges the gap between raw data and actionable insights. Upload your da
 
 **Key Differentiators:**
 - **Code Transparency**: See and verify the Python code generated for each analysis
+- **Multi-File Analysis**: Link multiple datasets to a single conversation for cross-file queries
 - **Multi-Agent Accuracy**: 5 specialized AI agents ensure accurate, safe results
 - **Intelligent Routing**: Manager Agent skips code generation for simple queries (~40% faster)
 - **Multi-Provider LLM**: Choose from Anthropic, OpenAI, Google, Ollama, or OpenRouter per agent
@@ -15,13 +16,19 @@ Spectra bridges the gap between raw data and actionable insights. Upload your da
 
 ## Features
 
+- ChatGPT-style session-centric UX with sidebar navigation
+- Multi-file linking per conversation with cross-file analysis
 - Natural language data queries with real-time SSE streaming
 - CSV/Excel file upload (up to 50MB) with AI-powered data profiling
+- My Files management screen with drag-and-drop upload, bulk delete, download
+- In-chat file linking via paperclip, file selector, and drag-and-drop
 - Multi-turn conversation memory with PostgreSQL checkpointing
 - Intelligent query routing (memory-only, code modification, or fresh analysis)
 - Smart query suggestions based on dataset structure
+- LLM-powered session title auto-generation
 - Web search integration (Tavily) with source citations
 - Interactive Data Cards with sortable tables, CSV/Markdown export
+- Dark/light theme toggle with Nord palette
 - 5 LLM providers with per-agent YAML configuration
 - Production SMTP email with secure password reset flow
 - JWT authentication with refresh tokens
@@ -34,7 +41,7 @@ Spectra bridges the gap between raw data and actionable insights. Upload your da
 | **AI/Agents** | LangGraph, LangChain, 5 agents with YAML prompts, Tavily web search |
 | **LLM Providers** | Anthropic (default), OpenAI, Google, Ollama, OpenRouter |
 | **Sandbox** | E2B Firecracker microVMs, AST validation, library allowlisting |
-| **Frontend** | Next.js 16, React 19, TypeScript 5, TanStack Query, shadcn/ui, Tailwind CSS 4 |
+| **Frontend** | Next.js 16, React 19, TypeScript 5, TanStack Query, Zustand, shadcn/ui, next-themes, Tailwind CSS 4 |
 | **Email** | aiosmtplib, Jinja2 templates, DB-backed reset tokens |
 
 ## AI Agent Architecture
@@ -130,7 +137,17 @@ Copy `backend/.env.example` to `backend/.env` and fill in:
 2. LLM health: `http://localhost:8000/health/llm`
 3. Open `http://localhost:3000`, sign up, upload a CSV, and ask a question
 
-## Current Status (v0.2)
+## Current Status (v0.3)
+
+### v0.3 Multi-file Conversation Support (February 2026)
+- ChatGPT-style session-centric UX with sidebar chat history navigation
+- Multi-file linking per session with cross-file analysis (ContextAssembler + named DataFrames)
+- My Files screen with TanStack Table, drag-and-drop upload, bulk delete, download
+- In-chat file linking via paperclip button, file selection modal, and drag-and-drop overlay
+- File requirement enforcement (at least one file per session) with dual feedback
+- LLM-powered session title auto-generation with manual rename lock
+- Dark/light theme toggle with Nord palette (persists across sessions)
+- Right sidebar panel for linked file context (info, remove, count badge)
 
 ### v0.2 Intelligence & Integration (February 2026)
 - Multi-LLM provider infrastructure (5 providers, per-agent YAML config)
@@ -146,11 +163,11 @@ Copy `backend/.env.example` to `backend/.env` and fill in:
 - 4-agent AI system with LangGraph orchestration
 - E2B sandbox code execution with AST validation
 - Interactive Data Cards with streaming, sorting, export
-- Tabbed multi-file interface with per-file chat history
 
 ### Known Limitations
 - E2B sandboxes created per-execution (~150ms cold start, no warm pools)
 - Basic mobile responsiveness (functional but not optimized)
+- No query safety filter (PII extraction, prompt injection)
 
 ## License
 
@@ -160,4 +177,4 @@ MIT License - See LICENSE file for details.
 
 - **GitHub**: [github.com/marwazihs/nuelo-spectra](https://github.com/marwazihs/nuelo-spectra)
 - **Issues**: Report bugs or request features via GitHub Issues
-- **Version**: v0.2 (February 2026)
+- **Version**: v0.3 (February 2026)
