@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** v0.3 Multi-file Conversation Support — Phase 17 complete, Phase 18 remaining
+**Current focus:** v0.3 Multi-file Conversation Support — Phase 18 in progress
 
 ## Current Position
 
-Phase: 17 - File Management & Linking
-Plan: 03 of 03 (In-Chat File Linking) — COMPLETE
-Status: Phase 17 COMPLETE — All 3 plans finished. File download, My Files screen, and in-chat file linking delivered.
+Phase: 18 - Integration & Polish
+Plan: 01 of 03 (File Requirement & Last-File Protection) — COMPLETE
+Status: Plan 18-01 complete. File requirement validation and last-file protection delivered.
 Branch: develop (fresh from master for v0.3)
-Last activity: 2026-02-11 — Completed Plan 17-03
+Last activity: 2026-02-12 — Completed Plan 18-01
 
-Progress: [████████████████████████████████] 100% (3/3 plans complete in Phase 17)
+Progress: [██████████░░░░░░░░░░░░░░░░░░░░░░] 33% (1/3 plans complete in Phase 18)
 
 ## Performance Metrics
 
@@ -31,7 +31,7 @@ Progress: [███████████████████████
 - Total commits: 110
 
 **Velocity (v0.3):**
-- Total plans completed: 13
+- Total plans completed: 14
 - Phase 14 Plan 01: 3 min, 2 tasks, 7 files
 - Phase 14 Plan 02: 4 min, 2 tasks, 3 files
 - Phase 14 Plan 03: 3 min, 2 tasks, 5 files
@@ -45,7 +45,8 @@ Progress: [███████████████████████
 - Phase 17 Plan 01: 2 min, 2 tasks, 3 files
 - Phase 17 Plan 02: 3 min, 2 tasks, 5 files
 - Phase 17 Plan 03: 3 min, 2 tasks, 6 files
-- Total commits: 26
+- Phase 18 Plan 01: 2 min, 2 tasks, 4 files
+- Total commits: 28
 
 ## Accumulated Context
 
@@ -134,6 +135,12 @@ Progress: [███████████████████████
 - Drag-and-drop overlay has its own upload dialog separate from FileLinkingDropdown (acceptable duplication)
 - File limit errors surface via component-level onError callbacks with toast.error
 
+**Phase 18-01 (File Requirement & Last-File Protection):**
+- Input textarea stays enabled at all times (user can type freely), only send is blocked when no files linked
+- Dual feedback on send attempt: toast.error (transient) + inline warning below toolbar (persistent until files linked)
+- Auto-clear inline warning via useEffect when linkedFileIds.length > 0
+- Defense-in-depth for last file: disabled button prevents dialog + handleUnlink guard with toast.warning
+
 See also: PROJECT.md Key Decisions table for milestone-level decisions.
 
 ### Pending Todos
@@ -149,8 +156,8 @@ See also: PROJECT.md Key Decisions table for milestone-level decisions.
 
 ## Session Continuity
 
-Last session: 2026-02-11
-Stopped at: Phase 17 complete — verified, ROADMAP updated
-Resume with: Plan Phase 18 (Integration & Polish)
-Next decision: Phase 17 verified (8/8 must-haves). Ready for Phase 18 — last phase of v0.3 milestone.
+Last session: 2026-02-12
+Stopped at: Completed 18-01-PLAN.md
+Resume with: Execute Plan 18-02
+Next decision: Continue with Plan 18-02 (next plan in Phase 18)
 UI directive: Use Frontend Design skill (/frontend-design) for UI work in Phases 16, 17, 18
