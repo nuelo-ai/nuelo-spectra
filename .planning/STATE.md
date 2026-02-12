@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 ## Current Position
 
 Phase: 18 - Integration & Polish
-Plan: 01 of 03 (File Requirement & Last-File Protection) — COMPLETE
-Status: Plan 18-01 complete. File requirement validation and last-file protection delivered.
+Plan: 02 of 03 (Light/Dark Theme Toggle) — COMPLETE
+Status: Plan 18-02 complete. Light/dark theme toggle with system default and localStorage persistence.
 Branch: develop (fresh from master for v0.3)
-Last activity: 2026-02-12 — Completed Plan 18-01
+Last activity: 2026-02-12 — Completed Plan 18-02
 
-Progress: [██████████░░░░░░░░░░░░░░░░░░░░░░] 33% (1/3 plans complete in Phase 18)
+Progress: [█████████████████████░░░░░░░░░░░] 67% (2/3 plans complete in Phase 18)
 
 ## Performance Metrics
 
@@ -46,7 +46,8 @@ Progress: [██████████░░░░░░░░░░░░░
 - Phase 17 Plan 02: 3 min, 2 tasks, 5 files
 - Phase 17 Plan 03: 3 min, 2 tasks, 6 files
 - Phase 18 Plan 01: 2 min, 2 tasks, 4 files
-- Total commits: 28
+- Phase 18 Plan 02: 2 min, 2 tasks, 2 files
+- Total commits: 30
 
 ## Accumulated Context
 
@@ -141,6 +142,12 @@ Progress: [██████████░░░░░░░░░░░░░
 - Auto-clear inline warning via useEffect when linkedFileIds.length > 0
 - Defense-in-depth for last file: disabled button prevents dialog + handleUnlink guard with toast.warning
 
+**Phase 18-02 (Light/Dark Theme Toggle):**
+- ThemeProvider wraps Providers component in layout.tsx (Server Component) for SSR theme injection
+- No explicit System theme option in toggle -- system preference only for initial default, then Light/Dark binary toggle
+- mounted state check on theme toggle prevents hydration mismatch (theme-dependent icons differ between SSR and client)
+- class-based dark mode via ThemeProvider attribute="class" activates existing .dark CSS variables in globals.css
+
 See also: PROJECT.md Key Decisions table for milestone-level decisions.
 
 ### Pending Todos
@@ -157,7 +164,7 @@ See also: PROJECT.md Key Decisions table for milestone-level decisions.
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 18-01-PLAN.md
-Resume with: Execute Plan 18-02
-Next decision: Continue with Plan 18-02 (next plan in Phase 18)
+Stopped at: Completed 18-02-PLAN.md
+Resume with: Execute Plan 18-03
+Next decision: Continue with Plan 18-03 (next plan in Phase 18)
 UI directive: Use Frontend Design skill (/frontend-design) for UI work in Phases 16, 17, 18
