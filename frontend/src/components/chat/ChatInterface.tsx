@@ -340,7 +340,7 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
         setShowUploadDialog(open);
         if (!open) setDroppedFiles([]);
       }}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Upload File</DialogTitle>
           </DialogHeader>

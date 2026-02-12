@@ -382,7 +382,7 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
       {!sessionId && (
         <>
           <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-            <DialogContent className="sm:max-w-lg">
+            <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Upload File</DialogTitle>
               </DialogHeader>
@@ -406,7 +406,7 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
           setDroppedFiles([]);
         }
       }}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Upload File</DialogTitle>
           </DialogHeader>
