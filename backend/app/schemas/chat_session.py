@@ -30,6 +30,7 @@ class FileBasicInfo(BaseModel):
     id: UUID
     original_filename: str
     file_type: str
+    file_size: int
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

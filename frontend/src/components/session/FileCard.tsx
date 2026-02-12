@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FileSpreadsheet, FileText, Info, X } from "lucide-react";
 import { toast } from "sonner";
 import { useUnlinkFile } from "@/hooks/useSessionMutations";
+import { formatFileSize } from "@/lib/utils";
 import { FileContextModal } from "@/components/file/FileContextModal";
 import {
   AlertDialog,
@@ -71,7 +72,7 @@ export function FileCard({ file, sessionId, isLastFile = false }: FileCardProps)
             {displayName}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {file.file_type?.toUpperCase() || "File"}
+            {file.file_type?.toUpperCase() || "File"} · {formatFileSize(file.file_size)}
           </p>
         </div>
 

@@ -7,6 +7,7 @@ export interface FileBasicInfo {
   id: string;
   original_filename: string;
   file_type: string;
+  file_size: number;
   created_at: string;
 }
 
