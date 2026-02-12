@@ -234,8 +234,8 @@ agents:
     max_tokens: 3000
 
   title_generator:
-    provider: anthropic
-    model: claude-sonnet-4-20250514
+    provider: ollama
+    model: llama3.2
     temperature: 0.3
     system_prompt: |
       Generate a concise title (max 8 words) for a data analysis conversation based on the user's first message.
