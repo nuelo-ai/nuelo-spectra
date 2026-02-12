@@ -33,7 +33,8 @@
 
 </details>
 
-### v0.3 Multi-file Conversation Support
+<details>
+<summary>✅ v0.3 Multi-file Conversation Support (Phases 14-19) — SHIPPED 2026-02-12</summary>
 
 **Goal:** Restructure the UX from file-tab-centric to chat-session-centric, enabling multi-file conversations and cross-file analysis
 
@@ -174,14 +175,16 @@ Plans:
 - [x] 19-01-PLAN.md — Sidebar UX fixes (double-click rename, logo, collapsed state)
 - [x] 19-02-PLAN.md — FileCard fixes (file size display, tooltip, bulk delete)
 - [x] 19-03-PLAN.md — Drag-drop file forwarding and sidebar auto-open on link
-- [ ] 19-04-PLAN.md — Fix drag-drop analyzing hang (setTimeout deferral) and sidebar auto-open on WelcomeScreen
-- [ ] 19-05-PLAN.md — Move Spectra branding from sidebar to main content headers
+- [x] 19-04-PLAN.md — Fix drag-drop analyzing hang (setTimeout deferral) and sidebar auto-open on WelcomeScreen
+- [x] 19-05-PLAN.md — Move Spectra branding from sidebar to main content headers
 
 **Success Criteria:**
 1. All v0.3 UAT tests pass
 2. No regressions in existing functionality
 
 ---
+
+</details>
 
 ## Progress
 
@@ -205,4 +208,4 @@ Plans:
 | 16. Frontend Restructure | v0.3 | 3/3 | Complete | 2026-02-11 |
 | 17. File Management & Linking | v0.3 | 3/3 | Complete | 2026-02-11 |
 | 18. Integration & Polish | v0.3 | 3/3 | Complete | 2026-02-11 |
-| 19. v0.3 Gap Closure | v0.3 | 3/5 | In Progress | — |
+| 19. v0.3 Gap Closure | v0.3 | 5/5 | Complete | 2026-02-12 |
