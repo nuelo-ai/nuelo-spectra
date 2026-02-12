@@ -122,9 +122,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 17-01-PLAN.md — Backend download endpoint, frontend hooks (download, recent, bulk delete), formatFileSize utility
-- [ ] 17-02-PLAN.md — My Files page with drag-and-drop upload, MyFilesTable with TanStack Table, FileContextModal
-- [ ] 17-03-PLAN.md — FileSelectionModal, FileLinkingDropdown (paperclip), chat drag-and-drop overlay, right sidebar update
+- [x] 17-01-PLAN.md — Backend download endpoint, frontend hooks (download, recent, bulk delete), formatFileSize utility
+- [x] 17-02-PLAN.md — My Files page with drag-and-drop upload, MyFilesTable with TanStack Table, FileContextModal
+- [x] 17-03-PLAN.md — FileSelectionModal, FileLinkingDropdown (paperclip), chat drag-and-drop overlay, right sidebar update
 
 **Success Criteria:**
 1. User can access "My Files" screen from sidebar showing all uploaded files with metadata
@@ -175,5 +175,5 @@ Plans:
 | 14. Database Foundation & Migration | v0.3 | 4/4 | Complete | 2026-02-11 |
 | 15. Agent System Enhancement | v0.3 | 3/3 | Complete | 2026-02-11 |
 | 16. Frontend Restructure | v0.3 | 3/3 | Complete | 2026-02-11 |
-| 17. File Management & Linking | v0.3 | 0/3 | Pending | — |
+| 17. File Management & Linking | v0.3 | 3/3 | Complete | 2026-02-11 |
 | 18. Integration & Polish | v0.3 | 0/? | Pending | — |
