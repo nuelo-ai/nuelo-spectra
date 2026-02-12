@@ -109,7 +109,7 @@ async def get_session(
         )
 
     return ChatSessionDetail(
-        **{k: v for k, v in session.__dict__.items() if not k.startswith('_')},
+        **{k: v for k, v in session.__dict__.items() if not k.startswith('_') and k != 'files'},
         files=[FileBasicInfo.model_validate(f) for f in session.files],
         file_count=len(session.files)
     )
@@ -255,7 +255,7 @@ async def link_file_to_session(
             )
 
     return ChatSessionDetail(
-        **{k: v for k, v in session.__dict__.items() if not k.startswith('_')},
+        **{k: v for k, v in session.__dict__.items() if not k.startswith('_') and k != 'files'},
         files=[FileBasicInfo.model_validate(f) for f in session.files],
         file_count=len(session.files)
     )
@@ -296,7 +296,7 @@ async def unlink_file_from_session(
         )
 
     return ChatSessionDetail(
-        **{k: v for k, v in session.__dict__.items() if not k.startswith('_')},
+        **{k: v for k, v in session.__dict__.items() if not k.startswith('_') and k != 'files'},
         files=[FileBasicInfo.model_validate(f) for f in session.files],
         file_count=len(session.files)
     )

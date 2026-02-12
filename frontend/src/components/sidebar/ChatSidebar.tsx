@@ -10,6 +10,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarRail,
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
@@ -75,6 +76,7 @@ export function ChatSidebar() {
       <SidebarFooter>
         <UserSection />
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   );
 }

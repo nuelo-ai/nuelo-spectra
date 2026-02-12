@@ -11,6 +11,7 @@ import { FileLinkingDropdown } from "@/components/file/FileLinkingDropdown";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Sparkles } from "lucide-react";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
 interface WelcomeScreenProps {
   /** If provided, the session already exists (user navigated to /sessions/[id] with no messages yet) */
@@ -63,6 +64,11 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
 
   return (
     <div className="flex flex-col h-full">
+      {/* Sidebar toggle */}
+      <div className="px-4 py-3">
+        <SidebarTrigger className="-ml-1" />
+      </div>
+
       {/* Main content area — centered greeting */}
       <div className="flex-1 flex items-center justify-center px-6">
         <div className="max-w-2xl w-full space-y-8 text-center">

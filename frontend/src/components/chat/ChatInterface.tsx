@@ -20,6 +20,7 @@ import { Globe, PanelRightOpen, PanelRightClose, Upload } from "lucide-react";
 import { useSessionStore } from "@/stores/sessionStore";
 import { useSessionDetail } from "@/hooks/useChatSessions";
 import { Button } from "@/components/ui/button";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FileLinkingDropdown } from "@/components/file/FileLinkingDropdown";
 import { FileUploadZone } from "@/components/file/FileUploadZone";
@@ -328,7 +329,10 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
       {/* Header */}
       <div className="px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <h2 className="text-lg font-semibold truncate">{sessionTitle}</h2>
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className="-ml-1" />
+            <h2 className="text-lg font-semibold truncate">{sessionTitle}</h2>
+          </div>
           <div className="flex items-center gap-2">
             {/* TODO: Phase 18 - Migrate ContextUsage to session-based endpoint */}
             <Button

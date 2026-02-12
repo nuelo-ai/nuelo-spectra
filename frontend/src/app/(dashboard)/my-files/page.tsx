@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
 /**
  * My Files page - standalone file management screen at /my-files.
@@ -54,11 +55,14 @@ export default function MyFilesPage() {
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
           {/* Page header */}
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">My Files</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Manage your uploaded data files
-            </p>
+          <div className="flex items-center gap-3">
+            <SidebarTrigger className="-ml-1" />
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">My Files</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Manage your uploaded data files
+              </p>
+            </div>
           </div>
 
           {/* Drag-and-drop zone */}

@@ -59,10 +59,19 @@ export default function SessionPage() {
     );
   }
 
-  // Error or not found - redirect to new session
+  // Error or not found — show error with navigation option (no auto-redirect to avoid loops)
   if (isError || !session) {
-    router.push("/sessions/new");
-    return null;
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4">
+        <p className="text-muted-foreground">Session not found</p>
+        <button
+          onClick={() => router.push("/sessions/new")}
+          className="text-sm text-primary underline hover:no-underline"
+        >
+          Start a new chat
+        </button>
+      </div>
+    );
   }
 
   // Show WelcomeScreen when session has no messages yet
