@@ -6,6 +6,8 @@ AI-powered conversational data analytics platform. Create chat sessions, link mu
 
 Spectra bridges the gap between raw data and actionable insights. Upload your datasets, and a multi-agent AI system analyzes the data structure, generates Python code, executes it in a secure sandbox, and presents results as interactive Data Cards — all through a conversational chat interface.
 
+<img width="1337" height="938" alt="image" src="https://github.com/user-attachments/assets/4ee5961e-ddb8-437a-8ef0-842673be6d22" />
+
 **Key Differentiators:**
 - **Code Transparency**: See and verify the Python code generated for each analysis
 - **Multi-File Analysis**: Link multiple datasets to a single conversation for cross-file queries
