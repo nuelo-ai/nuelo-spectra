@@ -603,7 +603,7 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
 
       {/* Status indicator - fixed at bottom */}
       {currentStatus && (
-        <div className="border-t bg-muted/50 py-2" style={{ animation: "var(--animate-slideUp)" }}>
+        <div className="bg-muted/50 py-2" style={{ animation: "var(--animate-slideUp)" }}>
           <div className="max-w-3xl mx-auto px-4">
             <div className="flex items-center gap-2">
               {currentSearchQuery ? (
@@ -623,7 +623,7 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
       )}
 
       {/* Chat input - fixed at bottom */}
-      <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="bg-muted/50">
         <div className="max-w-3xl mx-auto px-4 py-4">
           <ChatInput
             onSend={handleSend}
