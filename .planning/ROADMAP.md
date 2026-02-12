@@ -149,9 +149,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 18-01-PLAN.md — File requirement enforcement (send blocked without files, last-file unlink prevention)
-- [ ] 18-02-PLAN.md — Dark/light theme support (ThemeProvider, toggle in user menu)
-- [ ] 18-03-PLAN.md — Session title auto-generation via LLM (backend endpoint, frontend trigger, manual rename lock)
+- [x] 18-01-PLAN.md — File requirement enforcement (send blocked without files, last-file unlink prevention)
+- [x] 18-02-PLAN.md — Dark/light theme support (ThemeProvider, toggle in user menu)
+- [x] 18-03-PLAN.md — Session title auto-generation via LLM (backend endpoint, frontend trigger, manual rename lock)
 
 **Success Criteria:**
 1. User cannot send messages to a chat session until at least one file is linked (enforced with clear message)
@@ -183,4 +183,4 @@ Plans:
 | 15. Agent System Enhancement | v0.3 | 3/3 | Complete | 2026-02-11 |
 | 16. Frontend Restructure | v0.3 | 3/3 | Complete | 2026-02-11 |
 | 17. File Management & Linking | v0.3 | 3/3 | Complete | 2026-02-11 |
-| 18. Integration & Polish | v0.3 | 0/3 | Pending | — |
+| 18. Integration & Polish | v0.3 | 3/3 | Complete | 2026-02-11 |
