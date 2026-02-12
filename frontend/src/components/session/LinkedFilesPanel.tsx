@@ -71,6 +71,7 @@ export function LinkedFilesPanel({ sessionId, files }: LinkedFilesPanelProps) {
                   key={file.id}
                   file={file}
                   sessionId={sessionId}
+                  isLastFile={files.length === 1}
                 />
               ))
             )}

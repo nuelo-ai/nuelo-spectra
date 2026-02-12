@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { FileSpreadsheet, FileText, Info, X } from "lucide-react";
+import { toast } from "sonner";
 import { useUnlinkFile } from "@/hooks/useSessionMutations";
 import { FileContextModal } from "@/components/file/FileContextModal";
 import {
@@ -21,6 +22,8 @@ import type { FileBasicInfo } from "@/types/session";
 interface FileCardProps {
   file: FileBasicInfo;
   sessionId: string;
+  /** Whether this is the only file linked to the session */
+  isLastFile?: boolean;
 }
 
 /**
@@ -28,7 +31,7 @@ interface FileCardProps {
  * Shows file name, type icon, (i) info button to open FileInfoModal,
  * and remove button with confirmation dialog to unlink file from session.
  */
-export function FileCard({ file, sessionId }: FileCardProps) {
+export function FileCard({ file, sessionId, isLastFile = false }: FileCardProps) {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const unlinkFile = useUnlinkFile();
 
@@ -41,6 +44,10 @@ export function FileCard({ file, sessionId }: FileCardProps) {
   const FileIcon = isSpreadsheet ? FileSpreadsheet : FileText;
 
   const handleUnlink = () => {
+    if (isLastFile) {
+      toast.warning("At least one file must be linked to the session");
+      return;
+    }
     unlinkFile.mutate({ sessionId, fileId: file.id });
   };
 
@@ -88,7 +95,8 @@ export function FileCard({ file, sessionId }: FileCardProps) {
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7 hover:text-destructive"
-                title="Remove from session"
+                disabled={isLastFile}
+                title={isLastFile ? "Cannot remove last file — at least one file must be linked" : "Remove from session"}
               >
                 <X className="h-3.5 w-3.5" />
               </Button>
