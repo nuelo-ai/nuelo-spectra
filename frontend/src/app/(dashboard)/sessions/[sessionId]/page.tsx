@@ -1,9 +1,10 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useSessionDetail } from "@/hooks/useChatSessions";
 import { useChatMessages } from "@/hooks/useChatMessages";
+import { useGenerateTitle } from "@/hooks/useSessionMutations";
 import { useSessionStore } from "@/stores/sessionStore";
 import { ChatInterface } from "@/components/chat/ChatInterface";
 import { WelcomeScreen } from "@/components/session/WelcomeScreen";
@@ -20,15 +21,34 @@ export default function SessionPage() {
 
   const { data: session, isLoading, isError } = useSessionDetail(sessionId);
   const { data: chatData, isLoading: messagesLoading } = useChatMessages(sessionId);
+  const { mutate: generateTitle } = useGenerateTitle();
   const setCurrentSession = useSessionStore((s) => s.setCurrentSession);
+  const titleGenerated = useRef(false);
 
   // Update sessionStore.currentSessionId when this page mounts
   useEffect(() => {
     setCurrentSession(sessionId);
+    titleGenerated.current = false; // Reset for new session
     return () => {
       setCurrentSession(null);
     };
   }, [sessionId, setCurrentSession]);
+
+  // Generate title after first user message + AI response
+  useEffect(() => {
+    const messages = chatData?.messages ?? [];
+    const shouldGenerate =
+      messages.length >= 2 &&
+      session?.title === "New Chat" &&
+      !session?.user_modified &&
+      !titleGenerated.current;
+
+    if (shouldGenerate) {
+      titleGenerated.current = true;
+      // No message content sent -- backend reads from DB (security)
+      generateTitle({ sessionId });
+    }
+  }, [chatData?.messages, session?.title, session?.user_modified, sessionId, generateTitle]);
 
   // Loading state
   if (isLoading || messagesLoading) {

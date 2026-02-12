@@ -178,3 +178,41 @@ export function useUnlinkFile() {
     },
   });
 }
+
+/**
+ * Mutation for generating a session title via LLM.
+ * POST /sessions/{sessionId}/generate-title (no body -- backend reads from DB).
+ * Invalidates session list and detail caches on success.
+ * Fails silently -- caller doesn't need to handle errors.
+ *
+ * Security: No user content sent in request. Backend reads the first
+ * user message directly from the database to prevent LLM proxy abuse.
+ */
+export function useGenerateTitle() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      sessionId,
+    }: {
+      sessionId: string;
+    }): Promise<ChatSessionResponse> => {
+      const response = await apiClient.post(
+        `/sessions/${sessionId}/generate-title`,
+        {}
+      );
+      if (!response.ok) {
+        throw new Error("Failed to generate title");
+      }
+      return response.json();
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["sessions"] });
+      queryClient.invalidateQueries({
+        queryKey: ["sessions", variables.sessionId],
+      });
+    },
+    // Fail silently -- title generation is non-critical
+    onError: () => {},
+  });
+}

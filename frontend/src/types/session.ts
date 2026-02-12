@@ -17,6 +17,7 @@ export interface ChatSessionResponse {
   file_count: number;
   created_at: string;
   updated_at: string;
+  user_modified: boolean;
 }
 
 export interface ChatSessionDetail extends ChatSessionResponse {
