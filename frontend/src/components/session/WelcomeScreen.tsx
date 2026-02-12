@@ -234,6 +234,10 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
         sessionStorage.setItem("spectra_pending_message", message);
         sessionStorage.setItem("spectra_pending_search", searchToggle.enabled ? "1" : "0");
 
+        // Flag for SessionPage to open right sidebar after navigation
+        // (Zustand state does not reliably survive router.replace)
+        sessionStorage.setItem("spectra_pending_sidebar_open", "1");
+
         // Navigate to the real session page
         router.replace(`/sessions/${newSession.id}`);
       } catch (err) {

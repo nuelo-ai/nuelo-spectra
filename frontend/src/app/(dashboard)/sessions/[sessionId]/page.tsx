@@ -23,6 +23,7 @@ export default function SessionPage() {
   const { data: chatData, isLoading: messagesLoading } = useChatMessages(sessionId);
   const { mutate: generateTitle } = useGenerateTitle();
   const setCurrentSession = useSessionStore((s) => s.setCurrentSession);
+  const setRightPanelOpen = useSessionStore((s) => s.setRightPanelOpen);
   const titleGenerated = useRef(false);
 
   // Update sessionStore.currentSessionId when this page mounts
@@ -33,6 +34,15 @@ export default function SessionPage() {
       setCurrentSession(null);
     };
   }, [sessionId, setCurrentSession]);
+
+  // Read and consume pending sidebar open flag from WelcomeScreen/MyFiles navigation
+  useEffect(() => {
+    const pendingSidebar = sessionStorage.getItem("spectra_pending_sidebar_open");
+    if (pendingSidebar === "1") {
+      sessionStorage.removeItem("spectra_pending_sidebar_open");
+      setRightPanelOpen(true);
+    }
+  }, [sessionId, setRightPanelOpen]);
 
   // Generate title after first user message + AI response
   useEffect(() => {
