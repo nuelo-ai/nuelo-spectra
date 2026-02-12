@@ -14,6 +14,7 @@ import { apiClient } from "@/lib/api-client";
 
 interface FileUploadZoneProps {
   onUploadComplete?: () => void;
+  initialFiles?: File[];
 }
 
 type UploadStage = "idle" | "uploading" | "analyzing" | "ready";
@@ -21,7 +22,7 @@ type UploadStage = "idle" | "uploading" | "analyzing" | "ready";
 /**
  * Drag-and-drop file upload zone with staged progress indicators
  */
-export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
+export function FileUploadZone({ onUploadComplete, initialFiles }: FileUploadZoneProps) {
   const queryClient = useQueryClient();
   const { mutate: uploadFile } = useUploadFile();
   const { openTab } = useTabStore();
@@ -50,6 +51,9 @@ export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
       setProgress(100);
     }
   }, [uploadStage, summary?.data_summary]);
+
+  // Guard ref for initialFiles processing
+  const initialProcessed = useRef(false);
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -108,6 +112,14 @@ export function FileUploadZone({ onUploadComplete }: FileUploadZoneProps) {
     },
     [uploadFile, queryClient]
   );
+
+  // Auto-trigger upload when initialFiles are provided (from parent drag-drop)
+  useEffect(() => {
+    if (initialFiles && initialFiles.length > 0 && !initialProcessed.current && uploadStage === "idle") {
+      initialProcessed.current = true;
+      onDrop(initialFiles);
+    }
+  }, [initialFiles, onDrop, uploadStage]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

@@ -62,6 +62,7 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
   const { data: allFiles } = useFiles();
   const { mutate: linkFile } = useLinkFile();
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [droppedFiles, setDroppedFiles] = useState<File[]>([]);
   const prevFileIdsRef = useRef<Set<string>>(new Set());
 
   const onDrop = useCallback(
@@ -69,6 +70,7 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
       if (acceptedFiles.length === 0) return;
       // Snapshot current file IDs before opening upload dialog
       prevFileIdsRef.current = new Set(allFiles?.map((f) => f.id) || []);
+      setDroppedFiles(acceptedFiles);
       setShowUploadDialog(true);
     },
     [allFiles]
@@ -91,6 +93,7 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
 
   const handleDragUploadComplete = async () => {
     setShowUploadDialog(false);
+    setDroppedFiles([]);
     await queryClient.invalidateQueries({ queryKey: ["files"] });
     await queryClient.refetchQueries({ queryKey: ["files"] });
     const updatedFiles = queryClient.getQueryData<FileListItem[]>(["files"]);
@@ -330,12 +333,18 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
       )}
 
       {/* Upload dialog for drag-and-drop */}
-      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+      <Dialog open={showUploadDialog} onOpenChange={(open) => {
+        setShowUploadDialog(open);
+        if (!open) setDroppedFiles([]);
+      }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Upload File</DialogTitle>
           </DialogHeader>
-          <FileUploadZone onUploadComplete={handleDragUploadComplete} />
+          <FileUploadZone
+            onUploadComplete={handleDragUploadComplete}
+            initialFiles={droppedFiles.length > 0 ? droppedFiles : undefined}
+          />
         </DialogContent>
       </Dialog>
 

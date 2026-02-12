@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessionDetail } from "@/hooks/useChatSessions";
 import { useCreateSession, useLinkFile } from "@/hooks/useSessionMutations";
@@ -14,6 +14,7 @@ import { FileSelectionModal } from "@/components/file/FileSelectionModal";
 import { FileUploadZone } from "@/components/file/FileUploadZone";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
 import {
   Sparkles,
@@ -67,11 +68,37 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
   const [pendingFileIds, setPendingFileIds] = useState<string[]>([]);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectionModalOpen, setSelectionModalOpen] = useState(false);
+  const [dragUploadDialogOpen, setDragUploadDialogOpen] = useState(false);
+  const [droppedFiles, setDroppedFiles] = useState<File[]>([]);
   const prevFileIdsRef = useRef<Set<string>>(new Set());
 
   const { data: allFiles } = useFiles();
   const { data: recentFiles } = useRecentFiles(5);
   const pendingMessageSent = useRef(false);
+
+  // Drag-and-drop support
+  const onWelcomeDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      if (acceptedFiles.length === 0) return;
+      prevFileIdsRef.current = new Set(allFiles?.map((f) => f.id) || []);
+      setDroppedFiles(acceptedFiles);
+      setDragUploadDialogOpen(true);
+    },
+    [allFiles]
+  );
+
+  const { getRootProps: getWelcomeDropProps, getInputProps: getWelcomeDropInput, isDragActive: isWelcomeDragActive } = useDropzone({
+    onDrop: onWelcomeDrop,
+    noClick: true,
+    noKeyboard: true,
+    accept: {
+      "text/csv": [".csv"],
+      "application/vnd.ms-excel": [".xls"],
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+    },
+    maxSize: 50 * 1024 * 1024,
+    multiple: false,
+  });
 
   // Auto-send pending message after lazy session creation + navigation
   // Instead of starting the stream here (which gets killed on unmount),
@@ -143,6 +170,37 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
     }
   };
 
+  const handleDragUploadComplete = async () => {
+    setDragUploadDialogOpen(false);
+    setDroppedFiles([]);
+    await queryClient.invalidateQueries({ queryKey: ["files"] });
+    await queryClient.refetchQueries({ queryKey: ["files"] });
+    const updatedFiles = queryClient.getQueryData<
+      { id: string; original_filename: string }[]
+    >(["files"]);
+    if (updatedFiles) {
+      const newFiles = updatedFiles.filter(
+        (f) => !prevFileIdsRef.current.has(f.id)
+      );
+      if (sessionId) {
+        // Session exists: link files directly via API
+        for (const newFile of newFiles) {
+          linkFileAsync({ sessionId, fileId: newFile.id })
+            .then(() => toast.success(`${newFile.original_filename} linked to session`))
+            .catch((error: Error) => toast.error(error.message));
+        }
+      } else {
+        // No session: add to pending files
+        for (const newFile of newFiles) {
+          if (!pendingFileIds.includes(newFile.id)) {
+            setPendingFileIds((prev) => [...prev, newFile.id]);
+            toast.success(`${newFile.original_filename} selected`);
+          }
+        }
+      }
+    }
+  };
+
   const handleSend = async (message: string) => {
     // Case 1: No session yet — create session, link pending files, then navigate
     if (!sessionId) {
@@ -195,7 +253,20 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div {...getWelcomeDropProps()} className="flex flex-col h-full relative">
+      <input {...getWelcomeDropInput()} />
+
+      {/* Drag-and-drop overlay */}
+      {isWelcomeDragActive && (
+        <div className="absolute inset-0 z-50 bg-primary/5 border-2 border-dashed border-primary rounded-lg flex items-center justify-center backdrop-blur-sm">
+          <div className="text-center">
+            <Upload className="h-12 w-12 mx-auto mb-2 text-primary" />
+            <p className="text-base font-medium text-primary">Drop file to upload and link</p>
+            <p className="text-sm text-muted-foreground mt-1">CSV, Excel files up to 50MB</p>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar toggle */}
       <div className="px-4 py-3">
         <SidebarTrigger className="-ml-1" />
@@ -313,6 +384,24 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
           />
         </>
       )}
+
+      {/* Drag-drop upload dialog (works with and without session) */}
+      <Dialog open={dragUploadDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setDragUploadDialogOpen(false);
+          setDroppedFiles([]);
+        }
+      }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Upload File</DialogTitle>
+          </DialogHeader>
+          <FileUploadZone
+            onUploadComplete={handleDragUploadComplete}
+            initialFiles={droppedFiles.length > 0 ? droppedFiles : undefined}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

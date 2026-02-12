@@ -25,11 +25,14 @@ export default function MyFilesPage() {
   const queryClient = useQueryClient();
   const { data: files, isLoading } = useFiles();
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [droppedFiles, setDroppedFiles] = useState<File[]>([]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop: () => {
-      // Open the upload dialog - FileUploadZone handles the actual upload
-      setUploadDialogOpen(true);
+    onDrop: (acceptedFiles: File[]) => {
+      if (acceptedFiles.length > 0) {
+        setDroppedFiles(acceptedFiles);
+        setUploadDialogOpen(true);
+      }
     },
     accept: {
       "text/csv": [".csv"],
@@ -45,6 +48,7 @@ export default function MyFilesPage() {
 
   const handleUploadComplete = () => {
     setUploadDialogOpen(false);
+    setDroppedFiles([]);
     queryClient.invalidateQueries({ queryKey: ["files"] });
   };
 
@@ -133,7 +137,10 @@ export default function MyFilesPage() {
       </div>
 
       {/* Upload dialog */}
-      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+      <Dialog open={uploadDialogOpen} onOpenChange={(open) => {
+        setUploadDialogOpen(open);
+        if (!open) setDroppedFiles([]);
+      }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Upload File</DialogTitle>
@@ -141,7 +148,10 @@ export default function MyFilesPage() {
               Upload a CSV or Excel file to analyze with AI
             </DialogDescription>
           </DialogHeader>
-          <FileUploadZone onUploadComplete={handleUploadComplete} />
+          <FileUploadZone
+            onUploadComplete={handleUploadComplete}
+            initialFiles={droppedFiles.length > 0 ? droppedFiles : undefined}
+          />
         </DialogContent>
       </Dialog>
     </div>
