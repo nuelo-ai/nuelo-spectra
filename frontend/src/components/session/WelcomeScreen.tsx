@@ -6,7 +6,7 @@ import { useSessionDetail } from "@/hooks/useChatSessions";
 import { useCreateSession, useLinkFile } from "@/hooks/useSessionMutations";
 import { useAddLocalMessage } from "@/hooks/useChatMessages";
 import { useSearchToggle } from "@/hooks/useSearchToggle";
-import { useFiles, useRecentFiles } from "@/hooks/useFileManager";
+import { useFiles, useRecentFiles, useFileSummary } from "@/hooks/useFileManager";
 import { useSessionStore } from "@/stores/sessionStore";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { QuerySuggestions } from "@/components/chat/QuerySuggestions";
@@ -76,6 +76,8 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
 
   const { data: allFiles } = useFiles();
   const { data: recentFiles } = useRecentFiles(5);
+  const firstLinkedFileId = sessionDetail?.files?.[0]?.id ?? null;
+  const { data: fileSummary } = useFileSummary(firstLinkedFileId);
   const pendingMessageSent = useRef(false);
 
   // Drag-and-drop support
@@ -135,12 +137,30 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
     .map((id) => allFiles?.find((f) => f.id === id)?.original_filename)
     .filter(Boolean) as string[];
 
-  const handlePendingFileSelect = (fileId: string) => {
-    if (!pendingFileIds.includes(fileId)) {
-      setPendingFileIds((prev) => [...prev, fileId]);
-      const file = allFiles?.find((f) => f.id === fileId);
-      if (file) toast.success(`${file.original_filename} selected`);
+  // Eagerly create session when files are linked at /sessions/new
+  // so LinkedFilesPanel can render and right sidebar can open.
+  const createSessionAndLinkFiles = async (fileIds: string[]) => {
+    if (creatingSession.current || fileIds.length === 0) return;
+    creatingSession.current = true;
+    try {
+      const newSession = await createSession.mutateAsync("New Chat");
+      for (const fileId of fileIds) {
+        await linkFileAsync({ sessionId: newSession.id, fileId });
+      }
+      sessionStorage.setItem("spectra_pending_sidebar_open", "1");
+      router.replace(`/sessions/${newSession.id}`);
+    } catch (err) {
+      console.error("[WelcomeScreen] Session creation failed:", err);
+      toast.error("Failed to create session. Please try again.");
+      creatingSession.current = false;
     }
+  };
+
+  const handlePendingFileSelect = async (fileId: string) => {
+    if (pendingFileIds.includes(fileId)) return;
+    const file = allFiles?.find((f) => f.id === fileId);
+    if (file) toast.success(`${file.original_filename} selected`);
+    await createSessionAndLinkFiles([...pendingFileIds, fileId]);
   };
 
   const handlePendingRemove = (fileId: string) => {
@@ -163,11 +183,12 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
       const newFiles = updatedFiles.filter(
         (f) => !prevFileIdsRef.current.has(f.id)
       );
-      for (const newFile of newFiles) {
-        if (!pendingFileIds.includes(newFile.id)) {
-          setPendingFileIds((prev) => [...prev, newFile.id]);
-          toast.success(`${newFile.original_filename} selected`);
+      const newFileIds = newFiles.map((f) => f.id);
+      if (newFileIds.length > 0) {
+        for (const newFile of newFiles) {
+          toast.success(`${newFile.original_filename} uploaded`);
         }
+        await createSessionAndLinkFiles([...pendingFileIds, ...newFileIds]);
       }
     }
   };
@@ -195,12 +216,13 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
             .catch((error: Error) => toast.error(error.message));
         }
       } else {
-        // No session: add to pending files
-        for (const newFile of newFiles) {
-          if (!pendingFileIds.includes(newFile.id)) {
-            setPendingFileIds((prev) => [...prev, newFile.id]);
-            toast.success(`${newFile.original_filename} selected`);
+        // No session: create session, link files, and navigate
+        const newFileIds = newFiles.map((f) => f.id);
+        if (newFileIds.length > 0) {
+          for (const newFile of newFiles) {
+            toast.success(`${newFile.original_filename} uploaded`);
           }
+          await createSessionAndLinkFiles([...pendingFileIds, ...newFileIds]);
         }
       }
     }
@@ -337,9 +359,9 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
           )}
 
           {/* Query suggestions when files are linked */}
-          {hasLinkedFiles && sessionId && sessionDetail && (
+          {hasLinkedFiles && sessionId && sessionDetail && fileSummary?.query_suggestions?.categories && (
             <QuerySuggestions
-              categories={[]}
+              categories={fileSummary.query_suggestions.categories}
               onSelect={(suggestion) => handleSend(suggestion)}
               autoSend={true}
             />
