@@ -116,19 +116,27 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevStreamingRef = useRef(isStreaming);
-  const pendingStreamHandled = useRef(false);
 
-  // Pick up pending stream from WelcomeScreen handoff
+  // Pick up pending stream from WelcomeScreen handoff.
+  // Uses setTimeout(0) to survive React Strict Mode double-mount cycle:
+  // Without delay, Strict Mode cleanup aborts the in-flight stream before
+  // the second mount can pick it up (sessionStorage already consumed, ref guard blocks retry).
   useEffect(() => {
-    if (pendingStreamHandled.current || isStreaming) return;
+    if (isStreaming) return;
     const pending = sessionStorage.getItem("spectra_pending_stream");
     if (!pending) return;
 
-    pendingStreamHandled.current = true;
     const { message, searchEnabled } = JSON.parse(pending);
-    sessionStorage.removeItem("spectra_pending_stream");
 
-    startStream(sessionId, message, searchEnabled);
+    const timer = setTimeout(() => {
+      const stillPending = sessionStorage.getItem("spectra_pending_stream");
+      if (stillPending) {
+        sessionStorage.removeItem("spectra_pending_stream");
+        startStream(sessionId, message, searchEnabled);
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [sessionId, startStream, isStreaming]);
 
   // Track which cards are collapsed (by message ID)
