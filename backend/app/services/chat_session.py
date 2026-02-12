@@ -131,6 +131,7 @@ class ChatSessionService:
         # Update fields
         if title is not None:
             session.title = title
+            session.user_modified = True  # Lock title from auto-generation
 
         await db.commit()
         await db.refresh(session)
@@ -307,3 +308,110 @@ class ChatSessionService:
             raise ValueError("Session not found")
 
         return session.files
+
+    @staticmethod
+    async def generate_session_title(
+        db: AsyncSession,
+        session_id: UUID,
+        user_id: UUID,
+    ) -> ChatSession | None:
+        """Generate a title for a session using LLM.
+
+        SECURITY: Reads the first user message directly from the database.
+        No client-provided text is sent to the LLM -- this prevents the
+        endpoint from being used as a general-purpose LLM proxy.
+
+        Only generates if user_modified is False (user hasn't manually renamed).
+        Fails silently on LLM errors (leaves title unchanged).
+        """
+        session = await ChatSessionService.get_user_session(db, session_id, user_id)
+        if session is None:
+            return None
+
+        # Don't overwrite user-set titles
+        if session.user_modified:
+            return session
+
+        try:
+            from sqlalchemy import select as sa_select
+            from app.models.chat_message import ChatMessage
+            from app.agents.config import (
+                get_agent_provider,
+                get_agent_model,
+                get_agent_temperature,
+                get_agent_max_tokens,
+                get_agent_prompt,
+                get_api_key_for_provider,
+            )
+            from app.agents.llm_factory import get_llm, invoke_with_logging, validate_llm_response
+            from app.config import get_settings
+            from langchain_core.messages import SystemMessage, HumanMessage
+
+            # Read the first user message from the database (not from client)
+            msg_result = await db.execute(
+                sa_select(ChatMessage.content)
+                .where(
+                    ChatMessage.session_id == session_id,
+                    ChatMessage.user_id == user_id,
+                    ChatMessage.role == "user",
+                )
+                .order_by(ChatMessage.created_at.asc())
+                .limit(1)
+            )
+            first_message = msg_result.scalar_one_or_none()
+
+            if not first_message:
+                return session  # No user messages yet -- nothing to generate from
+
+            # Truncate to prevent excessive LLM input (defense in depth)
+            user_text = first_message[:500]
+
+            # Load agent config using existing config pattern
+            provider = get_agent_provider("title_generator")
+            model = get_agent_model("title_generator")
+            temperature = get_agent_temperature("title_generator")
+            max_tokens = get_agent_max_tokens("title_generator")
+            system_prompt = get_agent_prompt("title_generator")
+            settings = get_settings()
+            api_key = get_api_key_for_provider(provider, settings)
+
+            kwargs = {"max_tokens": max_tokens, "temperature": temperature}
+            if provider == "ollama":
+                kwargs["base_url"] = settings.ollama_base_url
+
+            llm = get_llm(
+                provider=provider,
+                model=model,
+                api_key=api_key,
+                **kwargs,
+            )
+
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_text),
+            ]
+
+            response = await invoke_with_logging(
+                llm, messages, "title_generator",
+                provider, model
+            )
+            title = validate_llm_response(
+                response, provider, model, "title_generator"
+            )
+
+            # Clean up: strip quotes, limit to 100 chars
+            title = title.strip().strip('"').strip("'")
+            if len(title) > 100:
+                title = title[:97] + "..."
+
+            session.title = title
+            await db.commit()
+            await db.refresh(session)
+            return session
+
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Title generation failed for session {session_id}: {e}")
+            # Fail silently -- session keeps its current title
+            return session

@@ -44,6 +44,7 @@ class ChatSessionResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     file_count: int = 0
+    user_modified: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 

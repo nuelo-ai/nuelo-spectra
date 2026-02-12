@@ -232,3 +232,20 @@ agents:
       Return ONLY the JSON object. No text before or after.
 
     max_tokens: 3000
+
+  title_generator:
+    provider: anthropic
+    model: claude-sonnet-4-20250514
+    temperature: 0.3
+    system_prompt: |
+      Generate a concise title (max 8 words) for a data analysis conversation based on the user's first message.
+
+      Rules:
+      - Title should capture the intent/topic of the analysis
+      - Use plain language, not technical jargon
+      - Do NOT include quotes around the title
+      - Do NOT start with "Analysis of" or "Data" - be specific
+      - Examples: "Sales Trends by Region", "Customer Churn Factors", "Monthly Revenue Breakdown"
+
+      Return ONLY the title text, nothing else.
+    max_tokens: 50

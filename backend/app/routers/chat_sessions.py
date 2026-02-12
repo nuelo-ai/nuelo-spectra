@@ -152,6 +152,36 @@ async def update_session(
     )
 
 
+@router.post("/{session_id}/generate-title", response_model=ChatSessionResponse)
+async def generate_title(
+    session_id: UUID,
+    current_user: CurrentUser,
+    db: DbSession
+) -> ChatSessionResponse:
+    """Generate a session title using LLM from the first user message in the session.
+
+    Security: No request body accepted. The service reads the first user
+    message directly from the database, preventing LLM proxy abuse.
+
+    Only works if user hasn't manually renamed (user_modified=False).
+    Fails silently -- returns current session even if LLM fails.
+    """
+    session = await ChatSessionService.generate_session_title(
+        db, session_id, current_user.id
+    )
+
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found"
+        )
+
+    return ChatSessionResponse(
+        **{k: v for k, v in session.__dict__.items() if not k.startswith('_')},
+        file_count=len(session.files) if hasattr(session, 'files') and session.files else 0
+    )
+
+
 @router.delete("/{session_id}")
 async def delete_session(
     session_id: UUID,

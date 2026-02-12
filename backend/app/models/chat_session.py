@@ -50,6 +50,7 @@ class ChatSession(Base):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc)
     )
+    user_modified: Mapped[bool] = mapped_column(default=False)
 
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="chat_sessions")
