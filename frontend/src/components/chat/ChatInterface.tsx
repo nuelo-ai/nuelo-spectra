@@ -599,6 +599,7 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
             onSearchToggle={searchToggle.toggle}
             searchConfigured={searchToggle.isConfigured}
             searchQuotaExceeded={searchToggle.isQuotaExceeded}
+            linkedFileIds={sessionDetail?.files?.map((f) => f.id) ?? []}
             leftSlot={
               <FileLinkingDropdown
                 sessionId={sessionId}
