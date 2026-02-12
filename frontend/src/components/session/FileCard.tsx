@@ -18,6 +18,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { FileBasicInfo } from "@/types/session";
 
 interface FileCardProps {
@@ -89,40 +90,58 @@ export function FileCard({ file, sessionId, isLastFile = false }: FileCardProps)
             <Info className="h-3.5 w-3.5" />
           </Button>
 
-          {/* Remove button with confirmation */}
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 hover:text-destructive"
-                disabled={isLastFile}
-                title={isLastFile ? "Cannot remove last file — at least one file must be linked" : "Remove from session"}
-              >
-                <X className="h-3.5 w-3.5" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  Remove {file.original_filename} from this chat?
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will unlink the file from this session. The file itself
-                  will not be deleted.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleUnlink}
-                  variant="destructive"
+          {/* Remove button: tooltip when disabled (last file), confirmation dialog otherwise */}
+          {isLastFile ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 hover:text-destructive"
+                    disabled
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                <p>Cannot remove last file — at least one file must be linked</p>
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 hover:text-destructive"
                 >
-                  Remove
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    Remove {file.original_filename} from this chat?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will unlink the file from this session. The file itself
+                    will not be deleted.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleUnlink}
+                    variant="destructive"
+                  >
+                    Remove
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       </div>
 

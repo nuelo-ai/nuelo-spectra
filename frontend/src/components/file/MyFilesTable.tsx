@@ -126,14 +126,11 @@ export function MyFilesTable({ files, isLoading }: MyFilesTableProps) {
     const selectedIds = Object.keys(rowSelection).filter(
       (key) => rowSelection[key]
     );
-    // Map row indices to file IDs
-    const fileIds = selectedIds
-      .map((idx) => files[Number(idx)]?.id)
-      .filter(Boolean) as string[];
-    if (fileIds.length === 0) return;
+    // selectedIds ARE already file UUIDs (via getRowId: row => row.id)
+    if (selectedIds.length === 0) return;
     try {
-      await bulkDeleteFiles.mutateAsync(fileIds);
-      toast.success(`${fileIds.length} file(s) deleted`);
+      await bulkDeleteFiles.mutateAsync(selectedIds);
+      toast.success(`${selectedIds.length} file(s) deleted`);
       setRowSelection({});
     } catch {
       toast.error("Failed to delete some files");
