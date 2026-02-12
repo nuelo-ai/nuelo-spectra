@@ -14,6 +14,7 @@ import { apiClient } from "@/lib/api-client";
 
 interface FileUploadZoneProps {
   onUploadComplete?: () => void;
+  onContinueToChat?: (fileId: string, fileName: string) => void;
   initialFiles?: File[];
 }
 
@@ -22,7 +23,7 @@ type UploadStage = "idle" | "uploading" | "analyzing" | "ready";
 /**
  * Drag-and-drop file upload zone with staged progress indicators
  */
-export function FileUploadZone({ onUploadComplete, initialFiles }: FileUploadZoneProps) {
+export function FileUploadZone({ onUploadComplete, onContinueToChat, initialFiles }: FileUploadZoneProps) {
   const queryClient = useQueryClient();
   const { mutate: uploadFile } = useUploadFile();
   const { openTab } = useTabStore();
@@ -272,9 +273,13 @@ export function FileUploadZone({ onUploadComplete, initialFiles }: FileUploadZon
                         // Sidebar will catch up via refetchInterval fallback
                       }
 
-                      // Step 3: Open file tab
+                      // Step 3: Navigate to chat with file
                       if (uploadedFileId) {
-                        openTab(uploadedFileId, uploadedFileName);
+                        if (onContinueToChat) {
+                          onContinueToChat(uploadedFileId, uploadedFileName);
+                        } else {
+                          openTab(uploadedFileId, uploadedFileName);
+                        }
                       }
                     } catch (error) {
                       console.error("Continue to Chat handler error:", error);

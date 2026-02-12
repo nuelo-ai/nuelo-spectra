@@ -4,7 +4,9 @@ import { useState } from "react";
 import { Upload, FileSpreadsheet } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { useFiles } from "@/hooks/useFileManager";
+import { useCreateSession, useLinkFile } from "@/hooks/useSessionMutations";
 import { FileUploadZone } from "@/components/file/FileUploadZone";
 import { MyFilesTable } from "@/components/file/MyFilesTable";
 import { Button } from "@/components/ui/button";
@@ -16,6 +18,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { toast } from "sonner";
 
 /**
  * My Files page - standalone file management screen at /my-files.
@@ -23,7 +26,10 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
  */
 export default function MyFilesPage() {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const { data: files, isLoading } = useFiles();
+  const createSession = useCreateSession();
+  const { mutateAsync: linkFileAsync } = useLinkFile();
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [droppedFiles, setDroppedFiles] = useState<File[]>([]);
 
@@ -50,6 +56,23 @@ export default function MyFilesPage() {
     setUploadDialogOpen(false);
     setDroppedFiles([]);
     queryClient.invalidateQueries({ queryKey: ["files"] });
+  };
+
+  const handleContinueToChat = async (fileId: string, fileName: string) => {
+    try {
+      // Create a new session
+      const newSession = await createSession.mutateAsync("New Chat");
+      // Link the uploaded file
+      await linkFileAsync({ sessionId: newSession.id, fileId });
+      // Set flag for sidebar auto-open (consumed by SessionPage on mount)
+      sessionStorage.setItem("spectra_pending_sidebar_open", "1");
+      // Navigate to the new session
+      router.push(`/sessions/${newSession.id}`);
+      toast.success(`Started new chat with ${fileName}`);
+    } catch (err) {
+      console.error("[MyFiles] Continue to Chat failed:", err);
+      toast.error("Failed to create session. Please try again.");
+    }
   };
 
   const hasFiles = (files?.length ?? 0) > 0;
@@ -155,6 +178,7 @@ export default function MyFilesPage() {
           </DialogHeader>
           <FileUploadZone
             onUploadComplete={handleUploadComplete}
+            onContinueToChat={handleContinueToChat}
             initialFiles={droppedFiles.length > 0 ? droppedFiles : undefined}
           />
         </DialogContent>
