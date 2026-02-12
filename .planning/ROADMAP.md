@@ -164,19 +164,21 @@ Plans:
 
 #### Phase 19: v0.3 Gap Closure (UAT Bug Fixes)
 
-**Goal:** Fix 9 bugs found during v0.3 UAT to pass all 25 acceptance tests
+**Goal:** Fix all bugs found during v0.3 UAT to pass all acceptance tests
 
 **Dependencies:** Phase 18 (requires all v0.3 features complete)
 
-**Plans:** 3 plans
+**Plans:** 5 plans
 
 Plans:
 - [x] 19-01-PLAN.md — Sidebar UX fixes (double-click rename, logo, collapsed state)
 - [x] 19-02-PLAN.md — FileCard fixes (file size display, tooltip, bulk delete)
 - [x] 19-03-PLAN.md — Drag-drop file forwarding and sidebar auto-open on link
+- [ ] 19-04-PLAN.md — Fix drag-drop analyzing hang (setTimeout deferral) and sidebar auto-open on WelcomeScreen
+- [ ] 19-05-PLAN.md — Move Spectra branding from sidebar to main content headers
 
 **Success Criteria:**
-1. All 25 v0.3 UAT tests pass
+1. All v0.3 UAT tests pass
 2. No regressions in existing functionality
 
 ---
@@ -203,4 +205,4 @@ Plans:
 | 16. Frontend Restructure | v0.3 | 3/3 | Complete | 2026-02-11 |
 | 17. File Management & Linking | v0.3 | 3/3 | Complete | 2026-02-11 |
 | 18. Integration & Polish | v0.3 | 3/3 | Complete | 2026-02-11 |
-| 19. v0.3 Gap Closure | v0.3 | 3/3 | Complete | 2026-02-12 |
+| 19. v0.3 Gap Closure | v0.3 | 3/5 | In Progress | — |
