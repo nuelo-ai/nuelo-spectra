@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 ## Current Position
 
 Phase: 19 - v0.3 Gap Closure
-Plan: 01 of 03 (Sidebar Double-Click Rename & Cosmetics) — COMPLETE
-Status: Plan 19-01 complete. Double-click rename + sidebar cosmetics fixed. 2 of 9 UAT gaps closed.
+Plan: 02 of 03 (FileCard File Size, Tooltip & Bulk Delete Fixes) — COMPLETE
+Status: Plan 19-02 complete. File size on cards, Radix Tooltip on disabled remove, bulk delete fixed. 6 of 9 UAT gaps closed.
 Branch: develop (fresh from master for v0.3)
-Last activity: 2026-02-12 — Completed Plan 19-01
+Last activity: 2026-02-12 — Completed Plan 19-02
 
-Progress: [██████████░░░░░░░░░░░░░░░░░░░░░░] 33% (1/3 plans complete in Phase 19)
+Progress: [█████████████████████░░░░░░░░░░░] 67% (2/3 plans complete in Phase 19)
 
 ## Performance Metrics
 
@@ -50,6 +50,7 @@ Progress: [██████████░░░░░░░░░░░░░
 - Phase 18 Plan 03: 4 min, 2 tasks, 9 files
 - Total commits: 32
 - Phase 19 Plan 01: 2 min, 2 tasks, 3 files
+- Phase 19 Plan 02: 2 min, 2 tasks, 4 files
 
 ## Accumulated Context
 
@@ -163,6 +164,11 @@ Progress: [██████████░░░░░░░░░░░░░
 - Spectra logo uses existing gradient-primary class from globals.css for consistent branding
 - clickTimerRef cleanup on unmount prevents timer memory leaks (auto-fixed deviation)
 
+**Phase 19-02 (FileCard File Size, Tooltip & Bulk Delete Fixes):**
+- Conditional isLastFile branching in FileCard: Tooltip when true, AlertDialog when false (avoids disabled-button-inside-trigger pointer-events issue)
+- Bulk delete uses rowSelection keys directly as UUIDs since getRowId returns row.id
+- Disabled button tooltip pattern: wrap disabled button in <span> inside TooltipTrigger to intercept hover through pointer-events-none
+
 See also: PROJECT.md Key Decisions table for milestone-level decisions.
 
 ### Pending Todos
@@ -179,7 +185,7 @@ See also: PROJECT.md Key Decisions table for milestone-level decisions.
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 19-01-PLAN.md
-Resume with: Execute 19-02-PLAN.md (next gap closure plan)
-Next decision: Continue with Plan 19-02 (sidebar auto-open, remove button, file size)
+Stopped at: Completed 19-02-PLAN.md
+Resume with: Execute 19-03-PLAN.md (final gap closure plan)
+Next decision: Continue with Plan 19-03 (sidebar auto-open, onboarding delay, drag-drop)
 UI directive: Use Frontend Design skill (/frontend-design) for UI work in Phases 16, 17, 18, 19
