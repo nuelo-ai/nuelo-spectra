@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 19-v03-gap-closure
 source: 19-01-SUMMARY.md, 19-02-SUMMARY.md, 19-03-SUMMARY.md
 started: 2026-02-12T16:00:00Z
-updated: 2026-02-12T16:20:00Z
+updated: 2026-02-12T16:35:00Z
 ---
 
 ## Current Test
@@ -81,47 +81,69 @@ skipped: 0
   reason: "User reported: branding should be in Chat area top-left, not inside sidebar. When sidebar is closed, title should still be visible. ChatGPT-style placement."
   severity: major
   test: 2
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Branding element placed inside ChatSidebar.tsx SidebarHeader (lines 39-44) with group-data-[collapsible=icon]:hidden. No branding exists in main content area. When sidebar collapses, branding disappears entirely."
+  artifacts:
+    - path: "frontend/src/components/sidebar/ChatSidebar.tsx"
+      issue: "Branding placed in sidebar header instead of main content header"
+    - path: "frontend/src/components/chat/ChatInterface.tsx"
+      issue: "Main content header (lines 355-360) has SidebarTrigger + title but no branding"
+    - path: "frontend/src/components/session/WelcomeScreen.tsx"
+      issue: "Welcome top area (lines 270-273) has bare SidebarTrigger, no branding"
+  missing:
+    - "Remove branding from ChatSidebar.tsx SidebarHeader"
+    - "Add branding to ChatInterface.tsx header next to SidebarTrigger"
+    - "Add branding to WelcomeScreen.tsx top area next to SidebarTrigger"
+  debug_session: ".planning/debug/branding-placement.md"
 
 - truth: "Drag-drop on My Files opens upload dialog with file pre-loaded and completes through analyzing to ready"
   status: failed
   reason: "User reported: file auto-loads but screen hangs on analyzing stage. Backend completes but frontend doesn't advance to ready/show results."
   severity: major
   test: 8
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "React Strict Mode double-mount disconnects TanStack Query MutationObserver. initialFiles useEffect fires mutate() on mount 1, Strict Mode unmounts, observer.onUnsubscribe removes observer from mutation, onSuccess never fires. setUploadedFileId never called, summary polling stays disabled."
+  artifacts:
+    - path: "frontend/src/components/file/FileUploadZone.tsx"
+      issue: "useEffect line 117-122 calls onDrop(initialFiles) during mount where Strict Mode unmount disconnects observer. initialProcessed ref guard prevents recovery on remount."
+  missing:
+    - "Wrap onDrop(initialFiles) in setTimeout(0) to defer past Strict Mode unmount-remount cycle"
+  debug_session: ".planning/debug/drag-drop-analyzing-hang.md"
 
 - truth: "Drag-drop on chat area opens upload dialog with file pre-loaded and completes through analyzing to ready"
   status: failed
   reason: "User reported: same issue as test 8, hangs on analyzing"
   severity: major
   test: 9
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Same as Test 8 — React Strict Mode double-mount in FileUploadZone.tsx initialFiles useEffect"
+  artifacts:
+    - path: "frontend/src/components/file/FileUploadZone.tsx"
+      issue: "Same initialFiles useEffect Strict Mode issue"
+  missing:
+    - "Same fix as Test 8"
+  debug_session: ".planning/debug/drag-drop-analyzing-hang.md"
 
 - truth: "Drag-drop on welcome screen opens upload dialog with file pre-loaded and completes through analyzing to ready"
   status: failed
   reason: "User reported: same issue as test 8, hangs on analyzing"
   severity: major
   test: 10
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Same as Test 8 — React Strict Mode double-mount in FileUploadZone.tsx initialFiles useEffect"
+  artifacts:
+    - path: "frontend/src/components/file/FileUploadZone.tsx"
+      issue: "Same initialFiles useEffect Strict Mode issue"
+  missing:
+    - "Same fix as Test 8"
+  debug_session: ".planning/debug/drag-drop-analyzing-hang.md"
 
 - truth: "Right sidebar auto-opens when a file is linked to the session"
   status: failed
   reason: "User reported: right sidebar did not open"
   severity: major
   test: 11
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Fix commit cae5f9a patched 4 of 6 linkFile call sites but missed 2 in WelcomeScreen.tsx: handleDragUploadComplete (line 188) and handleSend session creation flow (line 222). The most common new-user flow (New Chat -> add file -> send) always goes through the unpatched path."
+  artifacts:
+    - path: "frontend/src/components/session/WelcomeScreen.tsx"
+      issue: "Two linkFileAsync call sites (lines 188, 222) missing setRightPanelOpen(true)"
+  missing:
+    - "Add setRightPanelOpen(true) to WelcomeScreen handleDragUploadComplete linkFileAsync success"
+    - "Add setRightPanelOpen(true) to WelcomeScreen handleSend session creation flow before router.replace"
+  debug_session: ".planning/debug/sidebar-auto-open-fails.md"
