@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** Phase 21 — Visualization Agent (v0.4 Data Visualization)
+**Current focus:** Phase 22 — Graph Integration & Chart Intelligence (v0.4 Data Visualization)
 
 ## Current Position
 
-Phase: 21 of 25 (Visualization Agent) -- COMPLETE
-Plan: 1 of 1 in Phase 21
-Status: Phase Complete
-Last activity: 2026-02-13 — Completed 21-01 (Visualization Agent module + prompts.yaml + unit tests)
+Phase: 22 of 25 (Graph Integration & Chart Intelligence) -- IN PROGRESS
+Plan: 2 of 2 in Phase 22
+Status: Plan 22-01 Complete
+Last activity: 2026-02-13 — Completed 22-01 (Chart Intelligence in Manager and DA agents)
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 [###░░░░░░░] ~20%
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 [####░░░░░░] ~30%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Recent decisions for v0.4:
 - Reuse extract_code_block from coding.py in visualization agent (no duplication)
 - 8000 char execution_result truncation limit; data shape hints built on full data before truncation
 - Visualization agent generates code only; does not execute (execution is Phase 22)
+- [Phase 22]: LLM-based chart intelligence with two-phase flags (chart_hint advisory, visualization_requested confirmation)
 
 ### Pending Todos
 
@@ -69,5 +70,5 @@ Recent decisions for v0.4:
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 21-01-PLAN.md (Visualization Agent module + tests)
-Resume with: `/gsd:plan-phase 22` to plan Phase 22 (Visualization Execution)
+Stopped at: Completed 22-01-PLAN.md (Chart Intelligence in Manager and DA agents)
+Resume with: `/gsd:execute-phase 22` to execute 22-02-PLAN.md (Pipeline integration)
