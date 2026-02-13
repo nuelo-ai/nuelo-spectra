@@ -51,7 +51,7 @@
 **Milestone Goal:** Enable intelligent data visualization with AI-generated interactive Plotly charts that automatically appear when analysis benefits from visual representation
 
 - [x] **Phase 20: Infrastructure & Pipeline** — Allowlist, state schema, sandbox verification, and output parser for chart JSON
-- [ ] **Phase 21: Visualization Agent** — 6th AI agent that generates Plotly chart code from analysis results
+- [x] **Phase 21: Visualization Agent** — 6th AI agent that generates Plotly chart code from analysis results
 - [ ] **Phase 22: Graph Integration & Chart Intelligence** — Wire agent into LangGraph with conditional routing and visualization discretion
 - [ ] **Phase 23: Frontend Chart Rendering** — Plotly.js integration, ChartRenderer component, DataCard chart display
 - [ ] **Phase 24: Chart Types & Export** — All 7 chart types validated end-to-end, PNG/SVG export, chart type switcher
@@ -99,7 +99,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 21-01-PLAN.md -- Visualization Agent module + prompts.yaml config + unit tests
+- [x] 21-01-PLAN.md -- Visualization Agent module + prompts.yaml config + unit tests
 
 ---
 
@@ -223,7 +223,7 @@ Note: Phase 24 and Phase 25 can execute in parallel (both depend on Phase 23, no
 | 18. Integration & Polish | v0.3 | 3/3 | Complete | 2026-02-11 |
 | 19. v0.3 Gap Closure | v0.3 | 7/7 | Complete | 2026-02-12 |
 | 20. Infrastructure & Pipeline | v0.4 | 2/2 | Complete | 2026-02-13 |
-| 21. Visualization Agent | v0.4 | 0/1 | Not started | - |
+| 21. Visualization Agent | v0.4 | 1/1 | Complete | 2026-02-13 |
 | 22. Graph Integration & Chart Intelligence | v0.4 | 0/TBD | Not started | - |
 | 23. Frontend Chart Rendering | v0.4 | 0/TBD | Not started | - |
 | 24. Chart Types & Export | v0.4 | 0/TBD | Not started | - |
