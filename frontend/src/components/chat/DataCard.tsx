@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import {
   Collapsible,
@@ -15,6 +15,8 @@ import { CSVDownloadButton, MarkdownDownloadButton } from "@/components/data/Dow
 import { CodeDisplay } from "@/components/data/CodeDisplay";
 import ChartSkeleton from "@/components/chart/ChartSkeleton";
 import ChartErrorAlert from "@/components/chart/ChartErrorAlert";
+import { ChartExportButtons } from "@/components/chart/ChartExportButtons";
+import type { ChartRendererHandle } from "@/components/chart/ChartRenderer";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -66,6 +68,7 @@ export function DataCard({
   visualizationStage,
 }: DataCardProps) {
   const [internalCollapsed, setInternalCollapsed] = useState(isCollapsed);
+  const chartRendererRef = useRef<ChartRendererHandle>(null);
 
   const collapsed = onToggleCollapse ? isCollapsed : internalCollapsed;
   const toggleCollapse = onToggleCollapse || (() => setInternalCollapsed(!internalCollapsed));
@@ -176,7 +179,19 @@ export function DataCard({
             <h4 className="text-sm font-medium text-muted-foreground">
               Visualization
             </h4>
-            <ChartRenderer data={chartSpecs} />
+            <ChartRenderer ref={chartRendererRef} data={chartSpecs} />
+            {/* Export buttons - only show when not streaming */}
+            {!isStreaming && (
+              <div className="flex justify-end">
+                <ChartExportButtons
+                  getChartElement={() => chartRendererRef.current?.getElement() ?? null}
+                  filename={queryBrief
+                    ? queryBrief.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30)
+                    : undefined
+                  }
+                />
+              </div>
+            )}
           </div>
         )}
 
