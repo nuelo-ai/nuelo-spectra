@@ -277,11 +277,88 @@ agents:
          - 8 or fewer unique categories: PIE chart
          - More than 8 categories: horizontal BAR chart
       4. Two numeric columns: SCATTER plot.
-      5. Single numeric column: HISTOGRAM.
+      5. Single numeric column with many unique values (>8): HISTOGRAM (for distribution analysis).
       6. Categorical + numeric with natural ordering: vertical BAR chart.
-      7. Distribution analysis: BOX plot.
-      8. Fewer than 3 data points: Return NO CODE (empty code block).
-      9. Default fallback: BAR chart.
+      7. Distribution analysis or query contains "distribution"/"spread"/"variance": BOX plot.
+      8. Part-to-whole visualization with "donut" in query or chart_hint: DONUT chart (pie with hole=0.4).
+      9. Fewer than 3 data points: Return NO CODE (empty code block).
+      10. Default fallback: BAR chart.
+
+      **Chart Type Code Patterns:**
+
+      BAR CHART:
+      ```python
+      fig = px.bar(df, x='category_col', y='value_col',
+                   title='Descriptive Title Here',
+                   labels={'category_col': 'Human Label', 'value_col': 'Value ($)'})
+      ```
+
+      LINE CHART:
+      ```python
+      fig = px.line(df, x='date_col', y='metric_col',
+                    title='Metric Over Time',
+                    labels={'date_col': 'Date', 'metric_col': 'Metric Name'})
+      ```
+
+      SCATTER PLOT:
+      ```python
+      fig = px.scatter(df, x='numeric_x', y='numeric_y',
+                       title='Y vs X Relationship',
+                       labels={'numeric_x': 'X Label', 'numeric_y': 'Y Label'})
+      ```
+
+      HISTOGRAM:
+      ```python
+      fig = px.histogram(df, x='numeric_col',
+                         title='Distribution of Values',
+                         labels={'numeric_col': 'Value Name'})
+      ```
+
+      BOX PLOT:
+      ```python
+      fig = px.box(df, x='category_col', y='numeric_col',
+                   title='Distribution by Category',
+                   labels={'category_col': 'Category', 'numeric_col': 'Value'})
+      ```
+
+      PIE CHART:
+      ```python
+      fig = px.pie(df, values='numeric_col', names='category_col',
+                   title='Breakdown by Category')
+      ```
+
+      DONUT CHART:
+      ```python
+      fig = px.pie(df, values='numeric_col', names='category_col',
+                   hole=0.4,
+                   title='Breakdown by Category')
+      ```
+
+      **Label Formatting Rules:**
+      1. Chart title: Natural language summary of what the chart shows (max 8 words).
+         - Good: "Revenue by Region", "Monthly Sales Trend"
+         - Bad: "col_revenue vs col_region", "data_analysis_result"
+
+      2. Axis labels: Human-readable with units when inferable.
+         - "revenue", "sales", "price", "cost", "amount" -> add " ($)"
+         - "count", "quantity", "total" -> add " (Count)"
+         - "temp", "temperature" -> add context-appropriate unit
+         - "percent", "rate", "ratio" -> add " (%)"
+         - For unknown units, use clean descriptive name without units.
+
+      3. Always use the Plotly Express `labels` parameter to rename raw column names:
+         - Convert snake_case to Title Case: "total_revenue" -> "Total Revenue"
+         - Remove prefixes: "col_revenue_2024" -> "Revenue (2024)"
+         - Abbreviate long names: "average_monthly_customer_retention_rate" -> "Avg. Retention Rate (%)"
+
+      4. Pie/donut charts: Use clear category names. Plotly auto-generates legend.
+
+      **Avoid These Mistakes:**
+      - Do NOT use bar chart for single numeric distributions (use histogram instead).
+      - Do NOT use pie chart for more than 8 categories (use horizontal bar instead).
+      - Do NOT generate a chart title longer than 8 words.
+      - For horizontal bar charts with many categories, use: fig.update_layout(yaxis={'categoryorder': 'total ascending'})
+      - For line charts, always sort data by date/time column ascending before plotting.
 
       **Code Requirements:**
       - Embed the data as a Python list of dicts. DO NOT reference `df`, read files, or use `open()`.
@@ -290,8 +367,6 @@ agents:
       - Set paper_bgcolor="rgba(0,0,0,0)" and plot_bgcolor="rgba(0,0,0,0)".
       - Set height=400. Do NOT set width (let it be responsive).
       - Set margin=dict(l=40, r=40, t=50, b=40).
-      - Add a descriptive title based on the user's query.
-      - Use human-readable axis labels (not raw column names like "col_rev_2024").
       - DO NOT set explicit trace colors (let Plotly colorway defaults apply).
       - DO NOT use fig.write_image() or fig.show().
       - DO NOT use custom JavaScript callbacks, updatemenus, or sliders.
