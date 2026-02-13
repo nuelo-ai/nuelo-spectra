@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 ## Current Position
 
 Phase: 24 of 25 (Chart Types & Export)
-Plan: 0 of TBD in Phase 24
-Status: Ready to plan Phase 24
-Last activity: 2026-02-13 — Completed Phase 23 (Frontend Chart Rendering), fixed Coder Agent visualization code leak
+Plan: 1 of 3 in Phase 24
+Status: Executing Phase 24
+Last activity: 2026-02-13 — Completed Plan 24-01 (Visualization Prompt Enhancement)
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 [########░░] ~67%
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 [#########░] ~70%
 
 ## Performance Metrics
 
@@ -34,9 +34,14 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 [########░░] ~67%
 - Plans per day: ~8 plans/day
 
 **Velocity (v0.4):**
-- Total plans completed: 11 (Phases 20-23 complete)
+- Total plans completed: 12 (Phases 20-23 complete, Phase 24 in progress)
 - Total execution time: ~3 days (Feb 12-13, 2026)
 - Plans per day: ~4 plans/day
+
+| Phase-Plan | Duration | Tasks | Files | Date       |
+|------------|----------|-------|-------|------------|
+| 24-01      | 2min     | 1     | 1     | 2026-02-13 |
+| Phase 24 P02 | 152 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -68,6 +73,11 @@ Recent decisions for v0.4:
 - [Phase 23-02]: viz_response_node must return chart data in node output (not just custom writer events)
 - [Phase 23-02]: run_chat_query_stream needs try/finally with _save_stream_result() for DB persistence on GeneratorExit
 - [Post-23]: Removed plotly from Coder Agent allowlist — Coder must produce tabular data only, Visualization Agent handles charts
+- [Phase 24-01]: Explicit Plotly code patterns in LLM prompts reduce code generation errors (show hole=0.4 for donut, labels parameter usage)
+- [Phase 24-01]: Label formatting rules enforce human-readable output with unit inference (revenue->$, count->Count, percent->%)
+- [Phase 24-01]: Histogram vs bar distinction clarified (histogram for distributions >8 unique values, bar for categorical comparisons)
+- [Phase 24-01]: Query-driven chart selection (keywords like "distribution"/"donut" influence chart type choice)
+- [Phase 24]: Client-side Plotly.downloadImage() for chart export (instant, no server round-trip)
 
 ### Pending Todos
 
@@ -84,5 +94,5 @@ Recent decisions for v0.4:
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Phase 23 complete, Coder Agent visualization leak fixed. Ready to plan Phase 24.
-Resume with: /gsd:plan-phase 24 (Chart Types & Export)
+Stopped at: Completed Plan 24-01 (Visualization Prompt Enhancement). 2 plans remaining in Phase 24.
+Resume with: /gsd:execute-plan 24 02
