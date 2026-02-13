@@ -164,12 +164,12 @@ Plans:
   4. User can download any rendered chart as SVG via a download button below the chart
   5. User can switch between applicable chart types (bar, line, scatter) after initial generation, and the chart re-renders with the same data
 
-**Plans:** TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 24-01: TBD
-- [ ] 24-02: TBD
-- [ ] 24-03: TBD
+- [ ] 24-01-PLAN.md — Enhance Visualization Agent prompt with chart type code patterns and label formatting rules
+- [ ] 24-02-PLAN.md — ChartRenderer ref forwarding, ChartExportButtons (PNG/SVG), DataCard export integration
+- [ ] 24-03-PLAN.md — ChartTypeSwitcher with data shape compatibility, DataCard switcher integration
 
 ---
 
@@ -225,5 +225,5 @@ Note: Phase 24 and Phase 25 can execute in parallel (both depend on Phase 23, no
 | 21. Visualization Agent | v0.4 | 1/1 | Complete | 2026-02-13 |
 | 22. Graph Integration & Chart Intelligence | v0.4 | 2/2 | Complete | 2026-02-13 |
 | 23. Frontend Chart Rendering | v0.4 | 2/2 | Complete | 2026-02-13 |
-| 24. Chart Types & Export | v0.4 | 0/TBD | Not started | - |
+| 24. Chart Types & Export | v0.4 | 0/3 | Not started | - |
 | 25. Theme Integration | v0.4 | 0/TBD | Not started | - |
