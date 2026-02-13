@@ -450,31 +450,62 @@ except UnicodeDecodeError:
         # Success: parse JSON output from stdout
         import json
         execution_result = None
+        chart_specs = ""
+        chart_error = ""
 
         if result.stdout:
             # Try to parse JSON from last line of stdout (where print(json.dumps()) outputs)
             stdout_text = "\n".join(result.stdout)
             try:
-                # Look for JSON in stdout
+                # Fast path: Look for JSON in individual stdout lines (reverse order)
                 for line in reversed(result.stdout):
                     if line.strip().startswith('{') and line.strip().endswith('}'):
                         parsed = json.loads(line.strip())
                         if "result" in parsed:
                             execution_result = json.dumps(parsed["result"])
-                            break
+                        # Extract chart JSON if present
+                        if "chart" in parsed:
+                            chart_specs = json.dumps(parsed["chart"])
+                            logger.info(f"Chart JSON extracted ({len(chart_specs)} bytes)")
+                        break
+
+                # Fallback: join all stdout lines for large chart JSON that may
+                # span multiple stdout list items
+                if execution_result is None and stdout_text.strip().startswith('{'):
+                    try:
+                        parsed = json.loads(stdout_text.strip())
+                        if "result" in parsed:
+                            execution_result = json.dumps(parsed["result"])
+                        if "chart" in parsed:
+                            chart_specs = json.dumps(parsed["chart"])
+                            logger.info(f"Chart JSON extracted via joined stdout ({len(chart_specs)} bytes)")
+                    except json.JSONDecodeError:
+                        pass
+
                 # If no JSON found, use raw stdout
                 if execution_result is None:
                     execution_result = stdout_text
             except json.JSONDecodeError:
                 # Fallback: use raw stdout if JSON parsing fails
                 execution_result = stdout_text
+
+            # Validate chart JSON size (2MB limit)
+            if chart_specs and len(chart_specs) > 2_000_000:
+                logger.warning(f"Chart JSON too large ({len(chart_specs)} bytes), discarding")
+                chart_specs = ""
+                chart_error = "Chart data too large. Try aggregating data before charting."
+
         elif result.results:
             # Fallback: use results list if no stdout
             execution_result = str(result.results)
         else:
             execution_result = "Code executed successfully (no output)"
 
-        return {"execution_result": execution_result}
+        return {
+            "execution_result": execution_result,
+            "chart_specs": chart_specs,
+            "chart_error": chart_error,
+        }
     else:
         # Execution failed: check retry budget
         error_msg = f"{result.error['name']}: {result.error['value']}"
@@ -495,6 +526,8 @@ except UnicodeDecodeError:
                     "execution_result": f"Execution error: {error_msg}",
                     "validation_errors": [f"Execution error: {error_msg}. Please fix the code."],
                     "error_count": new_error_count,
+                    "chart_specs": "",
+                    "chart_error": "",
                 },
             )
         else:
@@ -510,6 +543,8 @@ except UnicodeDecodeError:
                     "execution_result": f"Execution error: {error_msg}",
                     "error_count": new_error_count,
                     "error": "execution_failed",
+                    "chart_specs": "",
+                    "chart_error": "",
                 },
             )
 
