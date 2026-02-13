@@ -802,8 +802,13 @@ async def viz_response_node(state: ChatAgentState) -> dict:
         if chart_error:
             logger.warning(f"Chart generation failed: {chart_error}")
 
-    # Return empty dict -- chart_specs and chart_error already in state from viz_execute
-    return {}
+    # Return chart data so it appears in node_complete SSE event for viz_response.
+    # Without this, the node_complete event carries no chart fields and the custom
+    # writer event may be lost during generator cleanup (GeneratorExit).
+    return {
+        "chart_specs": chart_specs,
+        "chart_error": chart_error,
+    }
 
 
 def build_chat_graph(checkpointer=None):

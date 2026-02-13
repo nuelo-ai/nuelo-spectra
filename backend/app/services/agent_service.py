@@ -540,6 +540,70 @@ async def run_chat_query_stream(
     # Start timing for stream metadata
     start_time = time.monotonic()
     final_state = {}
+    _saved = False
+
+    async def _save_stream_result():
+        """Save stream result to database. Extracted for reuse in finally block."""
+        nonlocal _saved
+        if _saved or not final_state:
+            return
+
+        elapsed_ms = int((time.monotonic() - start_time) * 1000)
+
+        # Track search quota per user query (not per API call)
+        if web_search_enabled:
+            async with async_session_maker() as quota_db:
+                await _track_search_quota(quota_db, user_id)
+
+        async with async_session_maker() as save_db:
+            # Save user message (session-based or file-based)
+            if session_id:
+                await ChatService.create_session_message(
+                    save_db, session_id, user_id, user_query, role="user"
+                )
+            else:
+                await ChatService.create_message(
+                    save_db, file_id, user_id, user_query, role="user"
+                )
+
+            # Serialize routing_decision for metadata storage
+            rd = final_state.get("routing_decision")
+            routing_meta = rd.model_dump() if hasattr(rd, "model_dump") else (rd or {})
+
+            # Save assistant response with stream metadata (session-based or file-based)
+            response_text = final_state.get("final_response") or final_state.get("analysis", "")
+            metadata = {
+                "generated_code": final_state.get("generated_code"),
+                "execution_result": final_state.get("execution_result"),
+                "error_count": final_state.get("error_count", 0),
+                "routing_decision": routing_meta,
+                "follow_up_suggestions": final_state.get("follow_up_suggestions", []),
+                "search_sources": final_state.get("search_sources", []),
+                "chart_specs": final_state.get("chart_specs", ""),
+                "chart_error": final_state.get("chart_error", ""),
+                "stream_metadata": {
+                    "duration_ms": elapsed_ms,
+                    "retry_count": final_state.get("error_count", 0),
+                    "error": final_state.get("error"),
+                }
+            }
+            if session_id:
+                await ChatService.create_session_message(
+                    save_db, session_id, user_id, response_text,
+                    role="assistant",
+                    message_type="agent_response",
+                    metadata_json=metadata,
+                )
+            else:
+                await ChatService.create_message(
+                    save_db, file_id, user_id, response_text,
+                    role="assistant",
+                    message_type="agent_response",
+                    metadata_json=metadata,
+                )
+
+        _saved = True
+        logger.info(f"Stream result saved for session_id={session_id}, file_id={file_id}")
 
     try:
         # Stream graph execution with combined mode: updates + custom
@@ -582,72 +646,7 @@ async def run_chat_query_stream(
         # "connection already closed" / "connection lost during query" errors
         # that occur when trying to write with a session that has been idle
         # throughout the entire streaming duration. See 04-RESEARCH.md Pitfall 7.
-        elapsed_ms = int((time.monotonic() - start_time) * 1000)
-
-        # Track search quota per user query (not per API call)
-        if web_search_enabled:
-            async with async_session_maker() as quota_db:
-                await _track_search_quota(quota_db, user_id)
-
-        async with async_session_maker() as save_db:
-            # Save user message (session-based or file-based)
-            if session_id:
-                await ChatService.create_session_message(
-                    save_db, session_id, user_id, user_query, role="user"
-                )
-            else:
-                await ChatService.create_message(
-                    save_db, file_id, user_id, user_query, role="user"
-                )
-
-            # Serialize routing_decision for metadata storage
-            rd = final_state.get("routing_decision")
-            routing_meta = rd.model_dump() if hasattr(rd, "model_dump") else (rd or {})
-
-            # Save assistant response with stream metadata (session-based or file-based)
-            response_text = final_state.get("final_response") or final_state.get("analysis", "")
-            if session_id:
-                await ChatService.create_session_message(
-                    save_db, session_id, user_id, response_text,
-                    role="assistant",
-                    message_type="agent_response",
-                    metadata_json={
-                        "generated_code": final_state.get("generated_code"),
-                        "execution_result": final_state.get("execution_result"),
-                        "error_count": final_state.get("error_count", 0),
-                        "routing_decision": routing_meta,
-                        "follow_up_suggestions": final_state.get("follow_up_suggestions", []),
-                        "search_sources": final_state.get("search_sources", []),
-                        "chart_specs": final_state.get("chart_specs", ""),
-                        "chart_error": final_state.get("chart_error", ""),
-                        "stream_metadata": {
-                            "duration_ms": elapsed_ms,
-                            "retry_count": final_state.get("error_count", 0),
-                            "error": final_state.get("error"),
-                        }
-                    }
-                )
-            else:
-                await ChatService.create_message(
-                    save_db, file_id, user_id, response_text,
-                    role="assistant",
-                    message_type="agent_response",
-                    metadata_json={
-                        "generated_code": final_state.get("generated_code"),
-                        "execution_result": final_state.get("execution_result"),
-                        "error_count": final_state.get("error_count", 0),
-                        "routing_decision": routing_meta,
-                        "follow_up_suggestions": final_state.get("follow_up_suggestions", []),
-                        "search_sources": final_state.get("search_sources", []),
-                        "chart_specs": final_state.get("chart_specs", ""),
-                        "chart_error": final_state.get("chart_error", ""),
-                        "stream_metadata": {
-                            "duration_ms": elapsed_ms,
-                            "retry_count": final_state.get("error_count", 0),
-                            "error": final_state.get("error"),
-                        }
-                    }
-                )
+        await _save_stream_result()
 
         # Yield completion event
         yield {
@@ -665,6 +664,17 @@ async def run_chat_query_stream(
             "type": "error",
             "message": error_msg
         }
+
+    finally:
+        # Ensure save-to-DB runs even on GeneratorExit (BaseException, not caught
+        # by except Exception). This handles cases where the SSE connection closes
+        # during streaming — the graph nodes complete but the generator cleanup
+        # would skip the save code without this finally block.
+        if not _saved and final_state:
+            try:
+                await _save_stream_result()
+            except Exception as save_err:
+                logger.error(f"Failed to save stream result during cleanup: {save_err}")
 
 
 async def _track_search_quota(db: AsyncSession, user_id: UUID) -> None:
