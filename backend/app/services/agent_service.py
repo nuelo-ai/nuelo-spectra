@@ -260,6 +260,12 @@ async def run_chat_query(
         "multi_file_context": multi_file_context,
         "file_metadata": file_metadata,
         "session_files": session_files,
+        # Visualization infrastructure defaults (v0.4 Phase 20)
+        "visualization_requested": False,
+        "chart_hint": "",
+        "chart_code": "",
+        "chart_specs": "",
+        "chart_error": "",
     }
 
     # Add new user message to checkpoint using aupdate_state
@@ -511,6 +517,12 @@ async def run_chat_query_stream(
         "multi_file_context": multi_file_context,
         "file_metadata": file_metadata,
         "session_files": session_files,
+        # Visualization infrastructure defaults (v0.4 Phase 20)
+        "visualization_requested": False,
+        "chart_hint": "",
+        "chart_code": "",
+        "chart_specs": "",
+        "chart_error": "",
     }
 
     # Add new user message to checkpoint using aupdate_state
@@ -552,7 +564,7 @@ async def run_chat_query_stream(
                            if k in ("generated_code", "execution_result",
                                     "analysis", "final_response", "error",
                                     "routing_decision", "follow_up_suggestions",
-                                    "search_sources")}
+                                    "search_sources", "chart_specs", "chart_error")}
                     }
 
         # Stream completed successfully -- save atomically with fresh session
