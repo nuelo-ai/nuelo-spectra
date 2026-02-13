@@ -113,6 +113,27 @@ class TestDisallowedImports:
         assert result.is_valid is False
         assert any("os" in err.lower() for err in result.errors)
 
+    def test_disallowed_plotly_express(self):
+        """Should reject plotly import (visualization belongs to Visualization Agent)."""
+        code = "import plotly.express as px"
+        result = validate_code(code)
+        assert result.is_valid is False
+        assert any("plotly" in err.lower() for err in result.errors)
+
+    def test_disallowed_plotly_graph_objects(self):
+        """Should reject plotly.graph_objects import."""
+        code = "import plotly.graph_objects as go"
+        result = validate_code(code)
+        assert result.is_valid is False
+        assert any("plotly" in err.lower() for err in result.errors)
+
+    def test_disallowed_matplotlib(self):
+        """Should reject matplotlib import."""
+        code = "import matplotlib.pyplot as plt"
+        result = validate_code(code)
+        assert result.is_valid is False
+        assert any("matplotlib" in err.lower() for err in result.errors)
+
     def test_disallowed_pathlib(self):
         """Should reject pathlib import."""
         code = "from pathlib import Path"

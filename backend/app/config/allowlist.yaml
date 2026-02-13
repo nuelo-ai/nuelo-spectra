@@ -9,7 +9,6 @@ allowed_libraries:
   - functools
   - re
   - json
-  - plotly
 
 unsafe_builtins:
   - eval

@@ -11,14 +11,16 @@ def clear_config_caches():
     caches (load_prompts, load_provider_registry) are cleared, preventing
     test state from leaking between tests.
     """
-    from app.agents.config import load_prompts, load_provider_registry
+    from app.agents.config import load_allowlist, load_prompts, load_provider_registry
 
     # Clear caches before test
     load_prompts.cache_clear()
     load_provider_registry.cache_clear()
+    load_allowlist.cache_clear()
 
     yield
 
     # Clear caches after test
     load_prompts.cache_clear()
     load_provider_registry.cache_clear()
+    load_allowlist.cache_clear()

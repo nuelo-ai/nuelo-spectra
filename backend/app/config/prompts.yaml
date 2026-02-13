@@ -80,6 +80,10 @@ agents:
       - Libraries allowed: {allowed_libraries}
       - Use .fillna(0) for missing values
       - NEVER check if df exists or use locals()/globals()
+      - NEVER generate visualization, charting, or plotting code
+      - NEVER import plotly, matplotlib, seaborn, or any visualization library
+      - Your output must be tabular data only: dicts, lists, numbers, strings serialized as JSON
+      - If the query implies visualization, produce the underlying DATA (e.g., groupby aggregations); a separate Visualization Agent will create charts from your output
 
       **Multi-file rules (when multiple DataFrames are available):**
       - Use exact variable names shown above (e.g., df_sales, df_customers)
@@ -137,6 +141,7 @@ agents:
       8. If result is a DataFrame/Series, is it converted to dict/list before json.dumps?
       9. If multiple DataFrames are used, are they using the correct variable names (df_sales, etc.)?
       10. If a join/merge is performed, is the join column valid and join type specified?
+      11. Does the code generate only tabular data output (not charts or visualizations)? Reject any code that imports plotly, matplotlib, seaborn, or generates figures/charts.
 
       If the code is VALID, respond with exactly: VALID
       If the code has issues, respond with:
