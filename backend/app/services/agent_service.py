@@ -322,6 +322,8 @@ async def run_chat_query(
                 "routing_decision": routing_meta,
                 "search_sources": result.get("search_sources", []),
                 "follow_up_suggestions": result.get("follow_up_suggestions", []),
+                "chart_specs": result.get("chart_specs", ""),
+                "chart_error": result.get("chart_error", ""),
             }
         )
     else:
@@ -340,6 +342,8 @@ async def run_chat_query(
                 "routing_decision": routing_meta,
                 "search_sources": result.get("search_sources", []),
                 "follow_up_suggestions": result.get("follow_up_suggestions", []),
+                "chart_specs": result.get("chart_specs", ""),
+                "chart_error": result.get("chart_error", ""),
             }
         )
 
@@ -350,7 +354,9 @@ async def run_chat_query(
         "execution_result": result.get("execution_result"),
         "analysis": final_response_text,
         "error": result.get("error"),
-        "retry_count": result.get("error_count", 0)
+        "retry_count": result.get("error_count", 0),
+        "chart_specs": result.get("chart_specs", ""),
+        "chart_error": result.get("chart_error", ""),
     }
 
 
@@ -612,6 +618,8 @@ async def run_chat_query_stream(
                         "routing_decision": routing_meta,
                         "follow_up_suggestions": final_state.get("follow_up_suggestions", []),
                         "search_sources": final_state.get("search_sources", []),
+                        "chart_specs": final_state.get("chart_specs", ""),
+                        "chart_error": final_state.get("chart_error", ""),
                         "stream_metadata": {
                             "duration_ms": elapsed_ms,
                             "retry_count": final_state.get("error_count", 0),
@@ -631,6 +639,8 @@ async def run_chat_query_stream(
                         "routing_decision": routing_meta,
                         "follow_up_suggestions": final_state.get("follow_up_suggestions", []),
                         "search_sources": final_state.get("search_sources", []),
+                        "chart_specs": final_state.get("chart_specs", ""),
+                        "chart_error": final_state.get("chart_error", ""),
                         "stream_metadata": {
                             "duration_ms": elapsed_ms,
                             "retry_count": final_state.get("error_count", 0),
