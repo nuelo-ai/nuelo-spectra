@@ -73,11 +73,11 @@
   3. E2B sandbox can execute `import plotly; print(plotly.__version__)` and return version 6.x
   4. Sandbox output parser extracts chart JSON from stdout alongside existing result data
 
-**Plans:** TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 20-01: TBD
-- [ ] 20-02: TBD
+- [ ] 20-01-PLAN.md — Plotly allowlist + ChatAgentState visualization fields + initial_state defaults
+- [ ] 20-02-PLAN.md — Sandbox output parser chart JSON extraction + E2B Plotly verification tests
 
 ---
 
