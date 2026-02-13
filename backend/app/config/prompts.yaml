@@ -185,6 +185,19 @@ agents:
       - When in doubt, choose NEW_ANALYSIS (safest fallback)
       - If no previous code exists, NEVER choose CODE_MODIFICATION
       - MEMORY_SUFFICIENT should only be used when NO code execution is needed
+
+      **Visualization Hint (chart_hint):**
+      If the query implies data visualization, suggest a chart type in the chart_hint field.
+      Use one of: bar, line, scatter, pie, histogram, box, or leave empty.
+      - "show trend over time" -> line
+      - "compare categories" -> bar
+      - "distribution of values" -> histogram
+      - "relationship between X and Y" -> scatter
+      - "breakdown by category" -> pie (for few categories) or bar (for many)
+      - If unsure or no visualization implied -> leave chart_hint empty
+      This hint is advisory only -- the Visualization Agent may override it based on actual data.
+      Only provide chart_hint when visualization seems likely. For questions like "what is the average?" or "explain the data", leave it empty.
+      Strong preference: when in doubt and data supports it, suggest a chart type.
     max_tokens: 500
 
   data_analysis:

@@ -179,13 +179,14 @@ async def manager_node(
     if decision.route == "MEMORY_SUFFICIENT":
         return Command(
             goto="da_with_tools",
-            update={"routing_decision": decision},
+            update={"routing_decision": decision, "chart_hint": decision.chart_hint},
         )
     elif decision.route == "CODE_MODIFICATION":
         return Command(
             goto="coding_agent",
             update={
                 "routing_decision": decision,
+                "chart_hint": decision.chart_hint,
                 "previous_code": previous_code or "",
             },
         )
@@ -195,6 +196,7 @@ async def manager_node(
             goto="coding_agent",
             update={
                 "routing_decision": decision,
+                "chart_hint": decision.chart_hint,
                 "previous_code": "",
             },
         )

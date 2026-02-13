@@ -19,6 +19,7 @@ class RoutingDecision(BaseModel):
     route: Literal["MEMORY_SUFFICIENT", "CODE_MODIFICATION", "NEW_ANALYSIS"]
     reasoning: str = Field(description="Brief explanation of why this route was chosen")
     context_summary: str = Field(description="Relevant context from conversation for downstream agents")
+    chart_hint: str = Field(default="", description="Suggested chart type if query implies visualization (bar, line, scatter, pie, histogram, box, or empty string)")
 
 
 class OnboardingState(TypedDict):
