@@ -50,7 +50,7 @@
 
 **Milestone Goal:** Enable intelligent data visualization with AI-generated interactive Plotly charts that automatically appear when analysis benefits from visual representation
 
-- [ ] **Phase 20: Infrastructure & Pipeline** — Allowlist, state schema, sandbox verification, and output parser for chart JSON
+- [x] **Phase 20: Infrastructure & Pipeline** — Allowlist, state schema, sandbox verification, and output parser for chart JSON
 - [ ] **Phase 21: Visualization Agent** — 6th AI agent that generates Plotly chart code from analysis results
 - [ ] **Phase 22: Graph Integration & Chart Intelligence** — Wire agent into LangGraph with conditional routing and visualization discretion
 - [ ] **Phase 23: Frontend Chart Rendering** — Plotly.js integration, ChartRenderer component, DataCard chart display
@@ -76,8 +76,8 @@
 **Plans:** 2 plans
 
 Plans:
-- [ ] 20-01-PLAN.md — Plotly allowlist + ChatAgentState visualization fields + initial_state defaults
-- [ ] 20-02-PLAN.md — Sandbox output parser chart JSON extraction + E2B Plotly verification tests
+- [x] 20-01-PLAN.md — Plotly allowlist + ChatAgentState visualization fields + initial_state defaults
+- [x] 20-02-PLAN.md — Sandbox output parser chart JSON extraction + E2B Plotly verification tests
 
 ---
 
@@ -223,7 +223,7 @@ Note: Phase 24 and Phase 25 can execute in parallel (both depend on Phase 23, no
 | 17. File Management & Linking | v0.3 | 3/3 | Complete | 2026-02-11 |
 | 18. Integration & Polish | v0.3 | 3/3 | Complete | 2026-02-11 |
 | 19. v0.3 Gap Closure | v0.3 | 7/7 | Complete | 2026-02-12 |
-| 20. Infrastructure & Pipeline | v0.4 | 0/TBD | Not started | - |
+| 20. Infrastructure & Pipeline | v0.4 | 2/2 | Complete | 2026-02-13 |
 | 21. Visualization Agent | v0.4 | 0/TBD | Not started | - |
 | 22. Graph Integration & Chart Intelligence | v0.4 | 0/TBD | Not started | - |
 | 23. Frontend Chart Rendering | v0.4 | 0/TBD | Not started | - |
