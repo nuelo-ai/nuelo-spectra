@@ -15,6 +15,19 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 **Branch:** master
 **Latest Tag:** v0.3 (2026-02-12)
 
+## Current Milestone: v0.4 Data Visualization
+
+**Goal:** Enable intelligent data visualization with AI-generated charts that automatically appear when analysis benefits from visual representation.
+
+**Target features:**
+- Visualization Agent (6th agent) generating Plotly-based interactive charts
+- Chart types: bar, line, scatter, histogram, box plot, pie, donut
+- Automatic chart generation with strong discretion (when in doubt, show chart if data supports it)
+- Chart + table display (chart above table in Data Cards)
+- PNG/SVG chart export
+- Basic chart customization (type switcher)
+- Architecture: Manager hints → Coder optimizes → Analyst delegates to Visualizer
+
 ## Current State
 
 **Shipped:** v0.3 Multi-file Conversation Support (2026-02-12)
@@ -238,7 +251,7 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 ### Active
 
-(Next milestone requirements to be defined — run `/gsd:new-milestone`)
+**v0.4 Data Visualization** — Requirements being defined (in progress)
 
 ### Out of Scope
 
@@ -321,4 +334,4 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | sessionStorage for cross-navigation state | Pass sidebar-open flag across router.replace navigations | ✓ Good — reliable mechanism where Zustand state may not persist |
 
 ---
-*Last updated: 2026-02-12 after v0.3 Multi-file Conversation Support milestone completed*
+*Last updated: 2026-02-12 after starting v0.4 Data Visualization milestone*
