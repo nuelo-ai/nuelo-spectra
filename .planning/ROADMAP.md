@@ -5,6 +5,7 @@
 - ✅ **v0.1 Beta MVP** — Phases 1-6 (shipped 2026-02-06)
 - ✅ **v0.2 Intelligence & Integration** — Phases 7-13 (shipped 2026-02-10)
 - ✅ **v0.3 Multi-file Conversation Support** — Phases 14-19 (shipped 2026-02-12)
+- 🚧 **v0.4 Data Visualization** — Phases 20-25 (in progress)
 
 ## Phases
 
@@ -29,166 +30,177 @@
 - [x] Phase 10: Smart Query Suggestions (2/2 plans) — completed 2026-02-08
 - [x] Phase 11: Web Search Tool Integration (3/3 plans) — completed 2026-02-09
 - [x] Phase 12: Production Email Infrastructure (2/2 plans) — completed 2026-02-09
-- [x] Phase 13: Migrate Web Search from Serper.dev to Tavily (2/2 plans) — completed 2026-02-09
+- [x] Phase 13: Migrate Web Search (Tavily) (2/2 plans) — completed 2026-02-09
 
 </details>
 
 <details>
 <summary>✅ v0.3 Multi-file Conversation Support (Phases 14-19) — SHIPPED 2026-02-12</summary>
 
-**Goal:** Restructure the UX from file-tab-centric to chat-session-centric, enabling multi-file conversations and cross-file analysis
-
-#### Phase 14: Database Foundation & Migration
-
-**Goal:** Chat sessions exist as first-class database entities with proper data model and migration strategy
-
-**Dependencies:** None (foundational)
-
-**Requirements:** DATA-01, DATA-02, DATA-03, DATA-04, DATA-05, DATA-06
-
-**Plans:** 4 plans
-
-Plans:
-- [x] 14-01-PLAN.md — ChatSession model, association table, Pydantic schemas
-- [x] 14-02-PLAN.md — Alembic migrations (schema, data, checkpoint)
-- [x] 14-03-PLAN.md — ChatSession service layer and REST API endpoints
-- [x] 14-04-PLAN.md — Integration wiring (session-based thread_ids in agent service)
-
-**Success Criteria:**
-1. Chat sessions can be created, read, updated, and deleted via API endpoints
-2. Files can be linked to multiple sessions and sessions can have multiple files (many-to-many relationship working)
-3. Chat messages belong to sessions (not files) and display correctly when session is opened
-4. Existing v0.2 conversations are accessible in the new session model with original messages intact
-5. LangGraph conversation memory works with session-based thread IDs (old conversations can continue)
-
----
-
-#### Phase 15: Agent System Enhancement (Multi-File Support)
-
-**Goal:** AI agents can perform cross-file analysis across all linked files in a single query
-
-**Dependencies:** Phase 14 (requires session model and file linking)
-
-**Requirements:** LINK-06
-
-**Plans:** 3 plans
-
-Plans:
-- [x] 15-01-PLAN.md — ContextAssembler service and settings.yaml configuration
-- [x] 15-02-PLAN.md — ChatAgentState multi-file fields and agent prompt updates
-- [x] 15-03-PLAN.md — Agent pipeline integration (service, sandbox, routing, limits)
-
-**Success Criteria:**
-1. User can ask "compare data from sales.csv with customers.xlsx" and agent generates code referencing both files
-2. Agent-generated Python code uses named DataFrames (df_sales, df_customers) not generic df
-3. E2B sandbox executes multi-file code without memory overflow for up to 5 files
-4. Context Assembler service provides compact multi-file metadata within token budget
-5. Manager Agent routes multi-file queries correctly (MEMORY_SUFFICIENT vs NEW_ANALYSIS)
-
----
-
-#### Phase 16: Frontend Restructure (Session-Centric UX)
-
-**Goal:** Users navigate via chat sessions in a sidebar, not file tabs
-
-**Dependencies:** Phase 14 (requires session APIs)
-
-**Requirements:** NAV-01, NAV-02, NAV-03, NAV-04, NAV-05, CHAT-01, CHAT-02, CHAT-04, CHAT-05, CHAT-09
-
-**Plans:** 3 plans
-
-Plans:
-- [x] 16-01-PLAN.md — Session state layer (store, hooks, types) and left sidebar components
-- [x] 16-02-PLAN.md — Dashboard layout restructure, session routes, chat migration to session-based
-- [x] 16-03-PLAN.md — Welcome screen, linked files right panel, human verification
-
-**Success Criteria:**
-1. User sees left sidebar with "New Chat" button, chronological chat history, and "My Files" button
-2. User can create a new chat session from sidebar and see welcome screen
-3. User can click any chat from history sidebar to open that session in main content area
-4. Chat history displays grouped by time (Today, This Week, This Month, Older) with most recent first
-5. User sees collapsible right sidebar panel showing linked files when chat session is active
-6. File-tab navigation is completely replaced by session-based navigation (no tabs visible)
-
----
-
-#### Phase 17: File Management & Linking
-
-**Goal:** Users can manage files independently and link them to chat sessions
-
-**Dependencies:** Phase 14 (requires session model), Phase 16 (requires My Files route)
-
-**Requirements:** FILE-01, FILE-02, FILE-03, FILE-04, FILE-05, FILE-06, FILE-07, LINK-01, LINK-02, LINK-03, LINK-04, LINK-05, LINK-07, LINK-08
-
-**Plans:** 3 plans
-
-Plans:
-- [x] 17-01-PLAN.md — Backend download endpoint, frontend hooks (download, recent, bulk delete), formatFileSize utility
-- [x] 17-02-PLAN.md — My Files page with drag-and-drop upload, MyFilesTable with TanStack Table, FileContextModal
-- [x] 17-03-PLAN.md — FileSelectionModal, FileLinkingDropdown (paperclip), chat drag-and-drop overlay, right sidebar update
-
-**Success Criteria:**
-1. User can access "My Files" screen from sidebar showing all uploaded files with metadata
-2. User can upload a new file from My Files screen and it completes onboarding flow
-3. User can view file context details (data summary, columns, row count) from My Files
-4. User can start a new chat session with a selected file from My Files (creates session and links file)
-5. User can delete a file with confirmation dialog and file is removed from linked sessions without deleting messages
-6. User can add files to chat session via "Add File" button, file selection modal, or drag-and-drop
-7. User sees file info icon in right sidebar panel showing context for each linked file
-8. User cannot link more than 10 files to a single session (enforced with error message)
-
----
-
-#### Phase 18: Integration & Polish
-
-**Goal:** All features work together seamlessly with proper constraints and visual polish
-
-**Dependencies:** Phase 14, Phase 15, Phase 16, Phase 17 (requires all layers complete)
-
-**Requirements:** CHAT-03, CHAT-06, CHAT-07, CHAT-08, THEME-01, THEME-02
-
-**Plans:** 3 plans
-
-Plans:
-- [x] 18-01-PLAN.md — File requirement enforcement (send blocked without files, last-file unlink prevention)
-- [x] 18-02-PLAN.md — Dark/light theme support (ThemeProvider, toggle in user menu)
-- [x] 18-03-PLAN.md — Session title auto-generation via LLM (backend endpoint, frontend trigger, manual rename lock)
-
-**Success Criteria:**
-1. User cannot send messages to a chat session until at least one file is linked (enforced with clear message)
-2. Chat sessions persist across browser sessions (messages and linked files preserved after login)
-3. User can have multiple independent chat sessions each with its own conversation context
-4. Chat session title is auto-generated from first user message and displays in sidebar
-5. User can toggle between light and dark mode and theme preference persists across sessions
-
----
-
-#### Phase 19: v0.3 Gap Closure (UAT Bug Fixes)
-
-**Goal:** Fix all bugs found during v0.3 UAT to pass all acceptance tests
-
-**Dependencies:** Phase 18 (requires all v0.3 features complete)
-
-**Plans:** 7 plans
-
-Plans:
-- [x] 19-01-PLAN.md — Sidebar UX fixes (double-click rename, logo, collapsed state)
-- [x] 19-02-PLAN.md — FileCard fixes (file size display, tooltip, bulk delete)
-- [x] 19-03-PLAN.md — Drag-drop file forwarding and sidebar auto-open on link
-- [x] 19-04-PLAN.md — Fix drag-drop analyzing hang (setTimeout deferral) and sidebar auto-open on WelcomeScreen
-- [x] 19-05-PLAN.md — Move Spectra branding from sidebar to main content headers
-- [x] 19-06-PLAN.md — Widen upload modal to match info modal width (sm:max-w-4xl)
-- [x] 19-07-PLAN.md — Continue to Chat redirect from My Files + sidebar auto-open on new session
-
-**Success Criteria:**
-1. All v0.3 UAT tests pass
-2. No regressions in existing functionality
-
----
+- [x] Phase 14: Database Foundation & Migration (4/4 plans) — completed 2026-02-11
+- [x] Phase 15: Agent System Enhancement (3/3 plans) — completed 2026-02-11
+- [x] Phase 16: Frontend Restructure (3/3 plans) — completed 2026-02-11
+- [x] Phase 17: File Management & Linking (3/3 plans) — completed 2026-02-11
+- [x] Phase 18: Integration & Polish (3/3 plans) — completed 2026-02-11
+- [x] Phase 19: v0.3 Gap Closure (7/7 plans) — completed 2026-02-12
 
 </details>
 
+### 🚧 v0.4 Data Visualization (In Progress)
+
+**Milestone Goal:** Enable intelligent data visualization with AI-generated interactive Plotly charts that automatically appear when analysis benefits from visual representation
+
+- [ ] **Phase 20: Infrastructure & Pipeline** — Allowlist, state schema, sandbox verification, and output parser for chart JSON
+- [ ] **Phase 21: Visualization Agent** — 6th AI agent that generates Plotly chart code from analysis results
+- [ ] **Phase 22: Graph Integration & Chart Intelligence** — Wire agent into LangGraph with conditional routing and visualization discretion
+- [ ] **Phase 23: Frontend Chart Rendering** — Plotly.js integration, ChartRenderer component, DataCard chart display
+- [ ] **Phase 24: Chart Types & Export** — All 7 chart types validated end-to-end, PNG/SVG export, chart type switcher
+- [ ] **Phase 25: Theme Integration** — Dark/light theme support for charts with Nord palette
+
+## Phase Details
+
+### Phase 20: Infrastructure & Pipeline
+
+**Goal:** The platform is prepared for chart generation — Plotly is allowed, state carries visualization data, sandbox captures chart JSON
+
+**Depends on:** Nothing (foundational for v0.4)
+
+**Requirements:** INFRA-01, INFRA-02, INFRA-03, INFRA-04
+
+**Success Criteria** (what must be TRUE):
+  1. Plotly import passes Code Checker AST validation without rejection (allowlist updated)
+  2. ChatAgentState carries visualization fields (visualization_requested, chart_hint, chart_code, chart_specs, chart_error) through the agent pipeline
+  3. E2B sandbox can execute `import plotly; print(plotly.__version__)` and return version 6.x
+  4. Sandbox output parser extracts chart JSON from stdout alongside existing result data
+
+**Plans:** TBD
+
+Plans:
+- [ ] 20-01: TBD
+- [ ] 20-02: TBD
+
+---
+
+### Phase 21: Visualization Agent
+
+**Goal:** A dedicated AI agent exists that generates correct Plotly Python code for charts based on analysis results and user intent
+
+**Depends on:** Phase 20 (requires allowlist and state schema)
+
+**Requirements:** AGENT-01, AGENT-02, AGENT-03, AGENT-04, AGENT-05, AGENT-06
+
+**Success Criteria** (what must be TRUE):
+  1. Visualization Agent module exists with LangGraph-compatible invoke interface (same pattern as other agents)
+  2. Agent is configurable via prompts.yaml with its own LLM provider, model, and system prompt
+  3. Agent generates valid Plotly Python code that produces chart JSON via fig.to_json() to stdout
+  4. Agent embeds data as Python literals in generated code (no file I/O or uploads needed in sandbox)
+  5. Agent applies chart type selection heuristics (e.g., categorical >8 values triggers bar instead of pie)
+
+**Plans:** TBD
+
+Plans:
+- [ ] 21-01: TBD
+- [ ] 21-02: TBD
+
+---
+
+### Phase 22: Graph Integration & Chart Intelligence
+
+**Goal:** The Visualization Agent is wired into the LangGraph pipeline with conditional routing — charts are generated only when the AI determines visualization adds value
+
+**Depends on:** Phase 21 (requires Visualization Agent module)
+
+**Requirements:** GRAPH-01, GRAPH-02, GRAPH-03, GRAPH-04, GRAPH-05, GRAPH-06, CHART-08, CHART-09, CHART-10
+
+**Success Criteria** (what must be TRUE):
+  1. Data Analysis Agent sets visualization_requested flag when it determines a chart would enhance the response
+  2. Manager Agent includes visualization hints during query routing that inform downstream chart decisions
+  3. When visualization_requested is true, the graph routes through Visualization Agent -> viz_execute -> viz_response nodes
+  4. When visualization_requested is false, the graph skips visualization nodes entirely (existing tabular flow unchanged)
+  5. Chart generation failure is non-fatal — the original analysis text and data table are preserved and displayed even when chart code errors occur
+
+**Plans:** TBD
+
+Plans:
+- [ ] 22-01: TBD
+- [ ] 22-02: TBD
+- [ ] 22-03: TBD
+
+---
+
+### Phase 23: Frontend Chart Rendering
+
+**Goal:** Users see interactive Plotly charts rendered in DataCards when chart data is available, with zoom, pan, and hover tooltips
+
+**Depends on:** Phase 22 (requires chart JSON flowing via SSE)
+
+**Requirements:** DISPLAY-01, DISPLAY-02, DISPLAY-03, DISPLAY-04, DISPLAY-05, DISPLAY-06, DISPLAY-07
+
+**Success Criteria** (what must be TRUE):
+  1. ChartRenderer component renders Plotly charts using dynamic import (no SSR, lazy-loaded only when chart data exists)
+  2. DataCard displays chart above the data table when chart_specs is present in the response
+  3. Charts are interactive — user can zoom, pan, and see hover tooltips on data points (Plotly.js defaults)
+  4. Charts resize responsively when the browser window or container size changes
+  5. A skeleton loader is visible while chart generation is in progress (before chart JSON arrives via SSE)
+
+**Plans:** TBD
+
+Plans:
+- [ ] 23-01: TBD
+- [ ] 23-02: TBD
+
+---
+
+### Phase 24: Chart Types & Export
+
+**Goal:** All 7 chart types produce correct visualizations end-to-end, charts have meaningful labels, and users can export charts or switch chart types
+
+**Depends on:** Phase 23 (requires chart rendering working)
+
+**Requirements:** CHART-01, CHART-02, CHART-03, CHART-04, CHART-05, CHART-06, CHART-07, CHART-11, EXPORT-01, EXPORT-02, EXPORT-03, EXPORT-04, EXPORT-05
+
+**Success Criteria** (what must be TRUE):
+  1. User can trigger generation of each chart type (bar, line, scatter, histogram, box plot, pie, donut) with appropriate queries and see correct output
+  2. Charts display meaningful titles and human-readable axis labels (not raw column names like "col_revenue_2024")
+  3. User can download any rendered chart as PNG via a download button below the chart
+  4. User can download any rendered chart as SVG via a download button below the chart
+  5. User can switch between applicable chart types (bar, line, scatter) after initial generation, and the chart re-renders with the same data
+
+**Plans:** TBD
+
+Plans:
+- [ ] 24-01: TBD
+- [ ] 24-02: TBD
+- [ ] 24-03: TBD
+
+---
+
+### Phase 25: Theme Integration
+
+**Goal:** Charts visually integrate with the platform's light and dark themes, using matching color palettes and readable text
+
+**Depends on:** Phase 23 (requires chart rendering working)
+
+**Requirements:** THEME-01, THEME-02, THEME-03, THEME-04
+
+**Success Criteria** (what must be TRUE):
+  1. Charts automatically switch appearance when the user toggles between light and dark mode
+  2. Charts use transparent backgrounds in dark mode (no white rectangles breaking the dark UI)
+  3. Chart colors use the Nord palette in dark mode, matching the rest of the platform's visual language
+  4. Chart axis labels, titles, and legend text are readable in both light and dark modes (proper contrast)
+
+**Plans:** TBD
+
+Plans:
+- [ ] 25-01: TBD
+
+---
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 20 -> 21 -> 22 -> 23 -> 24 -> 25
+Note: Phase 24 and Phase 25 can execute in parallel (both depend on Phase 23, not each other).
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -211,3 +223,9 @@ Plans:
 | 17. File Management & Linking | v0.3 | 3/3 | Complete | 2026-02-11 |
 | 18. Integration & Polish | v0.3 | 3/3 | Complete | 2026-02-11 |
 | 19. v0.3 Gap Closure | v0.3 | 7/7 | Complete | 2026-02-12 |
+| 20. Infrastructure & Pipeline | v0.4 | 0/TBD | Not started | - |
+| 21. Visualization Agent | v0.4 | 0/TBD | Not started | - |
+| 22. Graph Integration & Chart Intelligence | v0.4 | 0/TBD | Not started | - |
+| 23. Frontend Chart Rendering | v0.4 | 0/TBD | Not started | - |
+| 24. Chart Types & Export | v0.4 | 0/TBD | Not started | - |
+| 25. Theme Integration | v0.4 | 0/TBD | Not started | - |

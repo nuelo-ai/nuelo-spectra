@@ -117,13 +117,55 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (Empty - populated by roadmapper) | | |
+| INFRA-01 | Phase 20 | Pending |
+| INFRA-02 | Phase 20 | Pending |
+| INFRA-03 | Phase 20 | Pending |
+| INFRA-04 | Phase 20 | Pending |
+| AGENT-01 | Phase 21 | Pending |
+| AGENT-02 | Phase 21 | Pending |
+| AGENT-03 | Phase 21 | Pending |
+| AGENT-04 | Phase 21 | Pending |
+| AGENT-05 | Phase 21 | Pending |
+| AGENT-06 | Phase 21 | Pending |
+| GRAPH-01 | Phase 22 | Pending |
+| GRAPH-02 | Phase 22 | Pending |
+| GRAPH-03 | Phase 22 | Pending |
+| GRAPH-04 | Phase 22 | Pending |
+| GRAPH-05 | Phase 22 | Pending |
+| GRAPH-06 | Phase 22 | Pending |
+| CHART-08 | Phase 22 | Pending |
+| CHART-09 | Phase 22 | Pending |
+| CHART-10 | Phase 22 | Pending |
+| DISPLAY-01 | Phase 23 | Pending |
+| DISPLAY-02 | Phase 23 | Pending |
+| DISPLAY-03 | Phase 23 | Pending |
+| DISPLAY-04 | Phase 23 | Pending |
+| DISPLAY-05 | Phase 23 | Pending |
+| DISPLAY-06 | Phase 23 | Pending |
+| DISPLAY-07 | Phase 23 | Pending |
+| CHART-01 | Phase 24 | Pending |
+| CHART-02 | Phase 24 | Pending |
+| CHART-03 | Phase 24 | Pending |
+| CHART-04 | Phase 24 | Pending |
+| CHART-05 | Phase 24 | Pending |
+| CHART-06 | Phase 24 | Pending |
+| CHART-07 | Phase 24 | Pending |
+| CHART-11 | Phase 24 | Pending |
+| EXPORT-01 | Phase 24 | Pending |
+| EXPORT-02 | Phase 24 | Pending |
+| EXPORT-03 | Phase 24 | Pending |
+| EXPORT-04 | Phase 24 | Pending |
+| EXPORT-05 | Phase 24 | Pending |
+| THEME-01 | Phase 25 | Pending |
+| THEME-02 | Phase 25 | Pending |
+| THEME-03 | Phase 25 | Pending |
+| THEME-04 | Phase 25 | Pending |
 
 **Coverage:**
-- v0.4 requirements: 44 total
-- Mapped to phases: 0
-- Unmapped: 44 ⚠️
+- v0.4 requirements: 43 total (note: previously listed as 44, actual count is 43)
+- Mapped to phases: 43
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-12*
-*Last updated: 2026-02-12 after initial definition*
+*Last updated: 2026-02-12 after roadmap creation*
