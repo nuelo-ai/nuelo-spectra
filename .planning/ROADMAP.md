@@ -118,12 +118,11 @@ Plans:
   4. When visualization_requested is false, the graph skips visualization nodes entirely (existing tabular flow unchanged)
   5. Chart generation failure is non-fatal — the original analysis text and data table are preserved and displayed even when chart code errors occur
 
-**Plans:** TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 22-01: TBD
-- [ ] 22-02: TBD
-- [ ] 22-03: TBD
+- [ ] 22-01-PLAN.md — Chart intelligence: Manager chart_hint + DA visualization_requested flag + unit tests
+- [ ] 22-02-PLAN.md — Graph pipeline: Visualization nodes, conditional routing, chart execution with retry, SSE events, metadata persistence + tests
 
 ---
 
