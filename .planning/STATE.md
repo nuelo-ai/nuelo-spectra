@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** Phase 23 — Frontend Chart Rendering (v0.4 Data Visualization)
+**Current focus:** Phase 24 — Chart Types & Export (v0.4 Data Visualization)
 
 ## Current Position
 
-Phase: 23 of 25 (Frontend Chart Rendering)
-Plan: 1 of 2 in Phase 23
-Status: Executing Phase 23
-Last activity: 2026-02-13 — Completed 23-01 (Chart Infrastructure: Plotly Components & SSE Types)
+Phase: 24 of 25 (Chart Types & Export)
+Plan: 0 of TBD in Phase 24
+Status: Ready to plan Phase 24
+Last activity: 2026-02-13 — Completed Phase 23 (Frontend Chart Rendering), fixed Coder Agent visualization code leak
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 [######░░░░] ~50%
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 [########░░] ~67%
 
 ## Performance Metrics
 
@@ -34,9 +34,9 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 [######░░░░] ~50%
 - Plans per day: ~8 plans/day
 
 **Velocity (v0.4):**
-- Total plans completed: 10 (as of Phase 23-01)
+- Total plans completed: 11 (Phases 20-23 complete)
 - Total execution time: ~3 days (Feb 12-13, 2026)
-- Plans per day: ~3 plans/day
+- Plans per day: ~4 plans/day
 
 ## Accumulated Context
 
@@ -65,6 +65,9 @@ Recent decisions for v0.4:
 - [Phase 23-01]: Direct Plotly import in ChartRenderer; next/dynamic ssr:false wrapping deferred to Plan 02
 - [Phase 23-01]: Dynamic chart height: 400px base + 10px/100pts, 700px cap, backend layout.height override
 - [Phase 23-01]: Dual-path chart data extraction (direct SSE events + node_complete fields) for robustness
+- [Phase 23-02]: viz_response_node must return chart data in node output (not just custom writer events)
+- [Phase 23-02]: run_chat_query_stream needs try/finally with _save_stream_result() for DB persistence on GeneratorExit
+- [Post-23]: Removed plotly from Coder Agent allowlist — Coder must produce tabular data only, Visualization Agent handles charts
 
 ### Pending Todos
 
@@ -81,5 +84,5 @@ Recent decisions for v0.4:
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 23-01-PLAN.md (Chart Infrastructure: Plotly Components & SSE Types)
-Resume with: Execute 23-02-PLAN.md to integrate chart components into DataCards
+Stopped at: Phase 23 complete, Coder Agent visualization leak fixed. Ready to plan Phase 24.
+Resume with: /gsd:plan-phase 24 (Chart Types & Export)
