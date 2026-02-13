@@ -1,315 +1,327 @@
-# Technology Stack: v0.3 Multi-File Conversation Support
+# Technology Stack: v0.4 Data Visualization
 
 **Project:** Spectra - AI-powered data analytics platform
-**Researched:** 2026-02-11
-**Confidence:** HIGH (existing stack validated in production, additions are well-understood patterns)
+**Researched:** 2026-02-12
+**Confidence:** HIGH (backend: Plotly pre-installed in E2B; frontend: JSON approach avoids risky dependencies)
 
 ## Overview
 
-This research focuses exclusively on stack changes needed for v0.3 multi-file conversation support. The existing stack (FastAPI, PostgreSQL, SQLAlchemy, LangGraph, E2B, Next.js 16, React 19, TanStack Query, shadcn/ui, Zustand) is validated and unchanged. The v0.3 transformation is primarily **architectural and schema-level** -- not a library addition problem.
+This research focuses on stack additions needed for v0.4: AI-generated Plotly charts with interactive display and PNG/SVG export. The core architectural decision is **where chart rendering happens** -- in the E2B sandbox (server-side) or in the browser (client-side). This choice cascades into every other technology decision.
 
-Key insight: **v0.3 requires zero new backend dependencies and minimal frontend additions.** The transformation is about restructuring data models, API routes, frontend navigation, and agent state -- all achievable with the existing stack.
+**Recommendation: Hybrid approach.** Generate Plotly figure JSON in the E2B sandbox, render interactively with plotly.js on the client, and export PNG/SVG client-side using plotly.js's built-in `Plotly.toImage()` / `Plotly.downloadImage()`. This avoids Kaleido's Chrome dependency problem in sandboxed environments entirely.
+
+Key insight: **The E2B sandbox already has Plotly 6.0.1 pre-installed.** The Visualization Agent generates Python code that creates a Plotly figure and outputs its JSON via `fig.to_json()`. The frontend receives this JSON and renders it with plotly.js. No server-side image generation needed -- plotly.js handles PNG/SVG export natively in the browser.
+
+---
 
 ## What Changes (and What Does Not)
 
 ### Does NOT Change
 - FastAPI backend framework
 - PostgreSQL database
-- SQLAlchemy ORM
-- Alembic migrations
-- LangGraph agent orchestration
-- E2B sandbox execution
+- SQLAlchemy ORM / Alembic migrations
+- LangGraph agent orchestration (graph topology adds a node, but framework unchanged)
+- E2B sandbox execution (same `Sandbox.run_code()` pattern)
 - All 5 LLM providers
-- Next.js 16 / React 19 / TanStack Query
-- JWT authentication
-- SSE streaming
-- Tailwind CSS 4
+- Next.js 16 / React 19 / TanStack Query / Zustand
+- JWT authentication / SSE streaming
+- Tailwind CSS 4 / shadcn/ui components
 
 ### Changes Required
 
 | Layer | What Changes | Why |
 |-------|-------------|-----|
-| Database schema | New `chat_sessions` table, new `session_files` junction table, `chat_messages.file_id` becomes nullable + add `session_id` | Chat sessions become first-class entities decoupled from files |
-| Backend API routes | New `/sessions/*` router, modify `/chat/*` to use session_id, new file-linking endpoints | Chat-centric API replacing file-centric API |
-| LangGraph state | `ChatAgentState` gains multi-file fields (`file_ids`, `data_summaries`, `file_paths`), thread_id changes from `file_{id}_user_{id}` to `session_{id}` | Agent must reference multiple files in one conversation |
-| Frontend state | Replace `tabStore` with `sessionStore`, new `chatSessionStore` for sidebar navigation | Chat-session-centric navigation replacing file-tab-centric |
-| Frontend layout | Replace `FileSidebar` with chat history sidebar, add right panel for linked files, new "My Files" page | ChatGPT-style layout |
-| Frontend components | New shadcn/ui components: `sidebar`, `resizable`, `sheet` | Collapsible sidebar, resizable panels, file context panel |
+| Backend: LangGraph State | Add `chart_json` field to `ChatAgentState` | Carry Plotly figure JSON through the pipeline |
+| Backend: Agent Graph | Add `visualization_agent` node, modify routing from execute -> da_with_tools | Visualization Agent runs after execution when chart is appropriate |
+| Backend: Sandbox Output | Parse `fig.to_json()` output from sandbox stdout alongside table data | Sandbox code now outputs both table JSON and chart JSON |
+| Backend: Agent YAML Configs | New `visualization` agent config in `agents.yaml` | Per-agent LLM provider/model/prompt configuration |
+| Backend: SSE Events | New `chart_data` event type in stream | Frontend needs chart JSON streamed separately from table data |
+| Frontend: plotly.js | Add `plotly.js-dist-min` package | Client-side interactive chart rendering and image export |
+| Frontend: DataCard | Add chart section above table in DataCard component | Chart + table display in the same card |
+| Frontend: Chart Component | New `PlotlyChart` component wrapping `Plotly.newPlot()` | Renders chart JSON, handles resize, provides export buttons |
+| Frontend: Export UI | PNG/SVG download buttons on chart | Uses `Plotly.downloadImage()` -- no server roundtrip |
+| Frontend: Chart Type Switcher | Dropdown/buttons to change chart type | Modifies the `data[0].type` field in the Plotly JSON client-side |
 
 ---
 
 ## Recommended Stack Additions
 
-### Frontend: shadcn/ui Components (3 new components)
+### Backend: Python (Sandbox-Side) -- No New pip Installs
 
-| Component | Install Command | Purpose | Why Needed |
-|-----------|----------------|---------|------------|
-| Sidebar | `npx shadcn@latest add sidebar` | Collapsible left sidebar with chat history + "My Files" navigation | shadcn/ui's official Sidebar component provides SidebarProvider, collapsible state, cookie persistence, keyboard shortcuts, and mobile responsiveness out of the box. The current `FileSidebar` is a custom div -- this replaces it with a proper composable sidebar. |
-| Resizable | `npx shadcn@latest add resizable` | Three-panel layout: left sidebar + main chat + right file context panel | Built on react-resizable-panels v4.5.0. Provides ResizablePanelGroup, ResizablePanel, ResizableHandle with drag mechanics, keyboard accessibility, min/max constraints, and layout persistence. Essential for the right sidebar file context panel that users can resize. |
-| Sheet | `npx shadcn@latest add sheet` | Mobile-friendly slide-over panel for file context on small screens | Extends Dialog to display content as a side panel. Used as a responsive fallback -- on desktop the file context panel is a resizable panel, on mobile it becomes a Sheet slide-over. Also useful for file selection modals. |
+The E2B code interpreter sandbox has these visualization packages pre-installed (verified via DeepWiki/E2B documentation):
 
-**Rationale for shadcn/ui Sidebar over custom div:** The current `FileSidebar` is a plain 260px div. The v0.3 sidebar is more complex: it needs collapsible state, "New Chat" button, grouped chat history (Today/Yesterday/This Week), "My Files" navigation item, and responsive behavior. shadcn/ui's Sidebar component handles all of this with cookie-based state persistence and accessible keyboard navigation.
+| Package | Pre-installed Version | Purpose | Notes |
+|---------|----------------------|---------|-------|
+| `plotly` | 6.0.1 | Chart generation in sandbox | Pre-installed. Agent code uses `plotly.express` and `plotly.graph_objects`. |
+| `kaleido` | 1.0.0 | Static image export (server-side) | Pre-installed but **DO NOT USE** -- requires Chrome, unreliable in sandbox. See "Critical Decision" below. |
+| `pandas` | 2.2.3 | Data manipulation | Pre-installed. Already used by existing agents. |
 
-**Rationale for Resizable over fixed layout:** The v0.3 layout has three regions (left sidebar, main chat, right file panel). Fixed widths waste space on large screens and break on small ones. react-resizable-panels provides drag handles, min/max constraints, and persists user-preferred sizes via localStorage.
+**No `pip install` needed at runtime.** The Visualization Agent's generated code uses only pre-installed packages. The code creates a Plotly figure and outputs `fig.to_json()` to stdout, which the existing sandbox result parsing captures.
 
-### Frontend: No New npm Dependencies Required
+### Backend: Python (Server-Side) -- No New pip Installs
 
-The resizable panels library (`react-resizable-panels`) is automatically installed by `npx shadcn@latest add resizable`. No manual npm install needed beyond the shadcn CLI commands above.
+No new Python dependencies on the backend server. The changes are:
+1. New Visualization Agent node in LangGraph (uses existing `langchain-core`, `langgraph` patterns)
+2. New agent config in `agents.yaml` (uses existing YAML config system)
+3. Modified sandbox output parsing to extract chart JSON (Python `json` module, already used)
+4. New SSE event type (uses existing `sse-starlette` streaming)
 
-**What about Zustand?** Already installed (v5.0.11). The `persist` middleware (from `zustand/middleware`) will be used for the new session store to persist the active session ID across page reloads. No version change needed.
+### Frontend: plotly.js -- 1 New npm Package
 
-**What about next-themes?** Already installed (v0.4.6). Supports the light/dark mode toggle requirement.
+| Package | Version | Purpose | Why This Package |
+|---------|---------|---------|-----------------|
+| `plotly.js-dist-min` | ^3.3.1 | Client-side chart rendering + PNG/SVG export | Minified plotly.js bundle (~1MB gzipped). Provides `Plotly.newPlot()`, `Plotly.react()`, `Plotly.toImage()`, `Plotly.downloadImage()`. The `-dist-min` variant is the smallest full bundle -- no build tools needed, works as a drop-in. |
 
-**What about date formatting for chat history grouping?** Use native `Intl.RelativeTimeFormat` and `Date` methods. No date-fns or dayjs needed for simple "Today/Yesterday/This Week" grouping.
+**Why NOT `react-plotly.js`?** The official React wrapper (v2.6.0) has not been updated in 3 years, has known prop mutation issues, and has unverified React 19 compatibility. Instead, use a thin custom wrapper component around the raw `Plotly.newPlot()` API with a `useRef` + `useEffect` pattern. This is 30 lines of code and gives full control.
 
----
+**Why NOT `plotly.js-dist` (non-minified)?** The minified version is ~50% smaller with identical functionality. No reason to ship the non-minified bundle to production.
 
-## Backend: No New Dependencies Required
-
-### Database Schema Changes (SQLAlchemy + Alembic)
-
-All schema changes use existing SQLAlchemy ORM and Alembic migrations. No new packages needed.
-
-**New model: `ChatSession`**
-
-```python
-# backend/app/models/chat_session.py
-class ChatSession(Base):
-    __tablename__ = "chat_sessions"
-
-    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    user_id: Mapped[UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True
-    )
-    title: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc)
-    )
-
-    # Relationships
-    user: Mapped["User"] = relationship(back_populates="chat_sessions")
-    files: Mapped[list["File"]] = relationship(
-        secondary="session_files", back_populates="sessions"
-    )
-    messages: Mapped[list["ChatMessage"]] = relationship(
-        back_populates="session", cascade="all, delete-orphan"
-    )
-```
-
-**New association table: `session_files`**
-
-```python
-# backend/app/models/session_file.py
-session_files = Table(
-    "session_files",
-    Base.metadata,
-    Column("session_id", ForeignKey("chat_sessions.id", ondelete="CASCADE"), primary_key=True),
-    Column("file_id", ForeignKey("files.id", ondelete="CASCADE"), primary_key=True),
-    Column("linked_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
-)
-```
-
-**Why `secondary` Table (not Association Object):** The session-file relationship only needs the link itself plus a timestamp. No additional columns (like "role" or "order") are needed. SQLAlchemy's `secondary` pattern handles INSERT/DELETE automatically when objects are added/removed from the collection. If we later need ordering, we can add a `position` column and migrate to an Association Object pattern.
-
-**Modified model: `ChatMessage`**
-
-```python
-# Modify existing chat_message.py
-class ChatMessage(Base):
-    __tablename__ = "chat_messages"
-
-    # ... existing fields ...
-    session_id: Mapped[UUID] = mapped_column(
-        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
-        index=True, nullable=False
-    )
-    file_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("files.id", ondelete="SET NULL"),
-        index=True, nullable=True  # Changed from NOT NULL
-    )
-    # file_id becomes nullable because messages belong to sessions,
-    # not files. A message may reference no specific file (general chat).
-
-    # New relationship
-    session: Mapped["ChatSession"] = relationship(back_populates="messages")
-```
-
-### API Route Changes (FastAPI)
-
-No new packages. New router file + modifications to existing routers.
-
-**New router: `backend/app/routers/sessions.py`**
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `POST /sessions/` | Create | Create new chat session (optionally with file_ids) |
-| `GET /sessions/` | List | List user's chat sessions (for sidebar, ordered by updated_at desc) |
-| `GET /sessions/{session_id}` | Detail | Get session with linked files |
-| `DELETE /sessions/{session_id}` | Delete | Delete session and all its messages |
-| `PATCH /sessions/{session_id}` | Update | Update session title |
-| `POST /sessions/{session_id}/files` | Link | Link existing file(s) to session |
-| `DELETE /sessions/{session_id}/files/{file_id}` | Unlink | Remove file from session |
-
-**Modified router: `backend/app/routers/chat.py`**
-
-| Current | New | Change |
-|---------|-----|--------|
-| `GET /chat/{file_id}/messages` | `GET /chat/{session_id}/messages` | Key lookup changes from file_id to session_id |
-| `POST /chat/{file_id}/stream` | `POST /chat/{session_id}/stream` | Stream queries now scoped to session |
-| `GET /chat/{file_id}/context-usage` | `GET /chat/{session_id}/context-usage` | Context is per-session |
-| `POST /chat/{file_id}/trim-context` | `POST /chat/{session_id}/trim-context` | Trim is per-session |
-
-### LangGraph State Changes
-
-No new packages. Modify `ChatAgentState` and `agent_service.py`.
-
-**Modified state: `ChatAgentState`**
-
-```python
-class ChatAgentState(TypedDict):
-    # CHANGED: single file_id -> list of file_ids
-    file_ids: list[str]          # Was: file_id: str
-    file_paths: list[str]        # Was: file_path: str
-    data_summaries: list[str]    # Was: data_summary: str
-    data_profiles: list[str]     # Was: data_profile: str
-    user_contexts: list[str]     # Was: user_context: str
-
-    # CHANGED: session-based thread ID
-    session_id: str              # New: replaces implicit file-based thread_id
-
-    # UNCHANGED: all other fields remain the same
-    user_id: str
-    user_query: str
-    generated_code: str
-    # ... rest unchanged ...
-```
-
-**Thread ID change:**
-```python
-# v0.2 (current):
-thread_id = f"file_{file_id}_user_{user_id}"
-
-# v0.3 (new):
-thread_id = f"session_{session_id}"
-```
-
-**Agent prompt changes:** The Coding Agent and Data Analysis Agent prompts must be updated to receive context from multiple files. The prompt template will iterate over all linked files' summaries and profiles.
-
-**Execution changes:** The `execute_in_sandbox` node currently uploads one file. For multi-file, it must upload all linked files to the E2B sandbox. The coding agent's file-loading preamble must reference all files.
-
-### Migration Strategy (Alembic)
-
-Single Alembic migration with the following operations:
-
-1. Create `chat_sessions` table
-2. Create `session_files` junction table
-3. Add `session_id` column to `chat_messages` (nullable initially)
-4. Data migration: For each existing (user_id, file_id) pair in chat_messages, create a ChatSession and link the file
-5. Set `session_id` NOT NULL after data migration
-6. Make `chat_messages.file_id` nullable
-7. Change `chat_messages.file_id` ondelete from CASCADE to SET NULL
+**Why NOT `plotly.js-basic-dist-min` (partial bundle)?** The basic bundle only includes scatter, bar, and pie traces. We need histogram, box, and potentially heatmap for data analytics use cases. The full bundle covers all chart types.
 
 ---
 
-## Frontend Architecture Changes
+## Critical Decision: Server-Side vs Client-Side Image Export
 
-### State Management (Zustand)
+### The Problem with Kaleido in E2B Sandbox
 
-**Replace `tabStore.ts` with `sessionStore.ts`:**
+Kaleido v1.0.0 (pre-installed in E2B) requires Chrome/Chromium to be installed on the machine. The E2B sandbox environment:
+- Does NOT have Chrome pre-installed (verified: not listed in sandbox environment docs)
+- Is a minimal Firecracker microVM optimized for Python code execution
+- Has sandbox-within-sandbox issues (Kaleido spawns Chrome which has its own sandboxing, known to conflict with Docker/container environments -- [GitHub Issue #379](https://github.com/plotly/Kaleido/issues/379))
+- Has a 50x performance regression in Kaleido v1 vs v0.2.1 ([GitHub Issue #400](https://github.com/plotly/Kaleido/issues/400))
+
+Kaleido v0.2.1 (which bundled Chrome) is deprecated and incompatible with Plotly 6.x. Support was officially removed after September 2025.
+
+### The Solution: Client-Side Export with plotly.js
+
+plotly.js provides native image export functions that run entirely in the browser:
+- `Plotly.toImage(graphDiv, {format: 'png', width: 1200, height: 800})` -- returns base64 data URL
+- `Plotly.toImage(graphDiv, {format: 'svg', width: 1200, height: 800})` -- returns SVG string
+- `Plotly.downloadImage(graphDiv, {format: 'png', filename: 'chart'})` -- triggers browser download
+
+**Verified via plotly.js source code:** The `toImage` function supports `'png' | 'jpeg' | 'webp' | 'svg'` formats in the open-source library. The Plotly docs page is misleading -- it conflates Chart Studio (paid SaaS) features with the open-source JS library capabilities. The source at `plotly.js/src/snapshot/toimage.js` confirms all four formats are available without any subscription.
+
+**This approach:**
+- Requires zero server-side rendering infrastructure
+- Works without Chrome, Kaleido, or any headless browser
+- Produces high-quality PNG (canvas-based) and SVG (DOM-based) output
+- Runs instantly (no 2-3 second Kaleido overhead)
+- Allows user to customize chart (type, size) before exporting
+
+**Confidence: HIGH** -- Verified via [plotly.js source code](https://github.com/plotly/plotly.js/blob/master/src/snapshot/toimage.js), [official JS docs](https://plotly.com/javascript/static-image-export/), and community usage.
+
+---
+
+## Architecture: Data Flow for Chart Rendering
+
+```
+1. User asks: "Show me sales by region"
+
+2. Manager Agent -> routes to coding_agent (NEW_ANALYSIS)
+
+3. Coding Agent generates Python code:
+   - Data preparation (existing behavior)
+   - Outputs table JSON via print(json.dumps({"result": table_data}))
+
+4. Code Checker validates -> Execute in E2B sandbox
+
+5. [NEW] Manager/routing decides: visualization appropriate?
+   If yes -> Visualization Agent generates chart code
+
+6. Visualization Agent generates Plotly code, executed in sandbox:
+   ```python
+   import plotly.express as px
+   fig = px.bar(df, x="region", y="sales", title="Sales by Region")
+   # Output chart JSON to stdout
+   import json
+   print(json.dumps({"chart": json.loads(fig.to_json())}))
+   ```
+
+7. Backend parses stdout -> extracts chart JSON
+   Streams via SSE: {type: "chart_data", chart_json: {...}}
+
+8. Frontend receives chart JSON -> PlotlyChart component renders:
+   Plotly.newPlot(divRef, chartJson.data, chartJson.layout, {responsive: true})
+
+9. User clicks "Download PNG" -> Plotly.downloadImage(divRef, {format: 'png'})
+   User clicks "Download SVG" -> Plotly.downloadImage(divRef, {format: 'svg'})
+```
+
+### Alternative Considered: to_html() in Sandbox + iframe on Frontend
+
+Generate `fig.to_html(full_html=False, include_plotlyjs='cdn')` in the sandbox, send the HTML string to the frontend, and render in an iframe with `srcdoc`.
+
+**Why rejected:**
+- HTML string is ~50-100KB per chart (includes plotly.js CDN reference + data + layout)
+- iframe introduces CSS isolation issues (theming, dark mode won't penetrate)
+- iframe resize handling is complex (no native responsive behavior)
+- Export from iframe requires `postMessage` communication -- fragile
+- Chart type switching requires re-generating HTML server-side (round-trip)
+- JSON approach is ~5-10KB and enables all client-side interactivity natively
+
+---
+
+## Frontend: PlotlyChart Component Pattern
 
 ```typescript
-// stores/sessionStore.ts
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
+// components/data/PlotlyChart.tsx
+"use client";
 
-interface SessionStore {
-  activeSessionId: string | null;
-  setActiveSession: (sessionId: string | null) => void;
+import { useRef, useEffect, useCallback } from "react";
+import Plotly from "plotly.js-dist-min";
+
+interface PlotlyChartProps {
+  data: Plotly.Data[];
+  layout?: Partial<Plotly.Layout>;
+  config?: Partial<Plotly.Config>;
+  onChartReady?: (div: HTMLDivElement) => void;
+  className?: string;
 }
 
-export const useSessionStore = create<SessionStore>()(
-  persist(
-    (set) => ({
-      activeSessionId: null,
-      setActiveSession: (sessionId) => set({ activeSessionId: sessionId }),
-    }),
-    { name: "spectra-session" }
-  )
-);
+export function PlotlyChart({ data, layout, config, onChartReady, className }: PlotlyChartProps) {
+  const divRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!divRef.current) return;
+
+    const defaultLayout: Partial<Plotly.Layout> = {
+      autosize: true,
+      margin: { t: 40, r: 20, b: 40, l: 60 },
+      paper_bgcolor: "transparent",
+      plot_bgcolor: "transparent",
+      ...layout,
+    };
+
+    const defaultConfig: Partial<Plotly.Config> = {
+      responsive: true,
+      displayModeBar: true,
+      modeBarButtonsToRemove: ["sendDataToCloud", "lasso2d", "select2d"],
+      displaylogo: false,
+      ...config,
+    };
+
+    Plotly.newPlot(divRef.current, data, defaultLayout, defaultConfig)
+      .then(() => {
+        if (divRef.current && onChartReady) onChartReady(divRef.current);
+      });
+
+    return () => {
+      if (divRef.current) Plotly.purge(divRef.current);
+    };
+  }, [data, layout, config]);
+
+  return <div ref={divRef} className={className} />;
+}
 ```
 
-**Why persist middleware?** Unlike tabs (ephemeral), the active session should survive page reloads. User expects to return to their last conversation. Cookie-based persistence (via shadcn Sidebar's built-in mechanism) handles sidebar collapse state; localStorage (via Zustand persist) handles active session ID.
+**Why NOT `react-plotly.js`?** This wrapper is 30 lines and avoids: (1) stale React wrapper (last updated 3 years ago, React 19 untested), (2) prop mutation issues (react-plotly.js mutates data/layout props), (3) unnecessary dependency. The `Plotly.react()` function can be used for efficient updates instead of full `newPlot()` re-renders.
 
-### TanStack Query Keys
+**Next.js SSR Consideration:** plotly.js requires DOM access. The `"use client"` directive ensures this component only runs in the browser. No SSR issues with this approach.
+
+---
+
+## Frontend: Export Utility Functions
 
 ```typescript
-// New query key patterns:
-["sessions"]                          // List all sessions
-["sessions", sessionId]               // Single session detail
-["sessions", sessionId, "files"]      // Files linked to session
-["chat", "messages", sessionId]       // Messages for session (was fileId)
-["files"]                             // All user files (unchanged)
-["files", fileId, "summary"]          // File summary (unchanged)
-```
+// lib/chart-export.ts
+import Plotly from "plotly.js-dist-min";
 
-### Routing (Next.js App Router)
+export async function downloadChartAsPNG(
+  chartDiv: HTMLDivElement,
+  filename: string = "chart",
+  width: number = 1200,
+  height: number = 800,
+  scale: number = 2  // 2x for retina
+) {
+  await Plotly.downloadImage(chartDiv, {
+    format: "png",
+    width,
+    height,
+    scale,
+    filename,
+  });
+}
 
-```
-Current:
-  /dashboard                         -> DashboardPage (tab-based)
-
-v0.3:
-  /dashboard                         -> New chat (empty state with greeting)
-  /dashboard/chat/[sessionId]        -> Chat session view
-  /dashboard/files                   -> My Files management page
-```
-
-**Why dynamic routes for sessions?** Enables direct linking to conversations (shareable URLs later), browser back/forward navigation between sessions, and page-level code splitting. The current approach of switching state within a single page breaks browser navigation expectations.
-
-### Component Tree (New Layout)
-
-```
-DashboardLayout
-  +-- SidebarProvider (shadcn/ui)
-  |   +-- AppSidebar (left)
-  |   |   +-- SidebarHeader: "Spectra" logo + "New Chat" button
-  |   |   +-- SidebarContent
-  |   |   |   +-- SidebarGroup: "Chat History"
-  |   |   |   |   +-- ChatHistoryList (grouped by Today/Yesterday/This Week)
-  |   |   |   +-- SidebarGroup: "Navigation"
-  |   |   |       +-- "My Files" nav item
-  |   |   +-- SidebarFooter: User menu
-  |   +-- SidebarInset (main content)
-  |       +-- ResizablePanelGroup (horizontal)
-  |           +-- ResizablePanel (main chat area)
-  |           |   +-- ChatInterface (modified for session-centric)
-  |           +-- ResizableHandle
-  |           +-- ResizablePanel (right sidebar: linked files)
-  |               +-- LinkedFilesPanel
-  |                   +-- FileChip per linked file
-  |                   +-- "Add File" button
-  |                   +-- FileContextDrawer (expandable per file)
+export async function downloadChartAsSVG(
+  chartDiv: HTMLDivElement,
+  filename: string = "chart",
+  width: number = 1200,
+  height: number = 800
+) {
+  await Plotly.downloadImage(chartDiv, {
+    format: "svg",
+    width,
+    height,
+    filename,
+  });
+}
 ```
 
 ---
 
-## Supporting Libraries (Already Installed)
+## Backend: LangGraph State Additions
 
-| Library | Current Version | Role in v0.3 | Notes |
-|---------|----------------|--------------|-------|
-| `zustand` | ^5.0.11 | Session store with `persist` middleware | No change needed. Persist middleware built-in. |
-| `@tanstack/react-query` | ^5.90.20 | Session queries, file queries, message queries | No change needed. New query keys for sessions. |
-| `radix-ui` | ^1.4.3 | Primitives for new shadcn components (sidebar, resizable, sheet) | Already using unified package. New components auto-import from it. |
-| `lucide-react` | ^0.563.0 | Icons for sidebar, file chips, navigation | New icons: `MessageSquare`, `FolderOpen`, `Link`, `Plus`, `PanelRightOpen` |
-| `next-themes` | ^0.4.6 | Light/dark mode toggle | Already installed. Wire into sidebar footer settings. |
-| `sonner` | ^2.0.7 | Toast notifications for file link/unlink actions | Already installed. No change needed. |
-| `react-dropzone` | ^14.4.0 | File upload (drag & drop in chat + My Files page) | Already installed. Reuse `FileUploadZone` component. |
-| `class-variance-authority` | ^0.7.1 | Variant styling for new components | Already installed. Used by shadcn/ui components. |
+```python
+# Additions to ChatAgentState (backend/app/agents/state.py)
+class ChatAgentState(TypedDict):
+    # ... existing fields ...
+
+    chart_json: str
+    """Plotly figure JSON string from visualization agent code execution.
+    Contains {data: [...], layout: {...}} structure. Empty string if no chart."""
+
+    chart_type: str
+    """Chart type hint from visualization agent: 'bar', 'line', 'scatter',
+    'histogram', 'box', 'pie', 'donut'. Used by frontend for type switcher."""
+
+    visualization_requested: bool
+    """Whether the manager/analysis agent determined a chart is appropriate
+    for this query. Drives routing to visualization agent."""
+```
+
+---
+
+## Backend: SSE Event Schema for Charts
+
+```python
+# New SSE event emitted by visualization execution
+writer({
+    "type": "chart_data",
+    "event": "chart_data",
+    "chart_json": chart_json_string,  # Plotly figure JSON
+    "chart_type": "bar",              # Chart type hint
+    "message": "Chart generated",
+})
+```
+
+The frontend event handler adds chart JSON to the DataCard state alongside existing table data, enabling the "chart above table" layout.
+
+---
+
+## Backend: Visualization Agent Config
+
+```yaml
+# Addition to agents.yaml
+visualization:
+  provider: "anthropic"
+  model: "claude-sonnet-4-20250514"
+  temperature: 0.1
+  max_tokens: 2048
+  prompt: |
+    You are a data visualization expert. Given the user's query, data profile,
+    and analysis results, generate Python code using Plotly Express to create
+    an appropriate chart.
+
+    **Rules:**
+    - Use plotly.express (px) for simple charts, plotly.graph_objects (go) for complex
+    - Always set a descriptive title
+    - Use appropriate chart type: bar, line, scatter, histogram, box, pie
+    - Limit data to top 20 items for readability (sort and slice)
+    - Output the figure JSON: print(json.dumps({{"chart": json.loads(fig.to_json())}}))
+    - Do NOT call fig.show() or fig.write_image()
+    - Handle missing data gracefully (dropna or fillna)
+    - Use professional color schemes (plotly defaults are fine)
+```
 
 ---
 
@@ -317,13 +329,13 @@ DashboardLayout
 
 | Category | Recommended | Alternative | Why Not Alternative |
 |----------|-------------|-------------|---------------------|
-| Left sidebar | shadcn/ui Sidebar | Custom div (current approach) | Current FileSidebar is a plain div with no collapse, no responsive behavior, no keyboard shortcuts. shadcn Sidebar provides all of these plus cookie state persistence. |
-| Right panel | shadcn/ui Resizable + Panel | Fixed-width div | Users need control over panel width. Fixed layout wastes space on wide screens. Resizable is more professional. |
-| Right panel (mobile) | shadcn/ui Sheet | Always-visible panel | On mobile, a fixed right panel would leave no room for chat. Sheet slides over as needed. |
-| Session state | Zustand persist | URL-only (no store) | Active session ID in URL handles routing, but sidebar highlight state, collapse state, etc. benefit from Zustand. Both are needed: URL for routing, Zustand for UI state. |
-| Chat history grouping | Native Intl.RelativeTimeFormat | date-fns / dayjs | "Today", "Yesterday", "This Week" grouping is 10 lines of native JS. No dependency needed for this. |
-| File-session relationship | SQLAlchemy secondary table | Association Object | No extra columns needed beyond FK pair + timestamp. secondary is simpler and auto-manages inserts/deletes. |
-| Chat session routing | Dynamic routes `/chat/[sessionId]` | Client-side state switching | Dynamic routes enable browser back/forward, deep linking, and page-level code splitting. State switching (current tab approach) breaks navigation. |
+| Chart rendering location | Client-side (plotly.js) | Server-side (Kaleido in sandbox) | Kaleido v1 requires Chrome (not in E2B), has 50x perf regression, Docker sandbox conflicts. Client-side is instant and avoids all these issues. |
+| Chart data transport | JSON (`fig.to_json()`) | HTML (`fig.to_html()`) | HTML is 10x larger, iframe rendering breaks theming/dark mode, chart type switching requires server roundtrip. JSON enables full client-side interactivity. |
+| React Plotly wrapper | Custom 30-line component | `react-plotly.js` (npm) | Last updated 3 years ago (v2.6.0), React 19 untested, mutates props (violates React rules). Custom wrapper is simpler and safer. |
+| plotly.js bundle | `plotly.js-dist-min` (full, minified) | `plotly.js-basic-dist-min` (partial) | Basic bundle lacks histogram, box, heatmap -- needed for analytics. Full bundle is ~1MB gzipped, acceptable. |
+| Image export | `Plotly.downloadImage()` (client) | Kaleido `write_image()` (server) | Client-side export requires no infrastructure, is instant, works offline. Kaleido requires Chrome in a headless sandbox -- unreliable. |
+| SVG export | `Plotly.toImage({format:'svg'})` (client) | Server-side SVG rendering | plotly.js open-source supports SVG export natively. Verified in source code. No subscription needed. |
+| Chart type switcher | Client-side JSON mutation | Re-run visualization agent | Changing chart type is a simple `data[0].type` swap in JSON. No server roundtrip needed for basic type changes. |
 
 ---
 
@@ -331,133 +343,138 @@ DashboardLayout
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| `react-sidebar` or similar npm package | shadcn/ui Sidebar covers all needs natively with Radix primitives | `npx shadcn@latest add sidebar` |
-| `date-fns` or `dayjs` | Only need simple date grouping (Today/Yesterday/etc.) | Native `Intl.RelativeTimeFormat` + `Date` |
-| `react-dnd` or drag-and-drop library | No drag reordering of files or sessions in v0.3 requirements | Not needed |
-| `socket.io` or WebSocket library | SSE streaming (existing) handles all real-time needs | Existing `sse-starlette` + `useSSEStream` hook |
-| `react-router` | Next.js App Router handles all routing | Next.js built-in routing |
-| Additional ORM library | SQLAlchemy 2.0 handles all new models/relationships | Existing SQLAlchemy |
-| Redis for session state | PostgreSQL checkpointing + Zustand persist handle everything | Existing AsyncPostgresSaver + Zustand |
-| `@tanstack/react-virtual` | Chat message lists won't be long enough to need virtualization in v0.3 | Standard scroll. Reconsider if sessions exceed 500+ messages. |
+| `kaleido` (server-side export) | Requires Chrome in sandbox, 50x perf regression, Docker conflicts | `Plotly.downloadImage()` client-side |
+| `react-plotly.js` | Stale (3yr), React 19 untested, prop mutation | Custom 30-line `PlotlyChart` component |
+| `orca` (legacy Plotly export) | Officially deprecated, removed after Sept 2025 | Client-side plotly.js export |
+| `puppeteer` / `playwright` | Headless browser for server-side rendering -- massive dependency, sandbox conflicts | Not needed. Client-side rendering handles everything. |
+| `chart.js` / `recharts` / `d3` | Different charting libraries | Plotly already chosen. Adding another creates inconsistency. |
+| `html2canvas` | Screenshot-based export | `Plotly.toImage()` produces higher quality, native vector SVG |
+| Custom E2B sandbox template | Template with Chrome + Kaleido pre-configured | Unnecessary. JSON approach avoids all server-side rendering. |
+| `plotly.js` (non-dist) | Requires build tooling (webpack config) | `plotly.js-dist-min` is pre-built, no config needed |
+| `DOMPurify` / sanitizer | For sanitizing HTML in iframes | Not using iframes. JSON rendering is safe by design. |
 
 ---
 
 ## Installation
 
-### Frontend (3 shadcn/ui components)
+### Frontend (1 new package)
 
 ```bash
 cd frontend
-npx shadcn@latest add sidebar
-npx shadcn@latest add resizable
-npx shadcn@latest add sheet
+npm install plotly.js-dist-min
 ```
 
-These commands will:
-1. Add component files to `src/components/ui/`
-2. Install `react-resizable-panels` as a dependency (for Resizable)
-3. No other npm dependencies added
-
-### Backend (no new packages)
+Optionally, add TypeScript types:
 
 ```bash
-# No new pip installs needed for v0.3
-# All schema changes use existing SQLAlchemy + Alembic
+npm install -D @types/plotly.js
 ```
 
-### Database Migration
+**Note:** `@types/plotly.js` provides types for the full `plotly.js` API including `Plotly.newPlot()`, `Plotly.react()`, `Plotly.toImage()`, `Plotly.downloadImage()`, `Plotly.purge()`, and all data/layout type definitions.
+
+### Backend (0 new packages)
 
 ```bash
-cd backend
-alembic revision --autogenerate -m "add_chat_sessions_and_multi_file_support"
-alembic upgrade head
+# No new pip installs needed for v0.4
+# Plotly 6.0.1 is pre-installed in E2B sandbox
+# No new server-side dependencies
+```
+
+### E2B Sandbox (0 changes)
+
+```bash
+# No custom sandbox template needed
+# Plotly 6.0.1 pre-installed in default code-interpreter template
+# No Chrome/Kaleido configuration needed
 ```
 
 ---
 
-## Integration Points
+## Integration Points with Existing Stack
 
-### 1. Session Creation Flow
+### 1. E2B Sandbox Result Parsing (Modified)
 
-```
-User clicks "New Chat" -> POST /sessions/ -> Returns session_id
-  -> Frontend navigates to /dashboard/chat/{session_id}
-  -> Empty chat with greeting + "Link a file" prompt
-  -> User uploads/links file -> POST /sessions/{session_id}/files
-  -> File onboarding runs (existing flow)
-  -> Chat ready for queries
-```
-
-### 2. Multi-File Agent Context
-
-```
-User sends query in session with 3 linked files
-  -> Backend loads all 3 files' data_summary + data_profile
-  -> Builds combined prompt: "You have access to 3 datasets: [file1: summary], [file2: summary], [file3: summary]"
-  -> Agent generates code that loads all 3 files
-  -> E2B sandbox receives all 3 data files
-  -> Code can reference df1, df2, df3 (or named by filename)
-```
-
-### 3. Thread ID Migration
-
-```
-v0.2 checkpoints: thread_id = "file_{file_id}_user_{user_id}"
-v0.3 checkpoints: thread_id = "session_{session_id}"
-
-Migration: Old checkpoints become orphaned (acceptable -- users start fresh sessions).
-No need to migrate checkpoint data.
-```
-
-### 4. Chat History Sidebar
-
-```
-GET /sessions/ returns:
-[
-  { id, title, updated_at, file_count, preview_message }
-]
-
-Frontend groups by date:
-  Today: [session1, session2]
-  Yesterday: [session3]
-  This Week: [session4, session5]
-
-Title auto-generated from first user message (truncated)
-  or explicit rename via PATCH /sessions/{id}
-```
-
----
-
-## Configuration Changes
-
-### Backend Settings (app/config.py)
+Currently, `execute_in_sandbox` in `graph.py` parses JSON from stdout looking for `{"result": ...}`. The visualization code will output `{"chart": ...}` in addition to or instead of `{"result": ...}`.
 
 ```python
-# New settings for multi-file support
-max_files_per_session: int = 10  # Limit linked files per session
-max_total_file_size_mb: int = 100  # Total file size limit per session
-session_title_max_length: int = 100  # Auto-generated title length
+# Current parsing (graph.py line ~458):
+parsed = json.loads(line.strip())
+if "result" in parsed:
+    execution_result = json.dumps(parsed["result"])
+
+# Extended parsing for v0.4:
+parsed = json.loads(line.strip())
+if "result" in parsed:
+    execution_result = json.dumps(parsed["result"])
+if "chart" in parsed:
+    chart_json = json.dumps(parsed["chart"])
 ```
 
-### Frontend Environment
+### 2. SSE Stream Event Handling (Extended)
 
-No new environment variables needed. All API endpoints use the same base URL.
+The existing SSE stream (`chat.py` routers) passes events from LangGraph `get_stream_writer()`. The new `chart_data` event type flows through the same pipeline with zero changes to the streaming infrastructure.
+
+### 3. DataCard Component (Extended)
+
+The existing `DataCard.tsx` has sections: Query Brief -> Code Display -> Data Table -> Analysis. Charts insert between Code Display and Data Table:
+
+```
+Query Brief  (existing)
+Code Display (existing)
+Chart        (NEW - PlotlyChart component)
+Data Table   (existing)
+Analysis     (existing)
+Export Row   (existing CSV/MD + NEW PNG/SVG buttons)
+```
+
+### 4. LangGraph Agent Graph (Extended)
+
+The `build_chat_graph()` function adds a `visualization_agent` node. Routing:
+
+```
+execute -> [should_visualize?] -> visualization_agent -> da_with_tools
+execute -> [no visualization]  -> da_with_tools  (existing path)
+```
+
+The conditional edge checks `state["visualization_requested"]`. The visualization agent is optional -- queries that don't warrant charts skip it entirely.
+
+### 5. Frontend Zustand Store (Minimal Change)
+
+The existing message/card state in the chat interface needs a `chartJson` field per data card. This is a small extension to the existing streaming state management, not a new store.
 
 ---
 
 ## Version Compatibility
 
-| Existing Package | Current Version | v0.3 Compatible | Notes |
-|-----------------|-----------------|-----------------|-------|
-| Next.js | 16.1.6 | Yes | Dynamic routes supported |
-| React | 19.2.3 | Yes | No React-specific changes |
-| shadcn/ui (radix-ui) | 1.4.3 | Yes | New components install via CLI |
-| zustand | 5.0.11 | Yes | persist middleware available in 5.x |
-| @tanstack/react-query | 5.90.20 | Yes | New query keys, same patterns |
-| SQLAlchemy | 2.0+ | Yes | Many-to-many secondary table pattern supported |
-| FastAPI | 0.115+ | Yes | New routers, same patterns |
-| LangGraph | 1.0.7+ | Yes | State changes are backward-compatible |
-| langgraph-checkpoint-postgres | 2.0.0+ | Yes | Thread ID format change only |
+| Package | Version | Compatibility | Notes |
+|---------|---------|--------------|-------|
+| `plotly.js-dist-min` | ^3.3.1 | Works with all browsers | No framework dependency. Pure JS. |
+| `@types/plotly.js` | Latest | TypeScript 5.x | Type definitions only, dev dependency |
+| Plotly (Python, E2B) | 6.0.1 (pre-installed) | `fig.to_json()` available since Plotly 4.x | Stable API, no version concerns |
+| Next.js 16 | 16.1.6 | `"use client"` for plotly.js components | plotly.js needs DOM -- client components only |
+| React 19 | 19.2.3 | Compatible via `useRef` + `useEffect` | No React wrapper needed, direct DOM manipulation |
+| E2B Code Interpreter | >=1.0.2 | Pre-installs Plotly 6.0.1 | No custom template needed |
+
+---
+
+## Bundle Size Impact
+
+| Package | Uncompressed | Gzipped | Notes |
+|---------|-------------|---------|-------|
+| `plotly.js-dist-min` | ~3.5 MB | ~1.0 MB | One-time load. Can be lazy-loaded only when charts are displayed. |
+
+**Mitigation:** Use Next.js dynamic import to lazy-load plotly.js only when a DataCard with chart data is rendered:
+
+```typescript
+import dynamic from "next/dynamic";
+
+const PlotlyChart = dynamic(() => import("@/components/data/PlotlyChart"), {
+  ssr: false,
+  loading: () => <div className="h-[400px] skeleton rounded-lg" />,
+});
+```
+
+This ensures plotly.js is never loaded for users who haven't triggered a visualization query yet.
 
 ---
 
@@ -465,42 +482,43 @@ No new environment variables needed. All API endpoints use the same base URL.
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| Alembic data migration corrupts existing messages | Low | High | Write migration as reversible. Test on DB copy first. Back up production DB before running. |
-| Multi-file agent prompts exceed context window | Medium | Medium | Implement summary truncation. Limit files per session (10). Monitor token counts per prompt. |
-| E2B sandbox file upload time increases with multiple files | Low | Low | Files are small (CSV/Excel). Upload in parallel via threads. Set reasonable timeout. |
-| shadcn Sidebar conflicts with existing layout | Low | Low | Full layout rewrite planned anyway. No incremental integration concerns. |
-| Old LangGraph checkpoints break with new thread_id format | None | None | Old checkpoints simply become unreachable. New sessions create new checkpoints. |
+| plotly.js bundle increases page load | Medium | Low | Lazy-load with `next/dynamic`. Only loaded when chart renders. |
+| E2B sandbox Plotly version drifts | Low | Low | Pin via `import plotly; assert plotly.__version__.startswith('6')` in agent code preamble. |
+| `Plotly.toImage()` fails on some browsers | Very Low | Medium | Well-tested in all modern browsers. Fallback: hide export buttons if canvas unavailable. |
+| Chart JSON too large for SSE event | Low | Medium | Plotly JSON for typical charts is 5-20KB. For large datasets, the agent should aggregate before charting (top 20 items rule). |
+| Agent generates invalid Plotly JSON | Medium | Low | Code Checker already validates code. Add Plotly-specific validation: try `json.loads(chart_json)` and verify `data` key exists. |
+| Dark mode chart theming | Medium | Low | Set `paper_bgcolor: 'transparent'`, `plot_bgcolor: 'transparent'`, and use CSS variables for font colors in layout config. |
 
 ---
 
 ## Sources
 
-**shadcn/ui Components:**
-- [Sidebar Component](https://ui.shadcn.com/docs/components/radix/sidebar) -- Official shadcn/ui documentation
-- [Resizable Component](https://ui.shadcn.com/docs/components/radix/resizable) -- Built on react-resizable-panels
-- [Sheet Component](https://ui.shadcn.com/docs/components/radix/sheet) -- Side panel overlay
-- [Sidebar Building Blocks](https://ui.shadcn.com/blocks/sidebar) -- Pre-built sidebar examples
-- [February 2026 Radix UI Unified Package](https://ui.shadcn.com/docs/changelog/2026-02-radix-ui) -- Unified import pattern
+**Plotly Python (Sandbox-Side):**
+- [Plotly PyPI -- v6.5.2 current](https://pypi.org/project/plotly/) -- Confirms latest version. E2B has 6.0.1.
+- [fig.to_html() docs](https://plotly.com/python-api-reference/generated/plotly.io.to_html.html) -- `full_html`, `include_plotlyjs` parameters
+- [fig.to_json() docs](https://plotly.github.io/plotly.py-docs/generated/plotly.io.to_json.html) -- JSON export API
+- [Static image generation changes](https://plotly.com/python/static-image-generation-changes/) -- Kaleido v1 deprecation timeline
 
-**react-resizable-panels:**
-- [npm: react-resizable-panels](https://www.npmjs.com/package/react-resizable-panels) -- v4.5.0 (current)
-- [GitHub: bvaughn/react-resizable-panels](https://github.com/bvaughn/react-resizable-panels) -- Source and API docs
+**Plotly.js (Frontend-Side):**
+- [plotly.js-dist-min npm](https://www.npmjs.com/package/plotly.js-dist-min) -- v3.3.1 current
+- [plotly.js static image export](https://plotly.com/javascript/static-image-export/) -- `Plotly.toImage()`, `Plotly.downloadImage()` API
+- [plotly.js source: toimage.js](https://github.com/plotly/plotly.js/blob/master/src/snapshot/toimage.js) -- Confirms SVG support in open-source (format: 'png' | 'jpeg' | 'webp' | 'svg')
+- [react-plotly.js GitHub](https://github.com/plotly/react-plotly.js) -- Last updated 3 years ago, v2.6.0
 
-**Zustand:**
-- [Persist Middleware](https://zustand.docs.pmnd.rs/middlewares/persist) -- Official Zustand v5 documentation
+**Kaleido (NOT Recommended):**
+- [Kaleido GitHub](https://github.com/plotly/Kaleido) -- v1.2.0 current, requires Chrome
+- [Docker compatibility issue #379](https://github.com/plotly/Kaleido/issues/379) -- Sandbox-in-sandbox failures
+- [Performance regression issue #400](https://github.com/plotly/Kaleido/issues/400) -- 50x slower than v0.2.1
+- [Kaleido PyPI](https://pypi.org/project/kaleido/) -- Chrome dependency documented
 
-**SQLAlchemy:**
-- [Many-to-Many Relationships](https://docs.sqlalchemy.org/en/20/orm/basic_relationships.html) -- Secondary table pattern
-- [Association Object Pattern](https://docs.sqlalchemy.org/en/20/orm/basic_relationships.html#many-to-many) -- When extra columns needed
-
-**LangGraph:**
-- [Thread-Based State Management](https://medium.com/@vinodkrane/mastering-persistence-in-langgraph-checkpoints-threads-and-beyond-21e412aaed60) -- Thread isolation patterns
-- [State Management Best Practices](https://medium.com/@bharatraj1918/langgraph-state-management-part-1-how-langgraph-manages-state-for-multi-agent-workflows-da64d352c43b) -- Multi-agent state
-
-**Next.js:**
-- [Dynamic Route Segments](https://nextjs.org/docs/app/api-reference/file-conventions/dynamic-routes) -- App Router dynamic routes
+**E2B Sandbox:**
+- [E2B Code Interpreter Sandbox Environment](https://deepwiki.com/e2b-dev/code-interpreter/2.1-sandbox-environment) -- Pre-installed packages list (Plotly 6.0.1, Kaleido 1.0.0, pandas 2.2.3)
+- [E2B Custom Packages](https://e2b.dev/docs/quickstart/install-custom-packages) -- Runtime vs template installation
+- [E2B SDK Result Object](https://e2b.dev/docs/sdk-reference/code-interpreter-python-sdk/v1.2.1/sandbox) -- Result has `html`, `json`, `png` representations
+- [Plotly Python to JSON for React](https://community.plotly.com/t/how-to-convert-python-json-object-to-plot-in-plotly-js-in-react/68797) -- Community pattern for Python->JSON->JS rendering
 
 ---
-*Stack research for: Spectra v0.3 Multi-File Conversation Support*
-*Researched: 2026-02-11*
-*Confidence: HIGH -- All recommendations use existing dependencies or official shadcn/ui components. No speculative packages.*
+
+*Stack research for: Spectra v0.4 Data Visualization*
+*Researched: 2026-02-12*
+*Confidence: HIGH -- JSON rendering approach is well-established. Kaleido rejection based on verified sandbox limitations. plotly.js SVG export confirmed via source code. E2B pre-installed packages verified.*

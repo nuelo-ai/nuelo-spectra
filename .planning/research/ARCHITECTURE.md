@@ -1,1159 +1,768 @@
-# Architecture Patterns: Multi-File Conversation Support (v0.3)
+# Architecture Patterns: Visualization Agent Integration (v0.4)
 
-**Domain:** AI Data Analytics Platform - Chat-Session-Centric Multi-File Architecture
-**Researched:** 2026-02-11
-**Confidence:** HIGH (based on thorough codebase analysis + verified patterns)
+**Domain:** Data Visualization Agent for existing LangGraph multi-agent system
+**Researched:** 2026-02-12
+**Confidence:** HIGH (based on direct codebase analysis + verified library documentation)
 
 ---
 
 ## Executive Summary
 
-Spectra v0.3 restructures from a file-centric model (1 file = 1 chat) to a chat-session-centric model (1 chat = N files). This requires changes at every layer: database schema, API endpoints, LangGraph agent state, E2B sandbox execution, LangGraph checkpointing, and frontend state management.
+The Visualization Agent integrates into the existing LangGraph graph as a new node positioned after the Data Analysis Agent's response node. The architecture follows a **JSON-over-the-wire** pattern: Python generates Plotly figure JSON inside the E2B sandbox, the JSON flows through the agent state, and react-plotly.js renders it natively in the frontend DataCard. This avoids HTML/iframe injection entirely -- the chart is rendered as a first-class React component from structured data.
 
-The current architecture has clean separation of concerns which makes this migration feasible without a full rewrite. The key architectural challenge is **multi-file context aggregation**: how to assemble data summaries, profiles, and file bytes from N files and pass them through the agent pipeline that currently assumes a single file.
+The key architectural insight is that the Visualization Agent does NOT execute code itself. It generates Plotly Python code, which then runs in the same E2B sandbox pipeline the system already uses. The agent's role is to decide chart type, map data columns to axes, and produce correct Plotly Express or Graph Objects code. The E2B sandbox returns chart JSON (via `plotly.io.to_json()`), which streams to the frontend alongside the existing table data and analysis text.
 
----
-
-## Current Architecture (v0.2) - Baseline
-
-### Data Model
-
-```
-User --1:N--> File --1:N--> ChatMessage
-                   (file_id is the chat identity)
-                   (LangGraph thread_id = "file_{file_id}_user_{user_id}")
-```
-
-### Key Coupling Points (What Must Change)
-
-| Layer | Current Coupling to Single File | Impact |
-|-------|-------------------------------|--------|
-| `ChatMessage.file_id` | Messages belong to a file, not a session | Schema change |
-| `ChatAgentState.file_id` | State carries single file_id, file_path, data_summary | State schema change |
-| `agent_service.run_chat_query_stream` | Loads 1 file record, builds 1-file context | Service refactor |
-| `execute_in_sandbox` | Uploads 1 file, generates `df = pd.read_csv(...)` | Execution refactor |
-| `coding agent` prompt | `{data_profile}` is single-file JSON | Prompt change |
-| `useSSEStream.startStream` | Posts to `/chat/{file_id}/stream` | URL change |
-| `useChatMessages` | Queries by `file_id` | Key change |
-| `useTabStore` | Tabs are file-based, `currentTabId` is `fileId` | Full replacement |
-| `thread_id` | `f"file_{file_id}_user_{user_id}"` | Thread ID scheme change |
-| Dashboard layout | FileSidebar (left) + tab bar (top) + ChatInterface | Layout restructure |
+This approach requires changes to 4 backend files, 5 frontend files, and 2 config files. No existing component needs to be rewritten -- all changes are additive or extend existing interfaces.
 
 ---
 
-## Target Architecture (v0.3)
-
-### Data Model Transformation
+## Current Architecture (Before -- v0.3)
 
 ```
-User --1:N--> ChatSession --M:N--> File  (via SessionFile association)
-                   |
-                   +--1:N--> ChatMessage  (messages belong to session)
+User Query
+    |
+    v
+[Manager Agent] --MEMORY_SUFFICIENT--> [da_with_tools] --> [da_response] --> END
+    |
+    +-CODE_MODIFICATION/NEW_ANALYSIS--> [coding_agent] --> [code_checker] --> [execute]
+                                                                                |
+                                                                                v
+                                                                         [da_with_tools] --> [da_response] --> END
+                                                                              ^    |
+                                                                              |    v
+                                                                         [search_tools]
 ```
 
-### High-Level Component Diagram
+**Key source files (current):**
+- `backend/app/agents/graph.py` -- Graph assembly via `build_chat_graph()`
+- `backend/app/agents/state.py` -- `ChatAgentState` TypedDict with 25+ fields
+- `backend/app/agents/manager.py` -- Routes to `da_with_tools` or `coding_agent`
+- `backend/app/agents/data_analysis.py` -- `da_with_tools_node()`, `da_response_node()`
+- `backend/app/agents/coding.py` -- `coding_agent()` generates Python code
+- `backend/app/agents/code_checker.py` -- AST + LLM validation
+- `backend/app/services/sandbox/e2b_runtime.py` -- E2B execution
+- `backend/app/config/prompts.yaml` -- Per-agent LLM config + system prompts
+- `backend/app/config/allowlist.yaml` -- Allowed Python libraries for sandbox
+- `frontend/src/components/chat/DataCard.tsx` -- Renders query brief / table / analysis
+- `frontend/src/components/chat/ChatMessage.tsx` -- Routes to DataCard for structured responses
+- `frontend/src/hooks/useSSEStream.ts` -- Processes SSE events from backend stream
+- `frontend/src/types/chat.ts` -- TypeScript interfaces for stream events + messages
+
+---
+
+## Recommended Architecture (After -- v0.4)
 
 ```
-+----------+  +-------------------------------+  +-----------+
-| Chat     |  |  Main Content Area            |  | Linked    |
-| Sidebar  |  |                               |  | Files     |
-| (left)   |  |  +-------------------------+  |  | Panel     |
-|          |  |  | ChatView (per session)  |  |  | (right)   |
-| [New]    |  |  | - LinkedFilesBar (top)  |  |  |           |
-| [History]|  |  | - MessageList           |  |  | File 1    |
-| [Files]  |  |  | - ChatInput + Actions   |  |  | File 2    |
-+----------+  |  +-------------------------+  |  +-----------+
-              +-------------------------------+
-
-Backend:
-+--------------+     +-----------------+     +------------------+
-| FastAPI      |     | LangGraph       |     | E2B Sandbox      |
-| /sessions/*  |---->| Multi-file      |---->| N files uploaded  |
-| /chat/*      |     | ChatAgentState  |     | N named DFs      |
-| /files/*     |     | Coding/Analysis |     | Cross-file code  |
-+--------------+     +-----------------+     +------------------+
-       |                    |
-       v                    v
-+--------------+     +-----------------+
-| PostgreSQL   |     | Checkpointer    |
-| chat_sessions|     | thread_id =     |
-| session_files|     | session_{id}_   |
-| chat_messages|     | user_{id}       |
-+--------------+     +-----------------+
+User Query
+    |
+    v
+[Manager Agent] --MEMORY_SUFFICIENT--> [da_with_tools] --> [da_response] --> END
+    |                                                                         |
+    +-CODE_MODIFICATION/NEW_ANALYSIS-->                                       |
+         [coding_agent] --> [code_checker] --> [execute]                      |
+                                                  |                           |
+                                                  v                           |
+                                           [da_with_tools] --> [da_response] -+
+                                                ^    |              |
+                                                |    v              v
+                                           [search_tools]   {visualization_requested?}
+                                                              |              |
+                                                             NO            YES
+                                                              |              |
+                                                              v              v
+                                                            END     [visualization_agent]
+                                                                            |
+                                                                            v
+                                                                    [viz_execute]
+                                                                            |
+                                                                            v
+                                                                    [viz_response] --> END
 ```
+
+### Why this topology
+
+**The Visualization Agent sits AFTER `da_response` as a conditional branch** because:
+
+1. **Minimal disruption** -- `da_response` continues to work identically for non-visualization queries. The existing test suite and behavior are unaffected.
+2. **Analysis context available** -- The Data Analysis Agent's interpretation text provides context for the Visualization Agent to select chart types and format labels.
+3. **Clean separation of concerns** -- The Data Analysis Agent interprets meaning ("sales are highest in East region"), the Visualization Agent renders that meaning visually.
+4. **No new Manager route needed** -- Adding a 4th route (VISUALIZATION) to the Manager would force visualization queries through a separate pipeline that duplicates coding -> checking -> executing. Instead, data computation happens normally, then visualization is applied as a post-processing step.
 
 ---
 
 ## Component Boundaries
 
-### NEW Components
+### New Components (to create)
 
-| Component | Layer | Responsibility | Communicates With |
-|-----------|-------|---------------|-------------------|
-| `ChatSession` model | Backend/DB | First-class chat entity with title, timestamps | `SessionFile`, `ChatMessage`, `User` |
-| `SessionFile` association | Backend/DB | Many-to-many join between sessions and files with link metadata | `ChatSession`, `File` |
-| `sessions` router | Backend/API | CRUD for chat sessions, link/unlink files | `ChatSessionService`, `FileService` |
-| `ChatSessionService` | Backend/Service | Business logic for session management | DB models, `AgentService` |
-| `ContextAssembler` | Backend/Service | Builds multi-file context for agent state from session files | `FileService`, `OnboardingAgent` |
-| `useChatSessionStore` | Frontend/Store | Zustand store replacing `useTabStore` | API client, components |
-| `ChatSidebar` | Frontend/Component | Left sidebar with chat history, "New Chat", "My Files" | `useChatSessionStore`, router |
-| `LinkedFilesPanel` | Frontend/Component | Right sidebar showing files linked to current session | Session hooks, file hooks |
-| `LinkedFilesBar` | Frontend/Component | Compact bar at top of chat showing linked file badges | Session hooks |
-| `FileManagerPage` | Frontend/Page | Full-page file listing at `/dashboard/files` route | `useFileManager` hook |
-| `FileLinkModal` | Frontend/Component | Modal to select existing files to link to session | File hooks, session hooks |
-| `useChatSessions` hook | Frontend/Hook | TanStack Query hooks for session CRUD | API client |
+| Component | File Path | Responsibility | Reads From State | Writes To State |
+|-----------|-----------|---------------|-----------------|-----------------|
+| Visualization Agent | `backend/app/agents/visualization.py` | LLM generates Plotly Python code from execution results + user intent | `execution_result`, `analysis`, `user_query`, `chart_hint` | `chart_code` |
+| Viz Execute Node | `backend/app/agents/graph.py` (function) | Runs chart code in E2B sandbox, parses chart JSON | `chart_code` | `chart_specs`, `chart_error` |
+| Viz Response Node | `backend/app/agents/graph.py` (function) | Assembles final state with chart data for streaming | `chart_specs`, `analysis`, `final_response` | `final_response`, `chart_specs` |
+| should_visualize | `backend/app/agents/graph.py` (function) | Conditional edge: routes to viz or END | `visualization_requested` | (routing only) |
+| ChartRenderer | `frontend/src/components/data/ChartRenderer.tsx` | Renders Plotly JSON using react-plotly.js `<Plot>` | Props: `chartSpecs` | (UI only) |
 
-### MODIFIED Components
+### Modified Components (existing files that need changes)
 
-| Component | Current Behavior | New Behavior | Change Scope |
-|-----------|-----------------|-------------|-------------|
-| `ChatMessage` model | `file_id` FK required | `session_id` FK required, `file_id` removed | Schema change |
-| `ChatAgentState` | Single `file_id`, `file_path`, `data_summary`, `data_profile` | `session_id`, `file_contexts` list, `combined_data_summary`, `combined_data_profile` | State schema change |
-| `agent_service.run_chat_query_stream` | Loads single file, builds single-file context | Loads session + all linked files, uses `ContextAssembler` | Major refactor |
-| `execute_in_sandbox` in `graph.py` | Uploads 1 file, creates single `df` | Uploads N files, creates N named DataFrames | Major refactor |
-| `E2BSandboxRuntime` | `execute(data_file, data_filename)` | `execute_multi_file(files: list[tuple])` | Method addition |
-| `coding agent` prompt | Assumes single `df` variable | Receives multi-file profile, generates code using named DataFrames | Prompt + format change |
-| `code_checker` prompt | Validates single-df code | Validates multi-df code | Prompt change |
-| `data_analysis` prompt | Single execution context | Multi-file execution context | Prompt change |
-| `manager` prompt | Single-file routing context | Multi-file routing context | Prompt change |
-| `chat` router | Endpoints keyed by `file_id` | New endpoints keyed by `session_id` | API refactor |
-| `ChatInterface` | Receives `fileId`/`fileName` | Receives `sessionId`, fetches linked files | Major refactor |
-| `useChatMessages` hook | Queries by `file_id`, key `["chat", "messages", fileId]` | Queries by `session_id`, key `["sessions", sessionId, "messages"]` | Hook refactor |
-| `useSSEStream` hook | Posts to `/chat/{file_id}/stream` | Posts to `/chat/sessions/{session_id}/stream` | URL change |
-| `ChatService` | `list_file_messages(file_id)`, `create_message(file_id)` | `list_session_messages(session_id)`, `create_message(session_id)` | Parameter change |
-| Chat schemas | `ChatMessageResponse.file_id` | `ChatMessageResponse.session_id` | Schema change |
-| Dashboard layout | `FileSidebar` (left) + tabs (top) + content | `ChatSidebar` (left) + content + optional `LinkedFilesPanel` (right) | Layout restructure |
-| Dashboard page | Tab bar with file tabs, empty upload state | Session-based view, greeting empty state | Major refactor |
-| LangGraph thread_id | `f"file_{file_id}_user_{user_id}"` | `f"session_{session_id}_user_{user_id}"` | Thread ID change |
-| `File` model | `chat_messages` relationship | `session_files` relationship (messages go through sessions) | Relationship change |
+| Component | File Path | What Changes | Risk Level |
+|-----------|-----------|-------------|-----------|
+| `ChatAgentState` | `backend/app/agents/state.py` | Add 5 new fields (additive TypedDict extension) | LOW |
+| `build_chat_graph()` | `backend/app/agents/graph.py` | Add 3 nodes + 2 edges + 1 conditional edge; change `da_response` from finish point to conditional | MEDIUM |
+| `da_response_node()` | `backend/app/agents/data_analysis.py` | Add visualization intent detection to return dict | LOW |
+| `prompts.yaml` | `backend/app/config/prompts.yaml` | Add `visualization` agent config entry | LOW |
+| `allowlist.yaml` | `backend/app/config/allowlist.yaml` | Add `plotly` to `allowed_libraries` | LOW |
+| `agent_service.py` | `backend/app/services/agent_service.py` | Include `chart_specs` in metadata_json + node_complete event whitelist | LOW |
+| `DataCard.tsx` | `frontend/src/components/chat/DataCard.tsx` | Add chart section between table and analysis | MEDIUM |
+| `ChatMessage.tsx` | `frontend/src/components/chat/ChatMessage.tsx` | Pass `chart_specs` from `metadata_json` to DataCard | LOW |
+| `chat.ts` (types) | `frontend/src/types/chat.ts` | Add `chart_specs` to `StreamEvent`; add new event types | LOW |
+| `useSSEStream.ts` | `frontend/src/hooks/useSSEStream.ts` | Handle `visualization_started` event in switch | LOW |
+| `ChatInterface.tsx` | `frontend/src/components/chat/ChatInterface.tsx` | Extract chart_specs from viz events in `getStreamingDataCard()` | LOW |
 
-### UNCHANGED Components
+### Unchanged Components
 
 | Component | Why Unchanged |
 |-----------|--------------|
-| `User` model (mostly) | Add `chat_sessions` relationship back_populates only |
-| `OnboardingAgent` | Still processes one file at a time during upload |
-| `FileUploadZone` component | Upload UX stays the same, trigger context changes |
-| Authentication system | No changes needed |
-| `SandboxRuntime` protocol | Interface extends (new method), old method kept |
-| `LLM factory` | No changes needed |
-| Agent config YAML structure | Structure stays, prompt content changes |
-| `FileService` | File CRUD unchanged, still works independently |
-| Search quota system | Unchanged |
-| Context window management | Works the same, just with session-based thread IDs |
+| Manager Agent (`manager.py`) | No new routing path -- visualization is post-processing, not routing |
+| Coding Agent (`coding.py`) | Continues generating data-processing code only; chart code is separate |
+| Code Checker (`code_checker.py`) | Validates data code only; chart code has simpler validation (no data access) |
+| E2B Runtime (`e2b_runtime.py`) | Already supports arbitrary Python execution; no API changes needed |
+| Onboarding Agent (`onboarding.py`) | No interaction with visualization |
+| Chat Router (`chat.py`) | SSE streaming already forwards all node_complete events; no route changes |
+| `useChatMessages.ts` | Message format unchanged; chart data stored in existing `metadata_json` |
 
 ---
 
-## Database Schema Design
+## Detailed Data Flow
 
-### New Tables
+### Step-by-step for: "Show me a bar chart of sales by region"
 
-```python
-# backend/app/models/chat_session.py
+```
+1. MANAGER AGENT
+   Input:  user_query = "Show me a bar chart of sales by region"
+   Output: Command(goto="coding_agent", route=NEW_ANALYSIS)
+   Note:   Standard routing. Manager does NOT detect visualization intent.
 
-from sqlalchemy import String, DateTime, ForeignKey, Text
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from datetime import datetime, timezone
-from uuid import UUID, uuid4
-from app.models.base import Base
+2. CODING AGENT
+   Input:  user_query, data_profile
+   Output: generated_code = Python code that computes sales by region as JSON
+   Note:   Produces DATA, not charts. Identical to any non-viz query.
+   Example output:
+     import json
+     result = df.groupby('region')['sales'].sum().reset_index().to_dict('records')
+     print(json.dumps({"result": result}))
 
-class ChatSession(Base):
-    """Chat session - the primary workspace entity in v0.3."""
-    __tablename__ = "chat_sessions"
+3. CODE CHECKER
+   Input:  generated_code, user_query
+   Output: VALID -> Command(goto="execute")
 
-    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    user_id: Mapped[UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
-        index=True, nullable=False
-    )
-    title: Mapped[str] = mapped_column(String(255), default="New Chat")
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc)
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc)
-    )
+4. EXECUTE (E2B Sandbox)
+   Input:  generated_code + data files uploaded
+   Output: execution_result = '[{"region":"East","sales":50000},{"region":"West","sales":35000}]'
+   Note:   Standard sandbox execution, identical to current flow.
 
-    # Relationships
-    user: Mapped["User"] = relationship("User", back_populates="chat_sessions")
-    session_files: Mapped[list["SessionFile"]] = relationship(
-        "SessionFile", back_populates="session",
-        cascade="all, delete-orphan",
-        order_by="SessionFile.linked_at"
-    )
-    messages: Mapped[list["ChatMessage"]] = relationship(
-        "ChatMessage", back_populates="session",
-        cascade="all, delete-orphan",
-        order_by="ChatMessage.created_at"
-    )
+5. DA_WITH_TOOLS (Data Analysis Agent)
+   Input:  execution_result, user_query
+   Output: AIMessage with analysis JSON (may search web if enabled)
+   Note:   Tool-calling loop unchanged.
+
+6. DA_RESPONSE (Data Analysis Agent response)
+   Input:  analysis from da_with_tools
+   Output: {
+     analysis: "Sales by region shows East leading at $50K...",
+     final_response: "Sales by region shows East leading at $50K...",
+     follow_up_suggestions: ["Break down by quarter", "Show customer count per region"],
+     visualization_requested: true,    // <-- NEW: detected from user_query
+     chart_hint: "bar",                // <-- NEW: extracted from "bar chart"
+     messages: [AIMessage(content=analysis)]
+   }
+
+7. CONDITIONAL EDGE: should_visualize()
+   Input:  state["visualization_requested"]
+   Output: "visualization_agent"  (because True)
+
+8. VISUALIZATION AGENT (NEW)
+   Input:  execution_result, analysis, user_query, chart_hint
+   LLM generates Plotly Python code:
+     import plotly.express as px
+     import plotly.io as pio
+     import json
+
+     data = [{"region":"East","sales":50000},{"region":"West","sales":35000},
+             {"region":"North","sales":42000},{"region":"South","sales":28000}]
+     fig = px.bar(data, x="region", y="sales", title="Sales by Region",
+                  color_discrete_sequence=["#6366f1"])
+     fig.update_layout(template="plotly_white", height=400,
+                       margin=dict(l=40, r=40, t=50, b=40))
+     chart_json = json.loads(pio.to_json(fig))
+     print(json.dumps({"chart": chart_json}))
+
+   Output: {"chart_code": <above code string>}
+   Note:   Data is EMBEDDED in code (not re-read from files).
+           This avoids a second file upload to E2B.
+
+9. VIZ_EXECUTE (NEW - E2B Sandbox)
+   Input:  chart_code (no data files needed)
+   Execution: Creates fresh E2B sandbox, runs chart code, parses stdout JSON
+   Output: {
+     chart_specs: [{"data": [...], "layout": {...}}],
+     chart_error: ""
+   }
+   Note:   Lightweight sandbox call (~1-2s). No file upload overhead.
+
+10. VIZ_RESPONSE (NEW)
+    Input:  chart_specs, analysis (from step 6)
+    Output: {
+      final_response: <analysis from step 6>,
+      chart_specs: [{"data": [...], "layout": {...}}],
+      messages: [AIMessage(content=analysis)]
+    }
+    Note:   Preserves the analysis text. Adds chart_specs to state.
+
+11. FRONTEND receives via SSE stream:
+    - node_complete: {node: "viz_execute", chart_specs: [...]}
+    - node_complete: {node: "viz_response", chart_specs: [...], final_response: "..."}
+
+12. DATACARD renders:
+    [Query Brief]           -- "Show me a bar chart of sales by region"
+    [Generated Code]        -- (collapsible, from step 2)
+    [Data Table]            -- (from execution_result, step 4)
+    [Chart]                 -- NEW: react-plotly.js renders from chart_specs
+    [Analysis]              -- (from step 6)
+    [Follow-ups]            -- (from step 6)
 ```
 
-```python
-# backend/app/models/session_file.py
+### Data format: chart_specs structure
 
-from sqlalchemy import String, DateTime, ForeignKey, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from datetime import datetime, timezone
-from uuid import UUID, uuid4
-from app.models.base import Base
+```typescript
+// Each chart spec follows the Plotly JSON schema
+interface ChartSpec {
+  data: Array<{
+    type: string;        // "bar", "scatter", "pie", etc.
+    x?: any[];           // x-axis values
+    y?: any[];           // y-axis values
+    values?: any[];      // for pie charts
+    labels?: any[];      // for pie charts
+    marker?: object;     // styling
+    mode?: string;       // for scatter: "markers", "lines+markers"
+    name?: string;       // trace name (for legends)
+    [key: string]: any;  // other Plotly trace properties
+  }>;
+  layout: {
+    title?: { text: string };
+    template?: string;
+    height?: number;
+    width?: number;       // omitted for responsive
+    margin?: { l: number; r: number; t: number; b: number };
+    xaxis?: { title?: { text: string } };
+    yaxis?: { title?: { text: string } };
+    [key: string]: any;   // other Plotly layout properties
+  };
+}
 
-class SessionFile(Base):
-    """Association table: ChatSession <-> File (many-to-many with metadata)."""
-    __tablename__ = "session_files"
-
-    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    session_id: Mapped[UUID] = mapped_column(
-        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
-        index=True, nullable=False
-    )
-    file_id: Mapped[UUID] = mapped_column(
-        ForeignKey("files.id", ondelete="CASCADE"),
-        index=True, nullable=False
-    )
-    linked_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc)
-    )
-    # Alias: user-friendly name for the DataFrame variable
-    # Auto-generated from filename, e.g., "sales" for "Q4_2025_sales.csv"
-    alias: Mapped[str | None] = mapped_column(String(100), nullable=True)
-
-    # Relationships
-    session: Mapped["ChatSession"] = relationship("ChatSession", back_populates="session_files")
-    file: Mapped["File"] = relationship("File", back_populates="session_files")
-
-    # Same file cannot be linked twice to same session
-    __table_args__ = (
-        UniqueConstraint("session_id", "file_id", name="uq_session_file"),
-    )
-```
-
-### Modified Tables
-
-**ChatMessage:** Replace `file_id` FK with `session_id` FK.
-
-```python
-class ChatMessage(Base):
-    __tablename__ = "chat_messages"
-
-    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    user_id: Mapped[UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
-        index=True, nullable=False
-    )
-    # CHANGED: session_id replaces file_id
-    session_id: Mapped[UUID] = mapped_column(
-        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
-        index=True, nullable=False
-    )
-    role: Mapped[str] = mapped_column(String(20))
-    content: Mapped[str] = mapped_column(Text)
-    message_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    metadata_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc)
-    )
-
-    # CHANGED relationships
-    user: Mapped["User"] = relationship("User", back_populates="chat_messages")
-    session: Mapped["ChatSession"] = relationship("ChatSession", back_populates="messages")
-```
-
-**File model:** Replace `chat_messages` relationship with `session_files`.
-
-```python
-class File(Base):
-    # ... all existing columns unchanged ...
-
-    # CHANGED: Replace chat_messages relationship with session_files
-    session_files: Mapped[list["SessionFile"]] = relationship(
-        "SessionFile", back_populates="file",
-        cascade="all, delete-orphan"
-    )
-    # REMOVED: chat_messages relationship
-```
-
-### Migration Strategy: Two-Phase Approach
-
-**Migration 1: Add new tables, keep old columns (safe, reversible)**
-
-```python
-def upgrade():
-    # 1. Create chat_sessions table
-    op.create_table("chat_sessions",
-        sa.Column("id", sa.UUID(), primary_key=True),
-        sa.Column("user_id", sa.UUID(), sa.ForeignKey("users.id", ondelete="CASCADE"),
-                  nullable=False, index=True),
-        sa.Column("title", sa.String(255), default="New Chat"),
-        sa.Column("created_at", sa.DateTime(timezone=True)),
-        sa.Column("updated_at", sa.DateTime(timezone=True)),
-    )
-
-    # 2. Create session_files association table
-    op.create_table("session_files",
-        sa.Column("id", sa.UUID(), primary_key=True),
-        sa.Column("session_id", sa.UUID(),
-                  sa.ForeignKey("chat_sessions.id", ondelete="CASCADE"),
-                  nullable=False, index=True),
-        sa.Column("file_id", sa.UUID(),
-                  sa.ForeignKey("files.id", ondelete="CASCADE"),
-                  nullable=False, index=True),
-        sa.Column("linked_at", sa.DateTime(timezone=True)),
-        sa.Column("alias", sa.String(100), nullable=True),
-        sa.UniqueConstraint("session_id", "file_id", name="uq_session_file"),
-    )
-
-    # 3. Add session_id to chat_messages (NULLABLE initially)
-    op.add_column("chat_messages",
-        sa.Column("session_id", sa.UUID(), nullable=True))
-    op.create_foreign_key(
-        "fk_chat_messages_session_id", "chat_messages",
-        "chat_sessions", ["session_id"], ["id"], ondelete="CASCADE")
-```
-
-**Migration 2: Data migration + column swap (requires careful testing)**
-
-```python
-def upgrade():
-    conn = op.get_bind()
-
-    # For each unique (user_id, file_id) pair in chat_messages,
-    # create a ChatSession and link the file
-    results = conn.execute(text(
-        "SELECT DISTINCT user_id, file_id FROM chat_messages"
-    ))
-    for row in results:
-        session_id = str(uuid4())
-        # Create session titled after the file
-        conn.execute(text("""
-            INSERT INTO chat_sessions (id, user_id, title, created_at, updated_at)
-            SELECT :sid, :uid, f.original_filename, NOW(), NOW()
-            FROM files f WHERE f.id = :fid
-        """), {"sid": session_id, "uid": str(row.user_id), "fid": str(row.file_id)})
-
-        # Link file to session
-        conn.execute(text("""
-            INSERT INTO session_files (id, session_id, file_id, linked_at)
-            VALUES (:id, :sid, :fid, NOW())
-        """), {"id": str(uuid4()), "sid": session_id, "fid": str(row.file_id)})
-
-        # Update messages to point to session
-        conn.execute(text("""
-            UPDATE chat_messages SET session_id = :sid
-            WHERE user_id = :uid AND file_id = :fid
-        """), {"sid": session_id, "uid": str(row.user_id), "fid": str(row.file_id)})
-
-    # Make session_id NOT NULL
-    op.alter_column("chat_messages", "session_id", nullable=False)
-    # Create index for session_id queries
-    op.create_index("ix_chat_messages_session_id", "chat_messages", ["session_id"])
-    # Drop old file_id column
-    op.drop_constraint("chat_messages_file_id_fkey", "chat_messages", type_="foreignkey")
-    op.drop_index("ix_chat_messages_file_id", "chat_messages")
-    op.drop_column("chat_messages", "file_id")
+// State carries an array (milestone says "2-3 charts" possible)
+chart_specs: ChartSpec[]   // typically length 1, sometimes 2-3
 ```
 
 ---
 
-## LangGraph Agent State Changes
+## State Schema Changes
 
-### Multi-File State Schema
+### New fields added to ChatAgentState (state.py)
 
 ```python
 class ChatAgentState(TypedDict):
-    """State for the multi-file chat analysis pipeline (v0.3)."""
+    # ... all existing 25+ fields unchanged ...
 
-    # CHANGED: Session-based identity (was file_id)
-    session_id: str
-    """Chat session UUID."""
+    # NEW: Visualization Agent fields (v0.4)
+    visualization_requested: bool
+    """Whether da_response determined a chart should be generated.
+    Set by da_response_node based on user intent + data suitability.
+    Defaults to False. Read by should_visualize() conditional edge."""
 
-    user_id: str
-    """User UUID for access control."""
+    chart_hint: str
+    """Optional chart type hint extracted from user query.
+    Examples: 'bar', 'line', 'pie', 'scatter', '' (empty = auto-select).
+    Set by da_response_node. Read by visualization_agent."""
 
-    user_query: str
-    """User's natural language data analysis query."""
+    chart_code: str
+    """Plotly Python code string generated by Visualization Agent.
+    Executed in E2B sandbox by viz_execute to produce chart_specs.
+    Empty string when no visualization is requested."""
 
-    # CHANGED: Multi-file context replaces single-file fields
-    file_contexts: list[dict]
-    """Per-file context list. Each dict contains:
-    {
-        "file_id": str,
-        "filename": str,
-        "alias": str,           # DataFrame variable name (e.g., "df_sales")
-        "file_path": str,       # Absolute path on disk
-        "data_summary": str,    # Onboarding agent summary
-        "data_profile": str,    # JSON string with column info
-        "user_context": str,    # User-provided context
-    }
-    """
+    chart_specs: list[dict]
+    """List of Plotly figure JSON objects: [{"data": [...], "layout": {...}}].
+    Each entry is one chart. Usually 1, sometimes 2-3 per milestone req.
+    Empty list when no visualization. Passed to frontend via SSE."""
 
-    combined_data_summary: str
-    """Merged summary of all linked files, formatted for prompt injection."""
-
-    combined_data_profile: str
-    """Merged data profile JSON with file boundaries clearly marked."""
-
-    # UNCHANGED: Pipeline execution fields
-    generated_code: str
-    validation_result: str
-    validation_errors: list[str]
-    error_count: int
-    max_steps: int
-    execution_result: str
-    analysis: str
-    messages: Annotated[list[AnyMessage], add_messages]
-    routing_decision: RoutingDecision | None
-    previous_code: str
-    follow_up_suggestions: list[str]
-    web_search_enabled: bool
-    search_sources: list[dict]
-    final_response: str
-    error: str
+    chart_error: str
+    """Error from chart generation or execution. Empty string on success.
+    Non-fatal: analysis still returns even if chart fails."""
 ```
 
-### Context Assembler Service
-
-A dedicated service builds multi-file context before graph invocation:
-
-```python
-# backend/app/services/context_assembler.py
-
-import json
-import os
-from app.models.file import File
-from app.models.session_file import SessionFile
-
-class ContextAssembler:
-    """Builds aggregated multi-file context for the LangGraph agent state."""
-
-    @staticmethod
-    def build_file_contexts(
-        session_files: list[SessionFile],
-    ) -> list[dict]:
-        """Build per-file context dicts from session-file associations."""
-        contexts = []
-        for sf in session_files:
-            f = sf.file
-            alias = sf.alias or ContextAssembler._generate_alias(f.original_filename)
-            contexts.append({
-                "file_id": str(f.id),
-                "filename": f.original_filename,
-                "alias": alias,
-                "file_path": f.file_path,
-                "data_summary": f.data_summary or "",
-                "data_profile": "",  # populated separately via profiling
-                "user_context": f.user_context or "",
-            })
-        return contexts
-
-    @staticmethod
-    def build_combined_summary(file_contexts: list[dict]) -> str:
-        """Merge per-file summaries into a combined prompt-ready string."""
-        if len(file_contexts) == 1:
-            ctx = file_contexts[0]
-            return (
-                f"**File: {ctx['filename']}** (DataFrame: `{ctx['alias']}`)\n"
-                f"{ctx['data_summary']}\n"
-                f"User context: {ctx['user_context'] or 'None'}"
-            )
-
-        parts = []
-        for i, ctx in enumerate(file_contexts, 1):
-            parts.append(
-                f"### File {i}: {ctx['filename']} (DataFrame: `{ctx['alias']}`)\n"
-                f"{ctx['data_summary']}\n"
-                f"User context: {ctx['user_context'] or 'None'}"
-            )
-        return "\n\n---\n\n".join(parts)
-
-    @staticmethod
-    def build_combined_profile(file_contexts: list[dict]) -> str:
-        """Merge per-file data profiles into structured JSON for coding agent."""
-        files_data = []
-        for ctx in file_contexts:
-            profile = json.loads(ctx["data_profile"]) if ctx["data_profile"] else {}
-            files_data.append({
-                "name": ctx["alias"],
-                "filename": ctx["filename"],
-                **profile,
-            })
-
-        # Auto-detect join hints by finding matching column names
-        join_hints = ContextAssembler._detect_join_hints(files_data)
-
-        return json.dumps({
-            "files": files_data,
-            "join_hints": join_hints,
-        }, indent=2)
-
-    @staticmethod
-    def _generate_alias(filename: str) -> str:
-        """Generate a DataFrame alias from filename.
-        'Q4_2025_Sales_Data.csv' -> 'df_q4_2025_sales_data'
-        """
-        name = os.path.splitext(filename)[0]
-        # Replace spaces and hyphens with underscores, lowercase
-        alias = name.lower().replace(" ", "_").replace("-", "_")
-        # Remove non-alphanumeric characters except underscores
-        alias = "".join(c for c in alias if c.isalnum() or c == "_")
-        return f"df_{alias}"
-
-    @staticmethod
-    def _detect_join_hints(files_data: list[dict]) -> list[str]:
-        """Find columns with matching names across files for join suggestions."""
-        hints = []
-        if len(files_data) < 2:
-            return hints
-
-        for i in range(len(files_data)):
-            cols_i = set(files_data[i].get("columns", {}).keys())
-            for j in range(i + 1, len(files_data)):
-                cols_j = set(files_data[j].get("columns", {}).keys())
-                common = cols_i & cols_j
-                for col in common:
-                    hints.append(
-                        f"{files_data[i]['name']}.{col} <-> {files_data[j]['name']}.{col}"
-                    )
-        return hints
-```
-
-### Thread ID Strategy
-
-**Current:** `thread_id = f"file_{file_id}_user_{user_id}"`
-**New:** `thread_id = f"session_{session_id}_user_{user_id}"`
-
-Old checkpoints keyed by `file_*` thread IDs become orphaned. This is acceptable because:
-1. Sessions are new entities -- no collision with old thread IDs
-2. Old checkpoints can be garbage-collected with a cleanup script later
-3. No need to migrate checkpoint data (fragile, undocumented internal schema)
+**Backward compatibility:** All new fields use optional semantics via `.get()` with defaults in node functions. Existing checkpoints without these fields work because `state.get("visualization_requested", False)` returns `False`, skipping visualization entirely.
 
 ---
 
-## E2B Sandbox Multi-File Execution
+## Graph Topology Changes
 
-### Current Single-File Flow (in `execute_in_sandbox`, graph.py line 250-434)
+### Changes to build_chat_graph() in graph.py
 
 ```python
-# Current: Read 1 file, upload 1 file, create 1 `df`
-file_path = state.get("file_path", "")
-data_filename = os.path.basename(file_path)
-with open(file_path, "rb") as f:
-    data_file = f.read()
-# ... uploads to sandbox, generates: df = pd.read_csv('/home/user/file.csv')
+def build_chat_graph(checkpointer=None):
+    graph = StateGraph(ChatAgentState)
+
+    # === EXISTING NODES (unchanged) ===
+    graph.add_node("manager", manager_node)
+    graph.add_node("coding_agent", coding_agent)
+    graph.add_node("code_checker", code_checker_node)
+    graph.add_node("execute", execute_in_sandbox)
+    graph.add_node("halt", halt_node)
+    graph.add_node("da_with_tools", da_with_tools_node)
+    graph.add_node("search_tools", ToolNode([search_web], handle_tool_errors=True))
+    graph.add_node("da_response", da_response_node)
+
+    # === NEW NODES (v0.4 visualization) ===
+    graph.add_node("visualization_agent", visualization_agent_node)
+    graph.add_node("viz_execute", viz_execute_node)
+    graph.add_node("viz_response", viz_response_node)
+
+    # === EXISTING EDGES (unchanged) ===
+    graph.set_entry_point("manager")
+    graph.add_edge("coding_agent", "code_checker")
+    # code_checker routes via Command (no explicit edge needed)
+    graph.add_edge("execute", "da_with_tools")
+    graph.add_conditional_edges("da_with_tools", tools_condition, {
+        "tools": "search_tools",
+        "__end__": "da_response",
+    })
+    graph.add_edge("search_tools", "da_with_tools")
+
+    # === CHANGED: da_response routing (was finish point, now conditional) ===
+    # Previously: graph.set_finish_point("da_response")
+    # Now: conditionally route to visualization or end
+    graph.add_conditional_edges(
+        "da_response",
+        should_visualize,
+        {
+            "visualization_agent": "visualization_agent",
+            "__end__": "__end__",
+        },
+    )
+
+    # === NEW EDGES (v0.4 visualization pipeline) ===
+    graph.add_edge("visualization_agent", "viz_execute")
+    graph.add_edge("viz_execute", "viz_response")
+
+    # === FINISH POINTS ===
+    graph.set_finish_point("viz_response")  # NEW
+    graph.set_finish_point("halt")          # unchanged
+
+    return graph.compile(checkpointer=checkpointer)
+
+
+def should_visualize(state: ChatAgentState) -> str:
+    """Conditional edge: route to visualization agent or end.
+
+    Returns 'visualization_agent' if da_response flagged visualization_requested.
+    Returns '__end__' otherwise (normal analysis-only response).
+    """
+    if state.get("visualization_requested", False):
+        return "visualization_agent"
+    return "__end__"
 ```
 
-### New Multi-File Flow
+---
+
+## Visualization Agent Design
+
+### Agent Node: visualization.py
 
 ```python
-async def execute_in_sandbox(state: ChatAgentState) -> dict | Command:
-    """Execute code with multiple data files in E2B sandbox."""
-    writer = get_stream_writer()
-    settings = get_settings()
+async def visualization_agent_node(state: ChatAgentState) -> dict:
+    """Generate Plotly Python code from execution results.
 
-    file_contexts = state.get("file_contexts", [])
-    if not file_contexts:
-        # Fallback: no files linked
-        writer({"type": "error", "event": "error",
-                "message": "No files linked to this chat session."})
-        return Command(goto="halt", update={
-            "error": "no_files_linked",
-            "execution_result": "Error: No data files available",
+    The agent receives:
+    - execution_result: JSON data from the Coding Agent's code
+    - analysis: Data Analysis Agent's interpretation
+    - user_query: Original user question (contains chart type hints)
+    - chart_hint: Extracted chart type ('bar', 'line', 'pie', 'scatter', '')
+
+    The agent generates Plotly Python code that:
+    1. Embeds the execution_result data as a Python literal
+    2. Creates appropriate Plotly figure(s)
+    3. Serializes to JSON via plotly.io.to_json()
+    4. Prints JSON to stdout for sandbox capture
+
+    Returns: {"chart_code": str}
+    """
+```
+
+### Key prompt design principles for the Visualization Agent
+
+1. **Data is embedded, not loaded from files** -- The execution_result JSON is small (aggregated data). The agent writes it as a Python literal in the generated code. No file I/O needed.
+
+2. **Auto-select chart type unless user specifies** -- If chart_hint is empty, the agent infers from data shape:
+   - Categorical x + numeric y = bar chart
+   - Time series x + numeric y = line chart
+   - Parts of a whole = pie chart
+   - Two numeric columns = scatter plot
+
+3. **Multiple charts when appropriate** -- The milestone says "2-3 charts to show different perspectives." The agent decides when multiple views add value (e.g., bar chart + pie chart for the same data).
+
+4. **Consistent styling** -- The prompt specifies a standard template (`plotly_white`), consistent margins, and brand-aligned color palette.
+
+5. **Output format is strict** -- The code MUST end with:
+   ```python
+   chart_json = json.loads(pio.to_json(fig))
+   print(json.dumps({"chart": chart_json}))
+   ```
+   For multiple charts:
+   ```python
+   charts = [json.loads(pio.to_json(fig)) for fig in [fig1, fig2]]
+   print(json.dumps({"charts": charts}))
+   ```
+
+### Viz Execute Node
+
+The viz_execute node reuses the existing `E2BSandboxRuntime` with a lightweight call:
+
+```python
+async def viz_execute_node(state: ChatAgentState) -> dict:
+    """Execute Plotly chart code in E2B sandbox.
+
+    Key differences from the main execute_in_sandbox:
+    - No data files uploaded (data is embedded in code)
+    - Shorter timeout (chart generation is fast, ~5-10s)
+    - Parses chart JSON from stdout instead of execution_result
+    - Non-fatal: chart_error is set but does NOT halt the pipeline
+    """
+```
+
+**Non-fatal error handling:** If chart generation fails (LLM produces bad Plotly code, sandbox timeout), the response still includes the analysis text and data table. The chart section simply does not appear. This is critical -- a chart failure should never lose the analysis that was already computed.
+
+### Viz Response Node
+
+```python
+async def viz_response_node(state: ChatAgentState) -> dict:
+    """Assemble final response with chart data.
+
+    Emits the chart_specs alongside the existing analysis.
+    The final_response text is preserved from da_response (not overwritten).
+    """
+    writer = get_stream_writer()
+
+    chart_specs = state.get("chart_specs", [])
+    chart_error = state.get("chart_error", "")
+
+    if chart_error:
+        writer({
+            "type": "visualization_error",
+            "message": f"Chart generation failed: {chart_error}",
         })
 
-    # Read all files from disk
-    file_data = []
-    for ctx in file_contexts:
-        file_path = ctx["file_path"]
-        filename = os.path.basename(file_path)
-        alias = ctx["alias"]
-        try:
-            with open(file_path, "rb") as f:
-                file_data.append({
-                    "bytes": f.read(),
-                    "filename": filename,
-                    "alias": alias,
-                })
-        except (FileNotFoundError, IOError) as e:
-            writer({"type": "error", "event": "error",
-                    "message": f"Cannot read file: {filename}"})
-            return Command(goto="halt", update={
-                "error": "file_read_error",
-                "execution_result": f"Error: Cannot read {filename}: {e}",
-            })
-
-    # Build loading preamble: create named DataFrames
-    loading_lines = ["import pandas as pd", "import json", ""]
-    for fd in file_data:
-        ext = os.path.splitext(fd["filename"])[1].lower()
-        sandbox_path = f"/home/user/{fd['filename']}"
-        if ext in ('.xlsx', '.xls'):
-            loading_lines.append(f'{fd["alias"]} = pd.read_excel("{sandbox_path}")')
-        else:
-            loading_lines.append(
-                f'try:\n'
-                f'    {fd["alias"]} = pd.read_csv("{sandbox_path}", encoding="utf-8")\n'
-                f'except UnicodeDecodeError:\n'
-                f'    try:\n'
-                f'        {fd["alias"]} = pd.read_csv("{sandbox_path}", encoding="latin-1")\n'
-                f'    except UnicodeDecodeError:\n'
-                f'        {fd["alias"]} = pd.read_csv("{sandbox_path}", encoding="cp1252")'
-            )
-
-    # Backward compatibility: single file also gets `df` alias
-    if len(file_data) == 1:
-        loading_lines.append(f'df = {file_data[0]["alias"]}')
-
-    preamble = "\n".join(loading_lines) + "\n\n"
-    full_code = preamble + state.get("generated_code", "")
-
-    # Execute with all files
-    runtime = E2BSandboxRuntime(timeout_seconds=settings.sandbox_timeout_seconds)
-    result = await asyncio.to_thread(
-        runtime.execute_multi_file,
-        code=full_code,
-        timeout=float(settings.sandbox_timeout_seconds),
-        files=[(fd["bytes"], fd["filename"]) for fd in file_data],
-    )
-    # ... result handling same as current execute_in_sandbox
-```
-
-### SandboxRuntime Extension
-
-```python
-# Add new method to E2BSandboxRuntime (keep existing execute() for compatibility)
-
-def execute_multi_file(
-    self,
-    code: str,
-    timeout: float = 60.0,
-    files: list[tuple[bytes, str]] | None = None,
-) -> ExecutionResult:
-    """Execute code with multiple data files uploaded to sandbox.
-
-    Args:
-        code: Full Python code including file loading preamble
-        timeout: Maximum execution time
-        files: List of (file_bytes, filename) tuples
-    """
-    start_time = time.time()
-    settings = get_settings()
-
-    try:
-        with Sandbox.create(
-            timeout=int(timeout),
-            api_key=settings.e2b_api_key
-        ) as sandbox:
-            # Upload all files (E2B has no batch API, sequential upload)
-            if files:
-                for file_bytes, filename in files:
-                    sandbox.files.write(f"/home/user/{filename}", file_bytes)
-
-            # Execute code
-            execution = sandbox.run_code(code, timeout=timeout)
-
-            # ... same result parsing as existing execute() method
-    except Exception as e:
-        # ... same error handling
-```
-
-### Combined Data Profile Format
-
-The `combined_data_profile` injected into the coding agent prompt:
-
-```json
-{
-  "files": [
-    {
-      "name": "df_sales",
-      "filename": "Q4_2025_sales.csv",
-      "columns": {
-        "order_id": {"dtype": "int64", "sample": [1001, 1002, 1003]},
-        "customer_id": {"dtype": "int64", "sample": [501, 502, 503]},
-        "revenue": {"dtype": "float64", "sample": [150.00, 200.50, 75.25]}
-      },
-      "row_count": 5000
-    },
-    {
-      "name": "df_customers",
-      "filename": "customers_master.xlsx",
-      "columns": {
-        "customer_id": {"dtype": "int64", "sample": [501, 502, 503]},
-        "region": {"dtype": "object", "sample": ["East", "West", "North"]}
-      },
-      "row_count": 1200
+    return {
+        "chart_specs": chart_specs,
+        # Preserve existing analysis and response
+        "final_response": state.get("final_response", state.get("analysis", "")),
+        "messages": state.get("messages", []),  # preserve existing messages
     }
-  ],
-  "join_hints": [
-    "df_sales.customer_id <-> df_customers.customer_id"
-  ]
+```
+
+---
+
+## Frontend Integration
+
+### DataCard.tsx -- New Chart Section
+
+The chart section sits between Data Table and Analysis:
+
+```
+[Query Brief]           -- existing, unchanged
+[Generated Code]        -- existing, unchanged (collapsible)
+[Data Table]            -- existing, unchanged
+[Chart(s)]              -- NEW
+[Analysis]              -- existing, unchanged
+[Follow-ups]            -- existing, unchanged
+[Sources]               -- existing, unchanged
+```
+
+### New DataCard prop
+
+```typescript
+interface DataCardProps {
+  // ... existing props unchanged ...
+  chartSpecs?: Array<{ data: any[]; layout: any }>;  // NEW
 }
 ```
 
-The `join_hints` are auto-detected by `ContextAssembler._detect_join_hints()` -- matching column names across files gives the coding agent structural awareness.
+### ChartRenderer Component
 
----
+```tsx
+// frontend/src/components/data/ChartRenderer.tsx
+"use client";
 
-## Agent Prompt Changes
+import dynamic from "next/dynamic";
 
-### Coding Agent: Multi-File Awareness
+// Dynamic import: plotly.js requires window object, breaks SSR
+const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
-```yaml
-coding:
-  system_prompt: |
-    Generate Python code for data analysis.
-
-    **Available DataFrames:**
-    {data_profile}
-
-    Each file is loaded as a separate DataFrame with the variable name shown above.
-    For cross-file analysis, use merge/join operations between DataFrames.
-
-    **User context:** {user_context}
-
-    **Rules:**
-    - Use exact DataFrame variable names as shown (e.g., df_sales, df_customers)
-    - Use exact column names from the profile (case-sensitive)
-    - For cross-file joins: pd.merge(df_a, df_b, on='common_column')
-    - Convert results to Python types: int(), float(), str()
-    - For DataFrame/Series results: use .to_dict('records')
-    - End with: print(json.dumps({"result": result}))
-    - Libraries allowed: {allowed_libraries}
-    - Use .fillna(0) for missing values
-    - NEVER check if DataFrames exist or use locals()/globals()
-
-    **Single-file example:**
-    ```python
-    import json
-    result = int(df_sales['revenue'].sum())
-    print(json.dumps({"result": result}))
-    ```
-
-    **Cross-file example:**
-    ```python
-    import json
-    merged = pd.merge(df_sales, df_customers, on='customer_id')
-    result = merged.groupby('region')['revenue'].sum().reset_index().to_dict('records')
-    print(json.dumps({"result": result}))
-    ```
-
-    Return only code, no explanations.
-```
-
-### Code Checker: Multi-DataFrame Validation
-
-Add to the code checker prompt:
-```
-8. If multiple DataFrames are available, does the code use the correct DataFrame variable names?
-9. For cross-file operations, are merge/join keys valid columns in both DataFrames?
-```
-
-### Manager Agent: Multi-File Context
-
-The manager routing prompt should include file count and names:
-```
-**Session Context:**
-- Files linked: {file_count} ({file_names})
-- Messages in history: {msg_count}
-- Has previous code: {has_code}
-```
-
----
-
-## API Endpoint Design
-
-### New Session Endpoints
-
-```python
-# backend/app/routers/sessions.py
-
-router = APIRouter(prefix="/sessions", tags=["Sessions"])
-
-POST   /sessions/                              # Create new chat session
-GET    /sessions/                              # List user's sessions (chat history sidebar)
-GET    /sessions/{session_id}                  # Get session details + linked files
-PATCH  /sessions/{session_id}                  # Update session (title)
-DELETE /sessions/{session_id}                  # Delete session + all messages
-
-POST   /sessions/{session_id}/files            # Link file(s) to session
-DELETE /sessions/{session_id}/files/{file_id}  # Unlink file from session
-POST   /sessions/{session_id}/generate-title   # Auto-generate title from first query
-```
-
-### Modified Chat Endpoints (Session-Based)
-
-```python
-# backend/app/routers/chat.py -- session-based versions
-
-GET    /chat/sessions/{session_id}/messages         # List messages
-POST   /chat/sessions/{session_id}/stream           # Stream AI query
-GET    /chat/sessions/{session_id}/context-usage     # Context window usage
-POST   /chat/sessions/{session_id}/trim-context      # Trim context
-```
-
-### Session List Response Shape
-
-```python
-class ChatSessionListItem(BaseModel):
-    id: UUID
-    title: str
-    created_at: datetime
-    updated_at: datetime
-    file_count: int
-    message_count: int
-    last_message_preview: str | None  # First 100 chars of last message
-
-class ChatSessionDetail(BaseModel):
-    id: UUID
-    title: str
-    created_at: datetime
-    updated_at: datetime
-    files: list[SessionFileResponse]  # Linked files with aliases
-
-class SessionFileResponse(BaseModel):
-    file_id: UUID
-    filename: str
-    alias: str | None
-    file_type: str
-    linked_at: datetime
-    has_summary: bool
-```
-
----
-
-## Frontend Architecture Changes
-
-### State Management: ChatSessionStore Replaces TabStore
-
-```typescript
-// frontend/src/stores/chatSessionStore.ts
-
-interface ChatSessionStore {
-  currentSessionId: string | null;
-  setCurrentSession: (sessionId: string | null) => void;
+interface ChartRendererProps {
+  chartSpecs: Array<{ data: any[]; layout: any }>;
 }
 
-export const useChatSessionStore = create<ChatSessionStore>((set) => ({
-  currentSessionId: null,
-  setCurrentSession: (sessionId) => set({ currentSessionId: sessionId }),
-}));
+export function ChartRenderer({ chartSpecs }: ChartRendererProps) {
+  return (
+    <div className="space-y-4">
+      {chartSpecs.map((spec, idx) => (
+        <div key={idx} className="rounded-lg border bg-background p-2 overflow-hidden">
+          <Plot
+            data={spec.data}
+            layout={{
+              ...spec.layout,
+              autosize: true,
+              paper_bgcolor: "transparent",
+              plot_bgcolor: "transparent",
+            }}
+            config={{
+              responsive: true,
+              displayModeBar: true,
+              displaylogo: false,
+              modeBarButtonsToRemove: ["lasso2d", "select2d"],
+              toImageButtonOptions: {
+                format: "png",
+                filename: `spectra-chart-${idx}`,
+                height: 600,
+                width: 800,
+                scale: 2,
+              },
+            }}
+            useResizeHandler={true}
+            style={{ width: "100%", height: "100%" }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
 ```
 
-The store is minimal because TanStack Query handles session list caching and refetching. The store only tracks which session is currently active (needed for sidebar highlighting and URL sync).
+Architecture decisions for ChartRenderer:
+- **`dynamic(() => import(...), { ssr: false })`** -- Plotly.js accesses `window` and `document`. Without dynamic import, Next.js SSR fails with "window is not defined."
+- **`useResizeHandler={true}` + `autosize: true`** -- Chart resizes when DataCard or browser window resizes.
+- **`config.toImageButtonOptions`** -- Satisfies milestone requirement "user should be able to download the visualization as an image." The Plotly modebar includes a camera icon for PNG download.
+- **`paper_bgcolor: "transparent"`** -- Chart background inherits from DataCard's theme (light/dark mode compatible).
+- **`displayModeBar: true`** -- Shows hover/zoom/pan/download toolbar. Satisfies "interactive" requirement.
 
-### TanStack Query Key Structure
+### SSE Stream Integration
+
+The existing `node_complete` event forwarding in `agent_service.py` already passes any key present in the node's state update. The whitelist in `run_chat_query_stream` needs `chart_specs` added:
+
+```python
+# In agent_service.py, run_chat_query_stream():
+yield {
+    "type": "node_complete",
+    "node": node_name,
+    **{k: v for k, v in update.items()
+       if k in ("generated_code", "execution_result",
+                "analysis", "final_response", "error",
+                "routing_decision", "follow_up_suggestions",
+                "search_sources",
+                "chart_specs")}  # <-- ADD THIS
+}
+```
+
+Frontend `useSSEStream.ts` needs one new event handler:
 
 ```typescript
-// NEW keys
-["sessions"]                                    // session list for sidebar
-["sessions", sessionId]                         // session detail + linked files
-["sessions", sessionId, "messages"]             // session messages
-["sessions", sessionId, "context-usage"]        // context window usage
-
-// UNCHANGED keys
-["files"]                                       // user's file list
-["files", fileId, "summary"]                    // file summary (for info modal)
+case "visualization_started":
+  newState.currentStatus = "Generating visualization...";
+  break;
 ```
 
-### New Hooks
+Frontend `ChatInterface.tsx` `getStreamingDataCard()` extracts chart data:
 
 ```typescript
-// frontend/src/hooks/useChatSessions.ts
-
-export function useChatSessions()                      // List all sessions
-export function useChatSession(sessionId: string)      // Single session + files
-export function useCreateSession()                     // Mutation: create session
-export function useDeleteSession()                     // Mutation: delete session
-export function useUpdateSessionTitle()                // Mutation: update title
-export function useLinkFile()                          // Mutation: link file to session
-export function useUnlinkFile()                        // Mutation: unlink file
-export function useGenerateSessionTitle()              // Mutation: auto-title
-
-// MODIFIED hooks
-export function useChatMessages(sessionId: string | null)  // Changed param
-export function useAddLocalMessage()                        // Changed: uses sessionId
-export function useInvalidateChatMessages()                 // Changed: query key
-// useSSEStream.startStream(sessionId, message, webSearchEnabled) -- changed param
-```
-
-### Route Structure
-
-```
-/dashboard                        -> Empty state with greeting
-/dashboard/chat/{sessionId}       -> Specific chat session
-/dashboard/files                  -> My Files management page
-```
-
-Navigation uses Next.js App Router. `sessionId` comes from URL params.
-
-### Layout Restructure
-
-**Current layout** (`DashboardLayout` in `frontend/src/app/(dashboard)/layout.tsx`):
-```
-Header
-+--------+----------------------------------+
-| File   | Tab Bar (file tabs)              |
-| Side   | +----------------------------+   |
-| bar    | | ChatInterface (per file)   |   |
-| 260px  | +----------------------------+   |
-+--------+----------------------------------+
-```
-
-**New layout:**
-```
-Header
-+--------+-------------------------------+---------+
-| Chat   | Main Content Area             | Linked  |
-| Side   |                               | Files   |
-| bar    | (dynamic based on route)      | Panel   |
-| 260px  |                               | 240px   |
-|        | /dashboard -> Empty greeting  | (cond)  |
-| [New]  | /dashboard/chat/:id -> Chat   |         |
-| [Hist] | /dashboard/files -> Files     |         |
-| [Files]|                               |         |
-+--------+-------------------------------+---------+
-```
-
-The right panel (`LinkedFilesPanel`) is **conditional** -- only shows when a chat session is active and has linked files. On the Files page, it is hidden.
-
-### Component Tree
-
-```
-DashboardLayout
-  +-- Header (logo, user menu) [MODIFIED: same structure]
-  +-- ChatSidebar (left, 260px) [NEW: replaces FileSidebar]
-  |     +-- NewChatButton [NEW]
-  |     +-- ChatHistoryList [NEW: session list, sorted by updated_at]
-  |     +-- Separator
-  |     +-- MyFilesButton [NEW: navigates to /dashboard/files]
-  +-- MainContent (flex-1)
-  |     +-- ChatPage (for /dashboard/chat/:sessionId) [MODIFIED from DashboardPage]
-  |     |     +-- LinkedFilesBar (top of chat, shows file badges) [NEW]
-  |     |     +-- MessageList [MODIFIED: sessionId-based]
-  |     |     +-- ChatInput [MODIFIED: add file action button]
-  |     |     |     +-- AddFileDropdown [NEW: upload or link existing]
-  |     |     |     +-- SearchToggle [UNCHANGED]
-  |     |     +-- LinkedFilesPanel (right sidebar, collapsible) [NEW]
-  |     +-- FileManagerPage (for /dashboard/files) [NEW]
-  |     |     +-- FileList [MODIFIED from FileSidebar's file list]
-  |     |     +-- FileUploadButton [REUSE FileUploadZone]
-  |     |     +-- FileActions (delete, download, start chat) [NEW]
-  |     +-- EmptyState (for /dashboard) [MODIFIED: greeting message]
-  +-- Dialogs/Modals
-        +-- FileUploadZone [REUSE existing]
-        +-- FileLinkModal [NEW: select existing files to link]
-        +-- FileInfoModal [REUSE existing]
-```
-
----
-
-## Data Flow: Complete Multi-File Chat Query
-
-```
-1. User sends message in session with 2 linked files
-   POST /chat/sessions/{session_id}/stream
-   Body: {content: "Compare sales by region", web_search_enabled: false}
-
-2. Chat Router verifies session ownership
-   -> Load session via ChatSessionService
-   -> Verify session.user_id == current_user.id
-
-3. AgentService.run_chat_query_stream()
-   a. Load session + eager-load session_files -> files
-   b. Verify all linked files have data_summary (onboarded)
-   c. For each file: generate data_profile via OnboardingAgent.profile_data()
-   d. ContextAssembler.build_file_contexts(session_files)
-   e. ContextAssembler.build_combined_summary(file_contexts)
-   f. ContextAssembler.build_combined_profile(file_contexts)
-   g. Build initial_state with multi-file context
-   h. thread_id = f"session_{session_id}_user_{user_id}"
-   i. graph.aupdate_state(config, {messages: [HumanMessage(query)]})
-   j. graph.astream(initial_state, config)
-
-4. LangGraph Pipeline
-   Manager -> routes (MEMORY_SUFFICIENT / CODE_MODIFICATION / NEW_ANALYSIS)
-   Coding Agent -> sees combined_data_profile, generates multi-df code
-   Code Checker -> validates multi-df references
-   Execute -> uploads all files to E2B, runs code with named DataFrames
-   DA Agent -> interprets results in multi-file context
-
-5. Save messages with session_id (not file_id)
-   ChatService.create_message(session_id=..., ...)
-
-6. Frontend receives SSE events, renders in ChatView
+let chartSpecs: ChartSpec[] | undefined = undefined;
+const vizEvent = events.find(
+  (e) => e.type === "node_complete" && e.node === "viz_response"
+);
+if (vizEvent?.chart_specs && vizEvent.chart_specs.length > 0) {
+  chartSpecs = vizEvent.chart_specs;
+}
 ```
 
 ---
 
 ## Patterns to Follow
 
-### Pattern 1: Context Assembler (Dedicated Multi-File Aggregation)
+### Pattern 1: Agent as Code Generator, Not Code Executor
 
-**What:** A dedicated service class that takes session files and produces aggregated context for the agent state.
+**What:** The Visualization Agent generates Plotly Python code but does NOT execute it. A separate `viz_execute` node runs the code in E2B. This mirrors the existing Coding Agent -> Code Checker -> Execute pattern.
 
-**When:** Every time a chat query is initiated.
+**When:** Always. This maintains the security boundary.
 
-**Why:** Keeps aggregation logic in one testable place. Prevents `agent_service` from becoming a god function. Makes it easy to add features like join hint detection, profile compression, or context budget allocation.
+**Why:** The existing architecture separates code generation from code execution for security (sandbox isolation) and debuggability (code is visible in DataCard). The Visualization Agent follows the same contract.
 
-### Pattern 2: Session-First, Files-Second (Lazy Initialization)
+### Pattern 2: JSON-over-the-wire for Charts
 
-**What:** Sessions start empty (no files). Files are linked explicitly before the first AI query. The first AI response triggers auto-title generation.
+**What:** Charts are serialized as Plotly JSON (`{data: [...], layout: {...}}`) and passed through the state/SSE stream. The frontend renders with react-plotly.js `<Plot>` component using native `data` and `layout` props.
 
-**When:** User creates new chat, uploads a file, or links an existing file.
+**When:** Always. Never send HTML, SVG, or base64 images.
 
-**Why:** Matches ChatGPT-style UX from requirements. Sessions can exist in "empty" state. File linking is a separate action from session creation.
+**Why:**
+- Interactive: hover, zoom, pan are native Plotly features
+- Type-safe: Plotly JSON has a well-defined schema
+- Lightweight: ~5KB JSON vs ~100KB image or ~3MB embedded-HTML
+- Secure: no XSS risk -- react-plotly.js renders from structured data, not innerHTML
+- Themeable: layout properties can be overridden client-side for dark mode
 
-### Pattern 3: Backward-Compatible DataFrame Naming
+### Pattern 3: Conditional Post-Processing (not Routing)
 
-**What:** When a session has exactly 1 file, create both the named DataFrame (e.g., `df_sales`) AND the generic `df` alias. When multiple files exist, only use named DataFrames.
+**What:** Visualization is a conditional post-processing step after `da_response`, controlled by a `should_visualize()` edge function.
 
-**When:** Sandbox code preamble generation.
+**When:** Every query that flows through the code generation path.
 
-**Why:** Single-file sessions should feel identical to v0.2. The `df` alias means existing prompt patterns and any code the user has seen continues to work.
+**Why:** Visualization always needs data first. It is not an alternative path -- it is an extension of the analysis path. Keeping it after `da_response` means the analysis is always available even if chart generation fails.
 
-### Pattern 4: Additive Two-Phase Migration
+### Pattern 4: Embed Data in Chart Code
 
-**What:** Phase 1 adds new tables and columns (nullable). Phase 2 migrates data and removes old columns. Never drop old schema in the same migration that adds new schema.
+**What:** The Visualization Agent embeds `execution_result` data directly into the generated Plotly code as a Python literal. The viz_execute sandbox does NOT re-upload data files.
 
-**When:** Database migration from v0.2 to v0.3.
+**When:** Always. Chart data is already computed and small (aggregated/processed).
 
-**Why:** Allows rollback if migration fails. Data migration is the riskiest step -- separating it from schema changes reduces blast radius.
+**Why:**
+- Avoids ~2-3 second file upload overhead per query
+- Simpler error handling (no file-not-found for charts)
+- execution_result is typically <100 rows of aggregated data
+- Chart code is self-contained and reproducible
 
-### Pattern 5: File Limit Enforcement at API Level
+### Pattern 5: Non-Fatal Visualization Errors
 
-**What:** Cap at 10 files per session. Enforce in `POST /sessions/{id}/files`.
+**What:** If chart generation or execution fails, the response still includes the analysis text and data table. The chart section simply does not render.
 
-**When:** File linking API endpoint.
+**When:** Any chart-related failure (LLM generates invalid Plotly code, sandbox timeout, Plotly import error).
 
-**Why:** Prevents context window overflow (10 files x ~4K tokens/file = 40K tokens of context, approaching model limits). Also prevents sandbox timeout (uploading 20+ files adds significant startup time).
+**Why:** The user asked a question and got a complete answer (data + analysis). The chart is a bonus. Losing the entire response because a chart failed would be a poor user experience.
+
+**Implementation:** `viz_execute` writes to `chart_error` on failure instead of routing to `halt`. `viz_response` checks `chart_error` and emits a warning event but still returns the existing analysis.
+
+### Pattern 6: YAML-Configured Agent
+
+**What:** The Visualization Agent follows the established per-agent config pattern in `prompts.yaml`.
+
+**When:** Always. All 5 existing agents use this pattern.
+
+**Why:** Consistency. Enables using a cheaper/faster model for chart code generation since Plotly code is structurally simpler than data analysis code.
 
 ---
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Storing File Bytes in LangGraph State
+### Anti-Pattern 1: HTML Injection via dangerouslySetInnerHTML or iframe
 
-**What:** Putting actual file content (bytes or DataFrames) into `ChatAgentState`.
+**What:** Having the LLM generate a complete HTML page with embedded Plotly.js and injecting it into React.
 
-**Why bad:** State is serialized to PostgreSQL checkpoints via `AsyncPostgresSaver`. Large files (100MB each x N files) would make checkpoints enormous, slow checkpoint writes, and potentially exceed JSONB/BYTEA limits.
+**Why bad:** XSS attack surface, no React integration (chart outside component tree), 3MB+ payload size (embedded plotly.js library), poor responsiveness (iframe sizing), no theme support.
 
-**Instead:** Store only metadata (paths, summaries, profiles) in state. Read file bytes from disk only at execution time inside `execute_in_sandbox`.
+**Instead:** JSON-over-the-wire with react-plotly.js (Pattern 2).
 
-### Anti-Pattern 2: Concatenating All Files Into One DataFrame
+### Anti-Pattern 2: Combining Data Code and Chart Code in Coding Agent
 
-**What:** Auto-merging all linked files into a single `df` before sending to the agent.
+**What:** Having the Coding Agent generate both data processing AND Plotly chart code in a single block.
 
-**Why bad:** Files may have completely different schemas. A sales CSV and a customer list have no common structure. Concatenation destroys semantic distinction and makes cross-file joins impossible.
+**Why bad:** Doubles prompt complexity. Chart errors trigger data retry loops (coupled failures). Code Checker must validate Plotly API. Violates single-responsibility.
 
-**Instead:** Each file becomes a separate named DataFrame. The coding agent decides how to combine them based on the user's query and join hints.
+**Instead:** Coding Agent handles data. Visualization Agent handles charts. Separate concerns.
 
-### Anti-Pattern 3: Auto-Creating Sessions on Every Upload
+### Anti-Pattern 3: Manager Agent Routing to Visualization
 
-**What:** Implicitly creating a new chat session whenever a file is uploaded.
+**What:** Adding a 4th route "VISUALIZATION" to the Manager that bypasses data analysis.
 
-**Why bad:** Requirements say files live independently ("My Files" management). Users may upload files for later use without wanting to start a chat.
+**Why bad:** Visualization ALWAYS needs computed data. A separate route would duplicate the coding->checking->executing pipeline. Manager's 3-route logic is well-tested; a 4th route reduces routing accuracy.
 
-**Instead:** Session creation is explicit: "New Chat" button, or "Start Chat" from the file upload completion flow. The upload-to-chat flow creates a session + links the file + navigates to the session.
+**Instead:** Visualization as post-processing after analysis (Pattern 3).
 
-### Anti-Pattern 4: Migrating LangGraph Checkpoint Data
+### Anti-Pattern 4: Storing Chart Images
 
-**What:** Trying to modify `checkpoint_blobs` or `checkpoints` tables to match new state schema.
+**What:** Using `fig.write_image()` in E2B and returning base64 PNG/SVG.
 
-**Why bad:** LangGraph's `AsyncPostgresSaver` manages its own internal tables. The serialization format is undocumented and version-coupled. Manipulating it risks corruption.
+**Why bad:** Static (no hover/zoom/pan), larger payload, not responsive, not themeable. The milestone explicitly requires "interactive" charts.
 
-**Instead:** Let old checkpoints (keyed by `file_*` thread IDs) become orphans. New sessions get fresh checkpoints (keyed by `session_*` thread IDs). Run a cleanup script later to delete `file_*` rows from checkpoint tables.
+**Instead:** `plotly.io.to_json()` + react-plotly.js rendering.
 
-### Anti-Pattern 5: Routing All Chat Endpoints Through Sessions First
+### Anti-Pattern 5: Re-running Data Code for Visualization
 
-**What:** Requiring a session to exist before any chat message can be sent, even for the upload-and-chat flow.
+**What:** Having the Visualization Agent re-execute the original data query to get fresh data for charting.
 
-**Why bad:** Creates extra API round-trips. Upload -> Create Session -> Link File -> Send Message is 4 calls.
+**Why bad:** Doubles E2B sandbox cost and latency. Data is already in `execution_result`. Risk of different results if data changed between calls.
 
-**Instead:** The upload-and-chat flow should be a single compound operation: `POST /files/upload-and-chat` that creates the file, creates a session, links them, and returns the session ID. The frontend navigates to the session after upload.
+**Instead:** Embed `execution_result` in chart code (Pattern 4).
 
 ---
 
 ## Scalability Considerations
 
-| Concern | 1 file/session | 5 files/session | 10 files/session |
-|---------|---------------|-----------------|-----------------|
-| Context tokens | ~2-4K per file summary | ~10-20K tokens | ~20-40K -- may approach model limits |
-| Sandbox startup | ~3s (1 file upload) | ~5s (5 sequential uploads) | ~8-10s (consider parallel writes) |
-| Agent code complexity | Simple single-df | Moderate join operations | Complex multi-join -- agent may need guidance |
-| Data profile size | ~500 tokens | ~2.5K tokens | ~5K tokens in prompt |
-
-**Recommendations:**
-- Hard limit: 10 files per session (enforced at API level)
-- Soft limit: 5 files recommended (show warning above 5)
-- For sessions approaching context limits, compress data profiles (fewer sample rows, drop low-cardinality columns from profile)
+| Concern | At Current Scale | At 10K Users | At 1M Users |
+|---------|-----------------|--------------|-------------|
+| E2B cost | +1 lightweight sandbox per viz query (~$0.001) | Cache chart code for repeated patterns | Pre-compute charts for common aggregations |
+| Chart JSON size | ~5KB per chart, negligible | Stream separately if >100KB | Paginate multi-chart responses |
+| Plotly.js bundle | ~3.5MB loaded once, browser-cached | Use `plotly.js-basic-dist` (~1MB) | Lazy-load chart type modules |
+| LLM calls | +1 per viz query (Visualization Agent) | Use cheaper model (e.g., haiku) for chart code | Template-based chart generation (no LLM) |
+| Render perf | Single `<Plot>`, <100ms render | Virtualize charts in long conversations | IntersectionObserver for deferred rendering |
 
 ---
 
-## Build Order (Dependency-Aware)
+## Suggested Build Order (Dependency-Aware)
 
-The following dependency graph determines the safe build order:
+### Phase 1: Backend State + Agent (no frontend changes)
+1. `state.py` -- Add 5 new fields to `ChatAgentState`
+2. `allowlist.yaml` -- Add `plotly` to allowed_libraries
+3. `prompts.yaml` -- Add `visualization` agent config
+4. `visualization.py` -- New visualization agent node (LLM code generation)
+5. `graph.py` -- Add `viz_execute_node` function (E2B chart execution)
+6. `graph.py` -- Add `viz_response_node` function
+7. `graph.py` -- Add `should_visualize()` conditional edge function
+8. `graph.py` -- Wire nodes into `build_chat_graph()`, change `da_response` routing
 
-```
-Phase A: Database Foundation
-  1. ChatSession + SessionFile models
-  2. Alembic Migration 1 (add tables, add nullable session_id to chat_messages)
-  3. ChatSessionService (CRUD for sessions, link/unlink files)
-  4. Sessions router (API endpoints)
-  5. Alembic Migration 2 (data migration, make session_id NOT NULL, drop file_id)
-  6. ChatService refactor (session_id-based queries)
-  7. Chat schemas update (session_id in response)
+### Phase 2: Backend Integration (connects to existing pipeline)
+9. `data_analysis.py` -- Modify `da_response_node` to detect visualization intent
+10. `agent_service.py` -- Add `chart_specs` to metadata_json and node_complete whitelist
+11. Backend testing -- End-to-end test: query with viz intent produces chart_specs in state
 
-Phase B: Agent Pipeline (depends on A.1-A.3)
-  8. ContextAssembler service
-  9. ChatAgentState schema changes (multi-file fields)
-  10. Prompt updates (coding, code_checker, manager, data_analysis)
-  11. E2B sandbox multi-file execution (execute_multi_file)
-  12. agent_service refactor (session-based, uses ContextAssembler)
-  13. Chat router refactor (session-based stream endpoint)
-  14. Thread ID migration (session_* pattern)
+### Phase 3: Frontend Rendering
+12. `npm install react-plotly.js plotly.js` -- Install Plotly dependencies
+13. `ChartRenderer.tsx` -- New component with dynamic import
+14. `DataCard.tsx` -- Add `chartSpecs` prop, render ChartRenderer between table and analysis
+15. `chat.ts` -- Add `chart_specs` to `StreamEvent` type, add `visualization_started` event type
+16. `ChatMessage.tsx` -- Pass `metadata_json.chart_specs` to DataCard
+17. `useSSEStream.ts` -- Handle `visualization_started` event
+18. `ChatInterface.tsx` -- Extract `chart_specs` from viz events in `getStreamingDataCard()`
 
-Phase C: Frontend Structure (can start parallel with B)
-  15. Route structure (/dashboard/chat/:sessionId, /dashboard/files)
-  16. ChatSessionStore (Zustand, replaces TabStore)
-  17. useChatSessions hooks (TanStack Query)
-  18. ChatSidebar component
-  19. Layout restructure (sidebar + main + right panel)
+### Phase 4: Polish + Edge Cases
+19. Dark mode -- Chart theme adaptation (detect theme, swap `plotly_white` / `plotly_dark`)
+20. Multi-chart support -- Test 2-3 charts per response, layout spacing
+21. Download as image -- Verify Plotly modebar PNG download works in DataCard context
+22. Responsive -- Chart resizes on window/panel toggle
+23. Error handling -- Chart failure shows warning, analysis still renders
+24. Chart skeleton -- Loading skeleton while viz_execute runs
 
-Phase D: Frontend Features (depends on C + B.13)
-  20. ChatView (session-based ChatInterface)
-  21. LinkedFilesBar + LinkedFilesPanel
-  22. FileManagerPage (/dashboard/files)
-  23. FileLinkModal (link existing files to session)
-  24. AddFileDropdown in ChatInput
-  25. useChatMessages refactor (sessionId-based)
-  26. useSSEStream refactor (session-based URL)
-  27. Upload-and-chat flow integration
-
-Phase E: Polish
-  28. Auto-title generation
-  29. Empty state / greeting UX
-  30. Light/dark mode
-  31. Migration testing + cleanup script for old checkpoints
-```
-
-**Critical path:** A.1 -> A.2 -> A.3 -> B.8 -> B.9 -> B.12 -> B.13 -> D.20 -> D.26
-
-**Parallelizable:**
-- Phase C (frontend structure) can proceed alongside Phase B (backend agent changes)
-- They only converge at Phase D when the frontend needs working API endpoints
+### Rationale
+- State schema first: everything reads/writes it
+- Backend before frontend: frontend needs SSE events to consume
+- Single chart working end-to-end before multi-chart or dark mode
+- Error handling after happy path is validated
+- Polish after core functionality is solid
 
 ---
 
 ## Sources
 
-- Codebase analysis: Direct inspection of all source files in `backend/app/` and `frontend/src/`
-- Requirements: `/requirements/milestone-03-req.md` (direct inspection)
-- [LangGraph State Management Patterns](https://sparkco.ai/blog/mastering-langgraph-state-management-in-2025) - TypedDict state schema design
-- [LangGraph Persistence Deep Guide](https://pub.towardsai.net/persistence-in-langgraph-deep-practical-guide-36dc4c452c3b) - Thread ID and checkpoint patterns
-- [LangGraph Persistence Official Docs](https://docs.langchain.com/oss/python/langgraph/persistence) - Checkpoint and thread_id semantics
-- [E2B Documentation](https://e2b.dev/docs) - Sandbox file upload API, sandbox.files.write
-- [E2B Code Interpreter SDK](https://pypi.org/project/e2b-code-interpreter/) - Multi-file sandbox patterns
-- [Alembic Best Practices](https://medium.com/@pavel.loginov.dev/best-practices-for-alembic-and-sqlalchemy-73e4c8a6c205) - Two-phase migration patterns
+- [plotly.io.to_json documentation (v6.5.0)](https://plotly.github.io/plotly.py-docs/generated/plotly.io.to_json.html) -- HIGH confidence
+- [react-plotly.js GitHub](https://github.com/plotly/react-plotly.js) -- HIGH confidence
+- [React plotly.js official docs](https://plotly.com/javascript/react/) -- HIGH confidence
+- [Plotly JSON chart schema](https://plotly.com/chart-studio-help/json-chart-schema/) -- HIGH confidence
+- [E2B Code Interpreter](https://github.com/e2b-dev/code-interpreter) -- HIGH confidence
+- [Generating Plotly JSON in Python for React](https://community.plotly.com/t/generating-plotly-json-in-python-and-displaying-in-react-clientside/59238) -- MEDIUM confidence
+- [LangGraph multi-agent workflows](https://blog.langchain.com/langgraph-multi-agent-workflows/) -- MEDIUM confidence
+- Direct codebase analysis of all 15+ source files -- HIGH confidence
+- Milestone requirements: `requirements/milestone-04-req.md` -- HIGH confidence
