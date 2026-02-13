@@ -1,7 +1,11 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, forwardRef, useImperativeHandle } from "react";
 import Plotly from "plotly.js-dist-min";
+
+export interface ChartRendererHandle {
+  getElement: () => HTMLDivElement | null;
+}
 
 interface ChartRendererProps {
   /** JSON string from backend fig.to_json() */
@@ -36,11 +40,16 @@ function calculateChartHeight(chartData: Plotly.PlotData[]): number {
   return Math.min(dynamicHeight, MAX_HEIGHT);
 }
 
-export default function ChartRenderer({ data, height }: ChartRendererProps) {
-  const chartRef = useRef<HTMLDivElement>(null);
-  const [error, setError] = useState<string | null>(null);
+const ChartRenderer = forwardRef<ChartRendererHandle, ChartRendererProps>(
+  function ChartRenderer({ data, height }, ref) {
+    const chartRef = useRef<HTMLDivElement>(null);
+    const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+    useImperativeHandle(ref, () => ({
+      getElement: () => chartRef.current,
+    }));
+
+    useEffect(() => {
     if (!chartRef.current || !data) return;
 
     let resizeObserver: ResizeObserver | null = null;
@@ -92,17 +101,22 @@ export default function ChartRenderer({ data, height }: ChartRendererProps) {
         Plotly.purge(chartRef.current);
       }
     };
-  }, [data, height]);
+    }, [data, height]);
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-[200px] w-full">
-        <p className="text-sm text-muted-foreground">
-          Unable to render chart: {error}
-        </p>
-      </div>
-    );
+    if (error) {
+      return (
+        <div className="flex items-center justify-center min-h-[200px] w-full">
+          <p className="text-sm text-muted-foreground">
+            Unable to render chart: {error}
+          </p>
+        </div>
+      );
+    }
+
+    return <div ref={chartRef} className="w-full" />;
   }
+);
 
-  return <div ref={chartRef} className="w-full" />;
-}
+ChartRenderer.displayName = 'ChartRenderer';
+
+export default ChartRenderer;
