@@ -136,16 +136,16 @@ Plans:
 
 **Success Criteria** (what must be TRUE):
   1. ChartRenderer component renders Plotly charts using dynamic import (no SSR, lazy-loaded only when chart data exists)
-  2. DataCard displays chart above the data table when chart_specs is present in the response
+  2. DataCard displays chart below the data table when chart_specs is present in the response
   3. Charts are interactive — user can zoom, pan, and see hover tooltips on data points (Plotly.js defaults)
   4. Charts resize responsively when the browser window or container size changes
   5. A skeleton loader is visible while chart generation is in progress (before chart JSON arrives via SSE)
 
-**Plans:** TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 23-01: TBD
-- [ ] 23-02: TBD
+- [ ] 23-01-PLAN.md — Install Plotly.js, create chart components (ChartRenderer, ChartSkeleton, ChartErrorAlert), update SSE types/hook for chart events
+- [ ] 23-02-PLAN.md — Integrate chart components into DataCard, wire SSE chart data through ChatInterface, handle streaming and persisted chart display
 
 ---
 
@@ -224,6 +224,6 @@ Note: Phase 24 and Phase 25 can execute in parallel (both depend on Phase 23, no
 | 20. Infrastructure & Pipeline | v0.4 | 2/2 | Complete | 2026-02-13 |
 | 21. Visualization Agent | v0.4 | 1/1 | Complete | 2026-02-13 |
 | 22. Graph Integration & Chart Intelligence | v0.4 | 2/2 | Complete | 2026-02-13 |
-| 23. Frontend Chart Rendering | v0.4 | 0/TBD | Not started | - |
+| 23. Frontend Chart Rendering | v0.4 | 0/2 | Not started | - |
 | 24. Chart Types & Export | v0.4 | 0/TBD | Not started | - |
 | 25. Theme Integration | v0.4 | 0/TBD | Not started | - |
