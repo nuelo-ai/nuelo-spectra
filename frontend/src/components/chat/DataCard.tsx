@@ -16,6 +16,7 @@ import { CodeDisplay } from "@/components/data/CodeDisplay";
 import ChartSkeleton from "@/components/chart/ChartSkeleton";
 import ChartErrorAlert from "@/components/chart/ChartErrorAlert";
 import { ChartExportButtons } from "@/components/chart/ChartExportButtons";
+import { ChartTypeSwitcher } from "@/components/chart/ChartTypeSwitcher";
 import type { ChartRendererHandle } from "@/components/chart/ChartRenderer";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -180,16 +181,24 @@ export function DataCard({
               Visualization
             </h4>
             <ChartRenderer ref={chartRendererRef} data={chartSpecs} />
-            {/* Export buttons - only show when not streaming */}
+            {/* Chart toolbar: type switcher + export buttons */}
             {!isStreaming && (
-              <div className="flex justify-end">
-                <ChartExportButtons
-                  getChartElement={() => chartRendererRef.current?.getElement() ?? null}
-                  filename={queryBrief
-                    ? queryBrief.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30)
-                    : undefined
-                  }
-                />
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex-shrink-0">
+                  <ChartTypeSwitcher
+                    getChartElement={() => chartRendererRef.current?.getElement() ?? null}
+                    chartDataJson={chartSpecs}
+                  />
+                </div>
+                <div className="ml-auto">
+                  <ChartExportButtons
+                    getChartElement={() => chartRendererRef.current?.getElement() ?? null}
+                    filename={queryBrief
+                      ? queryBrief.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30)
+                      : undefined
+                    }
+                  />
+                </div>
               </div>
             )}
           </div>
