@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** Phase 20 — Infrastructure & Pipeline (v0.4 Data Visualization)
+**Current focus:** Phase 21 — Visualization Agent (v0.4 Data Visualization)
 
 ## Current Position
 
-Phase: 20 of 25 (Infrastructure & Pipeline) -- COMPLETE
-Plan: 2 of 2 in Phase 20
+Phase: 21 of 25 (Visualization Agent) -- COMPLETE
+Plan: 1 of 1 in Phase 21
 Status: Phase Complete
-Last activity: 2026-02-13 — Completed 20-02 (Output parser chart JSON extraction + E2B Plotly verification)
+Last activity: 2026-02-13 — Completed 21-01 (Visualization Agent module + prompts.yaml + unit tests)
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 [##░░░░░░░░] ~10%
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 [###░░░░░░░] ~20%
 
 ## Performance Metrics
 
@@ -50,6 +50,9 @@ Recent decisions for v0.4:
 - Single-line JSON fast path, joined stdout fallback for large chart JSON
 - 2MB chart JSON size limit with transparent error messaging
 - Accept Plotly 5.x or 6.x (E2B confirmed 6.0.1)
+- Reuse extract_code_block from coding.py in visualization agent (no duplication)
+- 8000 char execution_result truncation limit; data shape hints built on full data before truncation
+- Visualization agent generates code only; does not execute (execution is Phase 22)
 
 ### Pending Todos
 
@@ -66,5 +69,5 @@ Recent decisions for v0.4:
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed Phase 20 (all 2 plans: allowlist+state + output parser+E2B verification)
-Resume with: `/gsd:plan-phase 21` to plan Phase 21 (Visualization Agent)
+Stopped at: Completed 21-01-PLAN.md (Visualization Agent module + tests)
+Resume with: `/gsd:plan-phase 22` to plan Phase 22 (Visualization Execution)
