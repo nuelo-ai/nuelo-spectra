@@ -96,11 +96,10 @@ Plans:
   4. Agent embeds data as Python literals in generated code (no file I/O or uploads needed in sandbox)
   5. Agent applies chart type selection heuristics (e.g., categorical >8 values triggers bar instead of pie)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 21-01: TBD
-- [ ] 21-02: TBD
+- [ ] 21-01-PLAN.md -- Visualization Agent module + prompts.yaml config + unit tests
 
 ---
 
@@ -224,7 +223,7 @@ Note: Phase 24 and Phase 25 can execute in parallel (both depend on Phase 23, no
 | 18. Integration & Polish | v0.3 | 3/3 | Complete | 2026-02-11 |
 | 19. v0.3 Gap Closure | v0.3 | 7/7 | Complete | 2026-02-12 |
 | 20. Infrastructure & Pipeline | v0.4 | 2/2 | Complete | 2026-02-13 |
-| 21. Visualization Agent | v0.4 | 0/TBD | Not started | - |
+| 21. Visualization Agent | v0.4 | 0/1 | Not started | - |
 | 22. Graph Integration & Chart Intelligence | v0.4 | 0/TBD | Not started | - |
 | 23. Frontend Chart Rendering | v0.4 | 0/TBD | Not started | - |
 | 24. Chart Types & Export | v0.4 | 0/TBD | Not started | - |
