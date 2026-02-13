@@ -54,7 +54,7 @@
 - [x] **Phase 21: Visualization Agent** — 6th AI agent that generates Plotly chart code from analysis results
 - [x] **Phase 22: Graph Integration & Chart Intelligence** — Wire agent into LangGraph with conditional routing and visualization discretion
 - [x] **Phase 23: Frontend Chart Rendering** — Plotly.js integration, ChartRenderer component, DataCard chart display
-- [ ] **Phase 24: Chart Types & Export** — All 7 chart types validated end-to-end, PNG/SVG export, chart type switcher
+- [x] **Phase 24: Chart Types & Export** — All 7 chart types validated end-to-end, PNG/SVG export, chart type switcher
 - [ ] **Phase 25: Theme Integration** — Dark/light theme support for charts with Nord palette
 
 ## Phase Details
@@ -167,9 +167,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 24-01-PLAN.md — Enhance Visualization Agent prompt with chart type code patterns and label formatting rules
-- [ ] 24-02-PLAN.md — ChartRenderer ref forwarding, ChartExportButtons (PNG/SVG), DataCard export integration
-- [ ] 24-03-PLAN.md — ChartTypeSwitcher with data shape compatibility, DataCard switcher integration
+- [x] 24-01-PLAN.md — Enhance Visualization Agent prompt with chart type code patterns and label formatting rules
+- [x] 24-02-PLAN.md — ChartRenderer ref forwarding, ChartExportButtons (PNG/SVG), DataCard export integration
+- [x] 24-03-PLAN.md — ChartTypeSwitcher with data shape compatibility, DataCard switcher integration
 
 ---
 
@@ -225,5 +225,5 @@ Note: Phase 24 and Phase 25 can execute in parallel (both depend on Phase 23, no
 | 21. Visualization Agent | v0.4 | 1/1 | Complete | 2026-02-13 |
 | 22. Graph Integration & Chart Intelligence | v0.4 | 2/2 | Complete | 2026-02-13 |
 | 23. Frontend Chart Rendering | v0.4 | 2/2 | Complete | 2026-02-13 |
-| 24. Chart Types & Export | v0.4 | 0/3 | Not started | - |
+| 24. Chart Types & Export | v0.4 | 3/3 | Complete | 2026-02-13 |
 | 25. Theme Integration | v0.4 | 0/TBD | Not started | - |
