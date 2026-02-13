@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 
 ## Current Position
 
-Phase: 20 of 25 (Infrastructure & Pipeline)
-Plan: 1 of 2 in Phase 20
-Status: Executing
-Last activity: 2026-02-13 — Completed 20-01 (Plotly allowlist + ChatAgentState visualization fields)
+Phase: 20 of 25 (Infrastructure & Pipeline) -- COMPLETE
+Plan: 2 of 2 in Phase 20
+Status: Phase Complete
+Last activity: 2026-02-13 — Completed 20-02 (Output parser chart JSON extraction + E2B Plotly verification)
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 [#░░░░░░░░░] ~5%
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 [##░░░░░░░░] ~10%
 
 ## Performance Metrics
 
@@ -47,6 +47,9 @@ Recent decisions for v0.4:
 - Disallow custom JavaScript in Plotly charts (XSS via prompt injection risk)
 - Plotly NOT in unsafe_modules -- E2B sandbox is security boundary
 - Explicit visualization field initialization over LangGraph implicit defaults
+- Single-line JSON fast path, joined stdout fallback for large chart JSON
+- 2MB chart JSON size limit with transparent error messaging
+- Accept Plotly 5.x or 6.x (E2B confirmed 6.0.1)
 
 ### Pending Todos
 
@@ -63,5 +66,5 @@ Recent decisions for v0.4:
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed 20-01-PLAN.md (Plotly allowlist + ChatAgentState visualization fields)
-Resume with: `/gsd:execute-phase 20` to execute 20-02 (E2B sandbox + streaming integration)
+Stopped at: Completed Phase 20 (all 2 plans: allowlist+state + output parser+E2B verification)
+Resume with: `/gsd:plan-phase 21` to plan Phase 21 (Visualization Agent)
