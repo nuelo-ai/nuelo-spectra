@@ -1,78 +1,94 @@
 # Requirements: Spectra
 
-**Defined:** 2026-02-11
+**Defined:** 2026-02-12
 **Core Value:** Accurate data analysis through correct, safe Python code generation
 
-## v0.3 Requirements
+## v0.4 Requirements — Data Visualization
 
-Requirements for v0.3 Multi-file Conversation Support. Each maps to roadmap phases.
+Requirements for v0.4 Data Visualization milestone. Each maps to roadmap phases.
 
-### Chat Sessions
+### Infrastructure
 
-- [ ] **CHAT-01**: User can create a new chat session from the left sidebar "New Chat" button
-- [ ] **CHAT-02**: User is greeted with a welcome screen when opening a new chat session (friendly message asking what analysis to perform)
-- [ ] **CHAT-03**: User must link at least one file to a chat session before sending messages
-- [ ] **CHAT-04**: User can view chat history in the left sidebar grouped chronologically (Today, This Week, This Month, Older)
-- [ ] **CHAT-05**: User can click a chat from the sidebar to open that session in the main content area
-- [ ] **CHAT-06**: Chat sessions persist across browser sessions (messages and linked files preserved)
-- [ ] **CHAT-07**: User can have multiple chat sessions, each with its own independent conversation context
-- [ ] **CHAT-08**: Chat session title is auto-generated from the first user message
-- [ ] **CHAT-09**: User is greeted with a new chat session upon login
+- [ ] **INFRA-01**: Plotly added to allowed libraries in allowlist.yaml
+- [ ] **INFRA-02**: State schema extended with visualization fields (visualization_requested, chart_hint, chart_code, chart_specs, chart_error)
+- [ ] **INFRA-03**: E2B sandbox Plotly 6.0.1 availability verified
+- [ ] **INFRA-04**: Sandbox output parser modified to capture chart JSON from stdout
 
-### File Linking
+### Visualization Agent
 
-- [ ] **LINK-01**: User can upload a new file directly within a chat session via an "Add File" button below the chat input
-- [ ] **LINK-02**: User can link an existing (previously uploaded) file to a chat session via a file selection modal
-- [ ] **LINK-03**: User can drag and drop a file from their local machine into the chat session to upload and link it
-- [ ] **LINK-04**: Linked files for the current chat session are displayed in a collapsible right sidebar panel
-- [ ] **LINK-05**: User can view file context (data summary, columns, row count) via an info icon on each linked file in the right sidebar
-- [ ] **LINK-06**: AI agents can perform cross-file analysis across all linked files in a single query (e.g., "compare data from file A with file B")
-- [ ] **LINK-07**: User can add additional files to an existing chat session (file is linked to current session after onboarding)
-- [ ] **LINK-08**: Maximum of 10 files can be linked to a single chat session (enforced at API level)
+- [ ] **AGENT-01**: Visualization Agent module created with LangGraph integration
+- [ ] **AGENT-02**: Visualization Agent prompt configured in prompts.yaml with LLM settings
+- [ ] **AGENT-03**: Agent generates Plotly Python code from execution results and user query
+- [ ] **AGENT-04**: Agent embeds data as Python literal (no file uploads needed)
+- [ ] **AGENT-05**: Agent includes chart type selection heuristics (categorical >8 → bar not pie)
+- [ ] **AGENT-06**: Chart code outputs JSON via fig.to_json() to stdout
 
-### File Management
+### Chart Generation
 
-- [ ] **FILE-01**: User can access a "My Files" screen from the left sidebar
-- [ ] **FILE-02**: User can view a list of all uploaded files with metadata (name, size, upload date)
-- [ ] **FILE-03**: User can upload a new file from the My Files screen (triggers standard onboarding flow)
-- [ ] **FILE-04**: User can view file context/details (data summary, columns, row count) for any file from My Files
-- [ ] **FILE-05**: User can start a new chat session with a selected file from My Files (creates session and links file)
-- [ ] **FILE-06**: User can delete a file from My Files with confirmation dialog
-- [ ] **FILE-07**: User can download a previously uploaded file from My Files
+- [ ] **CHART-01**: System supports bar chart generation
+- [ ] **CHART-02**: System supports line chart generation
+- [ ] **CHART-03**: System supports scatter plot generation
+- [ ] **CHART-04**: System supports histogram generation
+- [ ] **CHART-05**: System supports box plot generation
+- [ ] **CHART-06**: System supports pie chart generation
+- [ ] **CHART-07**: System supports donut chart generation
+- [ ] **CHART-08**: Data Analysis Agent decides when visualization adds value (sets visualization_requested flag)
+- [ ] **CHART-09**: Manager Agent hints visualization intent during query routing
+- [ ] **CHART-10**: Chart generation errors are non-fatal (preserve analysis and table on failure)
+- [ ] **CHART-11**: Charts include meaningful titles and axis labels (not raw column names)
 
-### Layout & Navigation
+### Graph Integration
 
-- [ ] **NAV-01**: Left sidebar contains "New Chat" button, chronological chat history list, and "My Files" button
-- [ ] **NAV-02**: Main content area displays the active chat session or My Files screen
-- [ ] **NAV-03**: Right sidebar panel shows linked files for the current chat session (collapsible)
-- [ ] **NAV-04**: File-tab-based navigation is replaced by sidebar-based chat session navigation
-- [ ] **NAV-05**: Left sidebar is collapsible to maximize screen space
+- [ ] **GRAPH-01**: Visualization Agent node added to LangGraph
+- [ ] **GRAPH-02**: viz_execute node executes chart code in E2B sandbox
+- [ ] **GRAPH-03**: viz_response node handles chart results
+- [ ] **GRAPH-04**: should_visualize() conditional edge routes based on visualization_requested flag
+- [ ] **GRAPH-05**: da_response modified from finish point to conditional routing
+- [ ] **GRAPH-06**: Chart JSON streams to frontend via SSE events
 
-### Data Model & Backend
+### Chart Display
 
-- [ ] **DATA-01**: Chat sessions exist as first-class database entities with their own ID, title, timestamps, and user ownership
-- [ ] **DATA-02**: Files and chat sessions have a many-to-many relationship (a file can be linked to multiple sessions, a session can have multiple files)
-- [ ] **DATA-03**: Chat messages belong to a session (not a file), with session-based conversation history
-- [ ] **DATA-04**: Existing v0.2 conversations are migrated to the new session model (each existing file-chat becomes a session)
-- [ ] **DATA-05**: LangGraph conversation memory (checkpoints) is preserved during migration to session-based thread IDs
-- [ ] **DATA-06**: Deleting a file removes it from linked sessions but does not delete session messages or other linked files
+- [ ] **DISPLAY-01**: Frontend installs plotly.js-dist-min package (~1MB)
+- [ ] **DISPLAY-02**: ChartRenderer component created with dynamic import (no SSR)
+- [ ] **DISPLAY-03**: ChartRenderer uses Plotly.newPlot() with React useRef/useEffect
+- [ ] **DISPLAY-04**: DataCard renders chart above table when chart_specs exists
+- [ ] **DISPLAY-05**: Charts are interactive (zoom, pan, hover tooltips via Plotly.js)
+- [ ] **DISPLAY-06**: Charts are responsive (resize with container)
+- [ ] **DISPLAY-07**: Chart skeleton loader displays during generation
 
-### Appearance
+### Export & Customization
 
-- [ ] **THEME-01**: User can toggle between light and dark mode
-- [ ] **THEME-02**: Theme preference persists across browser sessions
+- [ ] **EXPORT-01**: User can download chart as PNG via Plotly.downloadImage()
+- [ ] **EXPORT-02**: User can download chart as SVG via Plotly.downloadImage()
+- [ ] **EXPORT-03**: Download buttons appear below chart in DataCard
+- [ ] **EXPORT-04**: User can switch chart type after generation (bar ↔ line ↔ scatter)
+- [ ] **EXPORT-05**: Chart type switcher only shows applicable types for data shape
+
+### Theme & Polish
+
+- [ ] **THEME-01**: Charts respect light/dark theme toggle
+- [ ] **THEME-02**: Charts use transparent backgrounds in dark mode
+- [ ] **THEME-03**: Chart colors match theme palette (Nord colors in dark mode)
+- [ ] **THEME-04**: Chart text colors adjust for theme (readable in both modes)
 
 ## Future Requirements
 
-Deferred to future milestone. Tracked but not in current roadmap.
+Deferred to future milestones. Tracked but not in v0.4 roadmap.
 
-### Advanced Cross-File Intelligence
+### Advanced Visualization
 
-- **CROSS-01**: Session-level multi-file query suggestions based on cross-file schema analysis
-- **CROSS-02**: Smart file suggestion when starting empty chat (recommend recently used files)
-- **CROSS-03**: Advanced cross-file join intelligence with automatic relationship detection
+- **VIZ-ADV-01**: Multi-chart display (2-3 charts per response with tabs/carousel)
+- **VIZ-ADV-02**: Advanced chart types (heatmap, 3D scatter, geo maps)
+- **VIZ-ADV-03**: Chart annotations with AI-generated insights (trend lines, outliers)
+- **VIZ-ADV-04**: Chart templates/presets (corporate, colorblind-friendly color schemes)
 
-### Production Hardening
+### Persistence & Sharing
+
+- **PERSIST-01**: Chart configurations saved to database metadata_json
+- **PERSIST-02**: User can bookmark specific charts
+- **PERSIST-03**: User can share chart links with collaborators
+
+### Production Hardening (from v0.3)
 
 - **PROD-01**: Query safety filter in Manager Agent (block PII extraction, prompt injection)
 - **PROD-02**: Pydantic structured output for agent JSON responses
@@ -84,13 +100,16 @@ Explicitly excluded. Documented to prevent scope creep.
 
 | Feature | Reason |
 |---------|--------|
-| Automatic cross-file joins without user intent | Silently merging datasets leads to wrong results (schema mismatches, Cartesian products) |
-| Conversation branching/forking | Extremely complex UX and data model, not requested |
-| Real-time collaborative editing | Multi-user on same session adds massive complexity |
-| Folder/directory organization for files | Over-engineering — users will have 5-50 files, not thousands |
-| Embedding/vector search across files | Architecturally different from structured data analysis |
-| Session rename from sidebar | Can be added as polish in future milestone |
-| Cross-session memory persistence | Context pollution risk; session-scoped memory by design |
+| Full chart editor UI | Over-engineering - basic type switcher sufficient for v0.4 |
+| Server-side chart rendering (Kaleido) | Kaleido requires Chrome (not in E2B), 50x slower, client-side works well |
+| Chart persistence in database | Transient regeneration acceptable, defer to post-v0.4 based on usage |
+| Animation/transitions in charts | Not core to value, adds bundle size |
+| Dashboard creation | Out of product scope - focus is query-response, not dashboards |
+| Custom Plotly config UI | Too complex - sensible defaults from AI sufficient |
+| Chart collaboration/comments | No real-time collab in v0.4 |
+| Database-direct chart generation | File upload only, no live data connections |
+| react-plotly.js wrapper | Unmaintained (3 years old), custom component more reliable |
+| Multi-chart in v0.4 | Deferred to v0.5+ for UX validation |
 
 ## Traceability
 
@@ -98,49 +117,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CHAT-01 | Phase 16 | Pending |
-| CHAT-02 | Phase 16 | Pending |
-| CHAT-03 | Phase 18 | Pending |
-| CHAT-04 | Phase 16 | Pending |
-| CHAT-05 | Phase 16 | Pending |
-| CHAT-06 | Phase 18 | Pending |
-| CHAT-07 | Phase 18 | Pending |
-| CHAT-08 | Phase 18 | Pending |
-| CHAT-09 | Phase 16 | Pending |
-| LINK-01 | Phase 17 | Pending |
-| LINK-02 | Phase 17 | Pending |
-| LINK-03 | Phase 17 | Pending |
-| LINK-04 | Phase 17 | Pending |
-| LINK-05 | Phase 17 | Pending |
-| LINK-06 | Phase 15 | Pending |
-| LINK-07 | Phase 17 | Pending |
-| LINK-08 | Phase 17 | Pending |
-| FILE-01 | Phase 17 | Pending |
-| FILE-02 | Phase 17 | Pending |
-| FILE-03 | Phase 17 | Pending |
-| FILE-04 | Phase 17 | Pending |
-| FILE-05 | Phase 17 | Pending |
-| FILE-06 | Phase 17 | Pending |
-| FILE-07 | Phase 17 | Pending |
-| NAV-01 | Phase 16 | Pending |
-| NAV-02 | Phase 16 | Pending |
-| NAV-03 | Phase 16 | Pending |
-| NAV-04 | Phase 16 | Pending |
-| NAV-05 | Phase 16 | Pending |
-| DATA-01 | Phase 14 | Pending |
-| DATA-02 | Phase 14 | Pending |
-| DATA-03 | Phase 14 | Pending |
-| DATA-04 | Phase 14 | Pending |
-| DATA-05 | Phase 14 | Pending |
-| DATA-06 | Phase 14 | Pending |
-| THEME-01 | Phase 18 | Pending |
-| THEME-02 | Phase 18 | Pending |
+| (Empty - populated by roadmapper) | | |
 
 **Coverage:**
-- v0.3 requirements: 37 total
-- Mapped to phases: 37 (100%)
-- Unmapped: 0
+- v0.4 requirements: 44 total
+- Mapped to phases: 0
+- Unmapped: 44 ⚠️
 
 ---
-*Requirements defined: 2026-02-11*
-*Last updated: 2026-02-11 after roadmap creation*
+*Requirements defined: 2026-02-12*
+*Last updated: 2026-02-12 after initial definition*
