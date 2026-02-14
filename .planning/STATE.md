@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** Phase 24 — Chart Types & Export (v0.4 Data Visualization)
+**Current focus:** Phase 25 — Theme Integration (v0.4 Data Visualization)
 
 ## Current Position
 
-Phase: 24 of 25 (Chart Types & Export)
-Plan: 3 of 3 in Phase 24
-Status: Phase 24 Complete
-Last activity: 2026-02-13 — Completed Plan 24-03 (Chart Type Switching)
+Phase: 25 of 25 (Theme Integration)
+Plan: 1 of 1 in Phase 25
+Status: Phase 25 Complete
+Last activity: 2026-02-14 — Completed Plan 25-01 (Chart Theme Integration)
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 [##########] ~80%
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 [##########] ~85%
 
 ## Performance Metrics
 
@@ -34,8 +34,8 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 [##########] ~80%
 - Plans per day: ~8 plans/day
 
 **Velocity (v0.4):**
-- Total plans completed: 14 (Phases 20-24 complete)
-- Total execution time: ~3 days (Feb 12-13, 2026)
+- Total plans completed: 15 (Phases 20-25 complete)
+- Total execution time: ~3 days (Feb 12-14, 2026)
 - Plans per day: ~5 plans/day
 
 | Phase-Plan | Duration | Tasks | Files | Date       |
@@ -43,6 +43,7 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 [##########] ~80%
 | 24-01      | 2min     | 1     | 1     | 2026-02-13 |
 | 24-02      | 152s     | 2     | 3     | 2026-02-13 |
 | 24-03      | 130s     | 2     | 4     | 2026-02-13 |
+| 25-01      | 189s     | 3     | 3     | 2026-02-14 |
 
 ## Accumulated Context
 
@@ -83,6 +84,10 @@ Recent decisions for v0.4:
 - [Phase 24-03]: Client-side chart type switching via Plotly.restyle() (instant, no backend round-trip)
 - [Phase 24-03]: Data shape analysis determines compatible chart types (numeric x-axis = all 3 types, categorical = bar+line only)
 - [Phase 24-03]: Fixed .gitignore pattern from 'lib/' to '/lib/' to not ignore frontend/src/lib/
+- [Phase 25-01]: Nord palette for all chart colors (16 colors + 5 darkened Aurora variants for light mode)
+- [Phase 25-01]: Theme captured on mount only (isDark NOT in useEffect deps) — already-rendered charts keep original theme on toggle
+- [Phase 25-01]: Frontend merges theme config OVER backend layout (backend transparent backgrounds replaced with themed colors)
+- [Phase 25-01]: Removed template='plotly_white' from visualization prompt (frontend controls all theming)
 
 ### Pending Todos
 
@@ -98,6 +103,6 @@ Recent decisions for v0.4:
 
 ## Session Continuity
 
-Last session: 2026-02-13
-Stopped at: Completed Phase 24 (Chart Types & Export). All 3 plans complete.
-Resume with: Next phase or milestone completion
+Last session: 2026-02-14
+Stopped at: Completed Phase 25-01 (Chart Theme Integration). Phase 25 complete.
+Resume with: Milestone v0.4 completion verification or next milestone
