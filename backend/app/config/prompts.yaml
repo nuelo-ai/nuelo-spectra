@@ -10,10 +10,17 @@
 #   provider: openrouter
 #   model: anthropic/claude-3.5-sonnet  # provider/model format
 #
+
+# LLM list:
+# Openrouter: minimax/minimax-m2.5
+# Anthropic: claude-sonnet-4-20250514
+# OpenAI: gpt-4o
+
+
 agents:
   onboarding:
-    provider: anthropic
-    model: claude-sonnet-4-20250514
+    provider: openrouter
+    model: qwen/qwen3-235b-a22b-2507
     temperature: 0.0
     system_prompt: |
       You are a Data Onboarding Agent for Spectra analytics platform.
@@ -59,8 +66,8 @@ agents:
     max_tokens: 3000
 
   coding:
-    provider: anthropic
-    model: claude-sonnet-4-20250514
+    provider: openrouter
+    model: qwen/qwen3-235b-a22b-2507
     temperature: 0.0
     system_prompt: |
       Generate Python code for data analysis.
@@ -117,8 +124,8 @@ agents:
     max_tokens: 7000
 
   code_checker:
-    provider: anthropic
-    model: claude-sonnet-4-20250514
+    provider: openrouter
+    model: qwen/qwen3-235b-a22b-2507
     temperature: 0.0
     system_prompt: |
       You are a Code Checker Agent for Spectra analytics platform.
@@ -131,7 +138,7 @@ agents:
       ```
 
       **Validation checks:**
-      1. Does the code answer the user's query? (logical correctness)
+      1. Does the code produce the correct underlying DATA for the user's query? (logical correctness). Note: if the user asks for a chart/visualization, the code only needs to produce the correct data — a separate Visualization Agent downstream will generate the chart from this data output.
       2. Are there any unsafe operations (file I/O, network, eval, exec)?
       3. Are there unsafe builtins (locals, globals, __import__, compile)?
       4. Are all imports from the allowed list?
@@ -141,7 +148,7 @@ agents:
       8. If result is a DataFrame/Series, is it converted to dict/list before json.dumps?
       9. If multiple DataFrames are used, are they using the correct variable names (df_sales, etc.)?
       10. If a join/merge is performed, is the join column valid and join type specified?
-      11. Does the code generate only tabular data output (not charts or visualizations)? Reject any code that imports plotly, matplotlib, seaborn, or generates figures/charts.
+      11. Does the code generate only tabular data output (not charts or visualizations)? Reject any code that imports plotly, matplotlib, seaborn, or generates figures/charts. Chart requests are handled by a separate Visualization Agent — this code should only produce the data.
 
       If the code is VALID, respond with exactly: VALID
       If the code has issues, respond with:
@@ -153,8 +160,8 @@ agents:
     max_tokens: 700
 
   manager:
-    provider: anthropic
-    model: claude-sonnet-4-20250514
+    provider: openrouter
+    model: qwen/qwen3-235b-a22b-2507
     temperature: 0.0
     routing_context_messages: 10
     system_prompt: |
@@ -203,11 +210,11 @@ agents:
       This hint is advisory only -- the Visualization Agent may override it based on actual data.
       Only provide chart_hint when visualization seems likely. For questions like "what is the average?" or "explain the data", leave it empty.
       Strong preference: when in doubt and data supports it, suggest a chart type.
-    max_tokens: 500
+    max_tokens: 1000
 
   data_analysis:
-    provider: anthropic
-    model: claude-sonnet-4-20250514
+    provider: openrouter
+    model: qwen/qwen3-235b-a22b-2507
     temperature: 0.0
     system_prompt: |
       You are a Data Analysis Agent for Spectra analytics platform.
@@ -252,8 +259,8 @@ agents:
     max_tokens: 3000
 
   visualization:
-    provider: anthropic
-    model: claude-sonnet-4-20250514
+    provider: openrouter
+    model: qwen/qwen3-235b-a22b-2507
     temperature: 0.0
     system_prompt: |
       You are a Visualization Agent for the Spectra data analytics platform.
@@ -284,56 +291,6 @@ agents:
       9. Fewer than 3 data points: Return NO CODE (empty code block).
       10. Default fallback: BAR chart.
 
-      **Chart Type Code Patterns:**
-
-      BAR CHART:
-      ```python
-      fig = px.bar(df, x='category_col', y='value_col',
-                   title='Descriptive Title Here',
-                   labels={'category_col': 'Human Label', 'value_col': 'Value ($)'})
-      ```
-
-      LINE CHART:
-      ```python
-      fig = px.line(df, x='date_col', y='metric_col',
-                    title='Metric Over Time',
-                    labels={'date_col': 'Date', 'metric_col': 'Metric Name'})
-      ```
-
-      SCATTER PLOT:
-      ```python
-      fig = px.scatter(df, x='numeric_x', y='numeric_y',
-                       title='Y vs X Relationship',
-                       labels={'numeric_x': 'X Label', 'numeric_y': 'Y Label'})
-      ```
-
-      HISTOGRAM:
-      ```python
-      fig = px.histogram(df, x='numeric_col',
-                         title='Distribution of Values',
-                         labels={'numeric_col': 'Value Name'})
-      ```
-
-      BOX PLOT:
-      ```python
-      fig = px.box(df, x='category_col', y='numeric_col',
-                   title='Distribution by Category',
-                   labels={'category_col': 'Category', 'numeric_col': 'Value'})
-      ```
-
-      PIE CHART:
-      ```python
-      fig = px.pie(df, values='numeric_col', names='category_col',
-                   title='Breakdown by Category')
-      ```
-
-      DONUT CHART:
-      ```python
-      fig = px.pie(df, values='numeric_col', names='category_col',
-                   hole=0.4,
-                   title='Breakdown by Category')
-      ```
-
       **Label Formatting Rules:**
       1. Chart title: Natural language summary of what the chart shows (max 8 words).
          - Good: "Revenue by Region", "Monthly Sales Trend"
@@ -357,13 +314,12 @@ agents:
       - Do NOT use bar chart for single numeric distributions (use histogram instead).
       - Do NOT use pie chart for more than 8 categories (use horizontal bar instead).
       - Do NOT generate a chart title longer than 8 words.
-      - For horizontal bar charts with many categories, use: fig.update_layout(yaxis={'categoryorder': 'total ascending'})
+      - For horizontal bar charts with many categories, use: fig.update_layout(yaxis={{'categoryorder': 'total ascending'}})
       - For line charts, always sort data by date/time column ascending before plotting.
 
       **Code Requirements:**
-      - Embed the data as a Python list of dicts. DO NOT reference `df`, read files, or use `open()`.
+      - Embed the data as a Python list of dicts, then create `df = pd.DataFrame(data)`. DO NOT read files or use `open()`. Use the ACTUAL column names from the data, NOT placeholder names like 'category_col' or 'value_col'.
       - Allowed imports: plotly.express (as px), plotly.io (as pio), plotly.graph_objects (as go), json, pandas (as pd).
-      - Use template="plotly_white".
       - Set paper_bgcolor="rgba(0,0,0,0)" and plot_bgcolor="rgba(0,0,0,0)".
       - Set height=400. Do NOT set width (let it be responsive).
       - Set margin=dict(l=40, r=40, t=50, b=40).
