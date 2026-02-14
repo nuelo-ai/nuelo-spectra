@@ -2,6 +2,8 @@
 
 import { useRef, useEffect, useState, forwardRef, useImperativeHandle } from "react";
 import Plotly from "plotly.js-dist-min";
+import { useTheme } from "next-themes";
+import { getChartThemeConfig, getPieChartOverrides } from "@/lib/chartTheme";
 
 export interface ChartRendererHandle {
   getElement: () => HTMLDivElement | null;
@@ -44,6 +46,8 @@ const ChartRenderer = forwardRef<ChartRendererHandle, ChartRendererProps>(
   function ChartRenderer({ data, height }, ref) {
     const chartRef = useRef<HTMLDivElement>(null);
     const [error, setError] = useState<string | null>(null);
+    const { resolvedTheme } = useTheme();
+    const isDark = resolvedTheme === 'dark';
 
     useImperativeHandle(ref, () => ({
       getElement: () => chartRef.current,
@@ -62,11 +66,46 @@ const ChartRenderer = forwardRef<ChartRendererHandle, ChartRendererProps>(
       const chartHeight =
         height ?? chartData.layout?.height ?? calculateChartHeight(traces);
 
+      // Get theme configuration
+      const themeConfig = getChartThemeConfig(isDark ? 'dark' : 'light');
+
+      // Apply pie chart overrides to traces
+      const themedTraces = traces.map(trace => {
+        const traceAny = trace as any;
+        if (traceAny.type === 'pie') {
+          const pieOverrides = getPieChartOverrides(isDark ? 'dark' : 'light');
+          return { ...trace, ...pieOverrides };
+        }
+        return trace;
+      });
+
+      // Merge layout with theme config (theme overrides backend colors, preserves backend text)
       const layout: Partial<Plotly.Layout> = {
         ...chartData.layout,
+        ...themeConfig,
+        xaxis: {
+          ...chartData.layout?.xaxis,
+          ...themeConfig.xaxis,
+          title: {
+            ...chartData.layout?.xaxis?.title,
+            font: themeConfig.xaxis?.title?.font,
+          },
+        },
+        yaxis: {
+          ...chartData.layout?.yaxis,
+          ...themeConfig.yaxis,
+          title: {
+            ...chartData.layout?.yaxis?.title,
+            font: themeConfig.yaxis?.title?.font,
+          },
+        },
+        title: {
+          ...chartData.layout?.title,
+          font: themeConfig.title?.font,
+        },
         autosize: true,
         height: chartHeight,
-        margin: { l: 50, r: 30, t: 40, b: 50 },
+        margin: { l: 50, r: 30, t: 40, b: 80 }, // increased bottom margin for horizontal legend
       };
 
       const config: Partial<Plotly.Config> = {
@@ -76,7 +115,7 @@ const ChartRenderer = forwardRef<ChartRendererHandle, ChartRendererProps>(
         modeBarButtonsToRemove: ["sendDataToCloud"] as Plotly.ModeBarDefaultButtons[],
       };
 
-      Plotly.react(chartRef.current, traces, layout, config);
+      Plotly.react(chartRef.current, themedTraces, layout, config);
       setError(null);
 
       // Set up ResizeObserver for responsive resizing
@@ -101,6 +140,9 @@ const ChartRenderer = forwardRef<ChartRendererHandle, ChartRendererProps>(
         Plotly.purge(chartRef.current);
       }
     };
+    // Theme is captured on mount only. Per user decision, already-rendered charts keep their
+    // original theme when user toggles. Only newly generated charts pick up the current theme.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data, height]);
 
     if (error) {
