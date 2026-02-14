@@ -55,7 +55,7 @@
 - [x] **Phase 22: Graph Integration & Chart Intelligence** — Wire agent into LangGraph with conditional routing and visualization discretion
 - [x] **Phase 23: Frontend Chart Rendering** — Plotly.js integration, ChartRenderer component, DataCard chart display
 - [x] **Phase 24: Chart Types & Export** — All 7 chart types validated end-to-end, PNG/SVG export, chart type switcher
-- [ ] **Phase 25: Theme Integration** — Dark/light theme support for charts with Nord palette
+- [x] **Phase 25: Theme Integration** — Dark/light theme support for charts with Nord palette
 
 ## Phase Details
 
@@ -190,7 +190,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 25-01-PLAN.md — Chart theme config module (Nord palette), ChartRenderer theme integration, toolbar theming verification
+- [x] 25-01-PLAN.md — Chart theme config module (Nord palette), ChartRenderer theme integration, toolbar theming verification
 
 ---
 
@@ -226,4 +226,4 @@ Note: Phase 24 and Phase 25 can execute in parallel (both depend on Phase 23, no
 | 22. Graph Integration & Chart Intelligence | v0.4 | 2/2 | Complete | 2026-02-13 |
 | 23. Frontend Chart Rendering | v0.4 | 2/2 | Complete | 2026-02-13 |
 | 24. Chart Types & Export | v0.4 | 3/3 | Complete | 2026-02-13 |
-| 25. Theme Integration | v0.4 | 0/1 | Not started | - |
+| 25. Theme Integration | v0.4 | 1/1 | Complete | 2026-02-13 |
