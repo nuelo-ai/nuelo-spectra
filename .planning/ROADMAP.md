@@ -187,10 +187,10 @@ Plans:
   3. Chart colors use the Nord palette in dark mode, matching the rest of the platform's visual language
   4. Chart axis labels, titles, and legend text are readable in both light and dark modes (proper contrast)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 25-01: TBD
+- [ ] 25-01-PLAN.md — Chart theme config module (Nord palette), ChartRenderer theme integration, toolbar theming verification
 
 ---
 
@@ -226,4 +226,4 @@ Note: Phase 24 and Phase 25 can execute in parallel (both depend on Phase 23, no
 | 22. Graph Integration & Chart Intelligence | v0.4 | 2/2 | Complete | 2026-02-13 |
 | 23. Frontend Chart Rendering | v0.4 | 2/2 | Complete | 2026-02-13 |
 | 24. Chart Types & Export | v0.4 | 3/3 | Complete | 2026-02-13 |
-| 25. Theme Integration | v0.4 | 0/TBD | Not started | - |
+| 25. Theme Integration | v0.4 | 0/1 | Not started | - |
