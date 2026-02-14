@@ -75,7 +75,7 @@ export function getChartThemeConfig(theme: 'light' | 'dark'): Partial<Layout> {
           },
         },
         tickfont: {
-          color: NORD_PALETTE.nord3, // one step dimmer than axis labels
+          color: NORD_PALETTE.nord4, // match axis label brightness for readability
         },
         zerolinecolor: 'rgba(67, 76, 94, 0.3)',
       },
@@ -88,7 +88,7 @@ export function getChartThemeConfig(theme: 'light' | 'dark'): Partial<Layout> {
           },
         },
         tickfont: {
-          color: NORD_PALETTE.nord3,
+          color: NORD_PALETTE.nord4, // match axis label brightness for readability
         },
         zerolinecolor: 'rgba(67, 76, 94, 0.3)',
       },

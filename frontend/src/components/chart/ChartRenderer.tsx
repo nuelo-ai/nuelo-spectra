@@ -105,7 +105,7 @@ const ChartRenderer = forwardRef<ChartRendererHandle, ChartRendererProps>(
         },
         autosize: true,
         height: chartHeight,
-        margin: { l: 50, r: 30, t: 40, b: 80 }, // increased bottom margin for horizontal legend
+        margin: { l: 50, r: 30, t: 60, b: 80 }, // top margin clears modebar, bottom for legend
       };
 
       const config: Partial<Plotly.Config> = {
@@ -140,10 +140,7 @@ const ChartRenderer = forwardRef<ChartRendererHandle, ChartRendererProps>(
         Plotly.purge(chartRef.current);
       }
     };
-    // Theme is captured on mount only. Per user decision, already-rendered charts keep their
-    // original theme when user toggles. Only newly generated charts pick up the current theme.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [data, height]);
+    }, [data, height, isDark]);
 
     if (error) {
       return (
