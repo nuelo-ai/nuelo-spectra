@@ -294,7 +294,10 @@ if mode in ("public", "dev"):
 # Admin routes (admin and dev modes) -- lazy import to avoid loading admin code in public mode
 if mode in ("admin", "dev"):
     from app.routers.admin import admin_router
+    from app.middleware.admin_token import AdminTokenReissueMiddleware
+
     app.include_router(admin_router, prefix="/api/admin")
+    app.add_middleware(AdminTokenReissueMiddleware)
 
 # In public mode, catch-all for /api/admin/* to log warnings and return 404
 if mode == "public":
