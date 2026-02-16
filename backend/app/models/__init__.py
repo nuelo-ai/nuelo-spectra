@@ -5,5 +5,14 @@ from app.models.chat_message import ChatMessage
 from app.models.chat_session import ChatSession, session_files
 from app.models.search_quota import SearchQuota
 from app.models.password_reset import PasswordResetToken
+from app.models.admin_audit_log import AdminAuditLog
+from app.models.user_credit import UserCredit
+from app.models.credit_transaction import CreditTransaction
+from app.models.invitation import Invitation
+from app.models.platform_setting import PlatformSetting
 
-__all__ = ["Base", "User", "File", "ChatMessage", "ChatSession", "session_files", "SearchQuota", "PasswordResetToken"]
+__all__ = [
+    "Base", "User", "File", "ChatMessage", "ChatSession", "session_files",
+    "SearchQuota", "PasswordResetToken", "AdminAuditLog", "UserCredit",
+    "CreditTransaction", "Invitation", "PlatformSetting",
+]
