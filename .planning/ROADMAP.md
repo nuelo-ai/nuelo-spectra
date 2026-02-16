@@ -116,11 +116,11 @@ Plans:
   2. Toggling `allow_public_signup` to disabled takes effect immediately -- the public signup endpoint rejects new registrations with an "invite-only" message, without requiring server restart
   3. When signup is invite-only, only users with a valid invite token can complete registration through the public signup flow
   4. User tiers are defined in `user_classes.yaml` (free/standard/premium) with admin-editable credit overrides per tier stored in platform_settings; admin can view tier summary with user counts and assign/change a user's tier
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 28-01: TBD
-- [ ] 28-02: TBD
+- [ ] 28-01-PLAN.md -- PlatformSettingsService with TTL cache, admin settings API (GET/PATCH), tier summary endpoint
+- [ ] 28-02-PLAN.md -- Admin tier change with credit reset, signup gating (backend + frontend), configurable credit cost and default tier
 
 ### Phase 29: User Management
 **Goal**: Admins can find, inspect, and manage any user account on the platform through admin API endpoints
@@ -201,7 +201,7 @@ Note: Phase 28 can start after Phase 26 (does not depend on Phase 27). Phase 30 
 | 25. Theme Integration | v0.4 | 1/1 | Complete | 2026-02-14 |
 | 26. Foundation | v0.5 | 3/3 | Complete | 2026-02-16 |
 | 27. Credit System | v0.5 | 4/4 | Complete | 2026-02-16 |
-| 28. Platform Config | v0.5 | 0/TBD | Not started | - |
+| 28. Platform Config | v0.5 | 0/2 | Planned | - |
 | 29. User Management | v0.5 | 0/TBD | Not started | - |
 | 30. Invitation System | v0.5 | 0/TBD | Not started | - |
 | 31. Dashboard & Admin Frontend | v0.5 | 0/TBD | Not started | - |
