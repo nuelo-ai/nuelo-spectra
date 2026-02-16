@@ -25,17 +25,18 @@ from app.agents.graph import get_or_create_graph
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
-# TODO: Phase 28: read default_credit_cost from platform_settings
-_DEFAULT_CREDIT_COST = Decimal("1.0")
-
 
 async def _deduct_credits_or_raise(db: DbSession, user_id: UUID) -> None:
-    """Deduct one credit from user or raise HTTP 402 if insufficient.
+    """Deduct credits from user or raise HTTP 402 if insufficient.
 
+    Reads default_credit_cost from platform_settings (runtime-configurable).
     Commits the credit deduction independently before agent execution.
     Unlimited users pass through (CreditService logs but doesn't deduct).
     """
-    deduction = await CreditService.deduct_credit(db, user_id, _DEFAULT_CREDIT_COST)
+    from app.services import platform_settings
+    cost_value = await platform_settings.get(db, "default_credit_cost")
+    credit_cost = Decimal(str(cost_value))
+    deduction = await CreditService.deduct_credit(db, user_id, credit_cost)
     if not deduction.success:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,

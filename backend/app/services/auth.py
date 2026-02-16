@@ -14,12 +14,16 @@ from app.services.user_class import get_class_config, get_default_class
 from app.utils.security import hash_password, verify_password
 
 
-async def create_user(db: AsyncSession, signup: SignupRequest) -> User:
+async def create_user(
+    db: AsyncSession, signup: SignupRequest, default_class: str | None = None
+) -> User:
     """Create a new user account.
 
     Args:
         db: Database session
         signup: Signup request data
+        default_class: Override default user class (from platform_settings).
+            Falls back to get_default_class() if None.
 
     Returns:
         Created user instance
@@ -42,8 +46,9 @@ async def create_user(db: AsyncSession, signup: SignupRequest) -> User:
     # Hash password and create user
     hashed_password = hash_password(signup.password)
 
-    # Assign default user class explicitly (matches model default but makes intent clear)
-    default_class = get_default_class()
+    # Use provided default_class or fall back to yaml-based default
+    if default_class is None:
+        default_class = get_default_class()
 
     user = User(
         email=signup.email,

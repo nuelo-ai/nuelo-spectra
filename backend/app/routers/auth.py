@@ -41,6 +41,16 @@ _reset_cooldowns: dict[str, float] = {}
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
+@router.get("/signup-status")
+async def get_signup_status(
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Public endpoint: check if signup is allowed. No auth required."""
+    from app.services import platform_settings
+    allowed = await platform_settings.get(db, "allow_public_signup")
+    return {"signup_allowed": allowed}
+
+
 @router.post("/signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def signup(
     signup_data: SignupRequest,
@@ -60,8 +70,42 @@ async def signup(
     Raises:
         HTTPException: 409 if email already registered
     """
+    # Check if public signup is allowed
+    from app.services import platform_settings
+    allow_signup = await platform_settings.get(db, "allow_public_signup")
+
+    if not allow_signup:
+        invite_token = getattr(signup_data, "invite_token", None)
+        if not invite_token:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Public registration is currently disabled. An invitation is required.",
+            )
+        # Validate invite token
+        token_hash = hashlib.sha256(invite_token.encode()).hexdigest()
+        from app.models.invitation import Invitation
+        result = await db.execute(
+            select(Invitation).where(
+                Invitation.token_hash == token_hash,
+                Invitation.status == "pending",
+                Invitation.expires_at > datetime.now(timezone.utc),
+            )
+        )
+        invitation = result.scalar_one_or_none()
+        if not invitation:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid or expired invitation token.",
+            )
+        # Mark invitation as accepted
+        invitation.status = "accepted"
+        invitation.accepted_at = datetime.now(timezone.utc)
+
+    # Read default user class from platform settings
+    default_class = await platform_settings.get(db, "default_user_class")
+
     # Create user (raises 409 if email exists)
-    user = await auth_service.create_user(db, signup_data)
+    user = await auth_service.create_user(db, signup_data, default_class=default_class)
 
     # Auto-login: create tokens for new user
     tokens = create_tokens(str(user.id), settings)

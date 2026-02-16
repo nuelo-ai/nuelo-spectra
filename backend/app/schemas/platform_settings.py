@@ -45,6 +45,12 @@ class SettingsUpdateRequest(BaseModel):
         return self
 
 
+class TierChangeRequest(BaseModel):
+    """Request schema for PUT /api/admin/tiers/users/{user_id}."""
+
+    user_class: str
+
+
 class TierSummaryResponse(BaseModel):
     """Response schema for GET /api/admin/tiers."""
 

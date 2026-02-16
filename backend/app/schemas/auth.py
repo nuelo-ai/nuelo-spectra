@@ -10,6 +10,7 @@ class SignupRequest(BaseModel):
     password: str = Field(..., min_length=8)
     first_name: str | None = None
     last_name: str | None = None
+    invite_token: str | None = None
 
 
 class LoginRequest(BaseModel):
