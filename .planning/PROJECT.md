@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Spectra is an AI-powered data analytics platform that transforms how users interact with their data. Users upload datasets (Excel/CSV), create chat sessions, link multiple files, and ask questions in natural language — receiving instant insights as interactive Data Cards. A ChatGPT-style session-centric UX with sidebar navigation enables multi-file conversations and cross-file analysis. A 5-agent AI system with intelligent query routing generates validated Python code in a secure sandbox, with multi-turn conversation memory, web search integration, and smart query suggestions. The platform supports 5 LLM providers with per-agent configuration and features dark/light theme toggle.
+Spectra is an AI-powered data analytics platform that transforms how users interact with their data. Users upload datasets (Excel/CSV), create chat sessions, link multiple files, and ask questions in natural language — receiving instant insights as interactive Data Cards with AI-generated Plotly charts. A ChatGPT-style session-centric UX with sidebar navigation enables multi-file conversations and cross-file analysis. A 6-agent AI system with intelligent query routing generates validated Python code in a secure sandbox, automatically creating visualizations when analysis benefits from charts. Multi-turn conversation memory, web search integration, smart query suggestions, 7 chart types with PNG/SVG export, and theme-aware Nord palette across 5 LLM providers.
 
 ## Core Value
 
@@ -15,12 +15,16 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 **Branch:** master
 **Latest Tag:** v0.3 (2026-02-12)
 
+## Current Milestone: Planning Next
+
+**Status:** v0.4 Data Visualization shipped (2026-02-15). Ready for `/gsd:new-milestone` to define v0.5.
+
 ## Current State
 
-**Shipped:** v0.3 Multi-file Conversation Support (2026-02-12)
+**Shipped:** v0.4 Data Visualization (2026-02-15)
 **Status:** Planning next milestone
-**Codebase:** 20,896 LOC (8,589 Python app + 2,077 Python tests + 10,230 TypeScript/TSX)
-**Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily (backend), Next.js 16 + React 19 + TanStack + Zustand + shadcn/ui + next-themes (frontend)
+**Codebase:** 23,177 LOC (9,173 Python app + 2,949 Python tests + 11,055 TypeScript/TSX)
+**Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily + Plotly (backend), Next.js 16 + React 19 + TanStack + Zustand + shadcn/ui + next-themes + Plotly.js (frontend)
 
 **What works:**
 - ✅ Complete authentication system with JWT, refresh tokens, and SMTP password reset
@@ -32,7 +36,7 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 - ✅ Right sidebar panel showing linked files with info and remove actions
 - ✅ File requirement enforcement (at least one file per session) with dual feedback
 - ✅ LLM-powered session title auto-generation with manual rename lock
-- ✅ 5-agent AI system (Onboarding, Manager, Coding, Code Checker, Data Analysis) with LangGraph orchestration
+- ✅ 6-agent AI system (Onboarding, Manager, Coding, Code Checker, Data Analysis, Visualization) with LangGraph orchestration
 - ✅ Multi-turn conversation memory with PostgreSQL checkpointing and token counting
 - ✅ Manager Agent with intelligent 3-path query routing (MEMORY_SUFFICIENT, CODE_MODIFICATION, NEW_ANALYSIS)
 - ✅ Smart query suggestions on welcome screen and follow-up chips on DataCards
@@ -40,7 +44,10 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 - ✅ 5 LLM providers (Anthropic, OpenAI, Google, Ollama, OpenRouter) with per-agent YAML config
 - ✅ Real-time SSE streaming showing AI thinking process
 - ✅ Interactive Data Cards with sortable tables, code display, and CSV/Markdown exports
-- ✅ Dark/light theme toggle with Nord palette (persists across sessions)
+- ✅ AI-generated Plotly charts with intelligent visualization discretion (7 types: bar, line, scatter, histogram, box, pie, donut)
+- ✅ Interactive charts with zoom, pan, hover tooltips, responsive resizing, and PNG/SVG export (1200x800)
+- ✅ Chart type switcher for compatible types (bar ↔ line ↔ scatter) with client-side instant rendering
+- ✅ Dark/light theme toggle with Nord palette for all UI surfaces including charts (persists across sessions)
 - ✅ Production SMTP email service with DB-backed single-use password reset tokens
 
 **Known limitations:**
@@ -183,7 +190,7 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **v0.2 Total: 54/54 requirements satisfied (100%)**
 
-**v0.3 Multi-file Conversation Support — Shipped 2026-02-12**
+**✅ v0.3 Multi-file Conversation Support — Shipped 2026-02-12**
 
 **Chat Sessions (9/9):**
 - ✓ User can create a new chat session from the left sidebar "New Chat" button — v0.3
@@ -236,9 +243,70 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **v0.3 Total: 37/37 requirements satisfied (100%)**
 
+**✅ v0.4 Data Visualization — Shipped 2026-02-15**
+
+**Infrastructure (4/4):**
+- ✓ Plotly added to allowed libraries in allowlist.yaml — v0.4
+- ✓ State schema extended with visualization fields — v0.4
+- ✓ E2B sandbox Plotly 6.0.1 availability verified — v0.4
+- ✓ Sandbox output parser modified to capture chart JSON — v0.4
+
+**Visualization Agent (6/6):**
+- ✓ Visualization Agent module created with LangGraph integration — v0.4
+- ✓ Agent prompt configured in prompts.yaml with LLM settings — v0.4
+- ✓ Agent generates Plotly Python code from execution results — v0.4
+- ✓ Agent embeds data as Python literal (no file uploads) — v0.4
+- ✓ Agent includes chart type selection heuristics — v0.4
+- ✓ Chart code outputs JSON via fig.to_json() to stdout — v0.4
+
+**Chart Generation (11/11):**
+- ✓ System supports bar chart generation — v0.4
+- ✓ System supports line chart generation — v0.4
+- ✓ System supports scatter plot generation — v0.4
+- ✓ System supports histogram generation — v0.4
+- ✓ System supports box plot generation — v0.4
+- ✓ System supports pie chart generation — v0.4
+- ✓ System supports donut chart generation — v0.4
+- ✓ Data Analysis Agent decides when visualization adds value — v0.4
+- ✓ Manager Agent hints visualization intent during routing — v0.4
+- ✓ Chart generation errors are non-fatal — v0.4
+- ✓ Charts include meaningful titles and axis labels — v0.4
+
+**Graph Integration (6/6):**
+- ✓ Visualization Agent node added to LangGraph — v0.4
+- ✓ viz_execute node executes chart code in sandbox — v0.4
+- ✓ viz_response node handles chart results — v0.4
+- ✓ should_visualize() conditional edge routes based on flag — v0.4
+- ✓ da_response modified for conditional routing — v0.4
+- ✓ Chart JSON streams to frontend via SSE events — v0.4
+
+**Chart Display (7/7):**
+- ✓ Frontend installs plotly.js-dist-min package — v0.4
+- ✓ ChartRenderer component created with dynamic import — v0.4
+- ✓ ChartRenderer uses Plotly.newPlot() with React hooks — v0.4
+- ✓ DataCard renders chart above table when specs exist — v0.4
+- ✓ Charts are interactive (zoom, pan, hover tooltips) — v0.4
+- ✓ Charts are responsive (resize with container) — v0.4
+- ✓ Chart skeleton loader displays during generation — v0.4
+
+**Export & Customization (5/5):**
+- ✓ User can download chart as PNG via Plotly.downloadImage() — v0.4
+- ✓ User can download chart as SVG — v0.4
+- ✓ Download buttons appear below chart in DataCard — v0.4
+- ✓ User can switch chart type after generation — v0.4
+- ✓ Chart type switcher only shows applicable types — v0.4
+
+**Theme & Polish (4/4):**
+- ✓ Charts respect light/dark theme toggle — v0.4
+- ✓ Charts use transparent backgrounds in dark mode — v0.4
+- ✓ Chart colors match Nord palette in dark mode — v0.4
+- ✓ Chart text colors adjust for theme (readable both modes) — v0.4
+
+**v0.4 Total: 43/43 requirements satisfied (100%)**
+
 ### Active
 
-(Next milestone requirements to be defined — run `/gsd:new-milestone`)
+(No active requirements - ready for `/gsd:new-milestone` to define v0.5)
 
 ### Out of Scope
 
@@ -246,7 +314,6 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 - **Save Data Cards to Collections** — Focus on real-time analysis; saving for review is polish
 - **Full Collections organization** — Basic file list sufficient; collections add complexity
 - **Google OAuth authentication** — Email/password sufficient for current validation
-- **Visualization Agent** — Focus on accurate analysis first; charts can come later
 - **PowerPoint export** — PDF export proves the concept first
 - **Billing and subscription management** — Validate product-market fit before payment infrastructure
 - **Credit tracking system** — No billing means no credits needed yet
@@ -319,6 +386,11 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | Nord palette for dark theme | Professional, muted aesthetic for dark mode | ✓ Good — consistent across all UI surfaces |
 | Eager session creation on file link | Create session when file is linked at /sessions/new (not on first message) | ✓ Good — enables sidebar to open and file panel to render immediately |
 | sessionStorage for cross-navigation state | Pass sidebar-open flag across router.replace navigations | ✓ Good — reliable mechanism where Zustand state may not persist |
+| Client-side chart export | Plotly.downloadImage() instead of server-side Kaleido | ✓ Good — instant export, Kaleido requires Chrome and is 50x slower |
+| Custom ChartRenderer | Build custom component instead of react-plotly.js wrapper | ✓ Good — react-plotly.js unmaintained (3 years), custom is more reliable |
+| Chart failure non-fatal | Preserve analysis and data table on chart errors | ✓ Good — graceful degradation doesn't block core analytics value |
+| LLM-based chart intelligence | Manager hints, DA confirms visualization_requested | ✓ Good — two-phase decision reduces false positives |
+| Nord palette for charts | Consistent theme-aware colors across all UI | ✓ Good — professional aesthetic, readable in both modes |
 
 ---
-*Last updated: 2026-02-12 after v0.3 Multi-file Conversation Support milestone completed*
+*Last updated: 2026-02-15 after completing v0.4 Data Visualization milestone*

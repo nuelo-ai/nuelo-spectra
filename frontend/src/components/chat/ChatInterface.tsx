@@ -52,6 +52,10 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
     events,
     currentSearchQuery,
     searchSources: streamSearchSources,
+    chartSpecs: streamChartSpecs,
+    chartError: streamChartError,
+    visualizationInProgress,
+    visualizationStage,
     startStream,
     resetStream,
   } = useSSEStream();
@@ -302,7 +306,11 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
       searchSources = streamSearchSources;
     }
 
-    return { queryBrief, tableData, explanation, generatedCode, followUpSuggestions, searchSources };
+    // Extract chart data from stream state
+    const chartSpecs = streamChartSpecs || undefined;
+    const chartError = streamChartError || undefined;
+
+    return { queryBrief, tableData, explanation, generatedCode, followUpSuggestions, searchSources, chartSpecs, chartError };
   };
 
   // Refresh search config when quota exceeded event received
@@ -547,6 +555,8 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
                         <DataCard
                           {...streamingData}
                           isStreaming={true}
+                          visualizationInProgress={visualizationInProgress}
+                          visualizationStage={visualizationStage ?? undefined}
                           followUpSuggestions={streamingData.followUpSuggestions}
                           onFollowUpClick={handleSend}
                           searchSources={streamingData.searchSources}

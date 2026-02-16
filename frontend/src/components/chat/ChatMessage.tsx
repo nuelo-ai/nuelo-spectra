@@ -138,6 +138,9 @@ export function ChatMessage({
     const tableData = parseExecutionResult(message.metadata_json?.execution_result);
     const followUpSuggestions = message.metadata_json?.follow_up_suggestions as string[] | undefined;
     const searchSources = message.metadata_json?.search_sources as { title: string; url: string }[] | undefined;
+    // Extract chart data from persisted metadata (convert empty strings to undefined)
+    const chartSpecs = message.metadata_json?.chart_specs ? (message.metadata_json.chart_specs as string) : undefined;
+    const chartError = message.metadata_json?.chart_error ? (message.metadata_json.chart_error as string) : undefined;
 
     return (
       <div className="p-4">
@@ -152,6 +155,8 @@ export function ChatMessage({
           followUpSuggestions={followUpSuggestions}
           onFollowUpClick={onFollowUpClick}
           searchSources={searchSources}
+          chartSpecs={chartSpecs}
+          chartError={chartError}
         />
       </div>
     );

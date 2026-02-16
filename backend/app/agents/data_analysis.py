@@ -225,6 +225,9 @@ async def da_response_node(state: ChatAgentState) -> dict:
             raw = "Unable to generate analysis."
         analysis_text, follow_ups = _parse_analysis_json(raw)
 
+    # Evaluate whether visualization would enhance this response
+    viz_requested = await _evaluate_visualization_need(state, analysis_text)
+
     # Return structured response with clean AIMessage for checkpoint
     # The clean AIMessage ensures the Manager Agent sees a readable message
     # on subsequent queries, not a tool-calling message
@@ -234,6 +237,7 @@ async def da_response_node(state: ChatAgentState) -> dict:
         "follow_up_suggestions": follow_ups,
         "search_sources": unique_sources,
         "messages": [AIMessage(content=analysis_text)],
+        "visualization_requested": viz_requested,
     }
 
 
@@ -446,3 +450,66 @@ def _extract_sources_from_tool_response(content: str) -> list[dict]:
         url = match.group(2).strip()
         sources.append({"title": title, "url": url})
     return sources
+
+
+async def _evaluate_visualization_need(state: ChatAgentState, analysis_text: str) -> bool:
+    """Evaluate whether a chart would enhance the current response.
+
+    Uses LLM judgment based on execution results and query context.
+    Balanced discretion with strong preference for charts when data supports it.
+
+    Args:
+        state: Current chat workflow state with execution context
+        analysis_text: Generated analysis text from Data Analysis Agent
+
+    Returns:
+        bool: True if visualization would add value, False otherwise
+    """
+    execution_result = state.get("execution_result", "")
+    user_query = state.get("user_query", "")
+    chart_hint = state.get("chart_hint", "")
+    routing = state.get("routing_decision")
+
+    # Skip visualization for MEMORY_SUFFICIENT (no data to chart)
+    if routing and routing.route == "MEMORY_SUFFICIENT":
+        return False
+
+    # Skip if no execution result (nothing to visualize)
+    if not execution_result or execution_result.startswith("Error:"):
+        return False
+
+    # Use a lightweight LLM call to evaluate
+    settings = get_settings()
+    provider = get_agent_provider("data_analysis")
+    model = get_agent_model("data_analysis")
+    api_key = get_api_key_for_provider(provider, settings)
+    kwargs = {"max_tokens": 50, "temperature": 0.0}
+    if provider == "ollama":
+        kwargs["base_url"] = settings.ollama_base_url
+    llm = get_llm(provider=provider, model=model, api_key=api_key, **kwargs)
+
+    eval_prompt = f"""Would a chart enhance this data analysis response? Answer YES or NO only.
+
+User query: {user_query}
+Chart hint from router: {chart_hint or 'none'}
+Result preview: {execution_result[:500]}
+Analysis: {analysis_text[:300]}
+
+Rules:
+- YES if data has multiple values that benefit from visual comparison
+- YES if data shows trends, distributions, or proportions
+- YES if chart_hint is provided (router suggested visualization)
+- NO if result is a single number, text explanation, or error
+- NO if result has fewer than 2 data points
+- When in doubt and data has 3+ comparable values, say YES"""
+
+    try:
+        response = await llm.ainvoke([
+            SystemMessage(content="You are a visualization decision helper. Answer YES or NO only."),
+            HumanMessage(content=eval_prompt),
+        ])
+        answer = response.content.strip().upper() if response.content else "NO"
+        return answer.startswith("YES")
+    except Exception as e:
+        logger.warning(f"Visualization evaluation failed: {e}")
+        return False

@@ -15,17 +15,22 @@ The data analysis pipeline (tool-calling loop):
 da_with_tools <-> search_tools (loop via tools_condition)
 da_with_tools -> da_response (when LLM has no more tool calls)
 
+The visualization pipeline (conditional):
+da_response -> visualization_agent -> viz_execute -> viz_response (when visualization_requested is true)
+
 The workflow includes:
 - Intelligent query routing via Manager Agent
 - Conditional routing based on validation results
 - Bounded retry loops with circuit breaker (max_steps=3)
 - Tool-calling loop for web search (bind_tools + ToolNode)
 - PostgreSQL checkpointing for thread isolation
+- Conditional chart generation with graceful degradation
 """
 
 from typing import Literal
 import asyncio
 import os
+import json
 
 from langgraph.graph import StateGraph
 # from langgraph.checkpoint.postgres import PostgresSaver  # Temporarily disabled
@@ -39,6 +44,7 @@ from app.agents.coding import coding_agent
 from app.agents.code_checker import validate_code
 from app.agents.data_analysis import da_with_tools_node, da_response_node
 from app.agents.tools import search_web
+from app.agents.visualization import visualization_agent_node
 from app.agents.config import (
     get_agent_prompt,
     get_agent_max_tokens,
@@ -450,31 +456,62 @@ except UnicodeDecodeError:
         # Success: parse JSON output from stdout
         import json
         execution_result = None
+        chart_specs = ""
+        chart_error = ""
 
         if result.stdout:
             # Try to parse JSON from last line of stdout (where print(json.dumps()) outputs)
             stdout_text = "\n".join(result.stdout)
             try:
-                # Look for JSON in stdout
+                # Fast path: Look for JSON in individual stdout lines (reverse order)
                 for line in reversed(result.stdout):
                     if line.strip().startswith('{') and line.strip().endswith('}'):
                         parsed = json.loads(line.strip())
                         if "result" in parsed:
                             execution_result = json.dumps(parsed["result"])
-                            break
+                        # Extract chart JSON if present
+                        if "chart" in parsed:
+                            chart_specs = json.dumps(parsed["chart"])
+                            logger.info(f"Chart JSON extracted ({len(chart_specs)} bytes)")
+                        break
+
+                # Fallback: join all stdout lines for large chart JSON that may
+                # span multiple stdout list items
+                if execution_result is None and stdout_text.strip().startswith('{'):
+                    try:
+                        parsed = json.loads(stdout_text.strip())
+                        if "result" in parsed:
+                            execution_result = json.dumps(parsed["result"])
+                        if "chart" in parsed:
+                            chart_specs = json.dumps(parsed["chart"])
+                            logger.info(f"Chart JSON extracted via joined stdout ({len(chart_specs)} bytes)")
+                    except json.JSONDecodeError:
+                        pass
+
                 # If no JSON found, use raw stdout
                 if execution_result is None:
                     execution_result = stdout_text
             except json.JSONDecodeError:
                 # Fallback: use raw stdout if JSON parsing fails
                 execution_result = stdout_text
+
+            # Validate chart JSON size (2MB limit)
+            if chart_specs and len(chart_specs) > 2_000_000:
+                logger.warning(f"Chart JSON too large ({len(chart_specs)} bytes), discarding")
+                chart_specs = ""
+                chart_error = "Chart data too large. Try aggregating data before charting."
+
         elif result.results:
             # Fallback: use results list if no stdout
             execution_result = str(result.results)
         else:
             execution_result = "Code executed successfully (no output)"
 
-        return {"execution_result": execution_result}
+        return {
+            "execution_result": execution_result,
+            "chart_specs": chart_specs,
+            "chart_error": chart_error,
+        }
     else:
         # Execution failed: check retry budget
         error_msg = f"{result.error['name']}: {result.error['value']}"
@@ -495,6 +532,8 @@ except UnicodeDecodeError:
                     "execution_result": f"Execution error: {error_msg}",
                     "validation_errors": [f"Execution error: {error_msg}. Please fix the code."],
                     "error_count": new_error_count,
+                    "chart_specs": "",
+                    "chart_error": "",
                 },
             )
         else:
@@ -510,6 +549,8 @@ except UnicodeDecodeError:
                     "execution_result": f"Execution error: {error_msg}",
                     "error_count": new_error_count,
                     "error": "execution_failed",
+                    "chart_specs": "",
+                    "chart_error": "",
                 },
             )
 
@@ -573,6 +614,203 @@ async def halt_node(state: ChatAgentState) -> dict:
     }
 
 
+def should_visualize(state: ChatAgentState) -> Literal["visualization_agent", "finish"]:
+    """Route to chart pipeline or finish based on visualization_requested flag.
+
+    When visualization_requested is True (set by DA response node), routes
+    to the visualization pipeline. Otherwise, routes to END (existing tabular
+    flow unchanged).
+
+    Per user decision: "Skip visualization entirely when flag is false"
+    """
+    if state.get("visualization_requested", False):
+        return "visualization_agent"
+    return "finish"
+
+
+async def _retry_chart_code(state: ChatAgentState, error_context: str) -> str:
+    """Regenerate chart code by feeding error back to Visualization Agent.
+
+    Calls visualization_agent_node with updated state containing the error.
+    Returns new chart_code or empty string on failure.
+    """
+    try:
+        retry_state = dict(state)
+        retry_state["chart_error"] = error_context
+        result = await visualization_agent_node(retry_state)
+        return result.get("chart_code", "")
+    except Exception as e:
+        logger.warning(f"Chart code retry failed: {e}")
+        return ""
+
+
+async def viz_execute_node(
+    state: ChatAgentState,
+) -> dict:
+    """Execute Visualization Agent's chart code in E2B sandbox.
+
+    Runs the chart code (which embeds data as Python literals) in the sandbox.
+    If execution fails, retries once by feeding the error back to the Visualization
+    Agent to regenerate code. Max 1 retry (2 total attempts) per user decision.
+
+    Chart execution reuses the same sandbox pattern as execute_in_sandbox but
+    WITHOUT file uploads (chart code embeds data directly).
+
+    Args:
+        state: Current chat workflow state with chart_code from Visualization Agent
+
+    Returns:
+        dict: State update with chart_specs and/or chart_error
+    """
+    writer = get_stream_writer()
+    settings = get_settings()
+
+    chart_code = state.get("chart_code", "")
+
+    if not chart_code:
+        logger.warning("viz_execute_node called with empty chart_code")
+        return {
+            "chart_specs": "",
+            "chart_error": "Chart generation produced no code",
+        }
+
+    writer({
+        "type": "chart_code_generated",
+        "message": "Executing chart code...",
+    })
+
+    max_retries = 1  # 2 total attempts per user decision
+    last_error = ""
+
+    for attempt in range(max_retries + 1):
+        # Execute chart code in sandbox (no file uploads -- data embedded in code)
+        runtime = E2BSandboxRuntime(timeout_seconds=settings.sandbox_timeout_seconds)
+        result: ExecutionResult = await asyncio.to_thread(
+            runtime.execute,
+            code=chart_code,
+            timeout=float(settings.sandbox_timeout_seconds),
+        )
+
+        if result.success:
+            # Parse chart JSON from stdout
+            chart_specs = ""
+            chart_error = ""
+
+            if result.stdout:
+                # Same parsing pattern as execute_in_sandbox (Phase 20-02)
+                for line in reversed(result.stdout):
+                    if line.strip().startswith('{') and line.strip().endswith('}'):
+                        try:
+                            parsed = json.loads(line.strip())
+                            if "chart" in parsed:
+                                chart_specs = json.dumps(parsed["chart"])
+                                logger.info(f"Viz chart JSON extracted ({len(chart_specs)} bytes)")
+                            break
+                        except json.JSONDecodeError:
+                            continue
+
+                # Fallback: join stdout lines for large chart JSON
+                if not chart_specs:
+                    stdout_text = "\n".join(result.stdout)
+                    if stdout_text.strip().startswith('{'):
+                        try:
+                            parsed = json.loads(stdout_text.strip())
+                            if "chart" in parsed:
+                                chart_specs = json.dumps(parsed["chart"])
+                                logger.info(f"Viz chart JSON extracted via joined stdout ({len(chart_specs)} bytes)")
+                        except json.JSONDecodeError:
+                            pass
+
+                # Validate chart JSON size (2MB limit from Phase 20)
+                if chart_specs and len(chart_specs) > 2_000_000:
+                    logger.warning(f"Viz chart JSON too large ({len(chart_specs)} bytes)")
+                    chart_specs = ""
+                    chart_error = "Chart data too large. Try aggregating data before charting."
+
+            if chart_specs:
+                return {
+                    "chart_specs": chart_specs,
+                    "chart_error": "",
+                }
+            elif not chart_error:
+                chart_error = "Chart code executed but produced no chart output"
+
+            # If we got here, execution succeeded but no chart JSON found
+            if attempt < max_retries:
+                # Retry: regenerate chart code with error context
+                logger.info(f"Viz execution produced no chart (attempt {attempt + 1}), retrying")
+                chart_code = await _retry_chart_code(state, chart_error)
+                if not chart_code:
+                    return {"chart_specs": "", "chart_error": chart_error}
+                continue
+            return {"chart_specs": "", "chart_error": chart_error}
+
+        else:
+            # Execution failed
+            error_msg = f"{result.error['name']}: {result.error['value']}"
+            last_error = error_msg
+            logger.warning(f"Viz execution error (attempt {attempt + 1}): {error_msg}")
+
+            if attempt < max_retries:
+                # Retry: feed error to Visualization Agent to fix code
+                chart_code = await _retry_chart_code(state, f"Execution error: {error_msg}")
+                if not chart_code:
+                    return {"chart_specs": "", "chart_error": f"Chart execution failed: {error_msg}"}
+                continue
+
+    # All attempts exhausted
+    return {
+        "chart_specs": "",
+        "chart_error": f"Chart execution failed after {max_retries + 1} attempts: {last_error}",
+    }
+
+
+async def viz_response_node(state: ChatAgentState) -> dict:
+    """Handle visualization results and emit SSE events.
+
+    On success: emits chart_completed event with chart_specs.
+    On failure: emits chart_failed event with subtle notification.
+
+    Per user decision: "Subtle notification -- inform user chart is unavailable
+    but don't alarm" and "Error logging server-side only".
+
+    Args:
+        state: Current chat workflow state with chart_specs/chart_error from viz_execute
+
+    Returns:
+        dict: Final state update (chart_specs/chart_error already set by viz_execute)
+    """
+    writer = get_stream_writer()
+
+    chart_specs = state.get("chart_specs", "")
+    chart_error = state.get("chart_error", "")
+
+    if chart_specs:
+        writer({
+            "type": "chart_completed",
+            "message": "Chart ready",
+            "chart_specs": chart_specs,
+        })
+        logger.info(f"Chart completed successfully ({len(chart_specs)} bytes)")
+    else:
+        # Subtle notification per user decision
+        writer({
+            "type": "chart_failed",
+            "message": "Chart unavailable",
+        })
+        # Server-side error logging only (don't expose details to frontend)
+        if chart_error:
+            logger.warning(f"Chart generation failed: {chart_error}")
+
+    # Return chart data so it appears in node_complete SSE event for viz_response.
+    # Without this, the node_complete event carries no chart fields and the custom
+    # writer event may be lost during generator cleanup (GeneratorExit).
+    return {
+        "chart_specs": chart_specs,
+        "chart_error": chart_error,
+    }
+
+
 def build_chat_graph(checkpointer=None):
     """Build and compile the chat analysis LangGraph workflow.
 
@@ -623,6 +861,11 @@ def build_chat_graph(checkpointer=None):
     ))
     graph.add_node("da_response", da_response_node)
 
+    # Visualization pipeline nodes
+    graph.add_node("visualization_agent", visualization_agent_node)
+    graph.add_node("viz_execute", viz_execute_node)
+    graph.add_node("viz_response", viz_response_node)
+
     # Set entry point to Manager Agent (routes via Command, no explicit edges needed)
     graph.set_entry_point("manager")
 
@@ -642,8 +885,22 @@ def build_chat_graph(checkpointer=None):
     )
     graph.add_edge("search_tools", "da_with_tools")  # Tool results -> back to LLM
 
+    # Conditional routing from da_response to visualization pipeline
+    graph.add_conditional_edges(
+        "da_response",
+        should_visualize,
+        {
+            "visualization_agent": "visualization_agent",
+            "finish": "__end__",
+        },
+    )
+
+    # Linear edges for visualization pipeline
+    graph.add_edge("visualization_agent", "viz_execute")
+    graph.add_edge("viz_execute", "viz_response")
+
     # Finish points
-    graph.set_finish_point("da_response")
+    graph.set_finish_point("viz_response")
     graph.set_finish_point("halt")
 
     # Compile with checkpointer

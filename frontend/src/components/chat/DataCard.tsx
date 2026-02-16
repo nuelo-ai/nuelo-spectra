@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import dynamic from "next/dynamic";
 import {
   Collapsible,
   CollapsibleContent,
@@ -12,8 +13,18 @@ import { TypingIndicator } from "./TypingIndicator";
 import { ChevronDown, ExternalLink } from "lucide-react";
 import { CSVDownloadButton, MarkdownDownloadButton } from "@/components/data/DownloadButtons";
 import { CodeDisplay } from "@/components/data/CodeDisplay";
+import ChartSkeleton from "@/components/chart/ChartSkeleton";
+import ChartErrorAlert from "@/components/chart/ChartErrorAlert";
+import { ChartExportButtons } from "@/components/chart/ChartExportButtons";
+import { ChartTypeSwitcher } from "@/components/chart/ChartTypeSwitcher";
+import type { ChartRendererHandle } from "@/components/chart/ChartRenderer";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+
+const ChartRenderer = dynamic(
+  () => import("@/components/chart/ChartRenderer"),
+  { ssr: false, loading: () => <ChartSkeleton /> }
+);
 
 interface DataCardProps {
   queryBrief?: string; // Section 1: user's query summary
@@ -30,6 +41,10 @@ interface DataCardProps {
   followUpSuggestions?: string[]; // Follow-up query suggestions
   onFollowUpClick?: (suggestion: string) => void; // Callback when follow-up chip clicked
   searchSources?: { title: string; url: string }[]; // Web search source citations
+  chartSpecs?: string; // JSON string from backend (fig.to_json())
+  chartError?: string; // Error message if chart generation failed
+  visualizationInProgress?: boolean; // True during chart generation
+  visualizationStage?: string; // Current stage message for skeleton
 }
 
 /**
@@ -48,8 +63,13 @@ export function DataCard({
   followUpSuggestions,
   onFollowUpClick,
   searchSources,
+  chartSpecs,
+  chartError,
+  visualizationInProgress,
+  visualizationStage,
 }: DataCardProps) {
   const [internalCollapsed, setInternalCollapsed] = useState(isCollapsed);
+  const chartRendererRef = useRef<ChartRendererHandle>(null);
 
   const collapsed = onToggleCollapse ? isCollapsed : internalCollapsed;
   const toggleCollapse = onToggleCollapse || (() => setInternalCollapsed(!internalCollapsed));
@@ -116,7 +136,9 @@ export function DataCard({
         {displayTableData ? (
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-muted-foreground">Data Results</h4>
-            <DataTable columns={displayTableData.columns} data={displayTableData.rows} />
+            <div className="max-h-[400px] overflow-y-auto">
+              <DataTable columns={displayTableData.columns} data={displayTableData.rows} />
+            </div>
             {/* CSV Download below table */}
             {!isStreaming && (
               <div className="flex justify-end">
@@ -138,6 +160,49 @@ export function DataCard({
             </div>
           </div>
         ) : null}
+
+        {/* Chart Error Alert - subtle dismissible notification */}
+        {chartError && !isStreaming && (
+          <ChartErrorAlert message={chartError} />
+        )}
+
+        {/* Chart Skeleton - shown during chart generation */}
+        {visualizationInProgress && !chartSpecs && isStreaming && (
+          <ChartSkeleton stage={visualizationStage} />
+        )}
+
+        {/* Chart - below table per user decision, fades in smoothly */}
+        {chartSpecs && (
+          <div
+            className="space-y-2"
+            style={{ animation: "var(--animate-fadeIn)" }}
+          >
+            <h4 className="text-sm font-medium text-muted-foreground">
+              Visualization
+            </h4>
+            <ChartRenderer ref={chartRendererRef} data={chartSpecs} />
+            {/* Chart toolbar: type switcher + export buttons */}
+            {!isStreaming && (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex-shrink-0">
+                  <ChartTypeSwitcher
+                    getChartElement={() => chartRendererRef.current?.getElement() ?? null}
+                    chartDataJson={chartSpecs}
+                  />
+                </div>
+                <div className="ml-auto">
+                  <ChartExportButtons
+                    getChartElement={() => chartRendererRef.current?.getElement() ?? null}
+                    filename={queryBrief
+                      ? queryBrief.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30)
+                      : undefined
+                    }
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Section 3: AI Explanation */}
         {explanation ? (

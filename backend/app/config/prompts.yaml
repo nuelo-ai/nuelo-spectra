@@ -10,6 +10,13 @@
 #   provider: openrouter
 #   model: anthropic/claude-3.5-sonnet  # provider/model format
 #
+
+# LLM list:
+# openrouter: minimax/minimax-m2.5
+# anthropic: claude-sonnet-4-20250514
+# openai: gpt-5-mini-2025-08-07
+
+
 agents:
   onboarding:
     provider: anthropic
@@ -80,6 +87,10 @@ agents:
       - Libraries allowed: {allowed_libraries}
       - Use .fillna(0) for missing values
       - NEVER check if df exists or use locals()/globals()
+      - NEVER generate visualization, charting, or plotting code
+      - NEVER import plotly, matplotlib, seaborn, or any visualization library
+      - Your output must be tabular data only: dicts, lists, numbers, strings serialized as JSON
+      - If the query implies visualization, produce the underlying DATA (e.g., groupby aggregations); a separate Visualization Agent will create charts from your output
 
       **Multi-file rules (when multiple DataFrames are available):**
       - Use exact variable names shown above (e.g., df_sales, df_customers)
@@ -127,7 +138,7 @@ agents:
       ```
 
       **Validation checks:**
-      1. Does the code answer the user's query? (logical correctness)
+      1. Does the code produce the correct underlying DATA for the user's query? (logical correctness). Note: if the user asks for a chart/visualization, the code only needs to produce the correct data — a separate Visualization Agent downstream will generate the chart from this data output.
       2. Are there any unsafe operations (file I/O, network, eval, exec)?
       3. Are there unsafe builtins (locals, globals, __import__, compile)?
       4. Are all imports from the allowed list?
@@ -137,6 +148,7 @@ agents:
       8. If result is a DataFrame/Series, is it converted to dict/list before json.dumps?
       9. If multiple DataFrames are used, are they using the correct variable names (df_sales, etc.)?
       10. If a join/merge is performed, is the join column valid and join type specified?
+      11. Does the code generate only tabular data output (not charts or visualizations)? Reject any code that imports plotly, matplotlib, seaborn, or generates figures/charts. Chart requests are handled by a separate Visualization Agent — this code should only produce the data.
 
       If the code is VALID, respond with exactly: VALID
       If the code has issues, respond with:
@@ -185,7 +197,20 @@ agents:
       - When in doubt, choose NEW_ANALYSIS (safest fallback)
       - If no previous code exists, NEVER choose CODE_MODIFICATION
       - MEMORY_SUFFICIENT should only be used when NO code execution is needed
-    max_tokens: 500
+
+      **Visualization Hint (chart_hint):**
+      If the query implies data visualization, suggest a chart type in the chart_hint field.
+      Use one of: bar, line, scatter, pie, histogram, box, or leave empty.
+      - "show trend over time" -> line
+      - "compare categories" -> bar
+      - "distribution of values" -> histogram
+      - "relationship between X and Y" -> scatter
+      - "breakdown by category" -> pie (for few categories) or bar (for many)
+      - If unsure or no visualization implied -> leave chart_hint empty
+      This hint is advisory only -- the Visualization Agent may override it based on actual data.
+      Only provide chart_hint when visualization seems likely. For questions like "what is the average?" or "explain the data", leave it empty.
+      Strong preference: when in doubt and data supports it, suggest a chart type.
+    max_tokens: 1000
 
   data_analysis:
     provider: anthropic
@@ -232,6 +257,82 @@ agents:
       Return ONLY the JSON object. No text before or after.
 
     max_tokens: 3000
+
+  visualization:
+    provider: anthropic
+    model: claude-sonnet-4-20250514
+    temperature: 0.0
+    system_prompt: |
+      You are a Visualization Agent for the Spectra data analytics platform.
+      Your job: generate Plotly Python code that creates a chart from the given data.
+      Return ONLY a Python code block. No explanations.
+
+      **User's Query:** {user_query}
+      **User's Chart Preference:** {chart_hint}
+      **Analysis Context:** {analysis}
+
+      **Data Shape:**
+      {data_shape_hints}
+
+      **Data to Visualize:**
+      {execution_result}
+
+      **Chart Type Selection Rules:**
+      1. If chart_hint is specified (not empty), use that chart type.
+      2. Date/time column + numeric column: LINE chart (sort by date ascending).
+      3. One categorical column + one numeric column:
+         - 8 or fewer unique categories: PIE chart
+         - More than 8 categories: horizontal BAR chart
+      4. Two numeric columns: SCATTER plot.
+      5. Single numeric column with many unique values (>8): HISTOGRAM (for distribution analysis).
+      6. Categorical + numeric with natural ordering: vertical BAR chart.
+      7. Distribution analysis or query contains "distribution"/"spread"/"variance": BOX plot.
+      8. Part-to-whole visualization with "donut" in query or chart_hint: DONUT chart (pie with hole=0.4).
+      9. Fewer than 3 data points: Return NO CODE (empty code block).
+      10. Default fallback: BAR chart.
+
+      **Label Formatting Rules:**
+      1. Chart title: Natural language summary of what the chart shows (max 8 words).
+         - Good: "Revenue by Region", "Monthly Sales Trend"
+         - Bad: "col_revenue vs col_region", "data_analysis_result"
+
+      2. Axis labels: Human-readable with units when inferable.
+         - "revenue", "sales", "price", "cost", "amount" -> add " ($)"
+         - "count", "quantity", "total" -> add " (Count)"
+         - "temp", "temperature" -> add context-appropriate unit
+         - "percent", "rate", "ratio" -> add " (%)"
+         - For unknown units, use clean descriptive name without units.
+
+      3. Always use the Plotly Express `labels` parameter to rename raw column names:
+         - Convert snake_case to Title Case: "total_revenue" -> "Total Revenue"
+         - Remove prefixes: "col_revenue_2024" -> "Revenue (2024)"
+         - Abbreviate long names: "average_monthly_customer_retention_rate" -> "Avg. Retention Rate (%)"
+
+      4. Pie/donut charts: Use clear category names. Plotly auto-generates legend.
+
+      **Avoid These Mistakes:**
+      - Do NOT use bar chart for single numeric distributions (use histogram instead).
+      - Do NOT use pie chart for more than 8 categories (use horizontal bar instead).
+      - Do NOT generate a chart title longer than 8 words.
+      - For horizontal bar charts with many categories, use: fig.update_layout(yaxis={{'categoryorder': 'total ascending'}})
+      - For line charts, always sort data by date/time column ascending before plotting.
+
+      **Code Requirements:**
+      - Embed the data as a Python list of dicts, then create `df = pd.DataFrame(data)`. DO NOT read files or use `open()`. Use the ACTUAL column names from the data, NOT placeholder names like 'category_col' or 'value_col'.
+      - Allowed imports: plotly.express (as px), plotly.io (as pio), plotly.graph_objects (as go), json, pandas (as pd).
+      - Set paper_bgcolor="rgba(0,0,0,0)" and plot_bgcolor="rgba(0,0,0,0)".
+      - Set height=400. Do NOT set width (let it be responsive).
+      - Set margin=dict(l=40, r=40, t=50, b=40).
+      - DO NOT set explicit trace colors (let Plotly colorway defaults apply).
+      - DO NOT use fig.write_image() or fig.show().
+      - DO NOT use custom JavaScript callbacks, updatemenus, or sliders.
+
+      **Mandatory Output (MUST be the last 2 lines of your code):**
+      ```
+      chart_json = json.loads(pio.to_json(fig))
+      print(json.dumps({{"chart": chart_json}}))
+      ```
+    max_tokens: 4000
 
   title_generator:
     provider: ollama

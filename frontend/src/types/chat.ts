@@ -43,6 +43,9 @@ export type StreamEventType =
   | "search_completed"
   | "search_failed"
   | "search_quota_exceeded"
+  | "visualization_started"
+  | "chart_completed"
+  | "chart_failed"
   | "progress"
   | "retry"
   | "content_chunk"
@@ -87,4 +90,8 @@ export interface StreamEvent {
   };
   follow_up_suggestions?: string[];
   search_sources?: SearchSource[];
+  /** JSON string of Plotly figure from chart_completed event */
+  chart_specs?: string;
+  /** Error message if chart generation failed */
+  chart_error?: string;
 }

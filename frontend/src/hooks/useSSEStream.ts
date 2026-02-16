@@ -13,6 +13,14 @@ export interface StreamState {
   currentSearchQuery: string | null;
   /** Search sources extracted from stream events */
   searchSources: SearchSource[];
+  /** Chart specs JSON string from chart_completed event */
+  chartSpecs: string | null;
+  /** Chart error message from chart_failed event */
+  chartError: string | null;
+  /** Whether visualization has been requested (chart generation in progress) */
+  visualizationInProgress: boolean;
+  /** Current visualization stage message */
+  visualizationStage: string | null;
 }
 
 /**
@@ -29,6 +37,10 @@ export function useSSEStream() {
     completedData: null,
     currentSearchQuery: null,
     searchSources: [],
+    chartSpecs: null,
+    chartError: null,
+    visualizationInProgress: false,
+    visualizationStage: null,
   });
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -54,6 +66,8 @@ export function useSSEStream() {
         return "Search complete";
       case "search_failed":
         return "Web search unavailable";
+      case "visualization_started":
+        return "Generating visualization...";
       default:
         return "Processing...";
     }
@@ -80,6 +94,10 @@ export function useSSEStream() {
         completedData: null,
         currentSearchQuery: null,
         searchSources: [],
+        chartSpecs: null,
+        chartError: null,
+        visualizationInProgress: false,
+        visualizationStage: null,
       });
 
       try {
@@ -186,11 +204,39 @@ export function useSSEStream() {
                       newState.currentStatus = "Search quota exceeded";
                       break;
 
+                    case "visualization_started":
+                      newState.visualizationInProgress = true;
+                      newState.visualizationStage = event.message || "Analyzing data...";
+                      newState.currentStatus = event.message || "Generating visualization...";
+                      break;
+
+                    case "chart_completed":
+                      newState.chartSpecs = event.chart_specs || null;
+                      newState.visualizationInProgress = false;
+                      newState.visualizationStage = null;
+                      newState.currentStatus = getStatusMessage("analysis_started");
+                      break;
+
+                    case "chart_failed":
+                      newState.chartError = event.message || "Chart generation failed";
+                      newState.visualizationInProgress = false;
+                      newState.visualizationStage = null;
+                      break;
+
                     case "node_complete":
                       // Node completion stored in events array
                       // Extract search sources from da_response node_complete
                       if (event.node === "da_response" && event.search_sources) {
                         newState.searchSources = event.search_sources;
+                      }
+                      // Extract chart data from viz_response or any node_complete with chart fields
+                      if (event.chart_specs) {
+                        newState.chartSpecs = event.chart_specs;
+                        newState.visualizationInProgress = false;
+                      }
+                      if (event.chart_error) {
+                        newState.chartError = event.chart_error;
+                        newState.visualizationInProgress = false;
                       }
                       break;
 
@@ -259,6 +305,10 @@ export function useSSEStream() {
       completedData: null,
       currentSearchQuery: null,
       searchSources: [],
+      chartSpecs: null,
+      chartError: null,
+      visualizationInProgress: false,
+      visualizationStage: null,
     });
   }, []);
 
