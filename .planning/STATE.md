@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** v0.5 Admin Portal — defining requirements
+**Current focus:** v0.5 Admin Portal -- Phase 26 Foundation
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-16 — Milestone v0.5 started
+Phase: 26 of 31 (Foundation)
+Plan: None yet (ready to plan)
+Status: Ready to plan
+Last activity: 2026-02-16 -- Roadmap created for v0.5 (6 phases, 86 requirements)
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ○ (defining)
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -44,15 +44,14 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ○ (defining)
 
 See PROJECT.md Key Decisions table for full decision log.
 
-v0.5 Architecture decisions (from requirements):
+v0.5 Architecture decisions (from requirements + research):
 - Split-horizon deployment: same FastAPI codebase, `SPECTRA_MODE` env var (public/admin/dev)
 - Admin frontend: separate Next.js app (`admin-frontend/`), not a route in existing frontend
-- Network isolation: Tailscale VPN in production, localhost in dev
-- Static user tiers: defined in `user_classes.yaml` (free/standard/premium), not dynamic via admin UI
-- Credit system: float values, default cost per message, weekly/monthly auto-reset by tier
-- Stripe-forward config: `stripe_price_id` placeholder in tier config, billing deferred
-- Admin auth: `is_admin` flag on users table, first admin seeded via CLI/env
-- Defense in depth: network isolation + auth + role enforcement + audit logging
+- Credit system: NUMERIC(10,1) precision, SELECT FOR UPDATE for atomicity, deduct before agent runs
+- Static user tiers: defined in `user_classes.yaml`, admin edits credit overrides in platform_settings
+- Platform settings: key-value DB table with 30s TTL cache, runtime changes without restart
+- Admin auth: `is_admin` flag on users table, first admin seeded via CLI
+- One new backend dep (APScheduler), one new frontend lib (Recharts)
 
 ### Pending Todos
 
@@ -63,11 +62,12 @@ v0.5 Architecture decisions (from requirements):
 
 ### Blockers/Concerns
 
-- E2B sandboxes created per-execution (no warm pools) — acceptable for now
-- LLM chart type selection has 15-30% error rate per research — mitigate with prompt heuristics
+- Credit deduction timing with SSE streaming: deduct before agent, no refund on failure (matches LLM billing patterns)
+- SearchQuota coexistence: decide during Phase 27 whether web searches deduct credits or keep separate quota
+- E2B sandboxes created per-execution (no warm pools) -- acceptable for now
 
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: v0.5 requirements defined (86 REQ-IDs across 10 categories), research complete (4 files + SUMMARY.md). Next step is roadmap creation.
-Resume with: `/gsd:new-milestone` — pick up at Step 10 (Create Roadmap). Requirements are committed and approved. Research is committed. Need to spawn gsd-roadmapper to create ROADMAP.md with phases starting from Phase 26.
+Stopped at: Roadmap created for v0.5 Admin Portal (Phases 26-31, 86 requirements mapped)
+Resume with: `/gsd:plan-phase 26` to plan Foundation phase

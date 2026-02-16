@@ -169,13 +169,98 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated by roadmapper) | | |
+| AUTH-01 | Phase 26 | Pending |
+| AUTH-02 | Phase 26 | Pending |
+| AUTH-03 | Phase 26 | Pending |
+| AUTH-04 | Phase 26 | Pending |
+| AUTH-05 | Phase 26 | Pending |
+| AUTH-06 | Phase 26 | Pending |
+| AUTH-07 | Phase 26 | Pending |
+| DASH-01 | Phase 31 | Pending |
+| DASH-02 | Phase 31 | Pending |
+| DASH-03 | Phase 31 | Pending |
+| DASH-04 | Phase 31 | Pending |
+| DASH-05 | Phase 31 | Pending |
+| DASH-06 | Phase 31 | Pending |
+| DASH-07 | Phase 31 | Pending |
+| USER-01 | Phase 29 | Pending |
+| USER-02 | Phase 29 | Pending |
+| USER-03 | Phase 29 | Pending |
+| USER-04 | Phase 29 | Pending |
+| USER-05 | Phase 29 | Pending |
+| USER-06 | Phase 29 | Pending |
+| USER-07 | Phase 29 | Pending |
+| USER-08 | Phase 29 | Pending |
+| USER-09 | Phase 29 | Pending |
+| USER-10 | Phase 29 | Pending |
+| USER-11 | Phase 29 | Pending |
+| USER-12 | Phase 29 | Pending |
+| USER-13 | Phase 29 | Pending |
+| SIGNUP-01 | Phase 28 | Pending |
+| SIGNUP-02 | Phase 28 | Pending |
+| SIGNUP-03 | Phase 28 | Pending |
+| SIGNUP-04 | Phase 28 | Pending |
+| INVITE-01 | Phase 30 | Pending |
+| INVITE-02 | Phase 30 | Pending |
+| INVITE-03 | Phase 30 | Pending |
+| INVITE-04 | Phase 30 | Pending |
+| INVITE-05 | Phase 30 | Pending |
+| INVITE-06 | Phase 30 | Pending |
+| INVITE-07 | Phase 30 | Pending |
+| INVITE-08 | Phase 30 | Pending |
+| TIER-01 | Phase 28 | Pending |
+| TIER-02 | Phase 28 | Pending |
+| TIER-03 | Phase 28 | Pending |
+| TIER-04 | Phase 28 | Pending |
+| TIER-05 | Phase 28 | Pending |
+| TIER-06 | Phase 28 | Pending |
+| TIER-07 | Phase 28 | Pending |
+| CREDIT-01 | Phase 27 | Pending |
+| CREDIT-02 | Phase 27 | Pending |
+| CREDIT-03 | Phase 27 | Pending |
+| CREDIT-04 | Phase 27 | Pending |
+| CREDIT-05 | Phase 27 | Pending |
+| CREDIT-06 | Phase 27 | Pending |
+| CREDIT-07 | Phase 27 | Pending |
+| CREDIT-08 | Phase 27 | Pending |
+| CREDIT-09 | Phase 27 | Pending |
+| CREDIT-10 | Phase 27 | Pending |
+| CREDIT-11 | Phase 27 | Pending |
+| CREDIT-12 | Phase 27 | Pending |
+| CREDIT-13 | Phase 27 | Pending |
+| SETTINGS-01 | Phase 28 | Pending |
+| SETTINGS-02 | Phase 28 | Pending |
+| SETTINGS-03 | Phase 28 | Pending |
+| SETTINGS-04 | Phase 28 | Pending |
+| SETTINGS-05 | Phase 28 | Pending |
+| SETTINGS-06 | Phase 28 | Pending |
+| SETTINGS-07 | Phase 28 | Pending |
+| SETTINGS-08 | Phase 28 | Pending |
+| ARCH-01 | Phase 26 | Pending |
+| ARCH-02 | Phase 26 | Pending |
+| ARCH-03 | Phase 26 | Pending |
+| ARCH-04 | Phase 26 | Pending |
+| ARCH-05 | Phase 26 | Pending |
+| ARCH-06 | Phase 31 | Pending |
+| ARCH-07 | Phase 31 | Pending |
+| ARCH-08 | Phase 26 | Pending |
+| ARCH-09 | Phase 31 | Pending |
+| ARCH-10 | Phase 26 | Pending |
+| DB-01 | Phase 26 | Pending |
+| DB-02 | Phase 26 | Pending |
+| DB-03 | Phase 26 | Pending |
+| DB-04 | Phase 26 | Pending |
+| DB-05 | Phase 26 | Pending |
+| DB-06 | Phase 26 | Pending |
+| DB-07 | Phase 26 | Pending |
+| DB-08 | Phase 26 | Pending |
+| DB-09 | Phase 26 | Pending |
 
 **Coverage:**
-- v0.5 requirements: 80 total
-- Mapped to phases: 0
-- Unmapped: 80 ⚠️
+- v0.5 requirements: 86 total
+- Mapped to phases: 86
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-16*
-*Last updated: 2026-02-16 after initial definition*
+*Last updated: 2026-02-16 after roadmap creation*
