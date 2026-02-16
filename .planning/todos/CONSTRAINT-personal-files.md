@@ -11,23 +11,27 @@
 
 ## Rules
 
-1. **NEVER update these files** without explicit user consent
-2. **NEVER commit these files** to git (already in .gitignore)
-3. **NEVER push these files** to remote repository
-4. These are the user's personal planning and notes files
+1. **NEVER read these files** unless explicitly asked by the user
+2. **NEVER update these files** unless explicitly asked by the user
+3. **NEVER use these files for context or planning**
+4. **NEVER commit these files** to git (already in .gitignore)
+5. **NEVER push these files** to remote repository
+6. These are the user's personal files - hands off completely
 
 ## What These Files Are
 
-- `ms-notes.txt`: Personal development notes, error logs, troubleshooting
-- `ms-milestone-strategy.md`: Personal milestone planning strategy and versioning decisions
+- `ms-notes.txt`: User's personal notes
+- `ms-milestone-strategy.md`: User's personal strategy notes
 
-## If User Asks to Update
+## Actions Allowed
 
-✅ **Allowed:** Reading these files to understand context
-✅ **Allowed:** Using information from these files for planning
-❌ **Not Allowed:** Writing/editing without explicit permission
+❌ **Not Allowed:** Reading for context
+❌ **Not Allowed:** Reading for planning
+❌ **Not Allowed:** Using information from them
+❌ **Not Allowed:** Writing/editing
+✅ **ONLY Allowed:** When user explicitly says "read ms-notes.txt" or "update ms-milestone-strategy.md"
 
-Always ask: "Would you like me to update [filename]?" before making changes.
+**Bottom line: Don't touch these files. Period.**
 
 ## Git Status
 
