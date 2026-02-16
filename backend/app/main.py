@@ -291,6 +291,9 @@ if mode in ("public", "dev"):
     app.include_router(chat_sessions.router)
     app.include_router(search.router)
 
+    from app.routers import credits
+    app.include_router(credits.router)
+
 # Admin routes (admin and dev modes) -- lazy import to avoid loading admin code in public mode
 if mode in ("admin", "dev"):
     from app.routers.admin import admin_router
