@@ -22,7 +22,7 @@ Atomic credit deduction per message, balance tracking, transaction history, admi
 - Silent deduction per message -- balance updates without showing per-message cost
 
 ### Reset scheduling
-- Default cadence: weekly
+- Reset cadence is per-class, defined by `reset_policy` in user_classes.yaml (weekly, monthly, none, unlimited) -- not a global default
 - Rolling reset relative to each user's signup date (not a global fixed day). If a user signed up on Wednesday, credits reset every Wednesday
 - No carry-over: balance resets to tier allocation regardless of remaining credits
 - Admin manual reset restarts the user's credit cycle from today (next auto-reset is 1 week/month from the manual reset date)
@@ -65,6 +65,10 @@ Atomic credit deduction per message, balance tracking, transaction history, admi
       credits: 0
       reset_policy: unlimited
   ```
+
+### Tier assignment on registration
+- Self-registered users → assigned the default class configured in platform_settings (admin-configurable, e.g., "free" or "free_trial")
+- Invite-based users → admin selects the class at invite creation time (required field)
 
 ### Claude's Discretion
 - Low-credit threshold exact value (percentage or absolute)
