@@ -146,6 +146,10 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"}
         )
 
+    # Track last login time
+    user.last_login_at = datetime.now(timezone.utc)
+    await db.flush()
+
     # Create tokens
     tokens = create_tokens(str(user.id), settings)
 
