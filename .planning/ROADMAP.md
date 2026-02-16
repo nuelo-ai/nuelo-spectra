@@ -130,11 +130,12 @@ Plans:
   1. Admin can list all users with pagination, search by email or name, and filter by active/inactive status, user class, and signup date
   2. Admin can view a user's full profile: name, email, signup date, last login, active/inactive status, tier, credit balance, usage history, file count, and chat session count
   3. Admin can activate/deactivate a user account, trigger a password reset email, change their tier, adjust their credit balance (with reason), and delete the account (with proper cascade)
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 29-01: TBD
-- [ ] 29-02: TBD
+- [ ] 29-01-PLAN.md -- User listing, search, filter, detail view, activity timeline, last_login_at migration
+- [ ] 29-02-PLAN.md -- Account actions: activate/deactivate (with token invalidation), password reset, tier change, credit adjust
+- [ ] 29-03-PLAN.md -- User deletion with challenge code and bulk operations (activate, deactivate, tier change, credit adjust, delete)
 
 ### Phase 30: Invitation System
 **Goal**: Admins can invite users via email with time-limited single-use links, and invited users can register even when public signup is disabled
@@ -202,6 +203,6 @@ Note: Phase 28 can start after Phase 26 (does not depend on Phase 27). Phase 30 
 | 26. Foundation | v0.5 | 3/3 | Complete | 2026-02-16 |
 | 27. Credit System | v0.5 | 4/4 | Complete | 2026-02-16 |
 | 28. Platform Config | v0.5 | Complete    | 2026-02-16 | - |
-| 29. User Management | v0.5 | 0/TBD | Not started | - |
+| 29. User Management | v0.5 | 0/3 | Not started | - |
 | 30. Invitation System | v0.5 | 0/TBD | Not started | - |
 | 31. Dashboard & Admin Frontend | v0.5 | 0/TBD | Not started | - |
