@@ -120,3 +120,45 @@
 
 ---
 
+
+## v0.4 Data Visualization (Shipped: 2026-02-15)
+
+**Delivered:** Intelligent data visualization with AI-generated interactive Plotly charts that automatically appear when analysis benefits from visual representation
+
+**Phases completed:** 20-25 (6 phases, 11 plans total)
+
+**Key accomplishments:**
+
+- Added 6th AI agent (Visualization Agent) that generates Plotly Python code with chart type selection heuristics embedded in LLM prompts
+- Implemented 7 chart types (bar, line, scatter, histogram, box plot, pie, donut) with automatic chart type selection based on data shape analysis
+- Built intelligent chart discretion system — Manager Agent hints visualization intent, Data Analysis Agent confirms when charts add value, conditional LangGraph routing skips visualization when not needed
+- Integrated Plotly.js with interactive charts (zoom, pan, hover tooltips), responsive resizing, and theme-aware Nord palette for dark/light modes
+- Added PNG/SVG chart export (1200x800 resolution) and chart type switcher for compatible types (bar ↔ line ↔ scatter) with instant client-side rendering
+- Implemented non-fatal error handling — chart generation failures preserve analysis text and data table with graceful degradation and subtle user notification
+
+**Stats:**
+
+- 9,173 lines of Python (app) + 2,949 lines of Python (tests)
+- 11,055 lines of TypeScript/TSX (frontend)
+- 23,177 total lines of code
+- 6 phases, 11 plans executed
+- 76 files changed (+15,708 / -2,204 lines)
+- 3 days development time (Feb 12-15, 2026)
+
+**Git range:** `v0.3 (cb936bf)` → `e3cf117 (Phase 25 final)`
+
+**Requirements:** 43/43 satisfied (100%)
+- Infrastructure: 4/4 (INFRA)
+- Visualization Agent: 6/6 (AGENT)
+- Chart Generation: 11/11 (CHART)
+- Graph Integration: 6/6 (GRAPH)
+- Chart Display: 7/7 (DISPLAY)
+- Export & Customization: 5/5 (EXPORT)
+- Theme & Polish: 4/4 (THEME)
+
+**Testing:** All chart types validated end-to-end, theme toggle verified in dark/light modes, export functionality tested
+
+**What's next:** v0.5 will be defined via `/gsd:new-milestone`
+
+---
+
