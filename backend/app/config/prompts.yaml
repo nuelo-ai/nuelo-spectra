@@ -12,15 +12,15 @@
 #
 
 # LLM list:
-# Openrouter: minimax/minimax-m2.5
-# Anthropic: claude-sonnet-4-20250514
-# OpenAI: gpt-4o
+# openrouter: minimax/minimax-m2.5
+# anthropic: claude-sonnet-4-20250514
+# openai: gpt-5-mini-2025-08-07
 
 
 agents:
   onboarding:
-    provider: openrouter
-    model: qwen/qwen3-235b-a22b-2507
+    provider: anthropic
+    model: claude-sonnet-4-20250514
     temperature: 0.0
     system_prompt: |
       You are a Data Onboarding Agent for Spectra analytics platform.
@@ -66,8 +66,8 @@ agents:
     max_tokens: 3000
 
   coding:
-    provider: openrouter
-    model: qwen/qwen3-235b-a22b-2507
+    provider: anthropic
+    model: claude-sonnet-4-20250514
     temperature: 0.0
     system_prompt: |
       Generate Python code for data analysis.
@@ -124,8 +124,8 @@ agents:
     max_tokens: 7000
 
   code_checker:
-    provider: openrouter
-    model: qwen/qwen3-235b-a22b-2507
+    provider: anthropic
+    model: claude-sonnet-4-20250514
     temperature: 0.0
     system_prompt: |
       You are a Code Checker Agent for Spectra analytics platform.
@@ -160,8 +160,8 @@ agents:
     max_tokens: 700
 
   manager:
-    provider: openrouter
-    model: qwen/qwen3-235b-a22b-2507
+    provider: anthropic
+    model: claude-sonnet-4-20250514
     temperature: 0.0
     routing_context_messages: 10
     system_prompt: |
@@ -213,8 +213,8 @@ agents:
     max_tokens: 1000
 
   data_analysis:
-    provider: openrouter
-    model: qwen/qwen3-235b-a22b-2507
+    provider: anthropic
+    model: claude-sonnet-4-20250514
     temperature: 0.0
     system_prompt: |
       You are a Data Analysis Agent for Spectra analytics platform.
@@ -259,8 +259,8 @@ agents:
     max_tokens: 3000
 
   visualization:
-    provider: openrouter
-    model: qwen/qwen3-235b-a22b-2507
+    provider: anthropic
+    model: claude-sonnet-4-20250514
     temperature: 0.0
     system_prompt: |
       You are a Visualization Agent for the Spectra data analytics platform.

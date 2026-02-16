@@ -105,7 +105,7 @@ const ChartRenderer = forwardRef<ChartRendererHandle, ChartRendererProps>(
         },
         autosize: true,
         height: chartHeight,
-        margin: { l: 50, r: 30, t: 60, b: 80 }, // top margin clears modebar, bottom for legend
+        margin: { l: 50, r: 30, t: 100, b: 80 }, // top margin clears modebar, bottom for legend
       };
 
       const config: Partial<Plotly.Config> = {
