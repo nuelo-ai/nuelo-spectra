@@ -9,7 +9,8 @@ Spectra bridges the gap between raw data and actionable insights. Upload your da
 **Key Differentiators:**
 - **Code Transparency**: See and verify the Python code generated for each analysis
 - **Multi-File Analysis**: Link multiple datasets to a single conversation for cross-file queries
-- **Multi-Agent Accuracy**: 5 specialized AI agents ensure accurate, safe results
+- **Multi-Agent Accuracy**: 6 specialized AI agents ensure accurate, safe results
+- **Intelligent Visualization**: AI determines when charts enhance analysis and generates interactive Plotly visualizations
 - **Intelligent Routing**: Manager Agent skips code generation for simple queries (~40% faster)
 - **Multi-Provider LLM**: Choose from Anthropic, OpenAI, Google, Ollama, or OpenRouter per agent
 - **Production Security**: E2B Firecracker microVM isolation for safe code execution
@@ -28,8 +29,11 @@ Spectra bridges the gap between raw data and actionable insights. Upload your da
 - LLM-powered session title auto-generation
 - Web search integration (Tavily) with source citations
 - Interactive Data Cards with sortable tables, CSV/Markdown export
-- Dark/light theme toggle with Nord palette
-- 5 LLM providers with per-agent YAML configuration
+- AI-generated Plotly charts with intelligent visualization discretion (7 types)
+- Interactive charts with zoom, pan, hover tooltips, and responsive sizing
+- PNG/SVG chart export (1200x800 resolution) and chart type switcher
+- Dark/light theme toggle with Nord palette (charts included)
+- 6 LLM providers with per-agent YAML configuration
 - Production SMTP email with secure password reset flow
 - JWT authentication with refresh tokens
 
@@ -46,13 +50,14 @@ Spectra bridges the gap between raw data and actionable insights. Upload your da
 
 ## AI Agent Architecture
 
-Spectra uses 5 specialized agents orchestrated by LangGraph:
+Spectra uses 6 specialized agents orchestrated by LangGraph:
 
 1. **Manager Agent** — Routes queries to optimal path: memory-only response, code modification, or fresh analysis
 2. **Onboarding Agent** — Analyzes uploaded file structure, generates data summary and query suggestions
 3. **Coding Agent** — Generates or modifies Python pandas code from natural language queries
 4. **Code Checker Agent** — Validates code via AST analysis, checks library allowlist and unsafe operations
 5. **Data Analysis Agent** — Interprets execution results, generates explanations, optionally searches web for context
+6. **Visualization Agent** — Generates Plotly chart code when analysis benefits from visual representation
 
 All agents use YAML-configured prompts and support per-agent LLM provider/model configuration.
 
@@ -137,7 +142,17 @@ Copy `backend/.env.example` to `backend/.env` and fill in:
 2. LLM health: `http://localhost:8000/health/llm`
 3. Open `http://localhost:3000`, sign up, upload a CSV, and ask a question
 
-## Current Status (v0.3)
+## Current Status (v0.4)
+
+### v0.4 Data Visualization (February 2026)
+- 6th AI agent (Visualization Agent) generates Plotly chart code with intelligent discretion
+- 7 chart types: bar, line, scatter, histogram, box plot, pie, donut
+- Automatic chart type selection based on data shape and query intent
+- Interactive charts with zoom, pan, hover tooltips, and responsive sizing
+- PNG/SVG chart export (1200x800 resolution) with client-side instant rendering
+- Chart type switcher for compatible types (bar ↔ line ↔ scatter)
+- Theme-aware Nord palette for charts matching dark/light mode toggle
+- Non-fatal error handling preserves analysis text and data table on chart failures
 
 ### v0.3 Multi-file Conversation Support (February 2026)
 - ChatGPT-style session-centric UX with sidebar chat history navigation
@@ -177,4 +192,4 @@ MIT License - See LICENSE file for details.
 
 - **GitHub**: [github.com/marwazihs/nuelo-spectra](https://github.com/marwazihs/nuelo-spectra)
 - **Issues**: Report bugs or request features via GitHub Issues
-- **Version**: v0.3 (February 2026)
+- **Version**: v0.4 (February 2026)
