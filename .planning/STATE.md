@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 26 of 31 (Foundation)
-Plan: 2 of 3 (26-02 complete)
-Status: Executing
-Last activity: 2026-02-16 -- Completed 26-02 split-horizon routing
+Plan: 3 of 3 (26-03 complete -- Phase 26 complete)
+Status: Phase Complete
+Last activity: 2026-02-16 -- Completed 26-03 admin auth
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 [█░░░░░░░░░] ~5%
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 [██░░░░░░░░] ~10%
 
 ## Performance Metrics
 
@@ -53,7 +53,10 @@ v0.5 Architecture decisions (from requirements + research):
 - Credit system: NUMERIC(10,1) precision, SELECT FOR UPDATE for atomicity, deduct before agent runs
 - Static user tiers: defined in `user_classes.yaml`, admin edits credit overrides in platform_settings
 - Platform settings: key-value DB table with 30s TTL cache, runtime changes without restart
-- Admin auth: `is_admin` flag on users table, first admin seeded via CLI
+- Admin auth: `is_admin` flag on users table, first admin seeded via CLI, defense-in-depth (JWT + DB check)
+- No separate admin refresh token; sliding window reissue via AdminTokenReissueMiddleware
+- In-memory login lockout for admin (upgrade to Redis for multi-instance)
+- Audit entries added to caller's transaction (no separate commit)
 - String(20) for user_class (not PostgreSQL ENUM) to avoid ALTER TYPE migration pain
 - Three-step migration pattern: add columns with server_default, create tables, backfill data
 - One new backend dep (APScheduler), one new frontend lib (Recharts)
@@ -74,5 +77,5 @@ v0.5 Architecture decisions (from requirements + research):
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 26-02-PLAN.md (split-horizon routing)
-Resume with: `/gsd:execute-phase 26` to continue with plan 26-03
+Stopped at: Completed 26-03-PLAN.md (admin auth) -- Phase 26 Foundation complete
+Resume with: `/gsd:execute-phase 27` to start Phase 27
