@@ -1,5 +1,6 @@
 """Authentication service layer for business logic."""
 
+from decimal import Decimal
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -7,7 +8,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
+from app.models.user_credit import UserCredit
 from app.schemas.auth import SignupRequest
+from app.services.user_class import get_class_config, get_default_class
 from app.utils.security import hash_password, verify_password
 
 
@@ -38,14 +41,36 @@ async def create_user(db: AsyncSession, signup: SignupRequest) -> User:
 
     # Hash password and create user
     hashed_password = hash_password(signup.password)
+
+    # Assign default user class explicitly (matches model default but makes intent clear)
+    default_class = get_default_class()
+
     user = User(
         email=signup.email,
         hashed_password=hashed_password,
         first_name=signup.first_name,
-        last_name=signup.last_name
+        last_name=signup.last_name,
+        user_class=default_class,
     )
 
     db.add(user)
+    await db.flush()  # Flush to get user.id for UserCredit FK
+
+    # Create UserCredit row with initial balance from tier config
+    class_config = get_class_config(default_class)
+    if class_config and class_config.get("reset_policy") == "unlimited":
+        initial_balance = Decimal("-1")  # Sentinel for unlimited users
+    elif class_config:
+        initial_balance = Decimal(str(class_config.get("credits", 0)))
+    else:
+        initial_balance = Decimal("0")
+
+    credit = UserCredit(user_id=user.id, balance=initial_balance)
+    db.add(credit)
+
+    # TODO: Existing users have balance=0 from migration backfill. Consider a
+    # one-time script or migration to set balance to tier allocation.
+
     await db.commit()
     await db.refresh(user)
 
