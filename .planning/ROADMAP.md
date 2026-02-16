@@ -82,12 +82,12 @@
   3. An admin user seeded via `python -m app.cli seed-admin` can log in through the admin auth endpoint and receive a JWT; a regular user hitting admin endpoints gets 403
   4. Admin session expires after configured inactivity timeout (default 30 minutes), requiring re-login
   5. Every admin API call creates a row in `admin_audit_log` with admin_id, action name, target, timestamp, and details
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 26-01: TBD
-- [ ] 26-02: TBD
-- [ ] 26-03: TBD
+- [ ] 26-01-PLAN.md -- Database models and Alembic migration (5 new tables, user fields, backfill)
+- [ ] 26-02-PLAN.md -- SPECTRA_MODE config and conditional router mounting with mode-aware CORS
+- [ ] 26-03-PLAN.md -- Admin auth (JWT, dependency, login, CLI seed-admin, lockout, audit logging, token reissue)
 
 ### Phase 27: Credit System
 **Goal**: Users have credit balances that are atomically deducted per message, with admin controls for adjustment, bulk operations, and scheduled resets
