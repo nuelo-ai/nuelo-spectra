@@ -1,5 +1,7 @@
 """FastAPI dependencies for authentication and database access."""
 
+import threading
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 from uuid import UUID
@@ -17,6 +19,33 @@ from app.utils.security import verify_token
 
 # OAuth2 scheme for token extraction (tokenUrl points to login endpoint)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+
+# In-memory set of recently deactivated user IDs for immediate token invalidation.
+# TTL matches access token expiry. After TTL, the DB is_active=False check suffices.
+_deactivated_users: dict[UUID, float] = {}
+_deactivation_lock = threading.Lock()
+
+
+def mark_user_deactivated(user_id: UUID, ttl_seconds: int = 1800) -> None:
+    """Add user to revocation set. TTL defaults to 30 min (token expiry)."""
+    with _deactivation_lock:
+        _deactivated_users[user_id] = time.time()
+        # Cleanup expired entries
+        cutoff = time.time() - ttl_seconds
+        expired = [uid for uid, ts in _deactivated_users.items() if ts < cutoff]
+        for uid in expired:
+            del _deactivated_users[uid]
+
+
+def clear_user_deactivation(user_id: UUID) -> None:
+    """Remove user from revocation set (on reactivation)."""
+    with _deactivation_lock:
+        _deactivated_users.pop(user_id, None)
+
+
+def is_user_deactivated(user_id: UUID) -> bool:
+    """Check if user was recently deactivated."""
+    return user_id in _deactivated_users
 
 
 async def get_current_user(
@@ -48,6 +77,14 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid user ID in token",
             headers={"WWW-Authenticate": "Bearer"}
+        )
+
+    # Check in-memory revocation set BEFORE DB lookup (immediate logout on deactivation)
+    if is_user_deactivated(user_id):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account has been deactivated",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     # Get user from database

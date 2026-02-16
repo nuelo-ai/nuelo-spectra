@@ -1,9 +1,10 @@
 """Pydantic schemas for admin user management endpoints."""
 
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class UserSummary(BaseModel):
@@ -67,3 +68,26 @@ class UserActivityResponse(BaseModel):
 
     user_id: UUID
     months: list[ActivityMonth]
+
+
+class ActivateDeactivateResponse(BaseModel):
+    """Response for activate/deactivate user actions."""
+
+    user_id: UUID
+    is_active: bool
+    message: str
+
+
+class PasswordResetTriggerResponse(BaseModel):
+    """Response for admin-triggered password reset."""
+
+    user_id: UUID
+    email: str
+    message: str
+
+
+class CreditAdjustRequest(BaseModel):
+    """Request for admin credit adjustment."""
+
+    amount: Decimal = Field(description="Positive to add, negative to deduct")
+    reason: str = Field(..., min_length=1, max_length=500)

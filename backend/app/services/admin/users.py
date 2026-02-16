@@ -1,20 +1,24 @@
 """Admin user management service.
 
-Provides list, detail, and activity queries for admin user management.
+Provides list, detail, activity queries, and account actions for admin user management.
 """
 
 import math
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import select, func, or_, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import Settings
+from app.dependencies import clear_user_deactivation, mark_user_deactivated
 from app.models.chat_message import ChatMessage
 from app.models.chat_session import ChatSession
 from app.models.file import File
+from app.models.password_reset import PasswordResetToken
 from app.models.user import User
 from app.models.user_credit import UserCredit
+from app.services.email import create_reset_token, send_password_reset_email
 
 
 async def list_users(
@@ -271,3 +275,118 @@ async def get_user_activity(
         "user_id": user_id,
         "months": activity_months,
     }
+
+
+async def deactivate_user(db: AsyncSession, user_id: UUID) -> User:
+    """Deactivate a user account and trigger immediate token invalidation.
+
+    Args:
+        db: Database session (caller manages transaction/commit).
+        user_id: UUID of the user to deactivate.
+
+    Returns:
+        The deactivated User instance.
+
+    Raises:
+        ValueError: If user not found or already inactive.
+    """
+    result = await db.execute(
+        select(User).where(User.id == user_id).with_for_update()
+    )
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise ValueError("User not found")
+    if not user.is_active:
+        raise ValueError("User is already deactivated")
+
+    user.is_active = False
+    await db.flush()
+
+    # Immediate token invalidation via in-memory revocation set
+    mark_user_deactivated(user_id)
+
+    return user
+
+
+async def activate_user(db: AsyncSession, user_id: UUID) -> User:
+    """Activate a previously deactivated user account.
+
+    Args:
+        db: Database session (caller manages transaction/commit).
+        user_id: UUID of the user to activate.
+
+    Returns:
+        The activated User instance.
+
+    Raises:
+        ValueError: If user not found or already active.
+    """
+    result = await db.execute(
+        select(User).where(User.id == user_id).with_for_update()
+    )
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise ValueError("User not found")
+    if user.is_active:
+        raise ValueError("User is already active")
+
+    user.is_active = True
+    await db.flush()
+
+    # Clear from revocation set so user can log in again
+    clear_user_deactivation(user_id)
+
+    return user
+
+
+async def trigger_password_reset(
+    db: AsyncSession, user_id: UUID, settings: Settings
+) -> str:
+    """Trigger a password reset email for a user (admin action).
+
+    Reuses the same token generation and email flow as the user-facing
+    forgot-password endpoint.
+
+    Args:
+        db: Database session (caller manages transaction/commit).
+        user_id: UUID of the user.
+        settings: Application settings (for frontend_url and SMTP config).
+
+    Returns:
+        The user's email address (for confirmation).
+
+    Raises:
+        ValueError: If user not found.
+    """
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise ValueError("User not found")
+
+    # Invalidate any existing active reset tokens for this email
+    await db.execute(
+        update(PasswordResetToken)
+        .where(
+            PasswordResetToken.email == user.email,
+            PasswordResetToken.is_active == True,  # noqa: E712
+        )
+        .values(is_active=False)
+    )
+
+    # Generate new reset token
+    raw_token, token_hash = create_reset_token()
+
+    # Store token in DB (10-minute expiry)
+    db_token = PasswordResetToken(
+        email=user.email,
+        token_hash=token_hash,
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
+    )
+    db.add(db_token)
+    await db.flush()
+
+    # Build reset link and send email
+    reset_link = f"{settings.frontend_url}/reset-password?token={raw_token}"
+    await send_password_reset_email(user.email, user.first_name, reset_link, settings)
+
+    return user.email
