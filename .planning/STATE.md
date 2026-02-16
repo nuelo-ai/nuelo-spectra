@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 29 of 31 (User Management)
-Plan: 1 of 3 complete
+Plan: 2 of 3 complete
 Status: Executing Phase 29
-Last activity: 2026-02-16 -- Completed 29-01 User Listing, Search & Detail
+Last activity: 2026-02-16 -- Completed 29-02 Account Actions
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 [█████░░░░░] ~40%
 
@@ -56,6 +56,7 @@ v0.5 Architecture decisions (from requirements + research):
 - Admin auth: `is_admin` flag on users table, first admin seeded via CLI, defense-in-depth (JWT + DB check)
 - No separate admin refresh token; sliding window reissue via AdminTokenReissueMiddleware
 - In-memory login lockout for admin (upgrade to Redis for multi-instance)
+- In-memory token revocation set with TTL for immediate logout on user deactivation (same single-instance caveat)
 - Audit entries added to caller's transaction (no separate commit)
 - String(20) for user_class (not PostgreSQL ENUM) to avoid ALTER TYPE migration pain
 - Three-step migration pattern: add columns with server_default, create tables, backfill data
@@ -77,5 +78,5 @@ v0.5 Architecture decisions (from requirements + research):
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 29-01-PLAN.md (User Listing, Search & Detail)
-Resume with: `/gsd:execute-phase 29` to continue Phase 29 (plan 02 next)
+Stopped at: Completed 29-02-PLAN.md (Account Actions)
+Resume with: `/gsd:execute-phase 29` to continue Phase 29 (plan 03 next)
