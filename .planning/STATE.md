@@ -69,5 +69,5 @@ v0.5 Architecture decisions (from requirements):
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Defining v0.5 Admin Portal requirements
-Resume with: Continue requirement definition and roadmap creation
+Stopped at: v0.5 requirements defined (86 REQ-IDs across 10 categories), research complete (4 files + SUMMARY.md). Next step is roadmap creation.
+Resume with: `/gsd:new-milestone` — pick up at Step 10 (Create Roadmap). Requirements are committed and approved. Research is committed. Need to spawn gsd-roadmapper to create ROADMAP.md with phases starting from Phase 26.
