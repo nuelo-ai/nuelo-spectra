@@ -30,6 +30,7 @@ Atomic credit deduction per message, balance tracking, transaction history, admi
 
 ### Admin credit operations
 - Individual user adjustments only (bulk operations deferred)
+- Admin must re-enter their password to confirm any manual credit adjustment (accountability measure)
 - Admin must provide a reason/note for every credit adjustment -- shown in transaction history and audit log
 - Auto-reset always sets balance to tier allocation, regardless of admin-granted bonuses. Admin bonuses are one-time grants consumed during the current period
 - Transaction types are explicitly typed: 'usage' (message sent), 'admin_adjustment', 'auto_reset', 'manual_reset'
