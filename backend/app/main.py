@@ -256,23 +256,56 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Add CORS middleware
+# Determine operational mode
+mode = settings.spectra_mode
+if mode not in ("public", "admin", "dev"):
+    raise ValueError(f"Invalid SPECTRA_MODE: '{mode}'. Must be 'public', 'admin', or 'dev'")
+
+logger = logging.getLogger("spectra.mode")
+logger.info(f"Starting Spectra in {mode.upper()} mode")
+
+# Add CORS middleware (mode-aware)
 # IMPORTANT: Must use explicit origins (not wildcard) with allow_credentials=True
+cors_origins = settings.get_cors_origins()
+if mode in ("admin", "dev") and settings.admin_cors_origin:
+    if settings.admin_cors_origin not in cors_origins:
+        cors_origins.append(settings.admin_cors_origin)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.get_cors_origins(),  # Use method to parse JSON/list
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Admin-Token"],  # For sliding window token reissue
 )
 
-# Include routers
+# Health is always available (all modes)
 app.include_router(health.router)
-app.include_router(auth.router)
-app.include_router(files.router)
-app.include_router(chat.router)
-app.include_router(chat_sessions.router)
-app.include_router(search.router)
+
+# Public routes (public and dev modes)
+if mode in ("public", "dev"):
+    app.include_router(auth.router)
+    app.include_router(files.router)
+    app.include_router(chat.router)
+    app.include_router(chat_sessions.router)
+    app.include_router(search.router)
+
+# Admin routes (admin and dev modes) -- lazy import to avoid loading admin code in public mode
+if mode in ("admin", "dev"):
+    from app.routers.admin import admin_router
+    app.include_router(admin_router, prefix="/api/admin")
+
+# In public mode, catch-all for /api/admin/* to log warnings and return 404
+if mode == "public":
+    from fastapi import HTTPException
+
+    @app.api_route("/api/admin/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+    async def admin_route_not_found(path: str):
+        logging.getLogger("spectra.security").warning(
+            f"Request to admin route /api/admin/{path} in public mode"
+        )
+        raise HTTPException(status_code=404, detail="Not Found")
 
 
 @app.get("/")
