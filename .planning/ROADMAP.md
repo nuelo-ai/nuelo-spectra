@@ -85,9 +85,9 @@
 **Plans**: 3 plans
 
 Plans:
-- [ ] 26-01-PLAN.md -- Database models and Alembic migration (5 new tables, user fields, backfill)
-- [ ] 26-02-PLAN.md -- SPECTRA_MODE config and conditional router mounting with mode-aware CORS
-- [ ] 26-03-PLAN.md -- Admin auth (JWT, dependency, login, CLI seed-admin, lockout, audit logging, token reissue)
+- [x] 26-01-PLAN.md -- Database models and Alembic migration (5 new tables, user fields, backfill)
+- [x] 26-02-PLAN.md -- SPECTRA_MODE config and conditional router mounting with mode-aware CORS
+- [x] 26-03-PLAN.md -- Admin auth (JWT, dependency, login, CLI seed-admin, lockout, audit logging, token reissue)
 
 ### Phase 27: Credit System
 **Goal**: Users have credit balances that are atomically deducted per message, with admin controls for individual adjustment, manual reset, and scheduled auto-resets
@@ -102,10 +102,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 27-01-PLAN.md -- Core credit service: user_classes.yaml, UserClassService, CreditService, credit schemas
-- [ ] 27-02-PLAN.md -- Admin credit endpoints and public balance endpoint
-- [ ] 27-03-PLAN.md -- Chat flow credit integration and registration credit initialization
-- [ ] 27-04-PLAN.md -- APScheduler setup and rolling credit reset job
+- [x] 27-01-PLAN.md -- Core credit service: user_classes.yaml, UserClassService, CreditService, credit schemas
+- [x] 27-02-PLAN.md -- Admin credit endpoints and public balance endpoint
+- [x] 27-03-PLAN.md -- Chat flow credit integration and registration credit initialization
+- [x] 27-04-PLAN.md -- APScheduler setup and rolling credit reset job
 
 ### Phase 28: Platform Config
 **Goal**: Admins can configure platform behavior at runtime -- tier credit allocations, signup mode, invite expiry, credit policies -- without redeployment
@@ -199,8 +199,8 @@ Note: Phase 28 can start after Phase 26 (does not depend on Phase 27). Phase 30 
 | 23. Frontend Chart Rendering | v0.4 | 2/2 | Complete | 2026-02-13 |
 | 24. Chart Types & Export | v0.4 | 3/3 | Complete | 2026-02-13 |
 | 25. Theme Integration | v0.4 | 1/1 | Complete | 2026-02-14 |
-| 26. Foundation | v0.5 | Complete    | 2026-02-16 | - |
-| 27. Credit System | v0.5 | Complete    | 2026-02-16 | - |
+| 26. Foundation | v0.5 | 3/3 | Complete | 2026-02-16 |
+| 27. Credit System | v0.5 | 4/4 | Complete | 2026-02-16 |
 | 28. Platform Config | v0.5 | 0/TBD | Not started | - |
 | 29. User Management | v0.5 | 0/TBD | Not started | - |
 | 30. Invitation System | v0.5 | 0/TBD | Not started | - |
