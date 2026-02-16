@@ -14,7 +14,14 @@ from app.config import Settings, get_settings
 from app.dependencies import CurrentAdmin, DbSession
 from app.schemas.admin_users import (
     ActivateDeactivateResponse,
+    BulkActionResult,
+    BulkCreditAdjustRequest,
+    BulkDeleteRequest,
+    BulkTierChangeRequest,
+    BulkUserActionRequest,
     CreditAdjustRequest,
+    DeleteChallengeResponse,
+    DeleteConfirmRequest,
     PasswordResetTriggerResponse,
     UserActivityResponse,
     UserDetailResponse,
@@ -26,11 +33,19 @@ from app.services.admin.audit import log_admin_action
 from app.services.admin.tiers import change_user_tier
 from app.services.admin.users import (
     activate_user,
+    bulk_activate,
+    bulk_adjust_credits,
+    bulk_change_tier,
+    bulk_deactivate,
+    bulk_delete,
     deactivate_user,
+    delete_user,
+    generate_challenge_code,
     get_user_activity,
     get_user_detail,
     list_users,
     trigger_password_reset,
+    verify_challenge_code,
 )
 from app.services.credit import CreditService
 
@@ -70,6 +85,169 @@ async def list_users_endpoint(
         sort_order=sort_order,
     )
     return UserListResponse(**result)
+
+
+# ---------------------------------------------------------------------------
+# Bulk operations (MUST be registered before /{user_id} to avoid path conflicts)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/bulk/activate", response_model=BulkActionResult)
+async def bulk_activate_endpoint(
+    body: BulkUserActionRequest,
+    request: Request,
+    db: DbSession,
+    current_admin: CurrentAdmin,
+) -> BulkActionResult:
+    """Bulk activate multiple users (up to 100)."""
+    result = await bulk_activate(db, body.user_ids)
+
+    client_ip = request.client.host if request.client else None
+    await log_admin_action(
+        db,
+        admin_id=current_admin.id,
+        action="bulk_activate",
+        target_type="users",
+        details={
+            "user_ids": [str(uid) for uid in body.user_ids],
+            "result": result,
+        },
+        ip_address=client_ip,
+    )
+    await db.commit()
+
+    return BulkActionResult(**result)
+
+
+@router.post("/bulk/deactivate", response_model=BulkActionResult)
+async def bulk_deactivate_endpoint(
+    body: BulkUserActionRequest,
+    request: Request,
+    db: DbSession,
+    current_admin: CurrentAdmin,
+) -> BulkActionResult:
+    """Bulk deactivate multiple users with immediate token invalidation (up to 100)."""
+    result = await bulk_deactivate(db, body.user_ids)
+
+    client_ip = request.client.host if request.client else None
+    await log_admin_action(
+        db,
+        admin_id=current_admin.id,
+        action="bulk_deactivate",
+        target_type="users",
+        details={
+            "user_ids": [str(uid) for uid in body.user_ids],
+            "result": result,
+        },
+        ip_address=client_ip,
+    )
+    await db.commit()
+
+    return BulkActionResult(**result)
+
+
+@router.post("/bulk/tier-change", response_model=BulkActionResult)
+async def bulk_tier_change_endpoint(
+    body: BulkTierChangeRequest,
+    request: Request,
+    db: DbSession,
+    current_admin: CurrentAdmin,
+) -> BulkActionResult:
+    """Bulk change tier for multiple users with credit reset (up to 100)."""
+    result = await bulk_change_tier(
+        db, body.user_ids, body.user_class, current_admin.id
+    )
+
+    client_ip = request.client.host if request.client else None
+    await log_admin_action(
+        db,
+        admin_id=current_admin.id,
+        action="bulk_tier_change",
+        target_type="users",
+        details={
+            "user_ids": [str(uid) for uid in body.user_ids],
+            "new_class": body.user_class,
+            "result": result,
+        },
+        ip_address=client_ip,
+    )
+    await db.commit()
+
+    return BulkActionResult(**result)
+
+
+@router.post("/bulk/credit-adjust", response_model=BulkActionResult)
+async def bulk_credit_adjust_endpoint(
+    body: BulkCreditAdjustRequest,
+    request: Request,
+    db: DbSession,
+    current_admin: CurrentAdmin,
+) -> BulkActionResult:
+    """Bulk credit adjustment -- set exact amount OR add/deduct delta (up to 100 users)."""
+    result = await bulk_adjust_credits(
+        db, body.user_ids, body.amount, body.delta, body.reason, current_admin.id
+    )
+
+    client_ip = request.client.host if request.client else None
+    await log_admin_action(
+        db,
+        admin_id=current_admin.id,
+        action="bulk_credit_adjust",
+        target_type="users",
+        details={
+            "user_ids": [str(uid) for uid in body.user_ids],
+            "amount": str(body.amount) if body.amount is not None else None,
+            "delta": str(body.delta) if body.delta is not None else None,
+            "reason": body.reason,
+            "result": result,
+        },
+        ip_address=client_ip,
+    )
+    await db.commit()
+
+    return BulkActionResult(**result)
+
+
+@router.post("/bulk/delete-challenge", response_model=DeleteChallengeResponse)
+async def bulk_delete_challenge_endpoint(
+    body: BulkUserActionRequest,
+    request: Request,
+    db: DbSession,
+    current_admin: CurrentAdmin,
+) -> DeleteChallengeResponse:
+    """Generate a challenge code for bulk delete confirmation."""
+    code = generate_challenge_code(
+        current_admin.id, f"bulk_delete_{len(body.user_ids)}"
+    )
+    return DeleteChallengeResponse(challenge_code=code, expires_in=300)
+
+
+@router.post("/bulk/delete", response_model=BulkActionResult)
+async def bulk_delete_endpoint(
+    body: BulkDeleteRequest,
+    request: Request,
+    db: DbSession,
+    current_admin: CurrentAdmin,
+) -> BulkActionResult:
+    """Bulk hard delete users with challenge code confirmation (up to 100)."""
+    if not verify_challenge_code(
+        current_admin.id,
+        f"bulk_delete_{len(body.user_ids)}",
+        body.challenge_code,
+    ):
+        raise HTTPException(
+            status_code=400, detail="Invalid or expired challenge code"
+        )
+
+    result = await bulk_delete(db, body.user_ids, current_admin.id)
+    await db.commit()
+
+    return BulkActionResult(**result)
+
+
+# ---------------------------------------------------------------------------
+# Individual user endpoints
+# ---------------------------------------------------------------------------
 
 
 @router.get("/{user_id}", response_model=UserDetailResponse)
@@ -239,6 +417,54 @@ async def change_user_tier_endpoint(
     await db.commit()
 
     return result
+
+
+@router.post("/{user_id}/delete-challenge", response_model=DeleteChallengeResponse)
+async def delete_challenge_endpoint(
+    user_id: UUID,
+    request: Request,
+    db: DbSession,
+    current_admin: CurrentAdmin,
+) -> DeleteChallengeResponse:
+    """Generate a 6-char challenge code for delete confirmation (USER-13)."""
+    code = generate_challenge_code(
+        current_admin.id, f"delete_user_{user_id}"
+    )
+    return DeleteChallengeResponse(challenge_code=code, expires_in=300)
+
+
+@router.delete("/{user_id}")
+async def delete_user_endpoint(
+    user_id: UUID,
+    body: DeleteConfirmRequest,
+    request: Request,
+    db: DbSession,
+    current_admin: CurrentAdmin,
+) -> dict:
+    """Hard delete a user with challenge code confirmation (USER-13).
+
+    The admin must first call POST /{user_id}/delete-challenge to get a code,
+    then submit that code here. Deletes all user data, anonymizes audit logs,
+    and removes physical files from disk.
+    """
+    if not verify_challenge_code(
+        current_admin.id, f"delete_user_{user_id}", body.challenge_code
+    ):
+        raise HTTPException(
+            status_code=400, detail="Invalid or expired challenge code"
+        )
+
+    try:
+        anon_label = await delete_user(db, user_id, current_admin.id)
+    except ValueError as e:
+        error_msg = str(e)
+        if "not found" in error_msg:
+            raise HTTPException(status_code=404, detail=error_msg)
+        raise HTTPException(status_code=400, detail=error_msg)
+
+    await db.commit()
+
+    return {"message": "User deleted", "anonymized_as": anon_label}
 
 
 @router.post("/{user_id}/credits/adjust", response_model=CreditBalanceResponse)
