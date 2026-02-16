@@ -17,25 +17,16 @@ Spectra bridges the gap between raw data and actionable insights. Upload your da
 
 ## Features
 
-- ChatGPT-style session-centric UX with sidebar navigation
-- Multi-file linking per conversation with cross-file analysis
-- Natural language data queries with real-time SSE streaming
-- CSV/Excel file upload (up to 50MB) with AI-powered data profiling
-- My Files management screen with drag-and-drop upload, bulk delete, download
-- In-chat file linking via paperclip, file selector, and drag-and-drop
-- Multi-turn conversation memory with PostgreSQL checkpointing
-- Intelligent query routing (memory-only, code modification, or fresh analysis)
-- Smart query suggestions based on dataset structure
-- LLM-powered session title auto-generation
-- Web search integration (Tavily) with source citations
-- Interactive Data Cards with sortable tables, CSV/Markdown export
-- AI-generated Plotly charts with intelligent visualization discretion (7 types)
-- Interactive charts with zoom, pan, hover tooltips, and responsive sizing
-- PNG/SVG chart export (1200x800 resolution) and chart type switcher
-- Dark/light theme toggle with Nord palette (charts included)
-- 6 LLM providers with per-agent YAML configuration
-- Production SMTP email with secure password reset flow
-- JWT authentication with refresh tokens
+- **Session Management**: ChatGPT-style UX with sidebar navigation and multi-file linking
+- **Natural Language Queries**: Real-time SSE streaming with intelligent routing
+- **File Upload**: CSV/Excel up to 50MB with AI-powered data profiling
+- **Conversation Memory**: Multi-turn memory with PostgreSQL checkpointing
+- **Data Visualization**: AI-generated Plotly charts (7 types) with export and customization
+- **Interactive Results**: Sortable tables, code display, CSV/Markdown export
+- **Web Search**: Tavily integration with source citations
+- **Multi-LLM Support**: 6 providers with per-agent configuration
+- **Authentication**: JWT with refresh tokens and secure password reset
+- **Theming**: Dark/light mode with Nord palette
 
 ## Tech Stack
 
@@ -86,16 +77,32 @@ brew install postgresql@16 && brew services start postgresql@16 && createdb spec
 # Ubuntu/Debian
 sudo apt install postgresql-16 && sudo systemctl start postgresql
 sudo -u postgres createdb spectra
+
+# Windows (using Chocolatey)
+choco install postgresql16
+# Or download installer from https://www.postgresql.org/download/windows/
+# After installation, create database via pgAdmin or psql
 ```
 
 **Backend:**
 ```bash
+# macOS/Linux
 cd backend
 pip install uv && uv sync
 cp .env.example .env
 # Edit .env with your configuration (see Environment Variables below)
 alembic upgrade head
 uvicorn app.main:app --reload
+
+# Windows (PowerShell)
+cd backend
+pip install uv
+uv sync
+copy .env.example .env
+# Edit .env with your configuration
+alembic upgrade head
+uvicorn app.main:app --reload
+
 # API at http://localhost:8000, docs at http://localhost:8000/docs
 ```
 
@@ -141,6 +148,77 @@ Copy `backend/.env.example` to `backend/.env` and fill in:
 1. Backend health: `http://localhost:8000/health`
 2. LLM health: `http://localhost:8000/health/llm`
 3. Open `http://localhost:3000`, sign up, upload a CSV, and ask a question
+
+## Configuration
+
+### Changing LLM Provider per Agent (Optional)
+
+Each AI agent can use a different LLM provider and model. Edit `backend/app/config/prompts.yaml`:
+
+```yaml
+agents:
+  onboarding:
+    provider: anthropic              # Options: anthropic, openai, google, ollama, openrouter
+    model: claude-sonnet-4-20250514  # Model name from provider
+    temperature: 0.0                 # 0.0 = deterministic, 1.0 = creative
+
+  coding:
+    provider: openai
+    model: gpt-4o
+    temperature: 0.0
+
+  # ... other agents ...
+```
+
+**Provider-specific models:**
+- Anthropic: `claude-sonnet-4-20250514`, `claude-opus-4-20250514`, `claude-haiku-4-20250514`
+- OpenAI: `gpt-4o`, `gpt-4-turbo`, `gpt-3.5-turbo`
+- Google: `gemini-2.0-flash-exp`, `gemini-1.5-pro`
+- Ollama: `llama3.1:70b`, `qwen2.5:72b` (requires local Ollama server)
+- OpenRouter: `anthropic/claude-3.5-sonnet`, `google/gemini-2.0-flash-exp:free`
+
+After editing, restart the backend server.
+
+### Advanced Configuration (Optional)
+
+**Agent Parameters** (`backend/app/config/prompts.yaml`):
+```yaml
+agents:
+  coding:
+    provider: anthropic
+    model: claude-sonnet-4-20250514
+    temperature: 0.0
+    max_tokens: 4000        # Maximum response length
+    top_p: 1.0             # Nucleus sampling (0.0-1.0)
+    system_prompt: |       # Custom agent instructions
+      You are a coding agent...
+```
+
+**Conversation Memory** (`backend/app/config/settings.yaml`):
+```yaml
+context:
+  max_tokens: 12000        # Context window size
+  warning_threshold: 0.85  # Warning at 85% capacity
+```
+
+**Multi-File Analysis** (`backend/app/config/settings.yaml`):
+```yaml
+multi_file:
+  max_files_per_session: 10
+  max_total_rows: 100000
+  context_token_budget: 4000
+```
+
+**Code Execution** (`backend/app/config/allowlist.yaml`):
+```yaml
+allowed_libraries:
+  - pandas
+  - numpy
+  - plotly
+  # Add custom libraries here
+```
+
+Changes to YAML configs require server restart.
 
 ## Current Status (v0.4)
 
