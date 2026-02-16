@@ -13,16 +13,28 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 **GitHub:** https://github.com/marwazihs/nuelo-spectra.git (private)
 **Remote:** origin
 **Branch:** master
-**Latest Tag:** v0.3 (2026-02-12)
+**Latest Tag:** v0.4 (2026-02-15)
 
-## Current Milestone: Planning Next
+## Current Milestone: v0.5 Admin Portal
 
-**Status:** v0.4 Data Visualization shipped (2026-02-15). Ready for `/gsd:new-milestone` to define v0.5.
+**Goal:** Build an internal admin portal for platform management — user management, credit system, invitation flow, signup control, and platform settings — deployed as a network-isolated service via Tailscale VPN.
+
+**Target features:**
+- Admin authentication with `is_admin` role, CLI seed, session timeout, audit logging
+- Admin dashboard with platform metrics and trend charts
+- User management (list, search, filter, activate/deactivate, reset password, change tier, adjust credits, delete)
+- Signup control toggle (public/invite-only, immediate effect)
+- User invitation system (email invites, time-limited single-use links, revoke/resend)
+- User class management (static tiers in YAML: free/standard/premium, admin edits credits per tier)
+- Credit management (float credits per message, weekly/monthly reset, per-user balance, transaction history, bulk adjustments)
+- Platform settings (centralized config: signup toggle, default tier, invite expiry, credit policy, cost per message)
+- Split-horizon architecture (`SPECTRA_MODE` env var: public/admin/dev, separate admin frontend)
+- Database extensions (5 new tables + user table fields, Alembic migrations)
 
 ## Current State
 
 **Shipped:** v0.4 Data Visualization (2026-02-15)
-**Status:** Planning next milestone
+**Status:** Defining requirements for v0.5 Admin Portal
 **Codebase:** 23,177 LOC (9,173 Python app + 2,949 Python tests + 11,055 TypeScript/TSX)
 **Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily + Plotly (backend), Next.js 16 + React 19 + TanStack + Zustand + shadcn/ui + next-themes + Plotly.js (frontend)
 
@@ -306,7 +318,17 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 ### Active
 
-(No active requirements - ready for `/gsd:new-milestone` to define v0.5)
+**v0.5 Admin Portal** — See `.planning/REQUIREMENTS.md` for full REQ-ID list.
+- Admin authentication and audit logging
+- Admin dashboard with platform metrics
+- User management (CRUD + tier + credits)
+- Signup control (public/invite-only toggle)
+- User invitation system (email invites, time-limited links)
+- User class management (static YAML tiers, admin edits credits)
+- Credit management (float balance, deduction, reset, history)
+- Platform settings (centralized config table)
+- Split-horizon architecture (SPECTRA_MODE, separate admin frontend)
+- Database extensions (5 new tables, Alembic migrations)
 
 ### Out of Scope
 
@@ -393,4 +415,4 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | Nord palette for charts | Consistent theme-aware colors across all UI | ✓ Good — professional aesthetic, readable in both modes |
 
 ---
-*Last updated: 2026-02-15 after completing v0.4 Data Visualization milestone*
+*Last updated: 2026-02-16 after starting v0.5 Admin Portal milestone*
