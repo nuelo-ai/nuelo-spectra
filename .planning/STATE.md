@@ -54,6 +54,8 @@ v0.5 Architecture decisions (from requirements + research):
 - Static user tiers: defined in `user_classes.yaml`, admin edits credit overrides in platform_settings
 - Platform settings: key-value DB table with 30s TTL cache, runtime changes without restart
 - Admin auth: `is_admin` flag on users table, first admin seeded via CLI
+- String(20) for user_class (not PostgreSQL ENUM) to avoid ALTER TYPE migration pain
+- Three-step migration pattern: add columns with server_default, create tables, backfill data
 - One new backend dep (APScheduler), one new frontend lib (Recharts)
 
 ### Pending Todos
