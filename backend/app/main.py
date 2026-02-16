@@ -242,7 +242,24 @@ async def lifespan(app: FastAPI):
         app.state.checkpointer = checkpointer
         logging.getLogger("spectra").info("PostgreSQL checkpointer initialized")
 
+        # Start credit reset scheduler if enabled
+        # Scheduler only makes sense in public or dev mode (processes user credits)
+        # but we rely on the env var toggle rather than mode check
+        if settings.enable_scheduler:
+            from app.scheduler import setup_scheduler
+            sched = setup_scheduler()
+            sched.start()
+            logging.getLogger("spectra.scheduler").info(
+                "Credit reset scheduler started (15-min interval)"
+            )
+
         yield
+
+        # Shutdown scheduler if it was started
+        if settings.enable_scheduler:
+            from app.scheduler import scheduler
+            scheduler.shutdown(wait=False)
+            logging.getLogger("spectra.scheduler").info("Credit reset scheduler stopped")
 
     # Shutdown: dispose of database engine
     await engine.dispose()

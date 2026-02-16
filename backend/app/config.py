@@ -79,6 +79,9 @@ class Settings(BaseSettings):
     admin_session_timeout_minutes: int = 30
     admin_cors_origin: str = "http://localhost:3001"  # Admin frontend origin
 
+    # Scheduler
+    enable_scheduler: bool = False  # Set ENABLE_SCHEDULER=true for credit reset job
+
     model_config = SettingsConfigDict(env_file=".env")
 
     def get_cors_origins(self) -> list[str]:
