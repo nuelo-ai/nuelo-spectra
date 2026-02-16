@@ -90,21 +90,22 @@ Plans:
 - [ ] 26-03-PLAN.md -- Admin auth (JWT, dependency, login, CLI seed-admin, lockout, audit logging, token reissue)
 
 ### Phase 27: Credit System
-**Goal**: Users have credit balances that are atomically deducted per message, with admin controls for adjustment, bulk operations, and scheduled resets
+**Goal**: Users have credit balances that are atomically deducted per message, with admin controls for individual adjustment, manual reset, and scheduled auto-resets
 **Depends on**: Phase 26
-**Requirements**: CREDIT-01, CREDIT-02, CREDIT-03, CREDIT-04, CREDIT-05, CREDIT-06, CREDIT-07, CREDIT-08, CREDIT-09, CREDIT-10, CREDIT-11, CREDIT-12, CREDIT-13
+**Requirements**: CREDIT-01, CREDIT-02, CREDIT-03, CREDIT-04, CREDIT-05, CREDIT-06, CREDIT-07, CREDIT-08, CREDIT-09, CREDIT-10, CREDIT-12, CREDIT-13
 **Success Criteria** (what must be TRUE):
   1. Sending a chat message deducts the configured credit cost (NUMERIC precision) from the user's balance atomically -- two concurrent requests from the same user cannot overdraw the balance below zero
   2. A user with zero credits (or less than the cost of one message) sees an "out of credits" message and cannot send messages
   3. Admin can view any user's credit balance and full transaction history (date, cost, remaining balance, admin note) via admin API endpoints
-  4. Admin can manually add/deduct credits for individual users or bulk-adjust by user class, and can trigger manual credit reset for a user or entire class (idempotent, tracks last_reset_at)
-  5. Scheduled auto-reset (weekly or monthly, configurable) resets user credits to their tier allocation without double-resetting
-**Plans**: TBD
+  4. Admin can manually add/deduct credits for individual users and can trigger manual credit reset for a user (idempotent, tracks last_reset_at)
+  5. Scheduled auto-reset (weekly or monthly, configurable per class) resets user credits to their tier allocation without double-resetting
+**Plans**: 4 plans
 
 Plans:
-- [ ] 27-01: TBD
-- [ ] 27-02: TBD
-- [ ] 27-03: TBD
+- [ ] 27-01-PLAN.md -- Core credit service: user_classes.yaml, UserClassService, CreditService, credit schemas
+- [ ] 27-02-PLAN.md -- Admin credit endpoints and public balance endpoint
+- [ ] 27-03-PLAN.md -- Chat flow credit integration and registration credit initialization
+- [ ] 27-04-PLAN.md -- APScheduler setup and rolling credit reset job
 
 ### Phase 28: Platform Config
 **Goal**: Admins can configure platform behavior at runtime -- tier credit allocations, signup mode, invite expiry, credit policies -- without redeployment
@@ -199,7 +200,7 @@ Note: Phase 28 can start after Phase 26 (does not depend on Phase 27). Phase 30 
 | 24. Chart Types & Export | v0.4 | 3/3 | Complete | 2026-02-13 |
 | 25. Theme Integration | v0.4 | 1/1 | Complete | 2026-02-14 |
 | 26. Foundation | v0.5 | Complete    | 2026-02-16 | - |
-| 27. Credit System | v0.5 | 0/TBD | Not started | - |
+| 27. Credit System | v0.5 | 0/4 | Not started | - |
 | 28. Platform Config | v0.5 | 0/TBD | Not started | - |
 | 29. User Management | v0.5 | 0/TBD | Not started | - |
 | 30. Invitation System | v0.5 | 0/TBD | Not started | - |
