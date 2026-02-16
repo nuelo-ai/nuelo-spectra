@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 26 of 31 (Foundation)
-Plan: None yet (ready to plan)
-Status: Ready to plan
-Last activity: 2026-02-16 -- Roadmap created for v0.5 (6 phases, 86 requirements)
+Plan: 2 of 3 (26-02 complete)
+Status: Executing
+Last activity: 2026-02-16 -- Completed 26-02 split-horizon routing
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 [░░░░░░░░░░] 0%
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 [█░░░░░░░░░] ~5%
 
 ## Performance Metrics
 
@@ -46,6 +46,9 @@ See PROJECT.md Key Decisions table for full decision log.
 
 v0.5 Architecture decisions (from requirements + research):
 - Split-horizon deployment: same FastAPI codebase, `SPECTRA_MODE` env var (public/admin/dev)
+- Lazy import of admin_router inside mode check to avoid loading admin code in public mode
+- Catch-all /api/admin/* in public mode logs WARNING for security monitoring
+- X-Admin-Token exposed in CORS headers for sliding window token reissue
 - Admin frontend: separate Next.js app (`admin-frontend/`), not a route in existing frontend
 - Credit system: NUMERIC(10,1) precision, SELECT FOR UPDATE for atomicity, deduct before agent runs
 - Static user tiers: defined in `user_classes.yaml`, admin edits credit overrides in platform_settings
@@ -69,5 +72,5 @@ v0.5 Architecture decisions (from requirements + research):
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Phase 26 context gathered
-Resume with: `/gsd:plan-phase 26` to plan Foundation phase
+Stopped at: Completed 26-02-PLAN.md (split-horizon routing)
+Resume with: `/gsd:execute-phase 26` to continue with plan 26-03
