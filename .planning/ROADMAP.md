@@ -65,7 +65,7 @@
 
 - [x] **Phase 26: Foundation** - Database schema, split-horizon architecture, admin authentication, and audit logging (completed 2026-02-16)
 - [x] **Phase 27: Credit System** - Atomic credit deduction, balance tracking, transaction history, and scheduled resets (completed 2026-02-16)
-- [ ] **Phase 28: Platform Config** - Platform settings, tier management, and signup control toggle
+- [x] **Phase 28: Platform Config** - Platform settings, tier management, and signup control toggle (completed 2026-02-16)
 - [ ] **Phase 29: User Management** - Admin user list, search, filter, and all user account operations
 - [ ] **Phase 30: Invitation System** - Email invites with time-limited single-use tokens and invite-only registration
 - [ ] **Phase 31: Dashboard & Admin Frontend** - Admin Next.js app with dashboard metrics, trend charts, and all admin UI pages
@@ -201,7 +201,7 @@ Note: Phase 28 can start after Phase 26 (does not depend on Phase 27). Phase 30 
 | 25. Theme Integration | v0.4 | 1/1 | Complete | 2026-02-14 |
 | 26. Foundation | v0.5 | 3/3 | Complete | 2026-02-16 |
 | 27. Credit System | v0.5 | 4/4 | Complete | 2026-02-16 |
-| 28. Platform Config | v0.5 | 0/2 | Planned | - |
+| 28. Platform Config | v0.5 | Complete    | 2026-02-16 | - |
 | 29. User Management | v0.5 | 0/TBD | Not started | - |
 | 30. Invitation System | v0.5 | 0/TBD | Not started | - |
 | 31. Dashboard & Admin Frontend | v0.5 | 0/TBD | Not started | - |
