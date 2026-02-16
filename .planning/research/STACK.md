@@ -1,327 +1,239 @@
-# Technology Stack: v0.4 Data Visualization
+# Technology Stack: v0.5 Admin Portal
 
 **Project:** Spectra - AI-powered data analytics platform
-**Researched:** 2026-02-12
-**Confidence:** HIGH (backend: Plotly pre-installed in E2B; frontend: JSON approach avoids risky dependencies)
+**Researched:** 2026-02-16
+**Confidence:** HIGH (no exotic dependencies, builds on existing patterns, all libraries well-established)
 
 ## Overview
 
-This research focuses on stack additions needed for v0.4: AI-generated Plotly charts with interactive display and PNG/SVG export. The core architectural decision is **where chart rendering happens** -- in the E2B sandbox (server-side) or in the browser (client-side). This choice cascades into every other technology decision.
+v0.5 adds an admin portal with user management, credit system, invitation flow, and split-horizon deployment. The good news: almost everything needed is already in the stack or available via Python stdlib. The admin frontend is a separate Next.js app reusing the same library choices as the public frontend. No new backend framework dependencies are required -- the additions are limited to one scheduling library and standard library usage.
 
-**Recommendation: Hybrid approach.** Generate Plotly figure JSON in the E2B sandbox, render interactively with plotly.js on the client, and export PNG/SVG client-side using plotly.js's built-in `Plotly.toImage()` / `Plotly.downloadImage()`. This avoids Kaleido's Chrome dependency problem in sandboxed environments entirely.
-
-Key insight: **The E2B sandbox already has Plotly 6.0.1 pre-installed.** The Visualization Agent generates Python code that creates a Plotly figure and outputs its JSON via `fig.to_json()`. The frontend receives this JSON and renders it with plotly.js. No server-side image generation needed -- plotly.js handles PNG/SVG export natively in the browser.
+**Key principle: minimize new dependencies.** The existing stack (FastAPI + SQLAlchemy + Alembic + PyJWT + Jinja2 + SMTP) already provides everything needed for admin auth, audit logging, invitation emails, and database schema changes. The credit reset scheduler is the only genuinely new backend capability requiring a library.
 
 ---
 
 ## What Changes (and What Does Not)
 
 ### Does NOT Change
+
 - FastAPI backend framework
-- PostgreSQL database
-- SQLAlchemy ORM / Alembic migrations
-- LangGraph agent orchestration (graph topology adds a node, but framework unchanged)
-- E2B sandbox execution (same `Sandbox.run_code()` pattern)
-- All 5 LLM providers
-- Next.js 16 / React 19 / TanStack Query / Zustand
-- JWT authentication / SSE streaming
-- Tailwind CSS 4 / shadcn/ui components
+- PostgreSQL database + SQLAlchemy ORM + Alembic migrations
+- JWT authentication (PyJWT) + refresh tokens
+- SMTP email service (aiosmtplib + Jinja2 templates)
+- LangGraph agent orchestration
+- E2B sandbox execution
+- Pydantic settings + python-dotenv
+- Public frontend: Next.js 16 / React 19 / TanStack Query / Zustand / shadcn/ui
 
 ### Changes Required
 
 | Layer | What Changes | Why |
 |-------|-------------|-----|
-| Backend: LangGraph State | Add `chart_json` field to `ChatAgentState` | Carry Plotly figure JSON through the pipeline |
-| Backend: Agent Graph | Add `visualization_agent` node, modify routing from execute -> da_with_tools | Visualization Agent runs after execution when chart is appropriate |
-| Backend: Sandbox Output | Parse `fig.to_json()` output from sandbox stdout alongside table data | Sandbox code now outputs both table JSON and chart JSON |
-| Backend: Agent YAML Configs | New `visualization` agent config in `agents.yaml` | Per-agent LLM provider/model/prompt configuration |
-| Backend: SSE Events | New `chart_data` event type in stream | Frontend needs chart JSON streamed separately from table data |
-| Frontend: plotly.js | Add `plotly.js-dist-min` package | Client-side interactive chart rendering and image export |
-| Frontend: DataCard | Add chart section above table in DataCard component | Chart + table display in the same card |
-| Frontend: Chart Component | New `PlotlyChart` component wrapping `Plotly.newPlot()` | Renders chart JSON, handles resize, provides export buttons |
-| Frontend: Export UI | PNG/SVG download buttons on chart | Uses `Plotly.downloadImage()` -- no server roundtrip |
-| Frontend: Chart Type Switcher | Dropdown/buttons to change chart type | Modifies the `data[0].type` field in the Plotly JSON client-side |
+| Backend: User Model | Add `is_admin`, `user_class`, `credit_balance`, `last_credit_reset` fields | Admin role, tier assignment, credit tracking |
+| Backend: New Models | 5 new tables (platform_settings, user_credits, credit_transactions, invitations, admin_audit_log) | Admin features require persistent state |
+| Backend: Router Mounting | `SPECTRA_MODE` env var controls which routers mount | Split-horizon architecture |
+| Backend: New Routers | `admin/` directory with 5 admin routers | Admin API endpoints |
+| Backend: Scheduler | APScheduler for periodic credit resets | Weekly/monthly credit allocation |
+| Backend: YAML Config | `user_classes.yaml` for tier definitions | Static tier config |
+| Backend: CLI Command | Admin seed script | First admin account creation |
+| Backend: Email Templates | New invitation email template | Invite flow |
+| New: Admin Frontend | Separate Next.js app at `admin-frontend/` | Network-isolated admin portal |
+| Config: Settings | New env vars (`SPECTRA_MODE`, `ADMIN_FRONTEND_URL`) | Split-horizon + CORS |
 
 ---
 
 ## Recommended Stack Additions
 
-### Backend: Python (Sandbox-Side) -- No New pip Installs
+### Backend: Python -- 1 New Dependency
 
-The E2B code interpreter sandbox has these visualization packages pre-installed (verified via DeepWiki/E2B documentation):
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `apscheduler` | `>=3.11.0` | Periodic credit reset scheduler | Well-established Python scheduler. AsyncIOScheduler integrates with FastAPI's event loop via lifespan. Handles weekly/monthly credit resets without external cron or Celery overhead. Only needed on the `admin` or `dev` mode deployment. |
 
-| Package | Pre-installed Version | Purpose | Notes |
-|---------|----------------------|---------|-------|
-| `plotly` | 6.0.1 | Chart generation in sandbox | Pre-installed. Agent code uses `plotly.express` and `plotly.graph_objects`. |
-| `kaleido` | 1.0.0 | Static image export (server-side) | Pre-installed but **DO NOT USE** -- requires Chrome, unreliable in sandbox. See "Critical Decision" below. |
-| `pandas` | 2.2.3 | Data manipulation | Pre-installed. Already used by existing agents. |
+**Why APScheduler over alternatives:**
+- **vs Celery**: Overkill. Celery requires Redis/RabbitMQ broker. We need one periodic job (credit reset), not a distributed task queue.
+- **vs `fastapi-utils` repeat_every**: Too simple. No cron expression support, no persistence across restarts, no timezone handling.
+- **vs OS-level cron**: Not portable. Docker deployments need the scheduler inside the application.
+- **vs manual endpoint**: Admin could trigger resets manually, but auto-reset is a stated requirement. APScheduler handles both -- scheduled auto-reset plus manual trigger via admin API.
 
-**No `pip install` needed at runtime.** The Visualization Agent's generated code uses only pre-installed packages. The code creates a Plotly figure and outputs `fig.to_json()` to stdout, which the existing sandbox result parsing captures.
+### Backend: Python Standard Library (No New Dependencies)
 
-### Backend: Python (Server-Side) -- No New pip Installs
+These capabilities come from Python stdlib -- no pip installs needed:
 
-No new Python dependencies on the backend server. The changes are:
-1. New Visualization Agent node in LangGraph (uses existing `langchain-core`, `langgraph` patterns)
-2. New agent config in `agents.yaml` (uses existing YAML config system)
-3. Modified sandbox output parsing to extract chart JSON (Python `json` module, already used)
-4. New SSE event type (uses existing `sse-starlette` streaming)
+| Capability | Module | Purpose |
+|------------|--------|---------|
+| Invite token generation | `secrets.token_urlsafe(32)` | Cryptographically secure, URL-safe invite tokens. 32 bytes = 256-bit entropy. |
+| Token expiry | `datetime` | Invite link expiration (7-day default) |
+| YAML config parsing | `pyyaml` (already installed) | `user_classes.yaml` tier definitions |
+| Enum for user classes | `enum.Enum` + SQLAlchemy `Enum` type | `free`, `standard`, `premium` tier enum |
+| Audit log serialization | `json` (stdlib) | Serializing action details in audit log |
+| CLI admin seed | `argparse` or simple script | `python -m app.cli.seed_admin` |
 
-### Frontend: plotly.js -- 1 New npm Package
+### Backend: Existing Dependencies (Already Installed, Zero Changes)
 
-| Package | Version | Purpose | Why This Package |
-|---------|---------|---------|-----------------|
-| `plotly.js-dist-min` | ^3.3.1 | Client-side chart rendering + PNG/SVG export | Minified plotly.js bundle (~1MB gzipped). Provides `Plotly.newPlot()`, `Plotly.react()`, `Plotly.toImage()`, `Plotly.downloadImage()`. The `-dist-min` variant is the smallest full bundle -- no build tools needed, works as a drop-in. |
-
-**Why NOT `react-plotly.js`?** The official React wrapper (v2.6.0) has not been updated in 3 years, has known prop mutation issues, and has unverified React 19 compatibility. Instead, use a thin custom wrapper component around the raw `Plotly.newPlot()` API with a `useRef` + `useEffect` pattern. This is 30 lines of code and gives full control.
-
-**Why NOT `plotly.js-dist` (non-minified)?** The minified version is ~50% smaller with identical functionality. No reason to ship the non-minified bundle to production.
-
-**Why NOT `plotly.js-basic-dist-min` (partial bundle)?** The basic bundle only includes scatter, bar, and pie traces. We need histogram, box, and potentially heatmap for data analytics use cases. The full bundle covers all chart types.
-
----
-
-## Critical Decision: Server-Side vs Client-Side Image Export
-
-### The Problem with Kaleido in E2B Sandbox
-
-Kaleido v1.0.0 (pre-installed in E2B) requires Chrome/Chromium to be installed on the machine. The E2B sandbox environment:
-- Does NOT have Chrome pre-installed (verified: not listed in sandbox environment docs)
-- Is a minimal Firecracker microVM optimized for Python code execution
-- Has sandbox-within-sandbox issues (Kaleido spawns Chrome which has its own sandboxing, known to conflict with Docker/container environments -- [GitHub Issue #379](https://github.com/plotly/Kaleido/issues/379))
-- Has a 50x performance regression in Kaleido v1 vs v0.2.1 ([GitHub Issue #400](https://github.com/plotly/Kaleido/issues/400))
-
-Kaleido v0.2.1 (which bundled Chrome) is deprecated and incompatible with Plotly 6.x. Support was officially removed after September 2025.
-
-### The Solution: Client-Side Export with plotly.js
-
-plotly.js provides native image export functions that run entirely in the browser:
-- `Plotly.toImage(graphDiv, {format: 'png', width: 1200, height: 800})` -- returns base64 data URL
-- `Plotly.toImage(graphDiv, {format: 'svg', width: 1200, height: 800})` -- returns SVG string
-- `Plotly.downloadImage(graphDiv, {format: 'png', filename: 'chart'})` -- triggers browser download
-
-**Verified via plotly.js source code:** The `toImage` function supports `'png' | 'jpeg' | 'webp' | 'svg'` formats in the open-source library. The Plotly docs page is misleading -- it conflates Chart Studio (paid SaaS) features with the open-source JS library capabilities. The source at `plotly.js/src/snapshot/toimage.js` confirms all four formats are available without any subscription.
-
-**This approach:**
-- Requires zero server-side rendering infrastructure
-- Works without Chrome, Kaleido, or any headless browser
-- Produces high-quality PNG (canvas-based) and SVG (DOM-based) output
-- Runs instantly (no 2-3 second Kaleido overhead)
-- Allows user to customize chart (type, size) before exporting
-
-**Confidence: HIGH** -- Verified via [plotly.js source code](https://github.com/plotly/plotly.js/blob/master/src/snapshot/toimage.js), [official JS docs](https://plotly.com/javascript/static-image-export/), and community usage.
+| Existing Dependency | v0.5 Usage | Notes |
+|---------------------|-----------|-------|
+| `fastapi[standard]` | Admin routers, dependency injection, CORS | Router prefix `/api/admin/` |
+| `sqlalchemy[asyncio]` + `asyncpg` | 5 new tables, user model extensions | Same ORM patterns, new models |
+| `alembic` | Migration for new tables + user model changes | Same migration chain |
+| `pyjwt` | Admin JWT tokens (same mechanism) | Add `is_admin` claim to token payload |
+| `pydantic-settings` | New settings: `SPECTRA_MODE`, `ADMIN_FRONTEND_URL` | Extend existing `Settings` class |
+| `aiosmtplib` + `jinja2` | Invitation emails | New template, same email service |
+| `pyyaml` | `user_classes.yaml` parsing | Already used for agent configs |
+| `pwdlib[argon2]` | Admin password hashing | Same auth service |
+| `httpx` | Health checks (if needed) | Already installed |
 
 ---
 
-## Architecture: Data Flow for Chart Rendering
+### Admin Frontend: New Next.js Application
 
-```
-1. User asks: "Show me sales by region"
+The admin frontend is a **separate Next.js app** (not a route in the existing frontend). It uses the same library stack as the public frontend for consistency and developer familiarity.
 
-2. Manager Agent -> routes to coding_agent (NEW_ANALYSIS)
+#### Core Framework
 
-3. Coding Agent generates Python code:
-   - Data preparation (existing behavior)
-   - Outputs table JSON via print(json.dumps({"result": table_data}))
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `next` | `16.1.6` | Admin frontend framework | Match public frontend version exactly. Separate app, same framework. |
+| `react` | `19.2.3` | UI library | Match public frontend. |
+| `react-dom` | `19.2.3` | React DOM renderer | Match public frontend. |
+| `typescript` | `^5` | Type safety | Match public frontend. |
 
-4. Code Checker validates -> Execute in E2B sandbox
+#### State & Data Fetching
 
-5. [NEW] Manager/routing decides: visualization appropriate?
-   If yes -> Visualization Agent generates chart code
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `@tanstack/react-query` | `^5.90.20` | Server state management, API calls | Same pattern as public frontend. Admin CRUD operations use mutations + query invalidation. |
+| `zustand` | `^5.0.11` | Client state (auth, UI state) | Lightweight, same as public frontend. Admin auth state, sidebar state. |
 
-6. Visualization Agent generates Plotly code, executed in sandbox:
-   ```python
-   import plotly.express as px
-   fig = px.bar(df, x="region", y="sales", title="Sales by Region")
-   # Output chart JSON to stdout
-   import json
-   print(json.dumps({"chart": json.loads(fig.to_json())}))
-   ```
+#### UI Components & Styling
 
-7. Backend parses stdout -> extracts chart JSON
-   Streams via SSE: {type: "chart_data", chart_json: {...}}
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `radix-ui` | `^1.4.3` | Headless UI primitives | Same as public frontend. Dialog, dropdown, tabs for admin panels. |
+| `tailwindcss` | `^4` | Utility CSS | Same as public frontend. |
+| `class-variance-authority` | `^0.7.1` | Component variants | Same as public frontend. |
+| `clsx` + `tailwind-merge` | Latest | Class name utilities | Same as public frontend. |
+| `lucide-react` | `^0.563.0` | Icons | Same as public frontend. |
+| `sonner` | `^2.0.7` | Toast notifications | Admin action feedback (user created, credits adjusted, etc). |
+| `next-themes` | `^0.4.6` | Dark mode | Consistency with public frontend. |
 
-8. Frontend receives chart JSON -> PlotlyChart component renders:
-   Plotly.newPlot(divRef, chartJson.data, chartJson.layout, {responsive: true})
+#### Data Display
 
-9. User clicks "Download PNG" -> Plotly.downloadImage(divRef, {format: 'png'})
-   User clicks "Download SVG" -> Plotly.downloadImage(divRef, {format: 'svg'})
-```
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `@tanstack/react-table` | `^8.21.3` | User list, invitation list, audit log tables | Already used in public frontend for data tables. Server-side pagination, sorting, filtering. |
 
-### Alternative Considered: to_html() in Sandbox + iframe on Frontend
+#### Charts (Admin Dashboard)
 
-Generate `fig.to_html(full_html=False, include_plotlyjs='cdn')` in the sandbox, send the HTML string to the frontend, and render in an iframe with `srcdoc`.
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `recharts` | `^3.7.0` | Admin dashboard trend charts (signups, messages, credits over time) | **shadcn/ui's official chart components are built on Recharts.** Using Recharts directly means we get shadcn chart patterns (ChartContainer, ChartTooltip) that match the existing design system. The admin dashboard needs simple line/bar/area charts -- not the heavy scientific plotting that Plotly handles in the public app. Recharts is ~45KB gzipped vs Plotly's ~1MB. |
 
-**Why rejected:**
-- HTML string is ~50-100KB per chart (includes plotly.js CDN reference + data + layout)
-- iframe introduces CSS isolation issues (theming, dark mode won't penetrate)
-- iframe resize handling is complex (no native responsive behavior)
-- Export from iframe requires `postMessage` communication -- fragile
-- Chart type switching requires re-generating HTML server-side (round-trip)
-- JSON approach is ~5-10KB and enables all client-side interactivity natively
+**Why Recharts (not Plotly) for admin dashboard:**
+- The public frontend uses Plotly for user-facing data visualization (complex, interactive, AI-generated charts). That is a different use case.
+- Admin dashboard charts are simple metrics: signups over time, credit usage trends, message counts. These are static line/bar charts with fixed data shapes.
+- shadcn/ui provides copy-paste chart components built on Recharts. Using Recharts means the admin dashboard charts match the shadcn design system natively.
+- Recharts is ~45KB gzipped. Plotly is ~1MB. The admin portal should load fast.
+- Recharts v3.7.0 supports React 19 (may need `--legacy-peer-deps` for `react-is` peer dependency).
 
----
-
-## Frontend: PlotlyChart Component Pattern
-
-```typescript
-// components/data/PlotlyChart.tsx
-"use client";
-
-import { useRef, useEffect, useCallback } from "react";
-import Plotly from "plotly.js-dist-min";
-
-interface PlotlyChartProps {
-  data: Plotly.Data[];
-  layout?: Partial<Plotly.Layout>;
-  config?: Partial<Plotly.Config>;
-  onChartReady?: (div: HTMLDivElement) => void;
-  className?: string;
-}
-
-export function PlotlyChart({ data, layout, config, onChartReady, className }: PlotlyChartProps) {
-  const divRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!divRef.current) return;
-
-    const defaultLayout: Partial<Plotly.Layout> = {
-      autosize: true,
-      margin: { t: 40, r: 20, b: 40, l: 60 },
-      paper_bgcolor: "transparent",
-      plot_bgcolor: "transparent",
-      ...layout,
-    };
-
-    const defaultConfig: Partial<Plotly.Config> = {
-      responsive: true,
-      displayModeBar: true,
-      modeBarButtonsToRemove: ["sendDataToCloud", "lasso2d", "select2d"],
-      displaylogo: false,
-      ...config,
-    };
-
-    Plotly.newPlot(divRef.current, data, defaultLayout, defaultConfig)
-      .then(() => {
-        if (divRef.current && onChartReady) onChartReady(divRef.current);
-      });
-
-    return () => {
-      if (divRef.current) Plotly.purge(divRef.current);
-    };
-  }, [data, layout, config]);
-
-  return <div ref={divRef} className={className} />;
-}
-```
-
-**Why NOT `react-plotly.js`?** This wrapper is 30 lines and avoids: (1) stale React wrapper (last updated 3 years ago, React 19 untested), (2) prop mutation issues (react-plotly.js mutates data/layout props), (3) unnecessary dependency. The `Plotly.react()` function can be used for efficient updates instead of full `newPlot()` re-renders.
-
-**Next.js SSR Consideration:** plotly.js requires DOM access. The `"use client"` directive ensures this component only runs in the browser. No SSR issues with this approach.
+**Why NOT Tremor:**
+- Tremor is excellent for dashboards but is a heavier abstraction layer on top of Recharts + Radix + Tailwind. Since we already have shadcn/ui (which uses Radix + Tailwind), adding Tremor creates overlapping component systems. Use shadcn/ui's own chart components (Recharts-based) instead.
 
 ---
 
-## Frontend: Export Utility Functions
+## Admin Frontend: What to Copy from Public Frontend
 
-```typescript
-// lib/chart-export.ts
-import Plotly from "plotly.js-dist-min";
+The admin frontend should copy these configuration files from the public frontend (not share them via monorepo -- keeps deployment simple):
 
-export async function downloadChartAsPNG(
-  chartDiv: HTMLDivElement,
-  filename: string = "chart",
-  width: number = 1200,
-  height: number = 800,
-  scale: number = 2  // 2x for retina
-) {
-  await Plotly.downloadImage(chartDiv, {
-    format: "png",
-    width,
-    height,
-    scale,
-    filename,
-  });
-}
+| File | Copy From | Modify |
+|------|-----------|--------|
+| `tailwind.config.ts` | `frontend/` | Same config |
+| `tsconfig.json` | `frontend/` | Same config |
+| `postcss.config.mjs` | `frontend/` | Same config |
+| `.eslintrc.json` | `frontend/` | Same config |
+| `components/ui/` | `frontend/` | Copy shadcn components needed (button, card, dialog, table, input, select, badge, etc.) |
+| `lib/utils.ts` | `frontend/` | Same cn() utility |
+| `lib/api-client.ts` | `frontend/` | Modify base URL to admin API |
 
-export async function downloadChartAsSVG(
-  chartDiv: HTMLDivElement,
-  filename: string = "chart",
-  width: number = 1200,
-  height: number = 800
-) {
-  await Plotly.downloadImage(chartDiv, {
-    format: "svg",
-    width,
-    height,
-    filename,
-  });
-}
-```
+**Why NOT a monorepo (Turborepo/Nx):**
+- The project is 23K LOC across 4 milestones. Adding monorepo tooling (Turborepo, workspace configs, shared packages) introduces significant complexity for minimal benefit.
+- The admin frontend shares UI library choices but has completely different pages, layouts, and API endpoints.
+- Copying shared code (shadcn components, utilities) is ~20 files. Maintaining a monorepo to avoid copying 20 files is not worth the overhead.
+- Split-horizon deployment means these are deployed to different networks. Independent build/deploy pipelines are simpler.
 
 ---
 
-## Backend: LangGraph State Additions
+## Split-Horizon Architecture: No New Dependencies
+
+The split-horizon deployment is a **configuration pattern**, not a technology addition:
+
+| Aspect | Implementation | New Dependency? |
+|--------|---------------|-----------------|
+| `SPECTRA_MODE` env var | `pydantic-settings` (existing) | No |
+| Conditional router mounting | Python `if/elif` in `main.py` | No |
+| Admin routers directory | `backend/app/routers/admin/` | No |
+| Tailscale VPN | Infrastructure concern, not code | No |
+| Docker Compose for admin | Docker config file | No |
+| CORS for admin frontend | Extend `Settings.cors_origins` | No |
+
+### Backend `main.py` Pattern
 
 ```python
-# Additions to ChatAgentState (backend/app/agents/state.py)
-class ChatAgentState(TypedDict):
-    # ... existing fields ...
+# Extend config.py
+spectra_mode: str = "dev"  # "public" | "admin" | "dev"
+admin_frontend_url: str = "http://localhost:3001"
 
-    chart_json: str
-    """Plotly figure JSON string from visualization agent code execution.
-    Contains {data: [...], layout: {...}} structure. Empty string if no chart."""
+# In main.py
+settings = get_settings()
 
-    chart_type: str
-    """Chart type hint from visualization agent: 'bar', 'line', 'scatter',
-    'histogram', 'box', 'pie', 'donut'. Used by frontend for type switcher."""
+if settings.spectra_mode in ("public", "dev"):
+    app.include_router(auth.router)
+    app.include_router(files.router)
+    app.include_router(chat.router)
+    app.include_router(chat_sessions.router)
+    app.include_router(search.router)
 
-    visualization_requested: bool
-    """Whether the manager/analysis agent determined a chart is appropriate
-    for this query. Drives routing to visualization agent."""
+if settings.spectra_mode in ("admin", "dev"):
+    from app.routers.admin import (
+        admin_auth, admin_users, admin_settings,
+        admin_invitations, admin_credits
+    )
+    app.include_router(admin_auth.router)
+    app.include_router(admin_users.router)
+    app.include_router(admin_settings.router)
+    app.include_router(admin_invitations.router)
+    app.include_router(admin_credits.router)
+
+# Always include health
+app.include_router(health.router)
 ```
 
 ---
 
-## Backend: SSE Event Schema for Charts
+## Database Changes: No New Dependencies
 
-```python
-# New SSE event emitted by visualization execution
-writer({
-    "type": "chart_data",
-    "event": "chart_data",
-    "chart_json": chart_json_string,  # Plotly figure JSON
-    "chart_type": "bar",              # Chart type hint
-    "message": "Chart generated",
-})
-```
+All database changes use the existing SQLAlchemy + Alembic stack:
 
-The frontend event handler adds chart JSON to the DataCard state alongside existing table data, enabling the "chart above table" layout.
+### New Tables (5)
 
----
+| Table | Key Columns | Notes |
+|-------|-------------|-------|
+| `platform_settings` | `key` (PK), `value` (JSON), `updated_at`, `updated_by` | Key-value store for runtime config |
+| `user_credits` | `user_id` (FK), `balance` (Float), `last_reset` | Per-user credit state |
+| `credit_transactions` | `id`, `user_id`, `amount`, `type` (enum: deduction/adjustment/reset), `reason`, `admin_id`, `created_at` | Immutable transaction log |
+| `invitations` | `id`, `email`, `token` (unique), `status` (enum: pending/accepted/expired/revoked), `expires_at`, `invited_by`, `created_at` | Invite records |
+| `admin_audit_log` | `id`, `admin_id`, `action`, `target_type`, `target_id`, `details` (JSON), `created_at` | Immutable audit trail |
 
-## Backend: Visualization Agent Config
+### User Table Extensions
 
-```yaml
-# Addition to agents.yaml
-visualization:
-  provider: "anthropic"
-  model: "claude-sonnet-4-20250514"
-  temperature: 0.1
-  max_tokens: 2048
-  prompt: |
-    You are a data visualization expert. Given the user's query, data profile,
-    and analysis results, generate Python code using Plotly Express to create
-    an appropriate chart.
-
-    **Rules:**
-    - Use plotly.express (px) for simple charts, plotly.graph_objects (go) for complex
-    - Always set a descriptive title
-    - Use appropriate chart type: bar, line, scatter, histogram, box, pie
-    - Limit data to top 20 items for readability (sort and slice)
-    - Output the figure JSON: print(json.dumps({{"chart": json.loads(fig.to_json())}}))
-    - Do NOT call fig.show() or fig.write_image()
-    - Handle missing data gracefully (dropna or fillna)
-    - Use professional color schemes (plotly defaults are fine)
-```
+| New Column | Type | Default | Notes |
+|------------|------|---------|-------|
+| `is_admin` | Boolean | `False` | Admin role flag |
+| `user_class` | Enum(free/standard/premium) | `free` | Tier assignment |
+| `credit_balance` | Float | `0.0` | Current credit balance (denormalized for fast reads) |
+| `last_credit_reset` | DateTime | `None` | Last auto-reset timestamp |
+| `last_login_at` | DateTime | `None` | For admin dashboard metrics |
+| `invited_by` | UUID (FK, nullable) | `None` | Track invitation source |
 
 ---
 
@@ -329,13 +241,19 @@ visualization:
 
 | Category | Recommended | Alternative | Why Not Alternative |
 |----------|-------------|-------------|---------------------|
-| Chart rendering location | Client-side (plotly.js) | Server-side (Kaleido in sandbox) | Kaleido v1 requires Chrome (not in E2B), has 50x perf regression, Docker sandbox conflicts. Client-side is instant and avoids all these issues. |
-| Chart data transport | JSON (`fig.to_json()`) | HTML (`fig.to_html()`) | HTML is 10x larger, iframe rendering breaks theming/dark mode, chart type switching requires server roundtrip. JSON enables full client-side interactivity. |
-| React Plotly wrapper | Custom 30-line component | `react-plotly.js` (npm) | Last updated 3 years ago (v2.6.0), React 19 untested, mutates props (violates React rules). Custom wrapper is simpler and safer. |
-| plotly.js bundle | `plotly.js-dist-min` (full, minified) | `plotly.js-basic-dist-min` (partial) | Basic bundle lacks histogram, box, heatmap -- needed for analytics. Full bundle is ~1MB gzipped, acceptable. |
-| Image export | `Plotly.downloadImage()` (client) | Kaleido `write_image()` (server) | Client-side export requires no infrastructure, is instant, works offline. Kaleido requires Chrome in a headless sandbox -- unreliable. |
-| SVG export | `Plotly.toImage({format:'svg'})` (client) | Server-side SVG rendering | plotly.js open-source supports SVG export natively. Verified in source code. No subscription needed. |
-| Chart type switcher | Client-side JSON mutation | Re-run visualization agent | Changing chart type is a simple `data[0].type` swap in JSON. No server roundtrip needed for basic type changes. |
+| Credit reset scheduler | APScheduler (AsyncIOScheduler) | Celery + Redis | Overkill for 1 periodic job. Adds Redis dependency, worker process, broker config. |
+| Credit reset scheduler | APScheduler | OS cron | Not portable. Docker/Tailscale deployment needs in-app scheduler. |
+| Credit reset scheduler | APScheduler | `fastapi-utils` repeat_every | No cron expressions, no timezone support, no graceful restart handling. |
+| Admin dashboard charts | Recharts (via shadcn chart patterns) | Plotly | Plotly is 20x larger (~1MB vs ~45KB). Admin needs simple line/bar charts, not scientific plotting. |
+| Admin dashboard charts | Recharts | Tremor | Overlapping abstraction layer with shadcn/ui. Both use Radix + Tailwind. Pick one. |
+| Admin dashboard charts | Recharts | Chart.js | No shadcn/ui integration. Recharts has official shadcn chart components. |
+| Invite tokens | `secrets.token_urlsafe(32)` | UUID v4 | UUID v4 has only 122 bits of entropy. `token_urlsafe(32)` has 256 bits. Also URL-safe by design. |
+| Invite tokens | `secrets.token_urlsafe(32)` | itsdangerous (signed tokens) | Unnecessary. Invite tokens are stored in DB and validated by lookup, not by signature verification. |
+| Project structure | Separate apps (copy shared code) | Monorepo (Turborepo) | 23K LOC project. Monorepo tooling overhead not justified. Admin shares ~20 files with public frontend. |
+| Admin auth | Same JWT mechanism + `is_admin` claim | Separate auth system | Same database, same user table. Adding `is_admin` to JWT payload is simpler than a second auth system. |
+| Audit logging | Database table (admin_audit_log) | External service (Datadog, ELK) | Over-engineered for admin action logging. DB table is queryable, portable, and requires no external services. |
+| Platform settings | Key-value DB table | Redis | Settings change rarely. DB reads are fast enough. Redis adds infrastructure dependency for no benefit. |
+| User class config | YAML file | Database table with admin CRUD | Requirement specifies static tiers. YAML is version-controlled, reviewed in PRs, deployed predictably. |
 
 ---
 
@@ -343,182 +261,272 @@ visualization:
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| `kaleido` (server-side export) | Requires Chrome in sandbox, 50x perf regression, Docker conflicts | `Plotly.downloadImage()` client-side |
-| `react-plotly.js` | Stale (3yr), React 19 untested, prop mutation | Custom 30-line `PlotlyChart` component |
-| `orca` (legacy Plotly export) | Officially deprecated, removed after Sept 2025 | Client-side plotly.js export |
-| `puppeteer` / `playwright` | Headless browser for server-side rendering -- massive dependency, sandbox conflicts | Not needed. Client-side rendering handles everything. |
-| `chart.js` / `recharts` / `d3` | Different charting libraries | Plotly already chosen. Adding another creates inconsistency. |
-| `html2canvas` | Screenshot-based export | `Plotly.toImage()` produces higher quality, native vector SVG |
-| Custom E2B sandbox template | Template with Chrome + Kaleido pre-configured | Unnecessary. JSON approach avoids all server-side rendering. |
-| `plotly.js` (non-dist) | Requires build tooling (webpack config) | `plotly.js-dist-min` is pre-built, no config needed |
-| `DOMPurify` / sanitizer | For sanitizing HTML in iframes | Not using iframes. JSON rendering is safe by design. |
+| `celery` + `redis` | Overkill for 1 periodic job. Adds 2 infrastructure dependencies. | APScheduler (in-process) |
+| `tremor` | Overlaps with shadcn/ui. Both wrap Radix + Tailwind. | Recharts via shadcn chart components |
+| `plotly.js` (in admin frontend) | Too heavy for simple metrics charts. Already in public frontend for different purpose. | Recharts (~45KB) |
+| `itsdangerous` | Signed tokens unnecessary. Invite tokens validated by DB lookup. | `secrets.token_urlsafe(32)` |
+| `turborepo` / `nx` | Monorepo tooling overhead not justified for 2 small frontends. | Copy shared files |
+| `fastapi-admin` / `sqladmin` | Auto-generated admin UIs don't match Spectra's custom admin requirements. | Custom admin routers + React frontend |
+| `redis` | No caching or session storage needs. Platform settings are low-read. | PostgreSQL (existing) |
+| `flower` / `celery-beat` | Only needed with Celery. Not using Celery. | APScheduler |
+| `alembic-autogenerate` blindly | 5 new tables + column additions need careful migration ordering. | Write migrations manually or review autogenerated. |
+| `RBAC library` (casbin, etc.) | Binary admin/non-admin check. No complex role hierarchy. | Simple `is_admin` boolean check in dependency. |
+| `rate limiting library` | Admin API is VPN-only. Rate limiting is a public API concern (future). | Network isolation is the security layer. |
 
 ---
 
 ## Installation
 
-### Frontend (1 new package)
+### Backend (1 new package)
 
 ```bash
-cd frontend
-npm install plotly.js-dist-min
+cd backend
+
+# Add to pyproject.toml dependencies:
+# "apscheduler>=3.11.0",
+
+pip install apscheduler
 ```
 
-Optionally, add TypeScript types:
+### Admin Frontend (new application)
 
 ```bash
-npm install -D @types/plotly.js
+# Create admin frontend
+mkdir admin-frontend
+cd admin-frontend
+
+npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"
+
+# Core dependencies (match public frontend versions)
+npm install @tanstack/react-query@^5.90.20 @tanstack/react-table@^8.21.3 zustand@^5.0.11
+npm install radix-ui@^1.4.3 class-variance-authority@^0.7.1 clsx@^2.1.1 tailwind-merge@^3.4.0
+npm install lucide-react@^0.563.0 sonner@^2.0.7 next-themes@^0.4.6
+
+# Admin-specific: charts for dashboard
+npm install recharts@^3.7.0
+
+# Dev dependencies
+npm install -D @tailwindcss/postcss@^4 tailwindcss@^4 tw-animate-css@^1.4.0
+npm install -D @types/node@^20 @types/react@^19 @types/react-dom@^19
 ```
 
-**Note:** `@types/plotly.js` provides types for the full `plotly.js` API including `Plotly.newPlot()`, `Plotly.react()`, `Plotly.toImage()`, `Plotly.downloadImage()`, `Plotly.purge()`, and all data/layout type definitions.
+**Note on Recharts + React 19:** Recharts v3.7.0 may flag a peer dependency warning for `react-is`. If npm install fails, use `npm install recharts@^3.7.0 --legacy-peer-deps`. This is a known issue with Recharts' `react-is` dependency not yet declaring React 19 in its peer range.
 
-### Backend (0 new packages)
+### Public Frontend (0 new packages)
 
 ```bash
-# No new pip installs needed for v0.4
-# Plotly 6.0.1 is pre-installed in E2B sandbox
-# No new server-side dependencies
+# No changes to public frontend dependencies for v0.5
 ```
 
-### E2B Sandbox (0 changes)
+---
+
+## Environment Variables: New Additions
 
 ```bash
-# No custom sandbox template needed
-# Plotly 6.0.1 pre-installed in default code-interpreter template
-# No Chrome/Kaleido configuration needed
+# .env additions for v0.5
+
+# Split-horizon mode: "public" | "admin" | "dev" (default: "dev")
+SPECTRA_MODE=dev
+
+# Admin frontend URL (for CORS and email links)
+ADMIN_FRONTEND_URL=http://localhost:3001
+
+# Invite link settings (optional, has defaults)
+INVITE_EXPIRY_DAYS=7
+
+# Credit reset settings (optional, has defaults)
+CREDIT_RESET_ENABLED=true
+CREDIT_RESET_SCHEDULE=weekly  # "weekly" | "monthly" | "manual"
 ```
 
 ---
 
 ## Integration Points with Existing Stack
 
-### 1. E2B Sandbox Result Parsing (Modified)
-
-Currently, `execute_in_sandbox` in `graph.py` parses JSON from stdout looking for `{"result": ...}`. The visualization code will output `{"chart": ...}` in addition to or instead of `{"result": ...}`.
+### 1. JWT Token Payload (Extended)
 
 ```python
-# Current parsing (graph.py line ~458):
-parsed = json.loads(line.strip())
-if "result" in parsed:
-    execution_result = json.dumps(parsed["result"])
+# Current payload: {"sub": user_id, "exp": expiry}
+# v0.5 payload: {"sub": user_id, "exp": expiry, "is_admin": True/False}
 
-# Extended parsing for v0.4:
-parsed = json.loads(line.strip())
-if "result" in parsed:
-    execution_result = json.dumps(parsed["result"])
-if "chart" in parsed:
-    chart_json = json.dumps(parsed["chart"])
+# Admin dependency (new):
+async def get_current_admin(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)):
+    user = await get_current_user(token, db)
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
 ```
 
-### 2. SSE Stream Event Handling (Extended)
+### 2. Email Service (Extended)
 
-The existing SSE stream (`chat.py` routers) passes events from LangGraph `get_stream_writer()`. The new `chart_data` event type flows through the same pipeline with zero changes to the streaming infrastructure.
-
-### 3. DataCard Component (Extended)
-
-The existing `DataCard.tsx` has sections: Query Brief -> Code Display -> Data Table -> Analysis. Charts insert between Code Display and Data Table:
-
-```
-Query Brief  (existing)
-Code Display (existing)
-Chart        (NEW - PlotlyChart component)
-Data Table   (existing)
-Analysis     (existing)
-Export Row   (existing CSV/MD + NEW PNG/SVG buttons)
+```python
+# Existing: password_reset.html template
+# New: invitation.html template (same Jinja2 + aiosmtplib pattern)
+# New: invitation_accepted.html template (optional notification to admin)
 ```
 
-### 4. LangGraph Agent Graph (Extended)
+### 3. Credit Deduction (Chat Service Integration)
 
-The `build_chat_graph()` function adds a `visualization_agent` node. Routing:
-
+```python
+# In existing chat router (chat.py), before processing message:
+# 1. Check user.credit_balance >= credit_cost
+# 2. If insufficient: return 402 Payment Required
+# 3. If sufficient: deduct and create credit_transaction record
+# This modifies the existing chat flow but uses existing models/services pattern
 ```
-execute -> [should_visualize?] -> visualization_agent -> da_with_tools
-execute -> [no visualization]  -> da_with_tools  (existing path)
+
+### 4. Signup Flow (Modified)
+
+```python
+# In existing auth router (auth.py), signup endpoint:
+# 1. Check platform_settings["allow_public_signup"]
+# 2. If disabled: check for valid invite token in request
+# 3. If invite: validate token, mark as accepted, proceed with signup
+# 4. Assign default user_class from platform_settings
+# 5. Set initial credit_balance from user_class config
 ```
 
-The conditional edge checks `state["visualization_requested"]`. The visualization agent is optional -- queries that don't warrant charts skip it entirely.
+### 5. APScheduler Lifespan Integration
 
-### 5. Frontend Zustand Store (Minimal Change)
+```python
+# In main.py lifespan (existing pattern):
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # ... existing startup code ...
 
-The existing message/card state in the chat interface needs a `chartJson` field per data card. This is a small extension to the existing streaming state management, not a new store.
+    # Credit reset scheduler (admin/dev mode only)
+    if settings.spectra_mode in ("admin", "dev"):
+        from apscheduler.schedulers.asyncio import AsyncIOScheduler
+        scheduler = AsyncIOScheduler()
+        scheduler.add_job(
+            reset_credits_job,
+            trigger="cron",
+            day_of_week="mon",  # Weekly on Monday (configurable)
+            hour=0, minute=0,
+            timezone="UTC"
+        )
+        scheduler.start()
+        app.state.scheduler = scheduler
+
+    yield
+
+    # Shutdown scheduler
+    if hasattr(app.state, "scheduler"):
+        app.state.scheduler.shutdown()
+    await engine.dispose()
+```
 
 ---
 
-## Version Compatibility
+## Version Compatibility Matrix
 
-| Package | Version | Compatibility | Notes |
-|---------|---------|--------------|-------|
-| `plotly.js-dist-min` | ^3.3.1 | Works with all browsers | No framework dependency. Pure JS. |
-| `@types/plotly.js` | Latest | TypeScript 5.x | Type definitions only, dev dependency |
-| Plotly (Python, E2B) | 6.0.1 (pre-installed) | `fig.to_json()` available since Plotly 4.x | Stable API, no version concerns |
-| Next.js 16 | 16.1.6 | `"use client"` for plotly.js components | plotly.js needs DOM -- client components only |
-| React 19 | 19.2.3 | Compatible via `useRef` + `useEffect` | No React wrapper needed, direct DOM manipulation |
-| E2B Code Interpreter | >=1.0.2 | Pre-installs Plotly 6.0.1 | No custom template needed |
+| Package | Version | Python/Node | Compatibility Notes |
+|---------|---------|-------------|---------------------|
+| `apscheduler` | >=3.11.0 | Python 3.12 | AsyncIOScheduler works with uvicorn's event loop |
+| `recharts` | ^3.7.0 | React 19 | May need `--legacy-peer-deps` for `react-is` peer dep |
+| `next` | 16.1.6 | Node 20+ | Same version as public frontend |
+| `@tanstack/react-query` | ^5.90.20 | React 19 | Verified compatible (already in use) |
+| `@tanstack/react-table` | ^8.21.3 | React 19 | Verified compatible (already in use) |
+| `zustand` | ^5.0.11 | React 19 | Verified compatible (already in use) |
+| `radix-ui` | ^1.4.3 | React 19 | Verified compatible (already in use) |
 
 ---
 
-## Bundle Size Impact
+## Project Structure After v0.5
 
-| Package | Uncompressed | Gzipped | Notes |
-|---------|-------------|---------|-------|
-| `plotly.js-dist-min` | ~3.5 MB | ~1.0 MB | One-time load. Can be lazy-loaded only when charts are displayed. |
-
-**Mitigation:** Use Next.js dynamic import to lazy-load plotly.js only when a DataCard with chart data is rendered:
-
-```typescript
-import dynamic from "next/dynamic";
-
-const PlotlyChart = dynamic(() => import("@/components/data/PlotlyChart"), {
-  ssr: false,
-  loading: () => <div className="h-[400px] skeleton rounded-lg" />,
-});
 ```
-
-This ensures plotly.js is never loaded for users who haven't triggered a visualization query yet.
-
----
-
-## Risk Assessment
-
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|------------|
-| plotly.js bundle increases page load | Medium | Low | Lazy-load with `next/dynamic`. Only loaded when chart renders. |
-| E2B sandbox Plotly version drifts | Low | Low | Pin via `import plotly; assert plotly.__version__.startswith('6')` in agent code preamble. |
-| `Plotly.toImage()` fails on some browsers | Very Low | Medium | Well-tested in all modern browsers. Fallback: hide export buttons if canvas unavailable. |
-| Chart JSON too large for SSE event | Low | Medium | Plotly JSON for typical charts is 5-20KB. For large datasets, the agent should aggregate before charting (top 20 items rule). |
-| Agent generates invalid Plotly JSON | Medium | Low | Code Checker already validates code. Add Plotly-specific validation: try `json.loads(chart_json)` and verify `data` key exists. |
-| Dark mode chart theming | Medium | Low | Set `paper_bgcolor: 'transparent'`, `plot_bgcolor: 'transparent'`, and use CSS variables for font colors in layout config. |
+spectra-dev/
+  backend/
+    app/
+      config.py                    # + SPECTRA_MODE, ADMIN_FRONTEND_URL
+      main.py                      # + conditional router mounting, scheduler
+      models/
+        user.py                    # + is_admin, user_class, credit_balance
+        platform_settings.py       # NEW
+        invitation.py              # NEW
+        credit_transaction.py      # NEW
+        admin_audit_log.py         # NEW
+      routers/
+        admin/                     # NEW directory
+          __init__.py
+          auth.py                  # Admin login
+          users.py                 # User CRUD
+          settings.py              # Platform settings
+          invitations.py           # Invite management
+          credits.py               # Credit management
+          dashboard.py             # Dashboard metrics
+      services/
+        admin/                     # NEW directory
+          user_management.py
+          invitation.py
+          credit.py
+          audit.py
+          dashboard.py
+      templates/
+        email/
+          password_reset.html      # existing
+          invitation.html          # NEW
+      cli/
+        seed_admin.py              # NEW: CLI admin seed
+    config/
+      user_classes.yaml            # NEW: tier definitions
+    alembic/
+      versions/
+        xxx_add_admin_portal.py    # NEW migration(s)
+  frontend/                        # UNCHANGED
+  admin-frontend/                  # NEW
+    src/
+      app/
+        layout.tsx
+        page.tsx                   # Dashboard
+        login/page.tsx
+        users/page.tsx
+        users/[id]/page.tsx
+        invitations/page.tsx
+        settings/page.tsx
+        credits/page.tsx
+      components/
+        ui/                        # Copied from frontend
+        admin/
+          dashboard-charts.tsx
+          user-table.tsx
+          invite-form.tsx
+          credit-adjust-dialog.tsx
+          audit-log.tsx
+      lib/
+        api-client.ts              # Admin API client
+        auth.ts                    # Admin auth hooks
+        utils.ts                   # Copied from frontend
+```
 
 ---
 
 ## Sources
 
-**Plotly Python (Sandbox-Side):**
-- [Plotly PyPI -- v6.5.2 current](https://pypi.org/project/plotly/) -- Confirms latest version. E2B has 6.0.1.
-- [fig.to_html() docs](https://plotly.com/python-api-reference/generated/plotly.io.to_html.html) -- `full_html`, `include_plotlyjs` parameters
-- [fig.to_json() docs](https://plotly.github.io/plotly.py-docs/generated/plotly.io.to_json.html) -- JSON export API
-- [Static image generation changes](https://plotly.com/python/static-image-generation-changes/) -- Kaleido v1 deprecation timeline
+**APScheduler:**
+- [APScheduler PyPI](https://pypi.org/project/APScheduler/) -- v3.11.2 current, actively maintained
+- [FastAPI + APScheduler patterns](https://sentry.io/answers/schedule-tasks-with-fastapi/) -- Lifespan integration pattern
+- [APScheduler GitHub Discussions](https://github.com/agronholm/apscheduler/discussions/830) -- FastAPI integration
 
-**Plotly.js (Frontend-Side):**
-- [plotly.js-dist-min npm](https://www.npmjs.com/package/plotly.js-dist-min) -- v3.3.1 current
-- [plotly.js static image export](https://plotly.com/javascript/static-image-export/) -- `Plotly.toImage()`, `Plotly.downloadImage()` API
-- [plotly.js source: toimage.js](https://github.com/plotly/plotly.js/blob/master/src/snapshot/toimage.js) -- Confirms SVG support in open-source (format: 'png' | 'jpeg' | 'webp' | 'svg')
-- [react-plotly.js GitHub](https://github.com/plotly/react-plotly.js) -- Last updated 3 years ago, v2.6.0
+**Recharts:**
+- [Recharts npm](https://www.npmjs.com/package/recharts) -- v3.7.0 current
+- [shadcn/ui Chart Component](https://ui.shadcn.com/docs/components/radix/chart) -- Built on Recharts
+- [Recharts React 19 Support](https://github.com/recharts/recharts/issues/4558) -- Supported via alpha, now stable in v3
 
-**Kaleido (NOT Recommended):**
-- [Kaleido GitHub](https://github.com/plotly/Kaleido) -- v1.2.0 current, requires Chrome
-- [Docker compatibility issue #379](https://github.com/plotly/Kaleido/issues/379) -- Sandbox-in-sandbox failures
-- [Performance regression issue #400](https://github.com/plotly/Kaleido/issues/400) -- 50x slower than v0.2.1
-- [Kaleido PyPI](https://pypi.org/project/kaleido/) -- Chrome dependency documented
+**shadcn/ui Charts:**
+- [shadcn/ui Charts](https://ui.shadcn.com/charts/area) -- Official chart components using Recharts
+- [shadcn Charts Discussion](https://github.com/shadcn-ui/ui/discussions/4133) -- Community recommendations
 
-**E2B Sandbox:**
-- [E2B Code Interpreter Sandbox Environment](https://deepwiki.com/e2b-dev/code-interpreter/2.1-sandbox-environment) -- Pre-installed packages list (Plotly 6.0.1, Kaleido 1.0.0, pandas 2.2.3)
-- [E2B Custom Packages](https://e2b.dev/docs/quickstart/install-custom-packages) -- Runtime vs template installation
-- [E2B SDK Result Object](https://e2b.dev/docs/sdk-reference/code-interpreter-python-sdk/v1.2.1/sandbox) -- Result has `html`, `json`, `png` representations
-- [Plotly Python to JSON for React](https://community.plotly.com/t/how-to-convert-python-json-object-to-plot-in-plotly-js-in-react/68797) -- Community pattern for Python->JSON->JS rendering
+**Invite Token Security:**
+- [Python secrets module](https://docs.python.org/3/library/secrets.html) -- `token_urlsafe()` documentation
+- [Secure token generation](https://blog.miguelgrinberg.com/post/the-new-way-to-generate-secure-tokens-in-python) -- Best practices
+
+**Split-Horizon / Multi-App:**
+- [Next.js Multi-Zones](https://nextjs.org/docs/pages/guides/multi-zones) -- Official multi-app documentation
+- [Monorepo considerations](https://medium.com/@techbysundaram/managing-two-frontend-apps-with-one-monorepo-a-practical-next-js-setup-b518cf390d24) -- Why monorepo may not be needed
 
 ---
 
-*Stack research for: Spectra v0.4 Data Visualization*
-*Researched: 2026-02-12*
-*Confidence: HIGH -- JSON rendering approach is well-established. Kaleido rejection based on verified sandbox limitations. plotly.js SVG export confirmed via source code. E2B pre-installed packages verified.*
+*Stack research for: Spectra v0.5 Admin Portal*
+*Researched: 2026-02-16*
+*Confidence: HIGH -- One new backend dependency (APScheduler, well-established). One new frontend library (Recharts, shadcn-recommended). Everything else uses existing stack or Python stdlib. Split-horizon is pure configuration. No exotic technologies.*
