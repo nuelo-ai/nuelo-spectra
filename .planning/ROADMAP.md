@@ -145,11 +145,12 @@ Plans:
   1. Admin enters an email address and the system generates a unique time-limited invite link (default 7 days, configurable), sends a branded email via existing SMTP service, and stores a SHA-256 hashed token in the invitations table
   2. Invited user clicks the link, sees a registration form with pre-filled locked email, sets their password and name, and completes registration -- the invite token is invalidated (single-use)
   3. Admin can view all invitations (pending/accepted/expired) and can revoke or resend pending invitations
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 30-01: TBD
-- [ ] 30-02: TBD
+- [ ] 30-01-PLAN.md -- Invitation schemas, service, admin endpoints, email templates, platform settings
+- [ ] 30-02-PLAN.md -- Invite token validation and invite-register auth endpoints (auto-login)
+- [ ] 30-03-PLAN.md -- Frontend invite registration page with token validation and form
 
 ### Phase 31: Dashboard & Admin Frontend
 **Goal**: A separate admin Next.js application provides a visual interface for all admin operations, including a dashboard with platform metrics and trend charts
