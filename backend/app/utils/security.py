@@ -97,6 +97,35 @@ def create_tokens(user_id: str, settings: Settings) -> dict[str, str]:
     }
 
 
+def create_admin_tokens(user_id: str, settings: Settings) -> dict[str, str]:
+    """Create JWT tokens with is_admin=True claim for admin users.
+
+    Uses iat claim for sliding window timeout. No separate refresh token;
+    the AdminTokenReissueMiddleware handles session continuation.
+
+    Args:
+        user_id: Admin user ID to encode in the token
+        settings: Application settings containing JWT and admin timeout config
+
+    Returns:
+        Dictionary with access_token and token_type
+    """
+    now = datetime.now(timezone.utc)
+    expire = now + timedelta(minutes=settings.admin_session_timeout_minutes)
+    payload = {
+        "sub": user_id,
+        "exp": expire,
+        "iat": now,
+        "type": "access",
+        "is_admin": True,
+    }
+    access_token = jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+    }
+
+
 def verify_token(token: str, token_type: str, settings: Settings) -> str:
     """Verify and decode a JWT token.
 

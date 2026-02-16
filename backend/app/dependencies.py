@@ -1,8 +1,10 @@
 """FastAPI dependencies for authentication and database access."""
 
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 from uuid import UUID
 
+import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -68,6 +70,74 @@ async def get_current_user(
     return user
 
 
+async def get_current_admin_user(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> User:
+    """Verify JWT has is_admin=True claim AND verify is_admin in DB (defense in depth).
+
+    Checks:
+    1. JWT signature and expiration
+    2. is_admin claim in JWT (fast pre-filter)
+    3. Token type is "access"
+    4. Sliding window timeout via iat claim
+    5. User exists and is active in DB
+    6. is_admin flag in DB (defense in depth)
+
+    Args:
+        token: JWT access token from Authorization header
+        db: Database session
+        settings: Application settings
+
+    Returns:
+        Authenticated admin user instance
+
+    Raises:
+        HTTPException: If any check fails
+    """
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Admin session expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    # Fast pre-filter: check JWT claim
+    if not payload.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    # Check token type
+    if payload.get("type") != "access":
+        raise HTTPException(status_code=401, detail="Invalid token type")
+
+    # Check sliding window timeout via iat claim
+    iat = payload.get("iat")
+    if iat:
+        issued_at = datetime.fromtimestamp(iat, tz=timezone.utc)
+        if datetime.now(timezone.utc) - issued_at > timedelta(
+            minutes=settings.admin_session_timeout_minutes
+        ):
+            raise HTTPException(status_code=401, detail="Admin session expired")
+
+    user_id_str = payload.get("sub")
+    if not user_id_str:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+
+    user_id = UUID(user_id_str)
+    user = await get_user_by_id(db, user_id)
+
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=401, detail="User not found or inactive")
+
+    # Defense in depth: verify is_admin in database (not just JWT claim)
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    return user
+
+
 # Typed dependencies for cleaner endpoint signatures
 CurrentUser = Annotated[User, Depends(get_current_user)]
+CurrentAdmin = Annotated[User, Depends(get_current_admin_user)]
 DbSession = Annotated[AsyncSession, Depends(get_db)]
