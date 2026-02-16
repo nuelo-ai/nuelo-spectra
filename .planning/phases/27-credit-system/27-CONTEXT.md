@@ -68,8 +68,9 @@ Atomic credit deduction per message, balance tracking, transaction history, admi
   ```
 
 ### Tier assignment on registration
-- Self-registered users → assigned the default class configured in platform_settings (admin-configurable, e.g., "free" or "free_trial")
-- Invite-based users → admin selects the class at invite creation time (required field)
+- All new users (self-registered and invite-based) → assigned the default class configured in platform_settings (admin-configurable, e.g., "free" or "free_trial")
+- No tier selection at invite time -- keeps the invite flow simple
+- If admin wants an invited user to have extra credits, they do a separate manual credit adjustment after the user registers
 
 ### Claude's Discretion
 - Low-credit threshold exact value (percentage or absolute)
