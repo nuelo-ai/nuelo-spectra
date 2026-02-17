@@ -263,7 +263,7 @@ function OverviewTab({ user }: { user: UserDetail }) {
                 </SelectTrigger>
                 <SelectContent>
                   {tiers?.map((tier) => (
-                    <SelectItem key={tier.id} value={tier.id}>
+                    <SelectItem key={tier.name} value={tier.name}>
                       {tier.display_name}
                     </SelectItem>
                   ))}

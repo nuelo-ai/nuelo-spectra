@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { adminApiClient } from "@/lib/admin-api-client";
 
 export interface TierInfo {
-  id: string;
+  name: string;
   display_name: string;
   credits: number;
   reset_policy: string;

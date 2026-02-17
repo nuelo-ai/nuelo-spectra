@@ -151,7 +151,7 @@ export function SettingsForm({ settings, isLoading }: SettingsFormProps) {
               </SelectTrigger>
               <SelectContent>
                 {tiers?.map((tier) => (
-                  <SelectItem key={tier.id} value={tier.id}>
+                  <SelectItem key={tier.name} value={tier.name}>
                     {tier.display_name}
                   </SelectItem>
                 )) ?? (
@@ -234,7 +234,7 @@ export function SettingsForm({ settings, isLoading }: SettingsFormProps) {
                 </TableHeader>
                 <TableBody>
                   {tiers?.map((tier) => (
-                    <TableRow key={tier.id}>
+                    <TableRow key={tier.name}>
                       <TableCell className="font-medium">{tier.display_name}</TableCell>
                       <TableCell>
                         <Badge variant="outline">{tier.reset_policy}</Badge>
