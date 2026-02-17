@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 28-platform-config
 source: 28-01-SUMMARY.md, 28-02-SUMMARY.md
 started: 2026-02-16T23:20:00Z
@@ -57,7 +57,9 @@ skipped: 0
   reason: "User reported: dropdown hardcoded to Free/Standard/Premium, missing Free Trial and Internal tiers"
   severity: minor
   test: 1
+  root_cause: "SettingsForm.tsx has hardcoded SelectItem elements; no useTiers hook to fetch from GET /api/admin/tiers"
   artifacts:
     - path: "admin-frontend/src/components/settings/SettingsForm.tsx"
       issue: "Hardcoded tier options at lines 145-147"
-  missing: []
+  missing:
+    - "Fetch tiers from API and populate dropdown dynamically"

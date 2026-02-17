@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 30-invitation-system
 source: 30-01-SUMMARY.md, 30-02-SUMMARY.md, 30-03-SUMMARY.md
 started: 2026-02-17T00:15:00Z
@@ -49,5 +49,17 @@ skipped: 0
   reason: "User reported: 1) Registration page doesn't show when another user is logged in. 2) User NOT auto-logged in — redirects to login page. 3) Shows 'Display Name' instead of 'First Name'/'Last Name' fields, inconsistent with normal registration."
   severity: major
   test: 4
-  artifacts: []
-  missing: []
+  root_cause: "Three sub-issues: (1) invite page in (auth) route group inherits auth guard redirect, (2) setTokens() without setUser() — AuthContext not updated so dashboard redirects to login, (3) form uses single displayName field instead of firstName/lastName"
+  artifacts:
+    - path: "frontend/src/app/(auth)/layout.tsx"
+      issue: "Auth guard redirects authenticated users from invite page"
+    - path: "frontend/src/app/(auth)/invite/[token]/page.tsx"
+      issue: "setTokens without fetching /auth/me and setUser; single displayName field"
+    - path: "backend/app/schemas/auth.py"
+      issue: "InviteRegisterRequest uses display_name instead of first_name/last_name"
+    - path: "backend/app/routers/auth.py"
+      issue: "Maps display_name to first_name, hardcodes last_name=None"
+  missing:
+    - "Move invite page out of (auth) route group"
+    - "After setTokens, fetch /auth/me and call setUser before redirect"
+    - "Replace displayName with firstName/lastName in form, schema, and endpoint"

@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 26-foundation
 source: 26-01-SUMMARY.md, 26-02-SUMMARY.md, 26-03-SUMMARY.md
 started: 2026-02-16T23:00:00Z
@@ -59,13 +59,24 @@ skipped: 1
   reason: "User reported: Catch-all /api/admin/{path} routes visible in OpenAPI /docs in public mode - they return Admin Route Not Found but shouldn't appear in docs at all"
   severity: minor
   test: 2
-  artifacts: []
-  missing: []
+  root_cause: "Catch-all @app.api_route in main.py line 326 missing include_in_schema=False"
+  artifacts:
+    - path: "backend/app/main.py"
+      issue: "Line 326: @app.api_route missing include_in_schema=False"
+  missing:
+    - "Add include_in_schema=False to the catch-all decorator"
 
 - truth: "Login lockout shows clear error message to admin user"
   status: failed
   reason: "User reported: No indicator to user that account is locked. Error message only shows [object Object] text in toast notification instead of a readable lockout message."
   severity: major
   test: 6
-  artifacts: []
-  missing: []
+  root_cause: "useAdminAuth.tsx passes errorData.detail (which can be an array for 422) directly to new Error(), producing [object Object]; also lockout 429 message lacks minutes remaining"
+  artifacts:
+    - path: "admin-frontend/src/hooks/useAdminAuth.tsx"
+      issue: "Lines 78-82: no guard against detail being array/object"
+    - path: "backend/app/routers/admin/auth.py"
+      issue: "Lockout 429 message lacks remaining minutes"
+  missing:
+    - "Check typeof errorData.detail before passing to Error()"
+    - "Include minutes_remaining in lockout response"

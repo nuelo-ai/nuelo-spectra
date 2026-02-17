@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 31-dashboard-admin-frontend
 source: 31-01-SUMMARY.md, 31-02-SUMMARY.md, 31-03-SUMMARY.md, 31-04-SUMMARY.md, 31-05-SUMMARY.md
 started: 2026-02-17T00:25:00Z
@@ -69,23 +69,47 @@ skipped: 0
   reason: "User reported: Active today shows 0 despite many active users. Credit used shows 0 despite credits being used today."
   severity: major
   test: 2
-  artifacts: []
-  missing: []
+  root_cause: "Two bugs: (1) last_login_at never committed (db.flush without db.commit in login — same as P29-T1), (2) dashboard.py filters transaction_type=='deduction' but credit service writes 'usage'"
+  artifacts:
+    - path: "backend/app/routers/auth.py"
+      issue: "db.flush() without db.commit() — last_login_at never persisted"
+    - path: "backend/app/routers/admin/dashboard.py"
+      issue: "Line 91: filters transaction_type=='deduction' but actual value is 'usage'"
+  missing:
+    - "Fix db.commit() in login (shared fix with P29-T1)"
+    - "Change filter from 'deduction' to 'usage' in dashboard.py"
 
 - truth: "Settings page tier dropdown fetches from API and credit reset policy is per-tier"
   status: failed
   reason: "User reported: 1) Tier dropdown hardcoded, not aligned with yaml. 2) Credit Reset Policy is global but should be per-tier as defined in user_classes.yaml."
   severity: major
   test: 7
+  root_cause: "SettingsForm has hardcoded tier dropdown; no useTiers hook; credit_reset_policy stored as single global key but YAML defines per-tier reset_policy"
   artifacts:
     - path: "admin-frontend/src/components/settings/SettingsForm.tsx"
       issue: "Hardcoded tier options and global credit_reset_policy"
-  missing: []
+    - path: "backend/app/services/platform_settings.py"
+      issue: "credit_reset_policy as single global key — functionally unused by tier logic"
+  missing:
+    - "Fetch tiers from API for dropdown"
+    - "Remove global credit_reset_policy; display per-tier reset_policy from tiers endpoint read-only"
 
 - truth: "Audit log table supports column sorting"
   status: failed
   reason: "User reported: sorting not available on table columns"
   severity: minor
   test: 8
-  artifacts: []
-  missing: []
+  root_cause: "Sorting never implemented at any layer — no getSortedRowModel in TanStack config, no sort params in hook/types, no sort_by/sort_order in backend endpoint"
+  artifacts:
+    - path: "admin-frontend/src/components/audit/AuditLogTable.tsx"
+      issue: "No getSortedRowModel, no sorting state, no sort handlers on headers"
+    - path: "admin-frontend/src/hooks/useAuditLog.ts"
+      issue: "No sort params forwarded"
+    - path: "admin-frontend/src/types/audit.ts"
+      issue: "AuditLogParams missing sort_by/sort_order"
+    - path: "backend/app/routers/admin/audit.py"
+      issue: "No sort_by/sort_order query params; hardcoded order_by"
+  missing:
+    - "Add sort params to backend endpoint"
+    - "Add sort fields to types and hook"
+    - "Configure TanStack Table with manualSorting and sort UI"
