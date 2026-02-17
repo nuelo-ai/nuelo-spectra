@@ -26,6 +26,8 @@ async def list_audit_logs(
     target_type: str | None = Query(default=None),
     date_from: datetime | None = Query(default=None),
     date_to: datetime | None = Query(default=None),
+    sort_by: str = Query(default="created_at", pattern="^(created_at|action|admin_email|target_type)$"),
+    sort_order: str = Query(default="desc", pattern="^(asc|desc)$"),
 ) -> AuditLogListResponse:
     """Return paginated audit log entries with optional filters.
 
@@ -73,10 +75,20 @@ async def list_audit_logs(
     total_result = await db.execute(count_query)
     total = total_result.scalar_one()
 
+    # Dynamic sort column
+    sort_column_map = {
+        "created_at": AdminAuditLog.created_at,
+        "action": AdminAuditLog.action,
+        "admin_email": User.email,
+        "target_type": AdminAuditLog.target_type,
+    }
+    sort_col = sort_column_map.get(sort_by, AdminAuditLog.created_at)
+    order = sort_col.asc() if sort_order == "asc" else sort_col.desc()
+
     # Fetch paginated results
     offset = (page - 1) * page_size
     data_query = (
-        base_query.order_by(AdminAuditLog.created_at.desc())
+        base_query.order_by(order)
         .offset(offset)
         .limit(page_size)
     )
