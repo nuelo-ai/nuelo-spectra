@@ -18,6 +18,8 @@ from app.models.user import User
 from app.schemas.auth import (
     ChangePasswordRequest,
     ForgotPasswordRequest,
+    InviteRegisterRequest,
+    InviteValidateResponse,
     LoginRequest,
     MessageResponse,
     ProfileUpdateRequest,
@@ -443,3 +445,112 @@ async def change_password_endpoint(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )
+
+
+@router.get("/invite-validate", response_model=InviteValidateResponse)
+async def invite_validate(
+    token: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> InviteValidateResponse:
+    """Public endpoint: validate an invite token and return the associated email.
+
+    Used to pre-fill the registration form with the invited email address.
+    Read-only check -- does not modify the invitation.
+
+    Args:
+        token: Raw invite token from the URL
+        db: Database session
+
+    Returns:
+        Email associated with the invitation
+
+    Raises:
+        HTTPException: 400 if token is invalid or expired
+    """
+    from app.models.invitation import Invitation
+
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    result = await db.execute(
+        select(Invitation).where(
+            Invitation.token_hash == token_hash,
+            Invitation.status == "pending",
+            Invitation.expires_at > datetime.now(timezone.utc),
+        )
+    )
+    invitation = result.scalar_one_or_none()
+
+    if not invitation:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This invite has expired. Contact your administrator for a new one.",
+        )
+
+    return InviteValidateResponse(email=invitation.email, valid=True)
+
+
+@router.post("/invite-register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+async def invite_register(
+    body: InviteRegisterRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> TokenResponse:
+    """Register a new user via invitation token and return auth tokens (auto-login).
+
+    The email is taken from the invitation record (not user input) to prevent
+    email enumeration. The invitation is marked as accepted (single-use).
+    A FOR UPDATE lock prevents concurrent registration with the same token.
+
+    Args:
+        body: Invite registration data (token, display_name, password)
+        db: Database session
+        settings: Application settings
+
+    Returns:
+        Access and refresh tokens for immediate login
+
+    Raises:
+        HTTPException: 403 if token is invalid or expired
+        HTTPException: 409 if email already registered
+    """
+    from app.models.invitation import Invitation
+    from app.services import platform_settings
+
+    # Hash token and look up invitation with pessimistic lock
+    token_hash = hashlib.sha256(body.token.encode()).hexdigest()
+    result = await db.execute(
+        select(Invitation).where(
+            Invitation.token_hash == token_hash,
+            Invitation.status == "pending",
+            Invitation.expires_at > datetime.now(timezone.utc),
+        ).with_for_update()
+    )
+    invitation = result.scalar_one_or_none()
+
+    if not invitation:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This invite has expired. Contact your administrator for a new one.",
+        )
+
+    # Mark invitation as accepted (single-use)
+    invitation.status = "accepted"
+    invitation.accepted_at = datetime.now(timezone.utc)
+
+    # Read default user class from platform settings
+    default_class = await platform_settings.get(db, "default_user_class")
+
+    # Build a SignupRequest-compatible object with email from invitation record
+    signup_data = SignupRequest(
+        email=invitation.email,
+        password=body.password,
+        first_name=body.display_name.strip(),
+        last_name=None,
+    )
+
+    # Create user (raises 409 if email already exists)
+    user = await auth_service.create_user(db, signup_data, default_class=default_class)
+
+    # Auto-login: generate tokens
+    tokens = create_tokens(str(user.id), settings)
+
+    return TokenResponse(**tokens)
