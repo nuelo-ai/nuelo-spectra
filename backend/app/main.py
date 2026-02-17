@@ -323,7 +323,7 @@ if mode in ("admin", "dev"):
 if mode == "public":
     from fastapi import HTTPException
 
-    @app.api_route("/api/admin/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+    @app.api_route("/api/admin/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"], include_in_schema=False)
     async def admin_route_not_found(path: str):
         logging.getLogger("spectra.security").warning(
             f"Request to admin route /api/admin/{path} in public mode"

@@ -88,7 +88,7 @@ async def get_dashboard_metrics(
     # DASH-06: Credit summary
     total_used_result = await db.execute(
         select(func.coalesce(func.sum(CreditTransaction.amount), 0)).where(
-            CreditTransaction.transaction_type == "deduction"
+            CreditTransaction.transaction_type == "usage"
         )
     )
     # Deductions are stored as negative amounts, so negate the sum

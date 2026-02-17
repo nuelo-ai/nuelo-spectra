@@ -19,7 +19,6 @@ from app.schemas.admin_users import (
     BulkDeleteRequest,
     BulkTierChangeRequest,
     BulkUserActionRequest,
-    CreditAdjustRequest,
     DeleteChallengeResponse,
     DeleteConfirmRequest,
     PasswordResetTriggerResponse,
@@ -27,7 +26,6 @@ from app.schemas.admin_users import (
     UserDetailResponse,
     UserListResponse,
 )
-from app.schemas.credit import CreditBalanceResponse
 from app.schemas.platform_settings import TierChangeRequest
 from app.services.admin.audit import log_admin_action
 from app.services.admin.tiers import change_user_tier
@@ -47,8 +45,6 @@ from app.services.admin.users import (
     trigger_password_reset,
     verify_challenge_code,
 )
-from app.services.credit import CreditService
-
 router = APIRouter(prefix="/users", tags=["admin-users"])
 
 
@@ -467,32 +463,3 @@ async def delete_user_endpoint(
     return {"message": "User deleted", "anonymized_as": anon_label}
 
 
-@router.post("/{user_id}/credits/adjust", response_model=CreditBalanceResponse)
-async def adjust_credits_endpoint(
-    user_id: UUID,
-    body: CreditAdjustRequest,
-    request: Request,
-    db: DbSession,
-    current_admin: CurrentAdmin,
-) -> CreditBalanceResponse:
-    """Adjust a user's credit balance with a reason note (USER-12)."""
-    try:
-        result = await CreditService.admin_adjust(
-            db, user_id, body.amount, body.reason, current_admin.id
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-    client_ip = request.client.host if request.client else None
-    await log_admin_action(
-        db,
-        admin_id=current_admin.id,
-        action="credit_adjustment",
-        target_type="user",
-        target_id=str(user_id),
-        details={"amount": str(body.amount), "reason": body.reason},
-        ip_address=client_ip,
-    )
-    await db.commit()
-
-    return result

@@ -150,7 +150,7 @@ async def login(
 
     # Track last login time
     user.last_login_at = datetime.now(timezone.utc)
-    await db.flush()
+    await db.commit()
 
     # Create tokens
     tokens = create_tokens(str(user.id), settings)

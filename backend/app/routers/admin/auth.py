@@ -41,9 +41,10 @@ async def admin_login(
     attempt_record = _login_attempts.get(client_ip, {})
     locked_until = attempt_record.get("locked_until", 0)
     if now < locked_until:
+        minutes_remaining = max(1, int((locked_until - now) / 60) + 1)
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many login attempts. Try again later.",
+            detail=f"Too many login attempts. Try again in {minutes_remaining} minute{'s' if minutes_remaining != 1 else ''}.",
         )
 
     # Reset attempts if lockout has expired
