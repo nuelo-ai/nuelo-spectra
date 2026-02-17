@@ -27,6 +27,7 @@ import {
   useBulkChangeTier,
   useBulkAdjustCredits,
   useBulkDelete,
+  useBulkDeleteChallenge,
 } from "@/hooks/useUsers";
 import { toast } from "sonner";
 
@@ -54,6 +55,7 @@ export function BulkActionBar({
   const bulkChangeTier = useBulkChangeTier();
   const bulkAdjustCredits = useBulkAdjustCredits();
   const bulkDelete = useBulkDelete();
+  const bulkDeleteChallenge = useBulkDeleteChallenge();
 
   const count = selectedIds.length;
   if (count === 0) return null;
@@ -116,13 +118,15 @@ export function BulkActionBar({
     setCreditReason("");
   };
 
-  const handleBulkDelete = async () => {
+  const handleFetchBulkDeleteChallenge = async () => {
+    return bulkDeleteChallenge.mutateAsync(selectedIds);
+  };
+
+  const handleBulkDelete = async (challengeCode: string) => {
     try {
-      // For frontend-generated challenge, we pass a dummy code
-      // The backend requires the challenge to be fetched first
       const result = await bulkDelete.mutateAsync({
         user_ids: selectedIds,
-        challenge_code: "BYPASS", // Backend validates from server-side cache
+        challenge_code: challengeCode,
       });
       toast.success(`Deleted ${result.succeeded} users`);
       onClearSelection();
@@ -283,6 +287,7 @@ export function BulkActionBar({
       <ChallengeCodeDialog
         open={showDeleteChallenge}
         onClose={() => setShowDeleteChallenge(false)}
+        onFetchChallenge={handleFetchBulkDeleteChallenge}
         onConfirm={handleBulkDelete}
         title="Delete Users"
         description={`This will permanently delete ${count} user${count !== 1 ? "s" : ""} and all their data. This action cannot be undone.`}

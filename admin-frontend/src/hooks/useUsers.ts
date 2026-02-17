@@ -74,7 +74,7 @@ export function useUserCreditTransactions(userId: string | undefined) {
     queryKey: ["admin", "users", userId, "credits"],
     queryFn: async () => {
       const res = await adminApiClient.get(
-        `/api/admin/users/${userId}/credits/transactions`
+        `/api/admin/credits/users/${userId}/transactions`
       );
       if (!res.ok) return [];
       return res.json();
@@ -134,18 +134,19 @@ export function useChangeTier() {
 
 export function useAdjustCredits() {
   return useUserMutation<{ userId: string } & CreditAdjustRequest>((p) =>
-    adminApiClient.post(`/api/admin/users/${p.userId}/credits/adjust`, {
+    adminApiClient.post(`/api/admin/credits/users/${p.userId}/adjust`, {
       amount: p.amount,
       reason: p.reason,
+      password: p.password,
     })
   );
 }
 
 export function useDeleteUser() {
   return useUserMutation<{ userId: string; challenge_code: string }>((p) =>
-    adminApiClient.delete(
-      `/api/admin/users/${p.userId}?challenge_code=${p.challenge_code}`
-    )
+    adminApiClient.delete(`/api/admin/users/${p.userId}`, {
+      challenge_code: p.challenge_code,
+    })
   );
 }
 

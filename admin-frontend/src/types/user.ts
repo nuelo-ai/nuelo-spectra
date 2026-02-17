@@ -57,6 +57,7 @@ export interface UserListParams {
 export interface CreditAdjustRequest {
   amount: number;
   reason: string;
+  password: string;
 }
 
 export interface CreditTransaction {

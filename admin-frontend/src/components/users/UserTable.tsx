@@ -4,10 +4,13 @@ import { useState, useMemo, useCallback } from "react";
 import {
   createColumnHelper,
   getCoreRowModel,
+  getSortedRowModel,
   useReactTable,
+  flexRender,
+  type SortingState,
 } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
-import { MoreHorizontalIcon } from "lucide-react";
+import { ChevronUpIcon, ChevronDownIcon, MoreHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -19,7 +22,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DataTableShell } from "@/components/shared/DataTableShell";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { ChallengeCodeDialog } from "@/components/shared/ChallengeCodeDialog";
@@ -28,6 +38,7 @@ import {
   useDeactivateUser,
   useResetPassword,
   useDeleteUser,
+  useDeleteChallenge,
 } from "@/hooks/useUsers";
 import type { UserSummary, UserListParams } from "@/types/user";
 
@@ -76,11 +87,13 @@ export function UserTable({
   const [actionType, setActionType] = useState<
     "deactivate" | "activate" | "reset-password" | "delete" | null
   >(null);
+  const [sorting, setSorting] = useState<SortingState>([]);
 
   const activateUser = useActivateUser();
   const deactivateUser = useDeactivateUser();
   const resetPassword = useResetPassword();
   const deleteUser = useDeleteUser();
+  const deleteChallenge = useDeleteChallenge();
 
   const handleAction = useCallback(
     (user: UserSummary, type: typeof actionType) => {
@@ -111,14 +124,6 @@ export function UserTable({
           await resetPassword.mutateAsync({ userId: actionUser.id });
           toast.success(`Password reset email sent to ${actionUser.email}`);
           break;
-        case "delete":
-          // Challenge code is handled client-side via ChallengeCodeDialog
-          await deleteUser.mutateAsync({
-            userId: actionUser.id,
-            challenge_code: "CLIENT",
-          });
-          toast.success(`${actionUser.email} deleted`);
-          break;
       }
     } catch (e: any) {
       toast.error(e.message);
@@ -130,9 +135,30 @@ export function UserTable({
     activateUser,
     deactivateUser,
     resetPassword,
-    deleteUser,
     closeAction,
   ]);
+
+  const handleDeleteConfirm = useCallback(
+    async (challengeCode: string) => {
+      if (!actionUser) return;
+      try {
+        await deleteUser.mutateAsync({
+          userId: actionUser.id,
+          challenge_code: challengeCode,
+        });
+        toast.success(`${actionUser.email} deleted`);
+      } catch (e: any) {
+        toast.error(e.message);
+      }
+      closeAction();
+    },
+    [actionUser, deleteUser, closeAction]
+  );
+
+  const handleFetchDeleteChallenge = useCallback(async () => {
+    if (!actionUser) throw new Error("No user selected");
+    return deleteChallenge.mutateAsync(actionUser.id);
+  }, [actionUser, deleteChallenge]);
 
   const columns = useMemo(
     () => [
@@ -158,6 +184,7 @@ export function UserTable({
           />
         ),
         size: 40,
+        enableSorting: false,
       }),
       columnHelper.display({
         id: "name",
@@ -179,12 +206,14 @@ export function UserTable({
             </div>
           );
         },
+        enableSorting: true,
       }),
       columnHelper.accessor("email", {
         header: "Email",
         cell: (info) => (
           <span className="text-muted-foreground">{info.getValue()}</span>
         ),
+        enableSorting: true,
       }),
       columnHelper.accessor("is_active", {
         header: "Status",
@@ -194,12 +223,14 @@ export function UserTable({
             value={info.getValue() ? "active" : "inactive"}
           />
         ),
+        enableSorting: false,
       }),
       columnHelper.accessor("user_class", {
         header: "Tier",
         cell: (info) => (
           <StatusBadge type="tier" value={info.getValue()} />
         ),
+        enableSorting: true,
       }),
       columnHelper.accessor("created_at", {
         header: "Created",
@@ -208,6 +239,7 @@ export function UserTable({
             {formatDate(info.getValue())}
           </span>
         ),
+        enableSorting: true,
       }),
       columnHelper.accessor("last_login_at", {
         header: "Last Login",
@@ -216,6 +248,16 @@ export function UserTable({
             {formatDate(info.getValue())}
           </span>
         ),
+        enableSorting: true,
+      }),
+      columnHelper.accessor("credit_balance", {
+        header: "Credits",
+        cell: (info) => (
+          <span className="font-mono text-sm">
+            {info.getValue().toFixed(1)}
+          </span>
+        ),
+        enableSorting: true,
       }),
       columnHelper.display({
         id: "actions",
@@ -267,6 +309,7 @@ export function UserTable({
           );
         },
         size: 50,
+        enableSorting: false,
       }),
     ],
     [router, handleAction]
@@ -274,30 +317,30 @@ export function UserTable({
 
   const rowSelection = useMemo(() => {
     const selection: Record<string, boolean> = {};
-    users.forEach((u, i) => {
-      if (selectedIds.includes(u.id)) {
-        selection[String(i)] = true;
-      }
+    selectedIds.forEach((id) => {
+      selection[id] = true;
     });
     return selection;
-  }, [selectedIds, users]);
+  }, [selectedIds]);
 
   const table = useReactTable({
     data: users,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     manualPagination: true,
     pageCount: totalPages,
     state: {
       rowSelection,
+      sorting,
     },
+    onSortingChange: setSorting,
     onRowSelectionChange: (updater) => {
       const newSelection =
         typeof updater === "function" ? updater(rowSelection) : updater;
       const newIds = Object.entries(newSelection)
         .filter(([, v]) => v)
-        .map(([idx]) => users[Number(idx)]?.id)
-        .filter(Boolean) as string[];
+        .map(([id]) => id);
       onSelectionChange(newIds);
     },
     enableRowSelection: true,
@@ -310,18 +353,117 @@ export function UserTable({
     resetPassword.isPending ||
     deleteUser.isPending;
 
+  const start = (page - 1) * pageSize + 1;
+  const end = Math.min(page * pageSize, total);
+
   return (
     <>
-      <DataTableShell
-        table={table}
-        columns={columns.length}
-        page={page}
-        pageSize={pageSize}
-        total={total}
-        totalPages={totalPages}
-        onPageChange={(p) => onFilterChange({ ...filters, page: p })}
-        emptyMessage="No users found matching your criteria."
-      />
+      <div className="space-y-4">
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <TableHead
+                      key={header.id}
+                      onClick={header.column.getToggleSortingHandler()}
+                      className={header.column.getCanSort() ? "cursor-pointer select-none" : ""}
+                    >
+                      <div className="flex items-center gap-1">
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(header.column.columnDef.header, header.getContext())}
+                        {header.column.getIsSorted() === "asc" && <ChevronUpIcon className="size-3" />}
+                        {header.column.getIsSorted() === "desc" && <ChevronDownIcon className="size-3" />}
+                      </div>
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    className="h-12"
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center text-muted-foreground"
+                  >
+                    No users found matching your criteria.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Pagination controls */}
+        <div className="flex items-center justify-between px-2">
+          <div className="text-sm text-muted-foreground">
+            {total > 0 ? (
+              <>
+                Showing {start} to {end} of {total} results
+              </>
+            ) : (
+              "No results"
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onFilterChange({ ...filters, page: 1 })}
+              disabled={page <= 1}
+            >
+              First
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onFilterChange({ ...filters, page: page - 1 })}
+              disabled={page <= 1}
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Page {page} of {totalPages || 1}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onFilterChange({ ...filters, page: page + 1 })}
+              disabled={page >= totalPages}
+            >
+              Next
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onFilterChange({ ...filters, page: totalPages })}
+              disabled={page >= totalPages}
+            >
+              Last
+            </Button>
+          </div>
+        </div>
+      </div>
 
       {/* Deactivate confirm */}
       <ConfirmModal
@@ -361,7 +503,8 @@ export function UserTable({
       <ChallengeCodeDialog
         open={actionType === "delete"}
         onClose={closeAction}
-        onConfirm={executeAction}
+        onFetchChallenge={handleFetchDeleteChallenge}
+        onConfirm={handleDeleteConfirm}
         title="Delete User"
         description={`This will permanently delete ${actionUser?.email} and all their data. This action cannot be undone.`}
         loading={isLoading}

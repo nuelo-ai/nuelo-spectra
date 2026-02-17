@@ -76,9 +76,17 @@ export function AdminAuthProvider({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        throw new Error(
-          errorData?.detail || "Login failed. Please check your credentials."
-        );
+        let message = "Login failed. Please check your credentials.";
+        if (errorData?.detail) {
+          if (typeof errorData.detail === "string") {
+            message = errorData.detail;
+          } else if (Array.isArray(errorData.detail)) {
+            message = errorData.detail.map((d: any) => d.msg || String(d)).join("; ");
+          } else {
+            message = JSON.stringify(errorData.detail);
+          }
+        }
+        throw new Error(message);
       }
 
       const data: AdminLoginResponse = await response.json();

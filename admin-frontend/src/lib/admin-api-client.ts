@@ -106,9 +106,10 @@ export const adminApiClient = {
     });
   },
 
-  async delete(path: string): Promise<Response> {
+  async delete(path: string, body?: unknown): Promise<Response> {
     return fetchWithAdminAuth(path, {
       method: "DELETE",
+      body: body ? JSON.stringify(body) : undefined,
     });
   },
 };

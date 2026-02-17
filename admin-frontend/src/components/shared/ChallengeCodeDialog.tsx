@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,41 +12,67 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Loader2Icon } from "lucide-react";
 
 interface ChallengeCodeDialogProps {
   open: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onFetchChallenge: () => Promise<{ challenge_code: string; expires_in: number }>;
+  onConfirm: (challengeCode: string) => void;
   title: string;
   description: string;
   loading?: boolean;
 }
 
-function generateCode(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code = "";
-  for (let i = 0; i < 6; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return code;
-}
-
 export function ChallengeCodeDialog({
   open,
   onClose,
+  onFetchChallenge,
   onConfirm,
   title,
   description,
   loading = false,
 }: ChallengeCodeDialogProps) {
   const [input, setInput] = useState("");
-  const challengeCode = useMemo(() => (open ? generateCode() : ""), [open]);
+  const [challengeCode, setChallengeCode] = useState("");
+  const [fetching, setFetching] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (open) setInput("");
-  }, [open]);
+    if (open) {
+      setInput("");
+      setChallengeCode("");
+      setFetchError(null);
+      setFetching(true);
+      onFetchChallenge()
+        .then((result) => {
+          setChallengeCode(result.challenge_code);
+        })
+        .catch((err) => {
+          setFetchError(err.message || "Failed to fetch challenge code");
+        })
+        .finally(() => {
+          setFetching(false);
+        });
+    }
+  }, [open, onFetchChallenge]);
 
-  const isMatch = input.toUpperCase() === challengeCode;
+  const isMatch = challengeCode !== "" && input.toUpperCase() === challengeCode.toUpperCase();
+
+  const handleRetry = useCallback(() => {
+    setFetchError(null);
+    setFetching(true);
+    onFetchChallenge()
+      .then((result) => {
+        setChallengeCode(result.challenge_code);
+      })
+      .catch((err) => {
+        setFetchError(err.message || "Failed to fetch challenge code");
+      })
+      .finally(() => {
+        setFetching(false);
+      });
+  }, [onFetchChallenge]);
 
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLInputElement>) => {
@@ -64,27 +90,45 @@ export function ChallengeCodeDialog({
         </DialogHeader>
 
         <div className="space-y-3 py-2">
-          <p className="text-sm text-muted-foreground">
-            To confirm this action, type the following code:
-          </p>
-          <div className="flex items-center justify-center">
-            <span className="rounded-md bg-muted px-4 py-2 font-mono text-lg font-bold tracking-widest">
-              {challengeCode}
-            </span>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="challenge-input">Confirmation code</Label>
-            <Input
-              id="challenge-input"
-              value={input}
-              onChange={(e) => setInput(e.target.value.toUpperCase())}
-              onPaste={handlePaste}
-              placeholder="Type the code above"
-              maxLength={6}
-              className="font-mono tracking-widest text-center"
-              autoComplete="off"
-            />
-          </div>
+          {fetching ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2Icon className="size-5 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-sm text-muted-foreground">
+                Fetching challenge code...
+              </span>
+            </div>
+          ) : fetchError ? (
+            <div className="space-y-2 text-center py-4">
+              <p className="text-sm text-destructive">{fetchError}</p>
+              <Button variant="outline" size="sm" onClick={handleRetry}>
+                Retry
+              </Button>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                To confirm this action, type the following code:
+              </p>
+              <div className="flex items-center justify-center">
+                <span className="rounded-md bg-muted px-4 py-2 font-mono text-lg font-bold tracking-widest">
+                  {challengeCode}
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="challenge-input">Confirmation code</Label>
+                <Input
+                  id="challenge-input"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value.toUpperCase())}
+                  onPaste={handlePaste}
+                  placeholder="Type the code above"
+                  maxLength={challengeCode.length || 6}
+                  className="font-mono tracking-widest text-center"
+                  autoComplete="off"
+                />
+              </div>
+            </>
+          )}
         </div>
 
         <DialogFooter>
@@ -93,8 +137,8 @@ export function ChallengeCodeDialog({
           </Button>
           <Button
             variant="destructive"
-            onClick={onConfirm}
-            disabled={!isMatch || loading}
+            onClick={() => onConfirm(challengeCode)}
+            disabled={!isMatch || loading || fetching}
           >
             {loading ? "Processing..." : "Confirm"}
           </Button>

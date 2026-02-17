@@ -35,6 +35,7 @@ import {
   useUserActivity,
   useUserCreditTransactions,
 } from "@/hooks/useUsers";
+import { useTiers } from "@/hooks/useTiers";
 import type { UserDetail, CreditTransaction } from "@/types/user";
 import {
   CalendarIcon,
@@ -79,6 +80,7 @@ function OverviewTab({ user }: { user: UserDetail }) {
   const [showTierChange, setShowTierChange] = useState(false);
   const [newTier, setNewTier] = useState(user.user_class);
 
+  const { data: tiers } = useTiers();
   const activateUser = useActivateUser();
   const deactivateUser = useDeactivateUser();
   const resetPassword = useResetPassword();
@@ -260,9 +262,11 @@ function OverviewTab({ user }: { user: UserDetail }) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="free">Free</SelectItem>
-                  <SelectItem value="standard">Standard</SelectItem>
-                  <SelectItem value="premium">Premium</SelectItem>
+                  {tiers?.map((tier) => (
+                    <SelectItem key={tier.id} value={tier.id}>
+                      {tier.display_name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -285,6 +289,7 @@ function OverviewTab({ user }: { user: UserDetail }) {
 function CreditsTab({ user }: { user: UserDetail }) {
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
+  const [password, setPassword] = useState("");
   const adjustCredits = useAdjustCredits();
   const { data: transactions, isLoading } = useUserCreditTransactions(user.id);
 
@@ -294,15 +299,21 @@ function CreditsTab({ user }: { user: UserDetail }) {
       toast.error("Enter a valid amount and reason");
       return;
     }
+    if (!password) {
+      toast.error("Password is required to confirm adjustment");
+      return;
+    }
     try {
       await adjustCredits.mutateAsync({
         userId: user.id,
         amount: num,
         reason: reason.trim(),
+        password,
       });
       toast.success("Credits adjusted");
       setAmount("");
       setReason("");
+      setPassword("");
     } catch (e: any) {
       toast.error(e.message);
     }
@@ -353,6 +364,17 @@ function CreditsTab({ user }: { user: UserDetail }) {
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="Reason for adjustment"
+                className="mt-1.5"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="credit-password">Admin Password</Label>
+              <Input
+                id="credit-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Re-enter your password to confirm"
                 className="mt-1.5"
               />
             </div>
