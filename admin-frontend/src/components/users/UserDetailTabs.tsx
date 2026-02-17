@@ -9,6 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import {
@@ -290,23 +298,29 @@ function CreditsTab({ user }: { user: UserDetail }) {
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [password, setPassword] = useState("");
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const adjustCredits = useAdjustCredits();
   const { data: transactions, isLoading } = useUserCreditTransactions(user.id);
 
-  const handleAdjust = async () => {
+  const handleAdjustClick = () => {
     const num = parseFloat(amount);
     if (isNaN(num) || !reason.trim()) {
       toast.error("Enter a valid amount and reason");
       return;
     }
+    setPassword("");
+    setShowPasswordModal(true);
+  };
+
+  const handleConfirmAdjust = async () => {
     if (!password) {
-      toast.error("Password is required to confirm adjustment");
+      toast.error("Password is required");
       return;
     }
     try {
       await adjustCredits.mutateAsync({
         userId: user.id,
-        amount: num,
+        amount: parseFloat(amount),
         reason: reason.trim(),
         password,
       });
@@ -314,6 +328,7 @@ function CreditsTab({ user }: { user: UserDetail }) {
       setAmount("");
       setReason("");
       setPassword("");
+      setShowPasswordModal(false);
     } catch (e: any) {
       toast.error(e.message);
     }
@@ -367,25 +382,49 @@ function CreditsTab({ user }: { user: UserDetail }) {
                 className="mt-1.5"
               />
             </div>
-            <div className="sm:col-span-2">
-              <Label htmlFor="credit-password">Admin Password</Label>
-              <Input
-                id="credit-password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Re-enter your password to confirm"
-                className="mt-1.5"
-              />
-            </div>
           </div>
           <Button
-            onClick={handleAdjust}
+            onClick={handleAdjustClick}
             disabled={adjustCredits.isPending}
             size="sm"
           >
             {adjustCredits.isPending ? "Processing..." : "Adjust"}
           </Button>
+
+          {/* Password confirmation modal */}
+          <Dialog open={showPasswordModal} onOpenChange={setShowPasswordModal}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Confirm Credit Adjustment</DialogTitle>
+                <DialogDescription>
+                  Adjusting <span className="font-semibold">{amount}</span> credits for {user.email}. Enter your admin password to confirm.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-2 py-2">
+                <Label htmlFor="confirm-password">Admin Password</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleConfirmAdjust()}
+                  placeholder="Enter your password"
+                  autoFocus
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowPasswordModal(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleConfirmAdjust}
+                  disabled={!password || adjustCredits.isPending}
+                >
+                  {adjustCredits.isPending ? "Processing..." : "Confirm"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </CardContent>
       </Card>
 
