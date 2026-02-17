@@ -119,8 +119,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 28-01-PLAN.md -- PlatformSettingsService with TTL cache, admin settings API (GET/PATCH), tier summary endpoint
-- [ ] 28-02-PLAN.md -- Admin tier change with credit reset, signup gating (backend + frontend), configurable credit cost and default tier
+- [x] 28-01-PLAN.md -- PlatformSettingsService with TTL cache, admin settings API (GET/PATCH), tier summary endpoint
+- [x] 28-02-PLAN.md -- Admin tier change with credit reset, signup gating (backend + frontend), configurable credit cost and default tier
 
 ### Phase 29: User Management
 **Goal**: Admins can find, inspect, and manage any user account on the platform through admin API endpoints
@@ -133,9 +133,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 29-01-PLAN.md -- User listing, search, filter, detail view, activity timeline, last_login_at migration
-- [ ] 29-02-PLAN.md -- Account actions: activate/deactivate (with token invalidation), password reset, tier change, credit adjust
-- [ ] 29-03-PLAN.md -- User deletion with challenge code and bulk operations (activate, deactivate, tier change, credit adjust, delete)
+- [x] 29-01-PLAN.md -- User listing, search, filter, detail view, activity timeline, last_login_at migration
+- [x] 29-02-PLAN.md -- Account actions: activate/deactivate (with token invalidation), password reset, tier change, credit adjust
+- [x] 29-03-PLAN.md -- User deletion with challenge code and bulk operations (activate, deactivate, tier change, credit adjust, delete)
 
 ### Phase 30: Invitation System
 **Goal**: Admins can invite users via email with time-limited single-use links, and invited users can register even when public signup is disabled
@@ -148,9 +148,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 30-01-PLAN.md -- Invitation schemas, service, admin endpoints, email templates, platform settings
-- [ ] 30-02-PLAN.md -- Invite token validation and invite-register auth endpoints (auto-login)
-- [ ] 30-03-PLAN.md -- Frontend invite registration page with token validation and form
+- [x] 30-01-PLAN.md -- Invitation schemas, service, admin endpoints, email templates, platform settings
+- [x] 30-02-PLAN.md -- Invite token validation and invite-register auth endpoints (auto-login)
+- [x] 30-03-PLAN.md -- Frontend invite registration page with token validation and form
 
 ### Phase 31: Dashboard & Admin Frontend
 **Goal**: A separate admin Next.js application provides a visual interface for all admin operations, including a dashboard with platform metrics and trend charts
@@ -161,14 +161,17 @@ Plans:
   2. Dashboard renders Recharts trend charts for signups over time and messages over time, plus credit distribution by tier and low-credit user list
   3. The `admin-frontend/` Next.js application provides pages for login, dashboard, user management (list + detail), platform settings, invitations, credit management, and audit log viewing -- using same stack as public frontend (TanStack Query, Zustand, shadcn/ui, Recharts)
   4. Local development runs 3 processes (backend:8000 dev mode, frontend:3000, admin:3001) with mode-aware CORS allowing both frontends to communicate with the backend
-**Plans**: 5 plans
+**Plans**: 8 plans
 
 Plans:
-- [ ] 31-01-PLAN.md -- Backend endpoints: dashboard metrics aggregation, audit log listing, admin /auth/me
-- [ ] 31-02-PLAN.md -- Admin frontend scaffold: Next.js app, shadcn/ui, API client, auth context, admin shell layout
-- [ ] 31-03-PLAN.md -- Dashboard page: metric cards, Recharts trend charts, credit distribution, low-credit users
-- [ ] 31-04-PLAN.md -- Users management (list + detail with tabs) and Invitations page
-- [ ] 31-05-PLAN.md -- Credits, Settings, Audit Log pages + visual verification checkpoint
+- [x] 31-01-PLAN.md -- Backend endpoints: dashboard metrics aggregation, audit log listing, admin /auth/me
+- [x] 31-02-PLAN.md -- Admin frontend scaffold: Next.js app, shadcn/ui, API client, auth context, admin shell layout
+- [x] 31-03-PLAN.md -- Dashboard page: metric cards, Recharts trend charts, credit distribution, low-credit users
+- [x] 31-04-PLAN.md -- Users management (list + detail with tabs) and Invitations page
+- [x] 31-05-PLAN.md -- Credits, Settings, Audit Log pages + visual verification checkpoint
+- [ ] 31-06-PLAN.md -- v0.5 gap closure: backend fixes (db.commit, dashboard filter, OpenAPI, lockout, audit sort)
+- [ ] 31-07-PLAN.md -- v0.5 gap closure: admin frontend fixes (URLs, delete flow, checkboxes, sorting, tiers, password)
+- [ ] 31-08-PLAN.md -- v0.5 gap closure: public frontend fixes (SSE 402, credit display, auth guard, invite form)
 
 ## Progress
 
@@ -208,4 +211,4 @@ Note: Phase 28 can start after Phase 26 (does not depend on Phase 27). Phase 30 
 | 28. Platform Config | v0.5 | Complete    | 2026-02-16 | - |
 | 29. User Management | v0.5 | Complete    | 2026-02-16 | - |
 | 30. Invitation System | v0.5 | Complete    | 2026-02-17 | - |
-| 31. Dashboard & Admin Frontend | v0.5 | Complete    | 2026-02-17 | - |
+| 31. Dashboard & Admin Frontend | v0.5 | 5/8 | Gap Closure | - |
