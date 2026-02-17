@@ -7,7 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
 from app.database import get_db
+from app.dependencies import CurrentAdmin
 from app.schemas.admin import AdminLoginRequest, AdminLoginResponse
+from app.schemas.admin_dashboard import AdminMeResponse
 from app.services.admin.auth import authenticate_admin
 from app.services.admin.audit import log_admin_action
 from app.utils.security import create_admin_tokens
@@ -80,3 +82,19 @@ async def admin_login(
     await db.commit()
 
     return AdminLoginResponse(**tokens)
+
+
+@router.get("/me", response_model=AdminMeResponse)
+async def admin_me(admin: CurrentAdmin) -> AdminMeResponse:
+    """Return the current admin user's profile.
+
+    Used by the admin frontend to verify session and display user info.
+    """
+    return AdminMeResponse(
+        id=admin.id,
+        email=admin.email,
+        first_name=admin.first_name,
+        last_name=admin.last_name,
+        is_admin=admin.is_admin,
+        created_at=admin.created_at,
+    )
