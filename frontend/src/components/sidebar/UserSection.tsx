@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
-import { ChevronsUpDown, Settings, LogOut, Moon, Sun } from "lucide-react";
+import { ChevronsUpDown, Settings, LogOut, Moon, Sun, CoinsIcon } from "lucide-react";
 import {
   SidebarMenu,
   SidebarMenuItem,
@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
+import { useCredits } from "@/hooks/useCredits";
 
 /**
  * User profile section at the bottom of the sidebar.
@@ -30,6 +31,7 @@ export function UserSection() {
   const { user, logout } = useAuth();
   const { isMobile } = useSidebar();
   const { theme, setTheme } = useTheme();
+  const { data: credits } = useCredits();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -72,6 +74,11 @@ export function UserSection() {
                 <span className="truncate text-xs text-muted-foreground">
                   {user.email}
                 </span>
+                {credits && !credits.is_unlimited && (
+                  <span className={`truncate text-xs ${credits.is_low ? "text-red-500" : "text-muted-foreground"}`}>
+                    {credits.balance.toFixed(1)} credits
+                  </span>
+                )}
               </div>
               <ChevronsUpDown className="ml-auto size-4 shrink-0" />
             </SidebarMenuButton>
@@ -94,6 +101,14 @@ export function UserSection() {
                   <span className="truncate text-xs text-muted-foreground">
                     {user.email}
                   </span>
+                  {credits && !credits.is_unlimited && (
+                    <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                      <CoinsIcon className="size-3" />
+                      <span className={credits.is_low ? "text-red-500 font-medium" : ""}>
+                        {credits.balance.toFixed(1)} / {credits.tier_allocation} credits
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </DropdownMenuLabel>

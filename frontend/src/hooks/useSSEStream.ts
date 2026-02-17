@@ -117,6 +117,10 @@ export function useSSEStream() {
         });
 
         if (!response.ok) {
+          if (response.status === 402) {
+            const errorBody = await response.json().catch(() => null);
+            throw new Error(errorBody?.detail || "You have run out of credits. Please contact your administrator.");
+          }
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
