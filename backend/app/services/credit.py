@@ -78,11 +78,7 @@ class CreditService:
             next_reset = CreditService._get_next_reset_date(
                 signup_date, credit.last_reset_at, reset_policy
             )
-            reset_msg = (
-                f"You're out of credits. Credits reset on {next_reset.strftime('%B %d, %Y')}."
-                if next_reset
-                else "You're out of credits."
-            )
+            reset_msg = "You're out of credits. Please contact your administrator."
             return CreditDeductionResult(
                 success=False,
                 balance=current_balance,
@@ -379,13 +375,20 @@ class CreditService:
             return None
 
         anchor = last_reset_at or signup_date
+        now = datetime.now(timezone.utc)
 
         if reset_policy == "weekly":
-            return anchor + timedelta(weeks=1)
+            period = timedelta(weeks=1)
         elif reset_policy == "monthly":
-            return anchor + timedelta(days=30)
+            period = timedelta(days=30)
+        else:
+            return None
 
-        return None
+        next_reset = anchor + period
+        # Roll forward until next_reset is in the future
+        while next_reset <= now:
+            next_reset += period
+        return next_reset
 
     @staticmethod
     def is_reset_due(

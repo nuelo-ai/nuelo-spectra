@@ -119,7 +119,25 @@ export function useSSEStream() {
         if (!response.ok) {
           if (response.status === 402) {
             const errorBody = await response.json().catch(() => null);
-            throw new Error(errorBody?.detail || "You have run out of credits. Please contact your administrator.");
+            const detail = errorBody?.detail;
+            const nextReset = typeof detail === "object" ? detail?.next_reset : null;
+            let creditMsg = "You're out of credits.";
+            if (nextReset) {
+              const resetDate = new Date(nextReset);
+              const timeFmt: Intl.DateTimeFormatOptions = {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+              };
+              const earliest = new Date(resetDate.getTime() - 15 * 60 * 1000);
+              const latest = new Date(resetDate.getTime() + 15 * 60 * 1000);
+              creditMsg += ` Credits reset between ${earliest.toLocaleString(undefined, timeFmt)} and ${latest.toLocaleString(undefined, timeFmt)}.`;
+            } else {
+              creditMsg += " Please contact your administrator.";
+            }
+            throw new Error(creditMsg);
           }
           throw new Error(`HTTP error! status: ${response.status}`);
         }
