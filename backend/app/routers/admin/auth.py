@@ -1,6 +1,7 @@
 """Admin authentication router with login lockout protection."""
 
 import time
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -67,6 +68,9 @@ async def admin_login(
 
     # Reset attempts on success
     _login_attempts.pop(client_ip, None)
+
+    # Track last login time
+    user.last_login_at = datetime.now(timezone.utc)
 
     tokens = create_admin_tokens(str(user.id), settings)
 
