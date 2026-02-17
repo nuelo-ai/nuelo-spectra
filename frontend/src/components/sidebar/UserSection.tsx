@@ -76,7 +76,7 @@ export function UserSection() {
                 </span>
                 {credits && !credits.is_unlimited && (
                   <span className={`truncate text-xs ${credits.is_low ? "text-red-500" : "text-muted-foreground"}`}>
-                    {credits.balance.toFixed(1)} credits
+                    {Number(credits.balance).toFixed(1)} credits
                   </span>
                 )}
               </div>
@@ -105,7 +105,7 @@ export function UserSection() {
                     <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
                       <CoinsIcon className="size-3" />
                       <span className={credits.is_low ? "text-red-500 font-medium" : ""}>
-                        {credits.balance.toFixed(1)} / {credits.tier_allocation} credits
+                        {Number(credits.balance).toFixed(1)} / {Number(credits.tier_allocation)} credits
                       </span>
                     </div>
                   )}
