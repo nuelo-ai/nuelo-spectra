@@ -31,4 +31,6 @@ export interface AuditLogParams {
   target_type?: string | null;
   date_from?: string | null;
   date_to?: string | null;
+  sort_by?: string;
+  sort_order?: "asc" | "desc";
 }

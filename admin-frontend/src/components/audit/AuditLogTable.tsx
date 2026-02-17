@@ -6,6 +6,7 @@ import {
   flexRender,
   getCoreRowModel,
   useReactTable,
+  type SortingState,
 } from "@tanstack/react-table";
 import {
   Table,
@@ -35,6 +36,8 @@ import {
   ChevronRightIcon,
   ChevronsLeftIcon,
   ChevronsRightIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
   InfoIcon,
 } from "lucide-react";
 import type { AuditLogEntry, AuditLogParams } from "@/types/audit";
@@ -107,6 +110,8 @@ export function AuditLogTable({
   params,
   onParamsChange,
 }: AuditLogTableProps) {
+  const [sorting, setSorting] = useState<SortingState>([]);
+
   const columns = useMemo(
     () => [
       columnHelper.accessor("created_at", {
@@ -116,16 +121,19 @@ export function AuditLogTable({
             {formatTimestamp(info.getValue())}
           </span>
         ),
+        enableSorting: true,
       }),
       columnHelper.accessor("admin_email", {
         header: "Admin",
         cell: (info) => (
           <span className="text-sm">{info.getValue() ?? "System"}</span>
         ),
+        enableSorting: true,
       }),
       columnHelper.accessor("action", {
         header: "Action",
         cell: (info) => <ActionBadge action={info.getValue()} />,
+        enableSorting: true,
       }),
       columnHelper.accessor("target_type", {
         header: "Target Type",
@@ -134,6 +142,7 @@ export function AuditLogTable({
             {info.getValue()?.replace(/_/g, " ") ?? "-"}
           </span>
         ),
+        enableSorting: true,
       }),
       columnHelper.accessor("target_id", {
         header: "Target ID",
@@ -152,6 +161,7 @@ export function AuditLogTable({
             </Tooltip>
           );
         },
+        enableSorting: false,
       }),
       columnHelper.accessor("details", {
         header: "Details",
@@ -175,6 +185,7 @@ export function AuditLogTable({
             </Tooltip>
           );
         },
+        enableSorting: false,
       }),
     ],
     []
@@ -184,6 +195,21 @@ export function AuditLogTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    manualSorting: true,
+    state: { sorting },
+    onSortingChange: (updater) => {
+      const newSorting = typeof updater === "function" ? updater(sorting) : updater;
+      setSorting(newSorting);
+      if (newSorting.length > 0) {
+        onParamsChange({
+          sort_by: newSorting[0].id,
+          sort_order: newSorting[0].desc ? "desc" : "asc",
+          page: 1,
+        });
+      } else {
+        onParamsChange({ sort_by: undefined, sort_order: undefined, page: 1 });
+      }
+    },
   });
 
   const start = (page - 1) * pageSize + 1;
@@ -285,13 +311,21 @@ export function AuditLogTable({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                  <TableHead
+                    key={header.id}
+                    onClick={header.column.getToggleSortingHandler()}
+                    className={header.column.getCanSort() ? "cursor-pointer select-none" : ""}
+                  >
+                    <div className="flex items-center gap-1">
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                      {header.column.getIsSorted() === "asc" && <ChevronUpIcon className="size-3" />}
+                      {header.column.getIsSorted() === "desc" && <ChevronDownIcon className="size-3" />}
+                    </div>
                   </TableHead>
                 ))}
               </TableRow>

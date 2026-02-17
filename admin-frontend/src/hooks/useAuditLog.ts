@@ -21,6 +21,8 @@ export function useAuditLog(params: AuditLogParams = {}) {
         searchParams.set("target_type", params.target_type);
       if (params.date_from) searchParams.set("date_from", params.date_from);
       if (params.date_to) searchParams.set("date_to", params.date_to);
+      if (params.sort_by) searchParams.set("sort_by", params.sort_by);
+      if (params.sort_order) searchParams.set("sort_order", params.sort_order);
 
       const qs = searchParams.toString();
       const res = await adminApiClient.get(

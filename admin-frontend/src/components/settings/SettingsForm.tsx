@@ -19,12 +19,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2Icon, SaveIcon } from "lucide-react";
 import { toast } from "sonner";
 import type { PlatformSettings } from "@/types/settings";
 import { useUpdateSettings } from "@/hooks/useSettings";
+import { useTiers } from "@/hooks/useTiers";
 
 interface SettingsFormProps {
   settings: PlatformSettings | undefined;
@@ -33,11 +43,11 @@ interface SettingsFormProps {
 
 export function SettingsForm({ settings, isLoading }: SettingsFormProps) {
   const updateSettings = useUpdateSettings();
+  const { data: tiers } = useTiers();
 
   const [allowPublicSignup, setAllowPublicSignup] = useState(false);
   const [defaultUserClass, setDefaultUserClass] = useState("free");
   const [inviteExpiryDays, setInviteExpiryDays] = useState(7);
-  const [creditResetPolicy, setCreditResetPolicy] = useState("monthly");
   const [defaultCreditCost, setDefaultCreditCost] = useState(1);
   const [maxPendingInvites, setMaxPendingInvites] = useState(10);
 
@@ -47,7 +57,6 @@ export function SettingsForm({ settings, isLoading }: SettingsFormProps) {
       setAllowPublicSignup(settings.allow_public_signup);
       setDefaultUserClass(settings.default_user_class);
       setInviteExpiryDays(settings.invite_expiry_days);
-      setCreditResetPolicy(settings.credit_reset_policy);
       setDefaultCreditCost(settings.default_credit_cost);
       setMaxPendingInvites(settings.max_pending_invites);
     }
@@ -73,7 +82,6 @@ export function SettingsForm({ settings, isLoading }: SettingsFormProps) {
         allow_public_signup: allowPublicSignup,
         default_user_class: defaultUserClass,
         invite_expiry_days: inviteExpiryDays,
-        credit_reset_policy: creditResetPolicy,
         default_credit_cost: defaultCreditCost,
         max_pending_invites: maxPendingInvites,
       },
@@ -142,9 +150,15 @@ export function SettingsForm({ settings, isLoading }: SettingsFormProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="free">Free</SelectItem>
-                <SelectItem value="standard">Standard</SelectItem>
-                <SelectItem value="premium">Premium</SelectItem>
+                {tiers?.map((tier) => (
+                  <SelectItem key={tier.id} value={tier.id}>
+                    {tier.display_name}
+                  </SelectItem>
+                )) ?? (
+                  <SelectItem value={defaultUserClass} disabled>
+                    Loading...
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
             <p className="text-sm text-muted-foreground">
@@ -205,22 +219,38 @@ export function SettingsForm({ settings, isLoading }: SettingsFormProps) {
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="reset-policy">Credit Reset Policy</Label>
-            <Select
-              value={creditResetPolicy}
-              onValueChange={setCreditResetPolicy}
-            >
-              <SelectTrigger id="reset-policy" className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="monthly">Monthly</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-sm text-muted-foreground">
-              How often user credit balances are reset
+            <Label>Credit Reset Policy (per tier)</Label>
+            <p className="text-sm text-muted-foreground mb-2">
+              Reset policies are defined per tier in user_classes.yaml
             </p>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tier</TableHead>
+                    <TableHead>Reset Policy</TableHead>
+                    <TableHead className="text-right">Credits</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tiers?.map((tier) => (
+                    <TableRow key={tier.id}>
+                      <TableCell className="font-medium">{tier.display_name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{tier.reset_policy}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-mono">{tier.credits}</TableCell>
+                    </TableRow>
+                  )) ?? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-muted-foreground">
+                        Loading tiers...
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
           <Separator />
           <div className="space-y-2">
