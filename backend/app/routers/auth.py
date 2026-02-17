@@ -501,7 +501,7 @@ async def invite_register(
     A FOR UPDATE lock prevents concurrent registration with the same token.
 
     Args:
-        body: Invite registration data (token, display_name, password)
+        body: Invite registration data (token, first_name, last_name, password)
         db: Database session
         settings: Application settings
 
@@ -543,8 +543,8 @@ async def invite_register(
     signup_data = SignupRequest(
         email=invitation.email,
         password=body.password,
-        first_name=body.display_name.strip(),
-        last_name=None,
+        first_name=body.first_name.strip(),
+        last_name=body.last_name.strip() if body.last_name else None,
     )
 
     # Create user (raises 409 if email already exists)

@@ -8,20 +8,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { setTokens } from "@/lib/api-client";
+import { setTokens, apiClient } from "@/lib/api-client";
+import { useAuth } from "@/hooks/useAuth";
 
 /**
  * Invite registration page - validates invite token, pre-fills email,
- * and allows invited user to set display name and password.
+ * and allows invited user to set first name, last name, and password.
  * Differentiated from public signup with invite-specific branding.
  */
 export default function InviteRegisterPage() {
   const params = useParams();
   const router = useRouter();
+  const { updateUser } = useAuth();
   const token = params.token as string;
 
   const [email, setEmail] = useState("");
-  const [displayName, setDisplayName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isValidating, setIsValidating] = useState(true);
@@ -55,8 +58,8 @@ export default function InviteRegisterPage() {
     e.preventDefault();
 
     // Client-side validation
-    if (!displayName.trim()) {
-      toast.error("Display name is required");
+    if (!firstName.trim()) {
+      toast.error("First name is required");
       return;
     }
 
@@ -73,7 +76,8 @@ export default function InviteRegisterPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           token,
-          display_name: displayName.trim(),
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
           password,
         }),
       });
@@ -85,7 +89,19 @@ export default function InviteRegisterPage() {
 
       const data = await response.json();
       setTokens(data.access_token, data.refresh_token);
-      router.push("/");
+
+      // Fetch user profile to complete auth context
+      try {
+        const meRes = await apiClient.get("/auth/me");
+        if (meRes.ok) {
+          const userData = await meRes.json();
+          updateUser(userData);
+        }
+      } catch {
+        // Auth context will pick up on next page load
+      }
+
+      router.push("/dashboard");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Registration failed");
     } finally {
@@ -132,17 +148,30 @@ export default function InviteRegisterPage() {
                   className="bg-muted text-muted-foreground"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="displayName">Display name</Label>
-                <Input
-                  id="displayName"
-                  type="text"
-                  placeholder="Your name"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  required
-                  disabled={isLoading}
-                />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    type="text"
+                    placeholder="First name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    type="text"
+                    placeholder="Last name (optional)"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>

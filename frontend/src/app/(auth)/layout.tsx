@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/hooks/useAuth";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 /**
@@ -15,15 +15,20 @@ export default function AuthLayout({
 }) {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Pages that should work regardless of auth state
+  const skipRedirectPaths = ["/reset-password", "/invite"];
+  const shouldSkipRedirect = skipRedirectPaths.some((p) => pathname.startsWith(p));
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
+    if (!isLoading && isAuthenticated && !shouldSkipRedirect) {
       router.push("/dashboard");
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, router, pathname, shouldSkipRedirect]);
 
-  // Show nothing while checking auth state
-  if (isLoading || isAuthenticated) {
+  // Show nothing while checking auth state (except for skip-redirect pages)
+  if (isLoading || (isAuthenticated && !shouldSkipRedirect)) {
     return null;
   }
 

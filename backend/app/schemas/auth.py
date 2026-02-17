@@ -76,7 +76,8 @@ class InviteRegisterRequest(BaseModel):
     """Request schema for invite-based registration."""
 
     token: str
-    display_name: str = Field(..., min_length=1, max_length=100)
+    first_name: str = Field(..., min_length=1, max_length=100)
+    last_name: str = Field(default="", max_length=100)
     password: str = Field(..., min_length=8)
 
 
