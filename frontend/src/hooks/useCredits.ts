@@ -17,7 +17,7 @@ export function useCredits() {
   return useQuery<CreditBalance>({
     queryKey: ["credits", "balance"],
     queryFn: async () => {
-      const res = await apiClient.get("/credits/balance");
+      const res = await apiClient.get("/api/credits/balance");
       if (!res.ok) throw new Error("Failed to fetch credits");
       return res.json();
     },
