@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -38,13 +38,16 @@ export function ChallengeCodeDialog({
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
+  const fetchRef = useRef(onFetchChallenge);
+  fetchRef.current = onFetchChallenge;
+
   useEffect(() => {
     if (open) {
       setInput("");
       setChallengeCode("");
       setFetchError(null);
       setFetching(true);
-      onFetchChallenge()
+      fetchRef.current()
         .then((result) => {
           setChallengeCode(result.challenge_code);
         })
@@ -55,7 +58,7 @@ export function ChallengeCodeDialog({
           setFetching(false);
         });
     }
-  }, [open, onFetchChallenge]);
+  }, [open]);
 
   const isMatch = challengeCode !== "" && input.toUpperCase() === challengeCode.toUpperCase();
 
