@@ -161,12 +161,14 @@ Plans:
   2. Dashboard renders Recharts trend charts for signups over time and messages over time, plus credit distribution by tier and low-credit user list
   3. The `admin-frontend/` Next.js application provides pages for login, dashboard, user management (list + detail), platform settings, invitations, credit management, and audit log viewing -- using same stack as public frontend (TanStack Query, Zustand, shadcn/ui, Recharts)
   4. Local development runs 3 processes (backend:8000 dev mode, frontend:3000, admin:3001) with mode-aware CORS allowing both frontends to communicate with the backend
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] 31-01: TBD
-- [ ] 31-02: TBD
-- [ ] 31-03: TBD
+- [ ] 31-01-PLAN.md -- Backend endpoints: dashboard metrics aggregation, audit log listing, admin /auth/me
+- [ ] 31-02-PLAN.md -- Admin frontend scaffold: Next.js app, shadcn/ui, API client, auth context, admin shell layout
+- [ ] 31-03-PLAN.md -- Dashboard page: metric cards, Recharts trend charts, credit distribution, low-credit users
+- [ ] 31-04-PLAN.md -- Users management (list + detail with tabs) and Invitations page
+- [ ] 31-05-PLAN.md -- Credits, Settings, Audit Log pages + visual verification checkpoint
 
 ## Progress
 
