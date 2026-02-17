@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 31 of 31 (Dashboard & Admin Frontend)
-Plan: 7 of 8 complete (gap closure)
-Status: Executing gap closure plans
-Last activity: 2026-02-17 -- Completed 31-07 Admin Frontend Bug Fixes (v0.5 gap closure)
+Plan: 8 of 8 complete (gap closure)
+Status: All gap closure plans complete
+Last activity: 2026-02-17 -- Completed 31-08 Public Frontend Bug Fixes (v0.5 gap closure)
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 gap closure 7/8
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 gap closure 8/8 ✅
 
 ## Performance Metrics
 
@@ -63,6 +63,8 @@ v0.5 Architecture decisions (from requirements + research):
 - One new backend dep (APScheduler), one new frontend lib (Recharts)
 - 31-07: Render UserTable inline (not DataTableShell) to support sort indicators on headers
 - 31-07: Backend-driven challenge codes for delete operations instead of client-side generation
+- 31-08: Used updateUser from useAuth context for invite auto-login
+- 31-08: Credit balance hook uses apiClient for automatic token refresh
 
 ### Pending Todos
 
@@ -80,5 +82,5 @@ v0.5 Architecture decisions (from requirements + research):
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 31-07-PLAN.md (Admin Frontend Bug Fixes) -- gap closure plan 7 of 8
-Resume with: Execute 31-08-PLAN.md (frontend fixes wave 2)
+Stopped at: Completed 31-08-PLAN.md (Public Frontend Bug Fixes) -- all gap closure plans complete
+Resume with: v0.5 UAT re-verification or milestone completion
