@@ -86,8 +86,9 @@ async def adjust_user_credits(
     Admin must re-enter their password to confirm the adjustment.
     """
     # Verify admin password (per locked decision: password re-entry required)
+    # Use 403 (not 401) — admin IS authenticated, just wrong confirmation password
     if not verify_password(body.password, current_admin.hashed_password):
-        raise HTTPException(status_code=401, detail="Invalid password")
+        raise HTTPException(status_code=403, detail="Incorrect password")
 
     result = await CreditService.admin_adjust(
         db, user_id, body.amount, body.reason, current_admin.id
@@ -126,8 +127,9 @@ async def manual_reset_user_credits(
     Restarts the user's credit cycle from today.
     """
     # Verify admin password
+    # Use 403 (not 401) — admin IS authenticated, just wrong confirmation password
     if not verify_password(body.password, current_admin.hashed_password):
-        raise HTTPException(status_code=401, detail="Invalid password")
+        raise HTTPException(status_code=403, detail="Incorrect password")
 
     result = await CreditService.manual_reset(db, user_id, current_admin.id)
 
