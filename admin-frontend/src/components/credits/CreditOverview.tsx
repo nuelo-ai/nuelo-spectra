@@ -153,7 +153,7 @@ export function CreditOverview({
                         {row.user_count.toLocaleString()}
                       </TableCell>
                       <TableCell className="text-right">
-                        {row.avg_balance.toFixed(1)}
+                        {Number(row.avg_balance).toFixed(1)}
                       </TableCell>
                       <TableCell className="text-right">
                         {totalUsers > 0

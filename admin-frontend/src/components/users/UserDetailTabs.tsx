@@ -331,7 +331,7 @@ function CreditsTab({ user }: { user: UserDetail }) {
         </CardHeader>
         <CardContent>
           <div className="text-3xl font-bold">
-            {user.credit_balance.toFixed(1)}
+            {Number(user.credit_balance).toFixed(1)}
           </div>
           <p className="text-sm text-muted-foreground mt-1">
             Tier: {user.user_class}
@@ -435,10 +435,10 @@ function CreditsTab({ user }: { user: UserDetail }) {
                       }`}
                     >
                       {tx.amount >= 0 ? "+" : ""}
-                      {tx.amount.toFixed(1)}
+                      {Number(tx.amount).toFixed(1)}
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      {tx.balance_after.toFixed(1)}
+                      {Number(tx.balance_after).toFixed(1)}
                     </TableCell>
                     <TableCell className="text-muted-foreground max-w-[200px] truncate">
                       {tx.reason || "-"}

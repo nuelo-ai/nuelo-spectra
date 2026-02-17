@@ -254,7 +254,7 @@ export function UserTable({
         header: "Credits",
         cell: (info) => (
           <span className="font-mono text-sm">
-            {info.getValue().toFixed(1)}
+            {Number(info.getValue()).toFixed(1)}
           </span>
         ),
         enableSorting: true,
