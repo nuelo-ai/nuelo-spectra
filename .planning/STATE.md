@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-16)
 ## Current Position
 
 Phase: 31 of 31 (Dashboard & Admin Frontend)
-Plan: 6 of 8 complete (gap closure)
+Plan: 7 of 8 complete (gap closure)
 Status: Executing gap closure plans
-Last activity: 2026-02-17 -- Completed 31-06 Backend Bug Fixes (v0.5 gap closure)
+Last activity: 2026-02-17 -- Completed 31-07 Admin Frontend Bug Fixes (v0.5 gap closure)
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 gap closure 6/8
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 gap closure 7/8
 
 ## Performance Metrics
 
@@ -61,6 +61,8 @@ v0.5 Architecture decisions (from requirements + research):
 - String(20) for user_class (not PostgreSQL ENUM) to avoid ALTER TYPE migration pain
 - Three-step migration pattern: add columns with server_default, create tables, backfill data
 - One new backend dep (APScheduler), one new frontend lib (Recharts)
+- 31-07: Render UserTable inline (not DataTableShell) to support sort indicators on headers
+- 31-07: Backend-driven challenge codes for delete operations instead of client-side generation
 
 ### Pending Todos
 
@@ -78,5 +80,5 @@ v0.5 Architecture decisions (from requirements + research):
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 31-06-PLAN.md (Backend Bug Fixes) -- gap closure plan 6 of 8
-Resume with: Execute 31-07-PLAN.md (frontend fixes wave 1) and 31-08-PLAN.md (frontend fixes wave 2)
+Stopped at: Completed 31-07-PLAN.md (Admin Frontend Bug Fixes) -- gap closure plan 7 of 8
+Resume with: Execute 31-08-PLAN.md (frontend fixes wave 2)
