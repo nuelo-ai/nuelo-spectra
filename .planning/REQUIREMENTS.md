@@ -203,8 +203,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INVITE-01 | Phase 30 | Pending |
 | INVITE-02 | Phase 30 | Pending |
 | INVITE-03 | Phase 30 | Pending |
-| INVITE-04 | Phase 30 | Pending |
-| INVITE-05 | Phase 30 | Pending |
+| INVITE-04 | Phase 30 + Phase 32 | Pending |
+| INVITE-05 | Phase 30 + Phase 32 | Pending |
 | INVITE-06 | Phase 30 | Pending |
 | INVITE-07 | Phase 30 | Pending |
 | INVITE-08 | Phase 30 | Pending |
@@ -232,7 +232,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SETTINGS-02 | Phase 28 | Pending |
 | SETTINGS-03 | Phase 28 | Pending |
 | SETTINGS-04 | Phase 28 | Pending |
-| SETTINGS-05 | Phase 28 | Pending |
+| SETTINGS-05 | Phase 28 + Phase 32 | Pending |
 | SETTINGS-06 | Phase 28 | Pending |
 | SETTINGS-07 | Phase 28 | Pending |
 | SETTINGS-08 | Phase 28 | Pending |

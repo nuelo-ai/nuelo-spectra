@@ -69,6 +69,7 @@
 - [x] **Phase 29: User Management** - Admin user list, search, filter, and all user account operations (completed 2026-02-16)
 - [x] **Phase 30: Invitation System** - Email invites with time-limited single-use tokens and invite-only registration (completed 2026-02-17)
 - [x] **Phase 31: Dashboard & Admin Frontend** - Admin Next.js app with dashboard metrics, trend charts, and all admin UI pages (completed 2026-02-17)
+- [ ] **Phase 32: Production Readiness** - Fix production-blocking invite URL hardcoding, resolve misleading settings control, remove dead route
 
 ## Phase Details
 
@@ -173,10 +174,24 @@ Plans:
 - [ ] 31-07-PLAN.md -- v0.5 gap closure: admin frontend fixes (URLs, delete flow, checkboxes, sorting, tiers, password)
 - [ ] 31-08-PLAN.md -- v0.5 gap closure: public frontend fixes (SSE 402, credit display, auth guard, invite form)
 
+### Phase 32: Production Readiness
+**Goal**: Fix production-blocking invite URL hardcoding, resolve misleading credit_reset_policy settings control, and remove dead tier route
+**Depends on**: Phase 30 (invite flow), Phase 28 (platform settings)
+**Requirements**: INVITE-04, INVITE-05, SETTINGS-05
+**Gap Closure**: Closes gaps from v0.5 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. Invite registration page uses `apiClient` (or relative URLs) instead of hardcoded `http://localhost:8000` — flow works in localhost, staging, and production
+  2. Settings UI `credit_reset_policy` field either drives the APScheduler (making it functional) or is clearly labelled as read-only/informational — no misleading save behavior
+  3. Dead route `PUT /api/admin/tiers/users/{user_id}` is removed from the tiers router
+**Plans**: 1 plan
+
+Plans:
+- [ ] 32-01-PLAN.md -- Fix invite page hardcoded URLs, fix credit_reset_policy misleading UI, remove dead tier route
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 26 -> 27 -> 28 -> 29 -> 30 -> 31
+Phases execute in numeric order: 26 -> 27 -> 28 -> 29 -> 30 -> 31 -> 32
 Note: Phase 28 can start after Phase 26 (does not depend on Phase 27). Phase 30 depends on Phase 28 (signup toggle).
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -212,3 +227,4 @@ Note: Phase 28 can start after Phase 26 (does not depend on Phase 27). Phase 30 
 | 29. User Management | v0.5 | Complete    | 2026-02-16 | - |
 | 30. Invitation System | v0.5 | Complete    | 2026-02-17 | - |
 | 31. Dashboard & Admin Frontend | v0.5 | Complete    | 2026-02-17 | - |
+| 32. Production Readiness | v0.5 | 0/1 | Pending | - |
