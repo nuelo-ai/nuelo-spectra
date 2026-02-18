@@ -2,7 +2,7 @@
 
 **Project:** Spectra
 **Strategy:** Development Branch with Semantic Versioning
-**Last Updated:** 2026-02-06
+**Last Updated:** 2026-02-18
 
 ---
 
@@ -39,13 +39,22 @@ v0.1, v0.2, v0.3, ... → v1.0 → v1.1, v1.2, ... → v2.0
   - Breaking API changes
   - Migration guides required
 
-### Hotfix Versions
+### Patch Versions
 
-For critical bugs in released versions:
+For bug fixes, minor improvements, or small changes to a released version — without bumping the minor version:
 
 ```
 v0.1.1, v0.1.2, v1.0.1, v1.0.2, etc.
 ```
+
+Use a patch version when the change is:
+- A bug fix (critical or non-critical)
+- A minor UI/UX improvement
+- A small config or documentation change
+- A dependency update
+- Any small change that doesn't warrant a full milestone
+
+Do **not** use a patch version for new features or significant additions — those belong in the next minor version (e.g., v0.6, v1.1).
 
 ---
 
@@ -65,7 +74,7 @@ hotfix/*  →  Emergency fixes for current stable version (if needed)
 |--------|---------|-----------|------|
 | `master` | Production-ready code, always stable | ✅ Yes | All version tags (v0.1, v0.2, etc.) |
 | `develop` | Active development for next milestone | ❌ No | Pre-release tags (v0.2-beta, optional) |
-| `hotfix/*` | Emergency fixes for current release | ❌ No | Hotfix tags (v0.1.1, v0.1.2) |
+| `hotfix/*` | Bug fixes and minor changes for current release | ❌ No | Patch tags (v0.1.1, v0.1.2) |
 
 ---
 
@@ -159,48 +168,50 @@ git checkout -b develop
 
 ---
 
-## Hotfix Workflow
+## Patch Workflow
 
-If critical bug found in stable release (v0.1) while developing v0.2:
+Use a `hotfix/*` branch for bug fixes, minor improvements, or small changes to a released version. This applies whether it's a critical bug or a minor tweak — anything too small to wait for the next milestone.
 
-### Option A: Quick Hotfix (Simple Bug)
+### Option A: Patch Branch (Recommended)
 
 ```bash
-# 1. Create hotfix branch from master
+# 1. Create patch branch from master
 git checkout master
 git checkout -b hotfix/v0.1.1
 
-# 2. Fix the bug
+# 2. Make changes (bug fix, minor improvement, config update, etc.)
 # ... make changes ...
 git add .
-git commit -m "hotfix: fix critical authentication bug"
+git commit -m "fix: correct authentication timeout logic"
+# or: git commit -m "chore: update default SMTP port"
 
 # 3. Merge to master and tag
 git checkout master
 git merge hotfix/v0.1.1 --no-ff
-git tag v0.1.1
+git tag -a v0.1.1 -m "v0.1.1: [brief description of change]"
 git push origin master
 git push origin v0.1.1
 
-# 4. Merge hotfix back to develop (avoid losing fix)
+# 4. Merge back to develop (keep develop in sync)
 git checkout develop
 git merge hotfix/v0.1.1
 git push origin develop
 
-# 5. Delete hotfix branch
+# 5. Delete patch branch
 git branch -d hotfix/v0.1.1
 ```
 
-### Option B: Direct Master Hotfix (Emergency)
+### Option B: Direct Master Patch (Simple/Emergency)
 
 ```bash
-# 1. Fix directly on master
+# 1. Make change directly on master
 git checkout master
-# ... make emergency fix ...
-git commit -m "hotfix: critical security patch"
+# ... make changes ...
+git commit -m "fix: critical security patch"
+# or: git commit -m "chore: minor UI label correction"
 
-# 2. Tag hotfix version
-git tag v0.1.1
+# 2. Tag patch version
+git tag -a v0.1.1 -m "v0.1.1: [brief description]"
 git push origin master --tags
 
 # 3. Merge back to develop immediately
@@ -221,7 +232,7 @@ git tag v0.1
 git tag v0.2
 git tag v1.0
 
-# Hotfix releases
+# Patch releases (bug fixes, minor improvements, small changes)
 git tag v0.1.1
 git tag v0.1.2
 git tag v1.0.1
@@ -469,6 +480,6 @@ git push -u origin develop
 
 ---
 
-*Last Updated: 2026-02-06*
+*Last Updated: 2026-02-18*
 *Strategy Established: v0.2 milestone*
 *Next Review: After v1.0 release*
