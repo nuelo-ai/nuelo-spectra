@@ -5,38 +5,18 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** Planning next milestone
+**Current focus:** Phase 33 — Pre-Work and Version API
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-18 — Milestone v0.6 started
+Phase: 33 of 36 (Pre-Work and Version API)
+Plan: 0 of 2 in current phase
+Status: Ready to plan
+Last activity: 2026-02-18 — v0.6 roadmap created, Phase 33 ready to plan
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 🚧
 
 ## Performance Metrics
-
-**Velocity (v0.1):**
-- Total plans completed: 36
-- Total execution time: ~5 days (Feb 1-6, 2026)
-- Plans per day: ~7 plans/day
-
-**Velocity (v0.2):**
-- Total plans completed: 19
-- Total execution time: ~4 days (Feb 7-10, 2026)
-- Plans per day: ~5 plans/day
-
-**Velocity (v0.3):**
-- Total plans completed: 23
-- Total execution time: ~3 days (Feb 10-12, 2026)
-- Plans per day: ~8 plans/day
-
-**Velocity (v0.4):**
-- Total plans completed: 11 (Phases 20-25 complete)
-- Total execution time: ~3 days (Feb 12-14, 2026)
-- Plans per day: ~4 plans/day
 
 **Velocity (v0.5):**
 - Total plans completed: 24 (Phases 26-32 complete)
@@ -49,22 +29,30 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅
 
 See PROJECT.md Key Decisions table for full decision log.
 
+Recent decisions affecting v0.6:
+- 3 separate Dokploy Application services (not single Compose stack) — independent rollback per service
+- `python:3.12-slim` for backend base image — glibc required for asyncpg/psycopg binary wheels; Alpine incompatible
+- `node:22-alpine` for both frontend base images — Alpine safe for Next.js; saves ~100MB per image
+- `output: 'standalone'` in both Next.js configs — required for multi-stage Docker images
+- Runtime `process.env.BACKEND_URL` in rewrites (not build-time `NEXT_PUBLIC_`) — no image rebuild on URL change
+- Dokploy-managed PostgreSQL — simpler, managed backups, no containerization needed
+- `.dockerignore` before any `docker build` — non-negotiable security gate
+
 ### Pending Todos
 
-- [ ] Create Dokploy Docker deployment package (deployment)
+- [ ] Create Dokploy Docker deployment package (deployment) — this milestone
 - [ ] Query safety filter in Manager Agent (security)
 - [ ] Show suggestions in Data Summary sidebar panel (ui)
 - [ ] Use Pydantic structured output for agent JSON responses (consistency)
 
 ### Blockers/Concerns
 
-- In-memory admin login lockout: upgrade to Redis for multi-instance deployment
-- In-memory token revocation set: same single-instance caveat
-- SearchQuota coexistence: web searches keep separate quota for now (not deducting credits)
-- E2B sandboxes created per-execution (no warm pools) -- acceptable for now
+- Dokploy internal service hostname format: MEDIUM confidence — verify in Dokploy UI after first backend deploy before setting `BACKEND_URL` in frontend services; fallback is public HTTPS domain for `BACKEND_URL`
+- SSE streaming through Next.js rewrite proxy in Docker: LOW confidence — verify during Phase 35 smoke test; if proxy doesn't stream correctly, `useSSEStream.ts` may need `NEXT_PUBLIC_BACKEND_URL` approach
+- `pg_isready` availability in `python:3.12-slim`: not included by default — install `postgresql-client` via apt-get OR use pure-Python TCP loop; decide in Phase 34
 
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Started v0.5.1 milestone, defining requirements
-Resume with: `/gsd:plan-phase 33` after roadmap is set
+Stopped at: v0.6 roadmap created — 4 phases (33-36), 23 requirements mapped, 100% coverage
+Resume with: `/gsd:plan-phase 33`

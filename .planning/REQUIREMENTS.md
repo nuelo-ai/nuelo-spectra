@@ -47,14 +47,16 @@ App version visible on settings/profile page in both frontends, fetched from bac
 
 ### Dokploy Deployment (DPLY)
 
-Three separate Dokploy Application services, each built from its own Dockerfile at repo root. Dokploy-managed PostgreSQL (not containerized by us).
+Four Dokploy Application services built from 3 Dockerfiles. Public services (public backend + public frontend) are internet-accessible via HTTPS. Admin services (admin backend + admin frontend) are **Tailscale-only** — not reachable from the public internet. Both backend deployments share the same Dokploy-managed PostgreSQL database.
 
-- [ ] **DPLY-01**: Backend is deployed as a Dokploy Application service with `Dockerfile.backend`, correct env vars (`SPECTRA_MODE`, `APP_VERSION`, `SECRET_KEY`, `DATABASE_URL`, API keys), and Alembic migration runs successfully against Dokploy-managed PostgreSQL on first deploy
-- [ ] **DPLY-02**: Public frontend is deployed as a Dokploy Application service with `Dockerfile.frontend` and `BACKEND_URL` pointing to the backend service (internal Dokploy network hostname)
-- [ ] **DPLY-03**: Admin frontend is deployed as a Dokploy Application service with `Dockerfile.admin`, `BACKEND_URL`, and backend deployed with `SPECTRA_MODE=admin` for admin API routing
-- [ ] **DPLY-04**: User file uploads persist across Dokploy redeployments — Dokploy Advanced → Mounts configured with named volume at `/app/uploads` before first production deploy
-- [ ] **DPLY-05**: All 3 services are accessible via custom HTTPS domains with SSL (Traefik certificates managed by Dokploy)
-- [ ] **DPLY-06**: `DEPLOYMENT.md` covers complete setup — Dokploy project creation, all 3 service configurations with env var tables, volume mount steps, domain/SSL assignment, `SECRET_KEY` generation, and a post-deploy smoke test checklist
+- [ ] **DPLY-01**: Public backend is deployed as a Dokploy Application service with `Dockerfile.backend`, `SPECTRA_MODE=public`, all required env vars (`APP_VERSION`, `SECRET_KEY`, `DATABASE_URL`, API keys), volume mount at `/app/uploads`, and Alembic migration runs successfully against Dokploy-managed PostgreSQL on first deploy
+- [ ] **DPLY-02**: Admin backend is deployed as a second Dokploy Application service from the same `Dockerfile.backend` with `SPECTRA_MODE=admin` — service binds to the Tailscale network interface only and is NOT exposed through Dokploy's public Traefik router
+- [ ] **DPLY-03**: Public frontend is deployed as a Dokploy Application service with `Dockerfile.frontend` and `BACKEND_URL` pointing to the public backend — accessible via public HTTPS domain with Traefik SSL
+- [ ] **DPLY-04**: Admin frontend is deployed as a Dokploy Application service with `Dockerfile.admin` and `BACKEND_URL` pointing to the admin backend Tailscale hostname — service is Tailscale-only, NOT exposed through Dokploy's public Traefik router
+- [ ] **DPLY-05**: Tailscale is installed on the Dokploy host — admin backend and admin frontend are reachable at `admin-api.spectra.ts.net` and `admin.spectra.ts.net` via Tailscale client only; a port scan from the public internet returns no response for admin services
+- [ ] **DPLY-06**: User file uploads persist across Dokploy redeployments — Dokploy Advanced → Mounts configured with named volume at `/app/uploads` on the public backend service before first production deploy
+- [ ] **DPLY-07**: Public backend and public frontend are accessible via custom public HTTPS domains with valid SSL (Traefik certificates managed by Dokploy) — no browser security warnings
+- [ ] **DPLY-08**: `DEPLOYMENT.md` covers complete setup — all 4 service configurations with env var tables, Tailscale installation and Tailscale-only binding for admin services, volume mount steps, public domain/SSL assignment, `SECRET_KEY` generation, and a post-deploy smoke test checklist for both public and Tailscale-only services
 
 ## v7 Requirements (Future)
 
@@ -74,7 +76,7 @@ Explicitly excluded. Documented to prevent scope creep.
 | Feature | Reason |
 |---------|--------|
 | Containerize PostgreSQL | Dokploy managed DB is simpler; managed backups; no added value |
-| Single Docker Compose stack for Dokploy | User chose 3 separate services for independent rollback per service |
+| Single Docker Compose stack for Dokploy | User chose 4 separate services (public backend, admin backend, public frontend, admin frontend) for independent rollback and Tailscale isolation |
 | Nginx container | Dokploy Traefik handles routing and TLS — no manual nginx needed |
 | Gunicorn multi-worker backend | Breaks APScheduler (in-process scheduler); uvicorn single-worker correct for this deployment |
 | NEXT_PUBLIC_ version var baked at build | Runtime env var approach chosen — no rebuild on version bump |
@@ -93,6 +95,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PRE-03 | Phase 33 | Pending |
 | PRE-04 | Phase 33 | Pending |
 | PRE-05 | Phase 33 | Pending |
+| VER-01 | Phase 33 | Pending |
+| VER-02 | Phase 33 | Pending |
+| VER-03 | Phase 33 | Pending |
 | DOCK-01 | Phase 34 | Pending |
 | DOCK-02 | Phase 34 | Pending |
 | DOCK-03 | Phase 34 | Pending |
@@ -102,21 +107,20 @@ Which phases cover which requirements. Updated during roadmap creation.
 | COMP-02 | Phase 35 | Pending |
 | COMP-03 | Phase 35 | Pending |
 | COMP-04 | Phase 35 | Pending |
-| VER-01 | Phase 33 | Pending |
-| VER-02 | Phase 33 | Pending |
-| VER-03 | Phase 33 | Pending |
 | DPLY-01 | Phase 36 | Pending |
 | DPLY-02 | Phase 36 | Pending |
 | DPLY-03 | Phase 36 | Pending |
 | DPLY-04 | Phase 36 | Pending |
 | DPLY-05 | Phase 36 | Pending |
 | DPLY-06 | Phase 36 | Pending |
+| DPLY-07 | Phase 36 | Pending |
+| DPLY-08 | Phase 36 | Pending |
 
 **Coverage:**
-- v0.6 requirements: 23 total
-- Mapped to phases: 23
+- v0.6 requirements: 25 total
+- Mapped to phases: 25
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-18*
-*Last updated: 2026-02-18 after initial definition*
+*Last updated: 2026-02-18 — traceability updated after roadmap creation (Phases 33-36)*
