@@ -9,7 +9,6 @@ class SettingsResponse(BaseModel):
     allow_public_signup: bool
     default_user_class: str
     invite_expiry_days: int
-    credit_reset_policy: str
     default_credit_cost: float
     max_pending_invites: int
 
@@ -26,7 +25,6 @@ class SettingsUpdateRequest(BaseModel):
     allow_public_signup: bool | None = None
     default_user_class: str | None = None
     invite_expiry_days: int | None = None
-    credit_reset_policy: str | None = None
     default_credit_cost: float | None = None
     max_pending_invites: int | None = None
 
@@ -39,7 +37,6 @@ class SettingsUpdateRequest(BaseModel):
                 self.allow_public_signup,
                 self.default_user_class,
                 self.invite_expiry_days,
-                self.credit_reset_policy,
                 self.default_credit_cost,
                 self.max_pending_invites,
             ]

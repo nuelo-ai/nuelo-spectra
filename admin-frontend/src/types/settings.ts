@@ -7,7 +7,6 @@ export interface PlatformSettings {
   allow_public_signup: boolean;
   default_user_class: string;
   invite_expiry_days: number;
-  credit_reset_policy: string;
   default_credit_cost: number;
   max_pending_invites: number;
 }

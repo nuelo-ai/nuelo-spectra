@@ -26,7 +26,6 @@ DEFAULTS: dict[str, str] = {
     "allow_public_signup": json.dumps(True),
     "default_user_class": json.dumps("free"),
     "invite_expiry_days": json.dumps(7),
-    "credit_reset_policy": json.dumps("weekly"),
     "default_credit_cost": json.dumps("1.0"),
     "max_pending_invites": json.dumps(50),
 }
@@ -135,12 +134,6 @@ def validate_setting(key: str, value: Any) -> str | None:
             return "invite_expiry_days must be an integer"
         if value < 1 or value > 365:
             return "invite_expiry_days must be between 1 and 365"
-
-    elif key == "credit_reset_policy":
-        if not isinstance(value, str):
-            return "credit_reset_policy must be a string"
-        if value not in {"manual", "weekly", "monthly"}:
-            return "credit_reset_policy must be one of: manual, weekly, monthly"
 
     elif key == "default_credit_cost":
         if not isinstance(value, (int, float)) or isinstance(value, bool):
