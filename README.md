@@ -166,6 +166,34 @@ cd backend
 uv run python -m app.cli seed-admin
 ```
 
+### Upgrading from v0.4 to v0.5
+
+```bash
+# 1. Pull latest code
+git pull origin master
+
+# 2. Install new backend dependencies (adds APScheduler)
+cd backend
+uv sync
+
+# 3. Run database migration (adds 5 new tables, backfills existing users)
+uv run alembic upgrade head
+
+# 4. Add new env vars to backend/.env
+#    SPECTRA_MODE=dev          (required — controls route mounting)
+#    ADMIN_EMAIL=admin@...     (optional — for seeding admin account)
+#    ADMIN_PASSWORD=...        (optional — for seeding admin account)
+
+# 5. Seed admin account (optional, requires ADMIN_EMAIL and ADMIN_PASSWORD in .env)
+uv run python -m app.cli seed-admin
+
+# 6. Install admin frontend (optional)
+cd ../admin-frontend
+npm install
+```
+
+The migration automatically backfills existing users with `is_admin=false`, `user_class=free`, and a credit record with free-tier default balance. No manual data changes needed.
+
 ### Verify Installation
 
 1. Backend health: `http://localhost:8000/health`
