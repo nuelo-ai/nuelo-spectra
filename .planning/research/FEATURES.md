@@ -1,437 +1,396 @@
-# Feature Research: Admin Portal, Credit System, Invitation Flow (v0.5)
+# Feature Research: Docker and Dokploy Deployment (v0.5.1)
 
-**Domain:** SaaS admin portal with user management, credit-based usage control, invitation system
-**Researched:** 2026-02-16
-**Confidence:** HIGH
-**Supersedes:** Previous FEATURES.md (v0.4 Data Visualization features, 2026-02-12)
+**Domain:** Docker containerization and Dokploy deployment for FastAPI + Next.js multi-service app
+**Researched:** 2026-02-18
+**Confidence:** HIGH (official Next.js docs verified, Dokploy docs verified, codebase inspected)
+**Supersedes:** Previous FEATURES.md (v0.5 Admin Portal features, 2026-02-16)
 
 ---
 
 ## Executive Summary
 
-Spectra v0.5 adds the operational backbone needed to transition from a developer prototype to a commercially viable SaaS product. The feature set spans four distinct domains: admin authentication and dashboard, user lifecycle management, credit-based usage metering, and controlled signup via invitations. These are well-understood SaaS patterns with established best practices -- the risk is not in "can we build this?" but in "do we build too much or too little?"
+Spectra v0.5.1 packages an existing, fully functional production app into Docker containers for Dokploy deployment. This is a "wrap the existing app" milestone, not a "build new features" milestone. The risk is not capability -- Docker + Dokploy is well-understood -- the risk is configuration correctness: wrong environment variable strategy, broken SSE streaming through proxies, missed volume mounts, or misconfigured inter-service networking.
 
-The requirements document is already well-scoped. The key insight from research is that the credit system is the most technically complex feature (concurrency, atomicity, audit trails) while appearing deceptively simple on the surface. The invitation system and signup toggle are straightforward but must be wired carefully into the existing auth flow without breaking it. The admin dashboard is high-visibility but low-risk -- it is read-only queries against existing data.
+Three services need Dockerfiles: FastAPI backend, Next.js public frontend, Next.js admin frontend. The backend uses uv for dependency management, so multi-stage builds leverage uv's venv copy pattern. Both Next.js apps use Next.js standalone output mode to reduce image size dramatically (from ~7GB to ~300MB typical). A Docker Compose file covers local development with all services + PostgreSQL.
 
-**Scope alignment:** The requirements deliberately defer Stripe integration, per-model credit costs, and self-service tier upgrades. This is the correct call. The v0.5 scope builds the internal plumbing (credit ledger, tier assignment, admin controls) that future monetization will plug into. Attempting to add payment processing in the same milestone would double the complexity.
+**Critical discovery from codebase inspection:** Both frontends currently use Next.js rewrites (`/api/*` -> backend) for almost all API calls, meaning they do NOT use `NEXT_PUBLIC_API_URL`. However, there are two hardcoded `localhost:8000` direct fetch calls in the public frontend (`useSSEStream.ts` line 112 and `register/page.tsx` line 26) that bypass the rewrite proxy. These must be fixed as part of this milestone -- they will fail in Docker where the backend is not at `localhost:8000`.
+
+**NEXT_PUBLIC_ variable strategy for Spectra:** Because both frontends already use relative `/api/` paths (proxied via Next.js rewrites), the `NEXT_PUBLIC_API_URL` approach is NOT needed for the rewrite-based API calls. The rewrite destination URL in `next.config.ts` IS the only thing that needs updating for Docker -- it is a server-side Next.js config value read at build time, but the destination hostname is the Docker service name (e.g., `http://backend:8000`). For Dokploy production, because services communicate over the dokploy-network, the rewrite destination changes to the backend's internal Dokploy hostname.
+
+---
+
+## Service Architecture Reference
+
+```
+3 Dokploy services + 1 Dokploy-managed PostgreSQL:
+
+  [public-frontend]     [admin-frontend]
+     port 3000            port 3000 (container)
+        |                      |
+        | Next.js rewrite      | Next.js rewrite
+        v                      v
+     [backend]              [backend]
+     port 8000
+        |
+     [PostgreSQL]  -- Dokploy-managed database
+     [/app/uploads] -- Docker volume (file uploads persistence)
+```
+
+All three services connect to `dokploy-network`. Services reference each other by their Dokploy application service name as DNS hostname.
 
 ---
 
 ## Table Stakes
 
-Features that any SaaS admin portal must have. Missing these makes the admin experience frustrating or dangerous.
+Features every production Docker deployment must have. Missing any of these means the deployment is not production-ready.
 
-| Feature | Why Expected | Complexity | Dependencies on Existing |
-|---------|--------------|------------|--------------------------|
-| **Admin login with role enforcement** | Every admin portal requires authentication. Without `is_admin` check on every endpoint, any authenticated user could access admin functions. This is security-critical, not optional. | LOW | Extends existing `User` model with `is_admin` boolean. Existing JWT auth infrastructure reused. New `AdminCurrentUser` dependency that checks the flag. |
-| **CLI seed for first admin** | Chicken-and-egg problem: you need an admin to create admins, but you need to create the first admin somehow. CLI seeding is the standard pattern (Django's `createsuperuser`, Rails seeds). | LOW | New CLI command using existing database connection. Creates user record with `is_admin=True`. No frontend dependency. |
-| **Session timeout for admin** | Admin sessions with indefinite lifetime are a security liability. 30-minute inactivity timeout is industry standard for internal tools. NIST SP 800-63B recommends 15-30 minutes for privileged sessions. | LOW | Configurable JWT expiry for admin tokens (separate from user tokens) or frontend-side inactivity timer that clears the session. |
-| **User list with search and filter** | The first thing any admin does is find a specific user. Without search/filter, admin managing 100+ users is unusable. Every SaaS admin panel (Stripe Dashboard, Auth0, Firebase) has this. | MEDIUM | New admin router querying existing `users` table. Paginated endpoint with `?search=email&status=active&tier=free` query params. Needs index on `email` (already exists) and new `user_class` column. |
-| **User activate/deactivate** | Ability to disable a user without deleting their data is fundamental. Deactivation should immediately prevent login (existing `is_active` check in auth already handles this). | LOW | Existing `is_active` field on `User` model. Admin endpoint flips the boolean. Existing auth middleware already checks `is_active` on token refresh. |
-| **Admin-triggered password reset** | Users lock themselves out. Admin must be able to trigger a reset email without knowing or setting the password directly. Standard in every user management system. | LOW | Reuses existing password reset email infrastructure. Admin endpoint creates a reset token and triggers the same email flow. No new email template needed. |
-| **User deletion with confirmation** | GDPR and general data hygiene require the ability to delete users. Must cascade-delete files, sessions, messages, and credit records. Two-step confirmation prevents accidents. | MEDIUM | Existing `cascade="all, delete-orphan"` on User relationships handles files, messages, sessions. New credit tables must also cascade. Admin frontend should require typed confirmation (e.g., "type user email to confirm"). |
-| **Credit balance per user** | The core of usage control. Each user has a float credit balance that decreases with each message. When balance hits zero, user cannot send messages. This is the fundamental gate for commercial operation. | HIGH | New `user_credits` table with `user_id`, `balance` (float), `last_reset`. Credit deduction integrated into existing chat message creation flow. Must be atomic -- deduct BEFORE sending to LLM, not after. |
-| **Credit deduction on message send** | Each message costs credits (configurable float, default 1.0). Deduction must happen synchronously, before the AI processes the query. If credits insufficient, return error immediately -- do not waste LLM API costs. | HIGH | Modifies existing `chat` router/service. Before calling agent pipeline, check balance >= cost, deduct atomically, then proceed. Race condition risk if user sends multiple messages simultaneously -- needs database-level locking or SELECT FOR UPDATE. |
-| **"Out of credits" blocking** | When credits reach zero, user sees a clear message explaining why they cannot send messages and what to do (wait for reset, contact admin, upgrade tier). Silently failing or showing generic errors is unacceptable. | LOW | Frontend check: if credit balance < message cost, disable send button and show message. Backend enforcement: reject message endpoint with 402/403 and descriptive error. Both are needed (defense in depth). |
-| **Credit transaction history** | Every credit movement (deduction, admin adjustment, reset, bonus) must be recorded as an immutable append-only log. This is both an audit requirement and essential for debugging "where did my credits go?" support tickets. | MEDIUM | New `credit_transactions` table: `id`, `user_id`, `amount` (positive=grant, negative=deduction), `type` (enum: message, admin_adjustment, reset, bonus), `reason` (text), `balance_after`, `created_at`, `admin_id` (nullable). Append-only -- never update or delete rows. |
-| **Signup control toggle** | Global on/off for public registration. When off, only invited users can register. This is essential for beta launches, enterprise deployments, and controlling growth. Must take effect immediately without restart. | MEDIUM | New `platform_settings` table with key-value pairs. Signup endpoint checks `allow_public_signup` setting on every request. Setting change writes to DB, no cache needed for this low-frequency check. |
-| **Email invitation with unique link** | Admin enters email, system generates a time-limited, single-use token and sends an invite email. Invited user clicks link, lands on registration form with email pre-filled and locked. Standard SaaS invitation pattern. | MEDIUM | New `invitations` table: `id`, `email`, `token_hash`, `status` (pending/accepted/expired/revoked), `expires_at`, `created_at`, `invited_by` (admin_id). Reuses existing email service for sending. New registration endpoint that accepts invite token. |
-| **Invite link expiry and single-use** | Invite links that never expire or can be reused are security holes. 7-day default expiry is standard. Link must be invalidated after successful registration. | LOW | Token validation checks `expires_at` and `status=pending`. On successful registration, update status to `accepted`. Cron job or on-check cleanup marks expired invites. |
-| **User class/tier assignment** | Each user belongs to a tier (free/standard/premium) that determines their credit allocation. Admin can change a user's tier. This is the foundation for commercial differentiation. | LOW | New `user_class` enum column on `users` table (default: `free`). Admin endpoint to update. Tier definitions live in `user_classes.yaml` config file. |
-| **Audit logging of admin actions** | Every admin action (user deactivation, credit adjustment, tier change, invite sent) must be logged with who, what, when, and target. Essential for accountability, debugging, and compliance. | MEDIUM | New `admin_audit_log` table: `id`, `admin_id`, `action` (string, e.g., `user.deactivate`), `target_type`, `target_id`, `details` (JSONB), `ip_address`, `created_at`. Log at service layer, not router layer, to ensure consistency. |
-| **Platform settings page** | Centralized admin page for global configuration: signup toggle, default tier, invite expiry, credit reset policy, credit cost per message. Without this, admins must edit config files and restart servers. | MEDIUM | `platform_settings` key-value table. Admin frontend form that reads/writes settings. Backend caches settings with short TTL or reads on every request (low frequency, acceptable). |
+### Backend (FastAPI)
+
+| Feature | Why Required | Complexity | Dependencies on Existing Code |
+|---------|-------------|------------|-------------------------------|
+| **Multi-stage Dockerfile (uv-based)** | Single-stage images are 3-5x larger, include build tools in production, and are slow to rebuild. uv-based builds are the established Python production pattern as of 2025. | LOW | Backend uses uv (uv.lock exists). Builder stage: install uv, sync deps. Runtime stage: copy .venv only. Run as non-root `app` user. |
+| **Non-root user in container** | Running as root inside Docker is a security anti-pattern. If the container is compromised, attacker gets root access. Industry standard is a non-root `app` or `appuser`. | LOW | No existing dependency. Add `RUN adduser --system --uid 1001 app` and `USER app` before CMD. |
+| **HEALTHCHECK instruction in Dockerfile** | Dokploy uses HEALTHCHECK to determine if a container is healthy before routing traffic and for auto-restart decisions. The backend already has `GET /health` endpoint. | LOW | Backend already has `GET /health` at `app/routers/health.py`. Uses `curl -f http://localhost:8000/health`. |
+| **Volume mount for uploads** | File uploads stored at `/app/uploads` (configured via `UPLOAD_DIR` env var) must persist across container restarts and redeploys. Without a volume, all user-uploaded files are lost on every deploy. | LOW | Backend `config.py` has `upload_dir: str = "uploads"`. In Docker, mount `/app/uploads` as a named volume or bind mount. Set `UPLOAD_DIR=/app/uploads`. |
+| **Environment variable injection (all secrets)** | `DATABASE_URL`, `SECRET_KEY`, `E2B_API_KEY`, `ANTHROPIC_API_KEY`, `SMTP_*`, `TAVILY_API_KEY` etc. must be injected via Dokploy environment variable UI, not baked into the image. | LOW | All config already in `app/config.py` via pydantic-settings. No code changes needed -- just populate Dokploy env vars. |
+| **SPECTRA_MODE=public for backend** | Backend routes are conditionally mounted based on `SPECTRA_MODE`. For production, the backend serving both public and admin frontends should use `SPECTRA_MODE=dev` or separate backend instances per mode. For simplest single-backend deployment, use `SPECTRA_MODE=dev`. | LOW | `SPECTRA_MODE` already in `app/config.py`. Set to `dev` for single backend instance, or `public` for a public-only backend. |
+| **ENABLE_SCHEDULER=true for backend** | APScheduler runs inside the backend process. Must be explicitly enabled in production via env var. APScheduler is already integrated in `app/scheduler.py` but defaults to `False`. | LOW | `enable_scheduler: bool = False` in `app/config.py`. Set `ENABLE_SCHEDULER=true` in Dokploy. |
+| **CORS origins configured** | Backend `CORS_ORIGINS` env var must include the actual deployed frontend URLs. Without correct CORS, browser requests from production frontend to backend will fail with CORS error. | LOW | `cors_origins` in `app/config.py` accepts JSON array string. Set `CORS_ORIGINS=["https://app.example.com","https://admin.example.com"]`. |
+| **Graceful shutdown (SIGTERM handling)** | FastAPI + uvicorn handle SIGTERM natively. The lifespan context manager in `main.py` already shuts down APScheduler and disposes the database engine on shutdown. No additional code needed, but the CMD must use uvicorn correctly so SIGTERM propagates (not shell form). | LOW | `main.py` already has lifespan context manager. Use `CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]` (exec form, not shell form). |
+| **Database connection via DATABASE_URL** | In Dokploy, PostgreSQL is a managed database with an internal hostname. `DATABASE_URL` must point to the internal Dokploy database hostname (not `localhost`). | LOW | `database_url: str` in `app/config.py`. Inject Dokploy's internal DB connection string. |
+
+### Public Frontend (Next.js)
+
+| Feature | Why Required | Complexity | Dependencies on Existing Code |
+|---------|-------------|------------|-------------------------------|
+| **Multi-stage Dockerfile (standalone mode)** | Next.js standalone output (`output: 'standalone'` in next.config.ts) reduces image from ~7GB to ~300MB by tracing only required dependencies. Official Next.js Docker pattern. | LOW | Must add `output: 'standalone'` to `frontend/next.config.ts`. Three-stage build: deps -> builder -> runner. |
+| **Non-root user in container** | Same security rationale as backend. Next.js official Dockerfile example uses `nextjs:nodejs` non-root user with uid 1001. | LOW | Add `RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs` and `USER nextjs`. |
+| **HEALTHCHECK instruction** | Dokploy needs to verify the Next.js app is serving before routing traffic. Next.js has no built-in `/health` endpoint -- must add one as an API route. | LOW | Need to create `frontend/src/app/api/health/route.ts` that returns `{status: "ok"}`. Uses Next.js App Router route handler pattern. |
+| **Backend URL in Next.js rewrite (server-side)** | Both frontends proxy `/api/*` to the backend via `next.config.ts` rewrites. The destination URL (`http://localhost:8000`) must be changed to the backend's Docker service hostname. This is a server-side config value -- NOT a NEXT_PUBLIC_ variable. | MEDIUM | Change `frontend/next.config.ts` rewrite destination from `http://localhost:8000` to env-var-driven value: `process.env.BACKEND_URL ?? 'http://localhost:8000'`. Then set `BACKEND_URL=http://backend:8000` in Docker. |
+| **SSE stream URL fix (hardcoded localhost bug)** | `frontend/src/hooks/useSSEStream.ts` line 112 has `fetch('http://localhost:8000/chat/...')` hardcoded. This bypasses the Next.js rewrite. In Docker, this call fails. Must fix to use relative `/api/chat/sessions/${sessionId}/stream` path OR use a `NEXT_PUBLIC_BACKEND_URL` env var. | MEDIUM | Direct code fix in `useSSEStream.ts`. SSE via Next.js rewrite works -- the rewrite is a server-side proxy, not a client-side redirect. Change to `fetch('/api/chat/sessions/${sessionId}/stream', ...)`. |
+| **Signup status URL fix (hardcoded localhost bug)** | `frontend/src/app/(auth)/register/page.tsx` line 26 has `fetch('http://localhost:8000/auth/signup-status')` hardcoded. Same issue. Must fix. | LOW | Change to `fetch('/api/auth/signup-status')`. Same relative-path pattern as all other API calls. |
+| **NODE_ENV=production** | Next.js enables production optimizations only when `NODE_ENV=production`. In standalone mode, set at runtime (not build time). | LOW | Set `ENV NODE_ENV=production` in runner stage of Dockerfile. |
+| **PORT and HOSTNAME env vars** | Next.js standalone `server.js` reads `PORT` and `HOSTNAME` env vars. Must set `HOSTNAME=0.0.0.0` so server binds to all interfaces (not just localhost), making it reachable inside Docker. | LOW | Set `ENV PORT=3000` and `ENV HOSTNAME=0.0.0.0` in Dockerfile runner stage. |
+
+### Admin Frontend (Next.js)
+
+| Feature | Why Required | Complexity | Dependencies on Existing Code |
+|---------|-------------|------------|-------------------------------|
+| **Multi-stage Dockerfile (standalone mode)** | Same rationale as public frontend. Admin frontend in `admin-frontend/` is a separate Next.js app. | LOW | Must add `output: 'standalone'` to `admin-frontend/next.config.ts`. Same 3-stage pattern. |
+| **Non-root user in container** | Same as public frontend. | LOW | Same pattern: nextjs:nodejs non-root user. |
+| **HEALTHCHECK instruction** | Same need as public frontend. Admin frontend needs its own health endpoint. | LOW | Create `admin-frontend/src/app/api/health/route.ts`. |
+| **Backend URL in Next.js rewrite** | `admin-frontend/next.config.ts` rewrites `/api/*` to `http://localhost:8000/api/*`. Must be updated for Docker service name. | MEDIUM | Change rewrite destination to `${process.env.BACKEND_URL ?? 'http://localhost:8000'}/api/*`. Set `BACKEND_URL=http://backend:8000` in Docker. |
+| **SPECTRA_MODE context** | Backend must be in `admin` or `dev` mode to serve admin routes. The admin frontend connects to the same backend as the public frontend (single backend in `dev` mode), or a separate backend in `admin` mode. For simplest deployment: single backend in `dev` mode serves both. | LOW | No frontend code change. Backend env var `SPECTRA_MODE=dev`. |
+| **Admin CORS origin** | Backend `ADMIN_CORS_ORIGIN` must be set to the admin frontend's production URL. | LOW | Set `ADMIN_CORS_ORIGIN=https://admin.example.com` in backend Dokploy env vars. |
+
+### Shared / Cross-Service
+
+| Feature | Why Required | Complexity | Dependencies on Existing Code |
+|---------|-------------|------------|-------------------------------|
+| **Docker Compose for local dev** | Single-command local development with all services + PostgreSQL. Developers must be able to run the full stack locally via `docker compose up`. | MEDIUM | New `docker-compose.yml` at repo root. Services: `backend`, `frontend`, `admin-frontend`, `postgres`. Backend depends on postgres. Both frontends depend on backend. |
+| **DEPLOYMENT.md guide** | Deployment of a multi-service app to Dokploy is not self-evident. Step-by-step guide covering Dokploy project creation, 3 service configurations, environment variables, volume setup, domain assignment, and SSL. | LOW | New document. No code dependencies. |
+| **Port assignments** | Standardized ports prevent conflicts. Backend: 8000. Public frontend: 3000. Admin frontend: 3001 (host-mapped, container port is 3000). | LOW | In Docker Compose, map `3001:3000` for admin-frontend. In Dokploy, each service gets its own container and domain -- port conflicts don't apply at container level. |
+| **Restart policy** | Containers should auto-restart on crash. Dokploy supports restart policies (`always`, `on-failure`, etc.). Set `unless-stopped` for all services. | LOW | Dokploy UI restart policy setting. In Docker Compose, `restart: unless-stopped`. |
 
 ---
 
 ## Differentiators
 
-Features that go beyond the minimum. These make the admin experience feel polished and professional, but Spectra can launch v0.5 without them if time is constrained.
+Production hardening extras beyond the minimum. Each is independently valuable for a single-developer project.
 
-| Feature | Value Proposition | Complexity | Dependencies on Existing |
-|---------|-------------------|------------|--------------------------|
-| **Admin dashboard with trend charts** | At-a-glance platform health: user growth, message volume, credit consumption over time. Most internal admin tools start as CRUD-only and add dashboards later. Having it from day one signals maturity. | MEDIUM | Aggregation queries against existing `users`, `chat_sessions`, `chat_messages`, `files` tables plus new `credit_transactions`. Charts rendered with the same Plotly infrastructure from v0.4 (or simpler Chart.js in admin frontend since no agent-generated charts needed). |
-| **Credit distribution overview** | Dashboard widget showing credit usage breakdown by tier: how many free/standard/premium users, average credit consumption per tier, users near depletion. Helps admin understand if tier allocations are right-sized. | MEDIUM | Aggregation query on `user_credits` joined with `users.user_class`. Low-credit threshold configurable in platform settings. |
-| **Bulk credit adjustments by tier** | "Grant 50 extra credits to all Free-tier users." Useful for promotions, compensation after outages, or seasonal adjustments. Doing this one user at a time is tedious. | MEDIUM | Batch UPDATE on `user_credits` WHERE user's class matches. Must create individual `credit_transactions` rows for each affected user (not a single bulk entry) for audit trail integrity. Could be slow for thousands of users -- consider async task. |
-| **Pending invitation management** | Admin sees all pending invites with status (pending/accepted/expired), can revoke or resend. Provides visibility into the invitation funnel and prevents lost invites. | LOW | Simple CRUD on `invitations` table. Revoke = update status to `revoked`. Resend = create new token, update expiry, re-send email. |
-| **User detail page with activity summary** | Clicking a user shows comprehensive view: profile, tier, credit balance, credit history, file count, session count, last login. Prevents admin from needing to query multiple pages. | MEDIUM | Aggregation endpoint that joins `users`, `user_credits`, `credit_transactions`, `files`, `chat_sessions`. Single API call, one page render. |
-| **Per-tier credit editing from admin UI** | Admin can adjust credit allocations per tier (e.g., change Free from 10 to 15 credits/week) without editing YAML files or redeploying. Overrides stored in `platform_settings`, falling back to YAML defaults. | LOW | Platform settings with keys like `tier.free.credits_per_week`. Service reads setting first, falls back to YAML. Simple form in admin frontend. |
-| **Credit reset policy configuration** | Toggle between manual-only, weekly auto-reset, and monthly auto-reset. Reset schedule configurable per tier or globally. Auto-reset implemented via scheduled task (cron or APScheduler). | MEDIUM | Scheduled task that runs periodically, checks reset policy, resets credits for eligible users based on their tier allocation. Must log reset transactions. APScheduler or system cron. |
-| **Low-credit user alerts** | Admin dashboard highlights users below 10% of their tier allocation. Proactive visibility prevents support tickets from users who suddenly cannot use the platform. | LOW | Query: SELECT users WHERE credits.balance < (tier.allocation * 0.1). Display as list or alert badge on dashboard. |
-| **Invite-only registration messaging** | When public signup is disabled, the signup page shows a clear, branded message: "Registration is currently invite-only. Contact your administrator for access." Not a generic 403. | LOW | Frontend checks signup toggle via public API endpoint. Conditionally renders invite-only message instead of signup form. |
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| **Build cache optimization (Docker layer ordering)** | Dependency installation in a separate layer means code changes don't trigger dep reinstalls. Reduces build time from 3-5 min to 30-60 sec after first build. | LOW | In backend Dockerfile: COPY pyproject.toml uv.lock FIRST, RUN uv sync, THEN COPY app/. In frontend Dockerfile: COPY package.json package-lock.json FIRST, RUN npm ci, THEN COPY src/. Official best practice. |
+| **Alembic migration in Docker entrypoint** | Running `alembic upgrade head` before starting uvicorn ensures database schema is always up to date on deployment. Prevents "table doesn't exist" errors on first deploy. | LOW | Backend Dockerfile CMD or entrypoint.sh: `alembic upgrade head && uvicorn app.main:app ...`. Alternatively, run migration as a separate Dokploy job before deploying. |
+| **libc6-compat in Alpine Next.js image** | Alpine Linux with Node.js sometimes requires `libc6-compat` for native modules. Without it, certain npm packages fail at startup. Official Next.js Dockerfile includes it. | LOW | `RUN apk add --no-cache libc6-compat` in deps stage. One line. |
+| **NEXT_TELEMETRY_DISABLED=1** | Next.js collects anonymous usage telemetry. In production Docker containers, this creates unnecessary outbound network calls at build time and startup. | LOW | `ENV NEXT_TELEMETRY_DISABLED=1` in Dockerfile builder and runner stages. |
+| **curl installed for health checks** | The backend Docker image (Python slim) does not include curl by default. HEALTHCHECK instruction using `curl` requires it to be installed. | LOW | `RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*` in runtime stage. Alternatively, use Python urllib for health check (no extra dep needed). |
+| **.dockerignore files** | Without .dockerignore, the Docker build context includes `node_modules/`, `.next/`, `__pycache__/`, `.env` files, and `venv/`. This slows build and can leak secrets. | LOW | New `.dockerignore` for each service directory. Key exclusions: `node_modules`, `.next`, `__pycache__`, `*.pyc`, `.env`, `venv`, `uploads`. |
+| **UV_COMPILE_BYTECODE=1** | Compiles Python to .pyc at build time for faster container startup. Production-only optimization. | LOW | `ENV UV_COMPILE_BYTECODE=1` in builder stage. |
+| **ReadOnly root filesystem (partial)** | Limit writable areas to explicit volume mounts and `/tmp`. Reduces attack surface. Only applies to backend (needs `/app/uploads` writable). Frontend containers can be fully read-only with `/tmp` tmpfs. | MEDIUM | Requires carefully mounting all writable paths. Skip for v0.5.1 -- too complex for marginal single-instance benefit. |
+| **Structured JSON logging** | Container logs go to stdout/stderr and are captured by Dokploy's log viewer. JSON-structured logs are more parseable but require additional config. | MEDIUM | Backend currently uses Python `logging.basicConfig`. Skip for v0.5.1 -- existing logs are readable and the product has 1 user (the developer). Add when log volume increases. |
 
 ---
 
 ## Anti-Features
 
-Features to explicitly NOT build in v0.5. These are commonly requested, seem reasonable, but would add significant scope or create problems.
+Features to explicitly NOT build. These seem helpful but add complexity for no real benefit at single-developer scale.
 
-| Anti-Feature | Why Requested | Why Problematic | Alternative |
-|--------------|---------------|-----------------|-------------|
-| **Stripe/payment integration** | "Let users self-serve upgrade their tier and pay." | Payment processing is an entire milestone of work: webhook handling, subscription lifecycle, failed payment recovery, invoice generation, refund logic, tax calculation, PCI compliance considerations. Mixing it with the admin portal foundation doubles the scope and risk. The requirements correctly defer this. | Build tier assignment and credit allocation now. Add `stripe_price_id` field to tier config as a placeholder. Payment integration becomes a clean follow-on milestone that plugs into the existing tier system. |
-| **Per-model credit costs** | "Different LLM models should cost different credits (Opus = 3.0, Haiku = 0.5)." | Spectra v0.5 does not yet have user-facing model selection. Building variable credit costs before the feature that uses them is premature engineering. It also complicates the credit deduction path (need to know which model at deduction time). | Implement flat `default_credit_cost` per message. When per-model selection ships in a future milestone, extend the deduction logic to read model-specific costs from config. The credit ledger already supports variable amounts per transaction. |
-| **Dynamic tier creation via admin UI** | "Let admins create new tiers (e.g., 'Enterprise', 'Trial') through the portal." | Dynamic tiers require a database-backed tier definition system with validation, dependent data migration when tiers change, and complex UI for tier attribute management. It is over-engineering for a product that will have 3-5 tiers for the foreseeable future. | Static tiers in YAML config. Adding a tier is a config change + migration + deploy. This is appropriate for a decision that happens once per quarter, not daily. |
-| **Self-service tier upgrade (user-facing)** | "Users should be able to upgrade their own tier." | Without payment integration, a self-service upgrade is either free (which defeats the purpose) or requires manual admin approval (which is just a support ticket with extra UI). Self-service upgrades only make sense with integrated payments. | Admin manually changes user tier. Future Stripe milestone adds self-service with payment. |
-| **Real-time credit balance WebSocket** | "Show credit balance updating in real-time as user sends messages." | WebSocket infrastructure adds operational complexity. Credit balance changes are low-frequency (one deduction per message, not hundreds per second). The frontend can simply re-fetch balance after each message completes. | Poll credit balance on page load and after each message response. Include updated balance in the chat message response payload. |
-| **Multi-admin role hierarchy** | "Super admin, billing admin, support admin with different permissions." | RBAC with multiple admin roles is a significant infrastructure investment (permission matrix, role management UI, per-endpoint permission checks). Spectra's admin portal will have 1-3 admins for the foreseeable future. | Single `is_admin` boolean. All admins have full access. When the team grows to 5+ admins, add granular roles as a separate feature. |
-| **User self-service credit purchase** | "Let users buy additional credits when they run out." | Requires payment integration (Stripe), credit package definition, purchase flow UI, receipt generation, and refund handling. This is a monetization feature, not an admin portal feature. | Admin manually adjusts credits for users who request more. Future monetization milestone adds self-service purchase. |
-| **Email notification for credit depletion** | "Email users when their credits are low or depleted." | Adds email sending volume, potential spam complaints, and configuration complexity (what threshold triggers email? how often? can user opt out?). For v0.5, the in-app "out of credits" message is sufficient. | In-app banner when credits are below 20%. Admin can see low-credit users in dashboard. Email notifications can be added in a later UX polish milestone. |
-| **Invitation with pre-assigned tier** | "Let admin assign a tier when inviting a user." | Adds complexity to the invite flow and the registration handler. The default tier (free) is appropriate for most invites. Admin can change tier immediately after user registers. | All invited users start at the default tier (configurable in platform settings). Admin changes tier after registration if needed. |
-| **Admin audit log export/SIEM integration** | "Export audit logs to CSV or integrate with Splunk/Datadog." | Enterprise feature that adds export infrastructure, API endpoints, and potentially streaming integration. Not needed for a platform with 1-3 admins. | Audit logs viewable in admin portal with search/filter. Export can be done via direct database query for now. Add API export when enterprise customers demand it. |
+| Anti-Feature | Why Requested | Why It's Wrong Here | Alternative |
+|--------------|---------------|---------------------|-------------|
+| **Runtime NEXT_PUBLIC_ injection via entrypoint script** | "One Docker image deployable to multiple environments without rebuilding" -- the classic argument for runtime env injection. | Spectra's frontends already use relative `/api/` paths via Next.js rewrites. They do NOT use `NEXT_PUBLIC_API_URL`. The only environment-specific config is the backend URL in `next.config.ts`, which is a server-side value read at startup (not baked at build time in standalone mode's `server.js`). A sed-based entrypoint to replace bundle strings is fragile, hard to debug, and unnecessary. | Set `BACKEND_URL` as a server-side env var (not NEXT_PUBLIC_). Next.js rewrites destination reads `process.env.BACKEND_URL` at startup. No rebuild needed between environments -- just set different env vars. |
+| **Gunicorn + uvicorn workers** | "Production needs multiple workers for performance." | Spectra has one production instance. APScheduler runs inside the process. Multiple uvicorn workers with APScheduler would cause duplicate scheduled jobs. E2B sandbox calls are the bottleneck, not Python workers. Multi-worker adds scheduler complexity for zero throughput benefit at current scale. | Single uvicorn worker: `uvicorn app.main:app --workers 1`. If horizontal scaling becomes needed, move APScheduler to Redis-backed Celery Beat instead of in-process. |
+| **Separate Docker image registry with CI/CD push** | "Build images in GitHub Actions, push to GHCR, Dokploy pulls from registry." | Valid for teams. Unnecessary for single-developer project. Dokploy can build directly from the Git repository on the Dokploy server. Eliminates GitHub Actions setup, registry authentication, and additional moving parts. | Dokploy builds from Git repo directly using the Dockerfile. No external registry needed. |
+| **Redis for session state and token revocation** | "Move in-memory token revocation and admin lockout to Redis for multi-instance safety." | PROJECT.md documents in-memory token revocation and admin lockout as known limitations. Adding Redis for a single-instance deployment is over-engineering. The "limitation" only matters at 2+ instances. | Keep in-memory. Accept the single-instance limitation. Document it in DEPLOYMENT.md. Add Redis if/when horizontal scaling is needed. |
+| **Kubernetes / Docker Swarm** | "Container orchestration for high availability." | Dokploy is the deployment target. Dokploy runs Docker Swarm under the hood, but it manages that. Using raw Swarm configs or Kubernetes configs would bypass Dokploy and add massive complexity. | Use Dokploy's built-in service management. Dokploy handles swarm details internally. |
+| **Separate nginx reverse proxy container** | "Put nginx in front of each service for static file serving and caching." | Next.js standalone mode includes its own Node.js HTTP server that serves static files correctly. Adding nginx adds a service, config, and potential SSE streaming issues (nginx requires `proxy_buffering off` for SSE). Dokploy's Traefik already handles TLS termination and routing. | Let Dokploy Traefik handle routing. Next.js serves its own static files. No additional nginx needed. |
+| **Multi-architecture Docker builds (arm64/amd64)** | "Build for both Mac M1 and Linux x86 servers." | The Dokploy server runs Linux x86. Development on M1 Mac can use the docker build with `--platform linux/amd64` flag. Multi-arch builds via buildx require additional CI setup. | Use `--platform linux/amd64` flag for local Mac builds targeting production. Or just build on the Dokploy server directly. |
+| **Docker secrets / secret management** | "Use Docker secrets instead of environment variables for sensitive values." | Docker secrets (Swarm secrets) require Swarm mode and additional secret creation steps. Dokploy's environment variable injection is encrypted at rest and sufficient for a single-developer project. | Use Dokploy's environment variable UI. All env vars are stored encrypted. This is appropriate for the scale. |
+
+---
+
+## NEXT_PUBLIC_ Variable Strategy (Critical Decision)
+
+This deserves its own section because it is the most commonly misunderstood Docker + Next.js topic.
+
+### The Problem
+
+`NEXT_PUBLIC_` variables are inlined as string literals into the JavaScript bundle at `next build` time. After building, they cannot be changed without rebuilding. This means if you bake `NEXT_PUBLIC_API_URL=http://localhost:8000` into the image, that URL is frozen forever in the built bundle.
+
+### Spectra's Actual Situation
+
+**Spectra does NOT need `NEXT_PUBLIC_API_URL`.** Here is why:
+
+1. Both frontends use relative paths: `fetch('/api/...')` goes to the Next.js server, not directly to the backend
+2. The Next.js server then proxies `/api/*` to the backend via the `rewrites()` in `next.config.ts`
+3. The rewrite destination URL (`http://localhost:8000` in development) is read by `next.config.ts` on server startup -- this is NOT baked into the client bundle
+4. In Docker, simply set `BACKEND_URL=http://backend:8000` as a server-side environment variable, and update `next.config.ts` to read `process.env.BACKEND_URL`
+
+This means:
+- Build the Docker image once (no environment-specific builds)
+- Set `BACKEND_URL` at deploy time in Dokploy's env vars UI
+- No `NEXT_PUBLIC_` variables needed at all
+
+### The Two Hardcoded Bugs
+
+Two places in the public frontend bypass the rewrite proxy and directly fetch `localhost:8000`:
+
+1. `frontend/src/hooks/useSSEStream.ts` line 112: SSE stream endpoint
+2. `frontend/src/app/(auth)/register/page.tsx` line 26: Signup status check
+
+**Fix:** Change both to relative paths (`/api/...`). The Next.js rewrite proxy correctly handles SSE streams -- it streams the response through. No `NEXT_PUBLIC_` variable needed.
+
+### When NEXT_PUBLIC_ IS Actually Needed
+
+Only use `NEXT_PUBLIC_` if the frontend code runs entirely on the client side (pure SPA) with no server-side proxy. Since Spectra uses Next.js server-side rewrites, this does not apply.
 
 ---
 
 ## Feature Dependencies
 
 ```
-Platform Settings Table (foundation)
+next.config.ts BACKEND_URL support (both frontends)
     |
-    +---> Signup Toggle (reads from settings)
-    |         |
-    |         +---> Invite-Only Registration (depends on toggle being OFF)
-    |                    |
-    |                    +---> Invitation System (creates invites when toggle OFF)
-    |                              |
-    |                              +---> Invite Registration Endpoint
-    |                                        (new /auth/signup-with-invite)
+    +---> Docker Compose: sets BACKEND_URL=http://backend:8000
     |
-    +---> Credit Config (default cost, reset policy stored in settings)
-    |         |
-    |         +---> Credit System (uses config for costs and reset)
-    |
-    +---> Default Tier Setting (default user_class for new signups)
+    +---> Dokploy: sets BACKEND_URL=http://<backend-service-name>:8000
 
-User Model Changes (is_admin, user_class)
+Hardcoded localhost:8000 fixes (useSSEStream.ts, register/page.tsx)
     |
-    +---> Admin Auth (requires is_admin field)
-    |         |
-    |         +---> Admin JWT/Session (separate token handling)
-    |                    |
-    |                    +---> All Admin Endpoints (protected by admin auth)
-    |
-    +---> User Class/Tier (requires user_class field)
-              |
-              +---> Credit Allocation (tier determines credit amount)
-              |         |
-              |         +---> Credit Balance (per-user, seeded from tier)
-              |         |         |
-              |         |         +---> Credit Deduction (on message send)
-              |         |         |         |
-              |         |         |         +---> Out-of-Credits Blocking
-              |         |         |
-              |         |         +---> Credit Transaction Log (records every movement)
-              |         |         |
-              |         |         +---> Auto-Reset (scheduled task resets based on tier)
-              |         |
-              |         +---> Tier Change (admin action, recalculates credits)
-              |
-              +---> User Management CRUD (needs tier for display/filter)
+    +---> Must be done BEFORE building Docker images
+    |     (otherwise SSE streaming and signup status fail in Docker)
 
-Audit Logging (cross-cutting concern)
+Backend Dockerfile
     |
-    +---> Wraps ALL admin actions (user mgmt, credit adj, invites, settings)
+    +---> needs: HEALTHCHECK (GET /health already exists)
+    |
+    +---> needs: Volume for /app/uploads
+    |
+    +---> needs: Alembic migration before uvicorn start
+
+Next.js Health Endpoints (new API routes)
+    |
+    +---> Must be created BEFORE building Docker images
+    |
+    +---> frontend/src/app/api/health/route.ts  (new file)
+    +---> admin-frontend/src/app/api/health/route.ts  (new file)
+
+next.config.ts output: 'standalone' (both frontends)
+    |
+    +---> Required for Dockerfile to use .next/standalone
+    |     Without this, standalone build output doesn't exist
+
+Docker Compose (local dev)
+    |
+    +---> Depends on all three Dockerfiles working
+    |
+    +---> Uses postgres:16-alpine as managed DB substitute
 ```
 
-### Critical Path (must be sequential)
+### Build Order
 
-1. **Database migrations** -- Add `is_admin`, `user_class` to users table. Create `platform_settings`, `user_credits`, `credit_transactions`, `invitations`, `admin_audit_log` tables.
-2. **Platform settings service** -- Key-value read/write against `platform_settings` table. All other features depend on reading config from this table.
-3. **Admin auth** -- Admin login, JWT with admin claim, `AdminCurrentUser` dependency. All admin endpoints depend on this.
-4. **User management CRUD** -- List, view, activate/deactivate, delete. Foundation for all admin user operations.
-5. **Credit system core** -- Balance tracking, deduction on message, transaction logging. This is the highest-risk feature.
-6. **Invitation system** -- Create invite, send email, invite-based registration. Depends on signup toggle from platform settings.
-7. **Admin dashboard** -- Read-only aggregation queries. Can be built last since it depends on data from all other features.
+1. Fix `useSSEStream.ts` and `register/page.tsx` hardcoded URLs
+2. Add `output: 'standalone'` to both `next.config.ts` files
+3. Update rewrite destination to use `process.env.BACKEND_URL` in both `next.config.ts` files
+4. Create health check API routes in both frontends
+5. Write Dockerfiles (backend, public frontend, admin frontend)
+6. Write `docker-compose.yml` for local dev
+7. Write `DEPLOYMENT.md`
 
-### Can Be Parallelized
-
-- **Admin frontend scaffolding** (independent of backend, can start immediately)
-- **Audit logging middleware** (can be added to endpoints after they exist)
-- **Signup toggle + invite-only messaging** (frontend work independent of invitation backend)
-- **Tier configuration UI** (reads/writes platform_settings, independent of credit system)
-
-### Dependency Notes
-
-- **Credit deduction requires credit balance:** Cannot deduct if no balance record exists. User credit records must be created at signup (with tier-default allocation).
-- **Invitation system requires email service:** Existing SMTP/email infrastructure from password reset. Must handle failure gracefully (invite created but email failed to send).
-- **Tier change requires credit recalculation:** When admin changes a user's tier, the credit balance should NOT be immediately overwritten. The new allocation applies at next reset. Current balance remains unchanged. This prevents confusion ("I had 45 credits, admin upgraded me, now I have 100 -- or do I have 145?").
-- **Signup toggle requires both backend and frontend changes:** Backend rejects signup requests when disabled. Frontend hides signup form. Both must be implemented -- frontend-only is bypassable.
+Steps 1-4 are code changes. Steps 5-7 are new files.
 
 ---
 
-## Feature Categories and Complexity Budget
+## Port Assignments
 
-### Category 1: Admin Authentication and Foundation (LOW-MEDIUM risk)
+| Service | Container Port | Local Dev Host Port | Dokploy |
+|---------|---------------|--------------------|---------|
+| Backend (FastAPI) | 8000 | 8000 | Assigned via Dokploy domain config |
+| Public Frontend (Next.js) | 3000 | 3000 | Assigned via Dokploy domain config |
+| Admin Frontend (Next.js) | 3000 | 3001 | Assigned via Dokploy domain config |
+| PostgreSQL (local dev only) | 5432 | 5432 | Dokploy-managed, no host port needed |
 
-| Feature | Complexity | Risk |
-|---------|-----------|------|
-| `is_admin` field on User model | LOW | LOW -- simple migration |
-| CLI admin seed command | LOW | LOW -- one-time script |
-| Admin login endpoint | LOW | LOW -- reuses existing auth |
-| Admin JWT with role claim | LOW | MEDIUM -- must not break existing user JWT flow |
-| Session timeout (admin) | LOW | LOW -- configurable token expiry |
-| `AdminCurrentUser` dependency | LOW | LOW -- extends existing pattern |
-| SPECTRA_MODE router mounting | MEDIUM | MEDIUM -- must not break existing routes |
-
-### Category 2: User Management (LOW-MEDIUM risk)
-
-| Feature | Complexity | Risk |
-|---------|-----------|------|
-| User list with pagination | LOW | LOW -- standard query |
-| Search by email/name | LOW | LOW -- ILIKE query |
-| Filter by status/tier/date | LOW | LOW -- WHERE clauses |
-| User detail view (aggregated) | MEDIUM | LOW -- joins across tables |
-| Activate/deactivate | LOW | LOW -- boolean flip |
-| Admin-triggered password reset | LOW | LOW -- reuses existing flow |
-| Change user tier | LOW | LOW -- enum update |
-| Adjust credit balance | MEDIUM | MEDIUM -- must be atomic with transaction log |
-| Delete user (cascade) | MEDIUM | MEDIUM -- must cascade correctly to new tables |
-
-### Category 3: Credit System (HIGH risk)
-
-| Feature | Complexity | Risk |
-|---------|-----------|------|
-| `user_credits` table and model | LOW | LOW -- schema design |
-| Credit balance on user creation | LOW | LOW -- default from tier config |
-| Credit deduction on message send | HIGH | HIGH -- atomicity, race conditions, must not break chat flow |
-| Transaction logging (append-only ledger) | MEDIUM | LOW -- standard insert pattern |
-| Out-of-credits blocking (backend) | LOW | MEDIUM -- must handle edge case of exact-zero balance |
-| Out-of-credits UI (frontend) | LOW | LOW -- conditional rendering |
-| Admin manual credit adjustment | MEDIUM | MEDIUM -- must log with reason, must be atomic |
-| Bulk credit adjustment by tier | MEDIUM | MEDIUM -- batch operation, individual transaction rows |
-| Auto-reset scheduled task | MEDIUM | MEDIUM -- scheduled job reliability, timezone handling |
-| Credit overview dashboard widget | MEDIUM | LOW -- read-only aggregation |
-
-### Category 4: Signup Control and Invitations (MEDIUM risk)
-
-| Feature | Complexity | Risk |
-|---------|-----------|------|
-| `platform_settings` key-value table | LOW | LOW -- simple schema |
-| Signup toggle (backend enforcement) | LOW | LOW -- check setting before signup |
-| Signup toggle (frontend messaging) | LOW | LOW -- conditional render |
-| Invitation creation (admin) | MEDIUM | LOW -- token generation, DB insert |
-| Invite email sending | LOW | LOW -- reuses email service |
-| Invite-based registration endpoint | MEDIUM | MEDIUM -- new auth flow alongside existing signup |
-| Invite link validation (expiry, single-use) | LOW | LOW -- token checks |
-| Pending invitation list (admin) | LOW | LOW -- CRUD query |
-| Revoke/resend invitations | LOW | LOW -- status update, new token |
-
-### Category 5: Admin Dashboard (LOW risk)
-
-| Feature | Complexity | Risk |
-|---------|-----------|------|
-| Total users (active/inactive) | LOW | LOW -- COUNT query |
-| New signups over time | LOW | LOW -- GROUP BY date |
-| Total sessions/files/messages | LOW | LOW -- COUNT queries |
-| Credit consumption summary | MEDIUM | LOW -- aggregation on credit_transactions |
-| Trend charts | MEDIUM | LOW -- frontend charting, data already available |
-| Low-credit user alerts | LOW | LOW -- threshold query |
-
-### Category 6: Audit Logging (MEDIUM risk)
-
-| Feature | Complexity | Risk |
-|---------|-----------|------|
-| `admin_audit_log` table | LOW | LOW -- schema design |
-| Audit logging service | MEDIUM | LOW -- centralized log function |
-| Logging on all admin actions | MEDIUM | MEDIUM -- must not be forgotten on any endpoint |
-| Audit log viewer (admin UI) | MEDIUM | LOW -- paginated list with filters |
+In Dokploy, each service gets its own container and its own domain. Port conflicts are irrelevant -- each container's port 3000 is independent. The public frontend gets `app.example.com:443`, admin gets `admin.example.com:443`. Traefik handles TLS termination and routing.
 
 ---
 
-## MVP Recommendation
+## Health Check Requirements
 
-### Must Have (v0.5 Core)
+### Backend Health Check (already exists)
 
-Prioritize in this order based on dependency chain:
+```
+GET /health
+Returns: {"status": "healthy", "version": "0.1.0"}
+HTTP 200
 
-1. **Database migrations + platform settings** -- Foundation for everything. Add `is_admin`, `user_class` to users. Create all new tables. Seed `platform_settings` with defaults.
+Dockerfile HEALTHCHECK:
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:8000/health || exit 1
+```
 
-2. **Admin auth + SPECTRA_MODE** -- Admin login, admin JWT, mode-based router mounting. Without this, no admin functionality is accessible.
+`--start-period=30s` is important: the backend performs LLM provider validation at startup (can take 5-15 seconds). Without a start period, Docker marks the container unhealthy before it finishes starting.
 
-3. **User management CRUD** -- List/search/filter users, view details, activate/deactivate, reset password, change tier, delete. This is the most immediately useful admin capability.
+### Public Frontend Health Check (needs to be created)
 
-4. **Credit system core** -- Credit balance per user, deduction on message send, out-of-credits blocking, transaction logging. This is the commercial gate.
+```
+GET /api/health
+Returns: {"status": "ok"}
+HTTP 200
 
-5. **Signup toggle + invitation system** -- Platform settings toggle, invite creation/sending, invite-based registration. Enables controlled growth.
+New file: frontend/src/app/api/health/route.ts
 
-6. **Audit logging** -- Wrap all admin actions. Must be in v0.5, but can be added to endpoints after they are built.
+Dockerfile HEALTHCHECK:
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:3000/api/health || exit 1
+```
 
-7. **Admin dashboard** -- Metrics and trend charts. Highest visibility but lowest urgency (the platform functions without it).
+### Admin Frontend Health Check (needs to be created)
 
-### Defer to Later
+```
+GET /api/health
+Returns: {"status": "ok"}
+HTTP 200
 
-- **Bulk credit adjustments** -- Convenience feature. Admin can adjust individual users for now. Add when user base exceeds 100.
-- **Credit auto-reset** -- Can start with manual-only reset. Auto-reset (weekly/monthly) adds scheduled task complexity. Implement in v0.5.x once manual flow is validated.
-- **Trend charts on dashboard** -- Start with numeric KPIs only. Charts are polish. Add after core dashboard metrics work.
-- **Admin audit log viewer with advanced filtering** -- Start with simple chronological list. Advanced search/filter is a UX enhancement.
+New file: admin-frontend/src/app/api/health/route.ts
+
+Dockerfile HEALTHCHECK:
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:3000/api/health || exit 1
+```
+
+---
+
+## Dokploy-Specific Configuration
+
+### Service Networking
+
+All three services are deployed as separate Dokploy "Application" services within the same Dokploy project. They communicate via the `dokploy-network` Docker overlay network using service names as DNS hostnames.
+
+Dokploy assigns each application a container name based on the service name. When the public frontend needs to reach the backend, it uses `http://backend:8000` (where `backend` is the Dokploy service name, not `localhost`).
+
+**Key implication:** The `BACKEND_URL` environment variable set in each frontend Dokploy service must use the backend's Dokploy internal service name, not `localhost` and not the public domain.
+
+### Managed PostgreSQL
+
+Dokploy provides a managed PostgreSQL service with an internal connection URL. The backend's `DATABASE_URL` should use the internal Dokploy database hostname (displayed in Dokploy's database connection settings as "Internal Host"). This keeps database traffic inside the Docker network.
+
+### Volumes for File Uploads
+
+The backend needs a persistent volume mounted at `/app/uploads`. Configure in Dokploy's advanced settings > Volumes. Use a Docker-managed volume (not a bind mount) for reliability across server moves.
+
+### Environment Variable Scoping (Dokploy)
+
+Dokploy supports three variable scopes:
+- **Project-level**: Shared across all services (e.g., database connection string)
+- **Service-level**: Specific to one service (e.g., `SPECTRA_MODE`, `E2B_API_KEY`)
+
+For Spectra, use project-level variables for shared config and service-level variables for service-specific secrets.
+
+---
+
+## MVP Definition (This Milestone)
+
+### Must Have for Functioning Docker Deployment
+
+1. **Fix hardcoded `localhost:8000` in public frontend** (useSSEStream.ts, register/page.tsx) -- without this, SSE chat streaming fails in Docker
+2. **Add `output: 'standalone'` to both next.config.ts files** -- required for Next.js Docker images
+3. **Update rewrite destinations to use `BACKEND_URL` env var** -- required for Docker service communication
+4. **Create health check route in both frontend apps** -- required for Dokploy health checks
+5. **Backend Dockerfile** (multi-stage, uv-based, non-root user, healthcheck, volume at /app/uploads)
+6. **Public Frontend Dockerfile** (3-stage standalone, non-root user, healthcheck)
+7. **Admin Frontend Dockerfile** (3-stage standalone, non-root user, healthcheck)
+8. **docker-compose.yml for local dev** (all 3 services + postgres, with correct env vars and volumes)
+9. **DEPLOYMENT.md** (step-by-step Dokploy deployment guide)
+
+### Add During Development (v0.5.1)
+
+- **Alembic migration in backend CMD** (run `alembic upgrade head` before uvicorn)
+- **.dockerignore for each service**
+- **Build cache layer optimization** (copy dependency files before app code)
+- **NEXT_TELEMETRY_DISABLED=1** (minor but good practice)
+
+### Defer (Not This Milestone)
+
+- **Redis for in-memory state** -- documented limitation, not urgent
+- **CI/CD image registry push** -- Dokploy direct-from-git is sufficient
+- **Structured JSON logging** -- current logging is readable
+- **Read-only root filesystem** -- security enhancement, complex to configure
 
 ---
 
 ## Feature Prioritization Matrix
 
-| Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| Admin auth + CLI seed | HIGH | LOW | P1 |
-| SPECTRA_MODE router mounting | HIGH | MEDIUM | P1 |
-| User list/search/filter | HIGH | LOW | P1 |
-| User activate/deactivate | HIGH | LOW | P1 |
-| User delete (cascade) | HIGH | MEDIUM | P1 |
-| Admin password reset | MEDIUM | LOW | P1 |
-| Change user tier | HIGH | LOW | P1 |
-| Credit balance per user | HIGH | MEDIUM | P1 |
-| Credit deduction on message | HIGH | HIGH | P1 |
-| Out-of-credits blocking | HIGH | LOW | P1 |
-| Credit transaction log | HIGH | MEDIUM | P1 |
-| Manual credit adjustment | HIGH | MEDIUM | P1 |
-| Signup toggle | HIGH | LOW | P1 |
-| Invitation system | HIGH | MEDIUM | P1 |
-| Invite-based registration | HIGH | MEDIUM | P1 |
-| Platform settings page | HIGH | MEDIUM | P1 |
-| Audit logging | HIGH | MEDIUM | P1 |
-| Admin dashboard (numeric KPIs) | MEDIUM | LOW | P1 |
-| Dashboard trend charts | MEDIUM | MEDIUM | P2 |
-| Bulk credit adjustments | MEDIUM | MEDIUM | P2 |
-| Credit auto-reset (scheduled) | MEDIUM | MEDIUM | P2 |
-| Per-tier credit editing (admin UI) | MEDIUM | LOW | P2 |
-| Low-credit user alerts | LOW | LOW | P2 |
-| Pending invitation management | MEDIUM | LOW | P2 |
-| User detail page (aggregated) | MEDIUM | MEDIUM | P2 |
-| Audit log viewer (advanced filter) | LOW | MEDIUM | P3 |
+| Feature | Deployment Value | Implementation Cost | Priority |
+|---------|-----------------|---------------------|----------|
+| Fix hardcoded localhost:8000 (2 files) | CRITICAL | LOW | P1 |
+| Backend Dockerfile | HIGH | LOW | P1 |
+| Public frontend Dockerfile | HIGH | LOW | P1 |
+| Admin frontend Dockerfile | HIGH | LOW | P1 |
+| output: 'standalone' in next.config.ts | HIGH | LOW | P1 |
+| BACKEND_URL in next.config.ts rewrites | HIGH | LOW | P1 |
+| Health check API routes (both frontends) | HIGH | LOW | P1 |
+| Docker Compose for local dev | HIGH | MEDIUM | P1 |
+| DEPLOYMENT.md guide | HIGH | LOW | P1 |
+| .dockerignore files | MEDIUM | LOW | P2 |
+| Alembic migration before uvicorn start | MEDIUM | LOW | P2 |
+| Build cache layer optimization | MEDIUM | LOW | P2 |
+| NEXT_TELEMETRY_DISABLED | LOW | LOW | P2 |
+| UV_COMPILE_BYTECODE=1 | LOW | LOW | P2 |
+| Structured JSON logging | LOW | MEDIUM | P3 |
+| Redis for in-memory state | LOW | HIGH | P3 |
 
 **Priority key:**
-- P1: Must have for v0.5 launch -- the admin portal is non-functional without these
-- P2: Should have, add during v0.5 development when core is stable
-- P3: Nice to have, can ship in v0.5.x follow-up
-
----
-
-## Competitor Feature Analysis (Admin/Credit Patterns in AI SaaS)
-
-| Feature | ChatGPT (OpenAI) | Claude (Anthropic) | Julius AI | Spectra v0.5 Target |
-|---------|-------------------|---------------------|-----------|---------------------|
-| Admin portal | Yes (Org admin) | Yes (Org admin) | Basic team mgmt | Yes (dedicated portal) |
-| User management | List, add, remove | List, roles, remove | List, invite | Full CRUD + tier mgmt |
-| Credit/usage system | Token-based billing | Token-based billing | Message credits | Message credit with tiers |
-| Tier system | Plus/Pro/Team/Enterprise | Free/Pro/Team/Enterprise | Free/Pro/Enterprise | Free/Standard/Premium |
-| Invite system | Email invite to org | Email invite to org | Email invite | Email invite + toggle |
-| Signup control | Org-only join | Org-only join | Public | Toggle public/invite-only |
-| Audit logging | Admin audit log | Admin audit log | None visible | Full audit logging |
-| Credit visibility | Usage dashboard | Usage dashboard | Credit counter | Balance + transaction history |
-| Network isolation | SSO/SCIM | SSO/SCIM | None | Tailscale VPN (unique) |
-
-**Key advantages for Spectra v0.5:**
-- **Split-horizon deployment** (Tailscale VPN for admin) is a genuine security differentiator over competitors who rely solely on RBAC
-- **Credit transparency** (full transaction history) exceeds most competitors who show only current balance
-- **Signup toggle** (public/invite-only switch) is more flexible than competitors who are either always-public or always-org-only
-
----
-
-## Detailed Feature Specifications
-
-### Credit Deduction: The Highest-Risk Feature
-
-The credit deduction path is the most technically critical feature in v0.5 because it touches the existing chat flow (the core product) and must be bulletproof.
-
-**Deduction flow:**
-1. User sends message via existing chat endpoint
-2. BEFORE agent pipeline starts: check credit balance >= message cost
-3. If insufficient: return 402 with "insufficient credits" error
-4. If sufficient: atomically deduct credits (SELECT FOR UPDATE on user_credits, UPDATE balance, INSERT credit_transaction)
-5. Proceed with existing agent pipeline
-6. If agent pipeline fails: do NOT refund credits (the LLM API was still called and billed)
-
-**Why deduct before, not after:**
-- If you deduct after, a user can send 10 concurrent requests and only pay for the last one
-- "Deduct first, no refund on failure" is the standard pattern (used by OpenAI, Anthropic, all AI SaaS)
-- The LLM API call costs money regardless of whether the response is useful
-
-**Race condition mitigation:**
-```sql
--- Atomic deduction with row-level lock
-BEGIN;
-SELECT balance FROM user_credits WHERE user_id = $1 FOR UPDATE;
--- Check balance >= cost in application code
-UPDATE user_credits SET balance = balance - $cost WHERE user_id = $1;
-INSERT INTO credit_transactions (user_id, amount, type, balance_after, ...) VALUES (...);
-COMMIT;
-```
-
-**Complexity:** HIGH -- this modifies the critical path of the core product.
-
-### Invitation Registration: Parallel Auth Flow
-
-The invitation system creates a second registration path alongside the existing public signup.
-
-**Two registration endpoints:**
-1. `POST /auth/signup` -- existing public signup (blocked when signup toggle is OFF)
-2. `POST /auth/signup-with-invite` -- new invite-based signup (always available when valid token provided)
-
-**Why two endpoints, not one:**
-- Keeps existing signup untouched (no regression risk)
-- Invite validation logic is separate from general signup validation
-- Clear API contract: invite signup requires `invite_token` field
-
-**Invite registration flow:**
-1. Admin creates invite for `user@example.com`
-2. System generates cryptographic token, hashes and stores it, sends email with link
-3. User clicks link: `https://app.spectra.io/register?invite=<token>`
-4. Frontend pre-fills and locks email field, shows registration form
-5. User submits: `POST /auth/signup-with-invite` with `{invite_token, email, password, first_name, last_name}`
-6. Backend validates: token exists, not expired, not used, email matches
-7. Creates user account with default tier, marks invite as accepted
-8. Returns JWT tokens (auto-login, same as existing signup)
-
-**Complexity:** MEDIUM -- the hardest part is ensuring the existing signup flow is not broken.
-
-### Platform Settings: Keep It Simple
-
-**Database schema:**
-```sql
-CREATE TABLE platform_settings (
-    key VARCHAR(255) PRIMARY KEY,
-    value TEXT NOT NULL,  -- JSON-encoded for complex values
-    updated_at TIMESTAMP WITH TIME ZONE,
-    updated_by UUID REFERENCES users(id)  -- which admin changed it
-);
-```
-
-**Initial settings to seed:**
-| Key | Default Value | Type | Description |
-|-----|--------------|------|-------------|
-| `allow_public_signup` | `true` | boolean | Toggle public registration |
-| `default_user_class` | `"free"` | string | Tier for new signups |
-| `invite_expiry_days` | `7` | integer | Days before invite links expire |
-| `credit_reset_policy` | `"manual"` | string | manual/weekly/monthly |
-| `default_credit_cost` | `1.0` | float | Credits per message |
-
-**Why key-value, not structured table:**
-- Flexible: new settings can be added without migration
-- Simple: one table, one service, universal read/write
-- Values are JSON-encoded for type safety at application layer
-- Matches the requirements spec exactly
-
-**Complexity:** LOW -- the simplest feature in v0.5, but foundational for many others.
+- P1: Required for any working Docker/Dokploy deployment
+- P2: Production hardening, include in v0.5.1 with minimal effort
+- P3: Nice to have, defer to future milestone
 
 ---
 
 ## Sources
 
-### High Confidence (Official patterns, established SaaS practices)
-- [EnterpriseReady Audit Logging Guide](https://www.enterpriseready.io/features/audit-log/) -- Definitive guide on what to log, how to store, retention policy
-- [Martin Fowler: Feature Toggles](https://martinfowler.com/articles/feature-toggles.html) -- Authoritative reference for feature flag patterns
-- [Frontegg User Management Guide](https://frontegg.com/guides/user-management) -- Comprehensive SaaS user management patterns
+### High Confidence (Official Documentation)
 
-### Medium Confidence (Multiple sources agree, verified patterns)
-- [Stigg: Building AI Credits](https://www.stigg.io/blog-posts/weve-built-ai-credits-and-it-was-harder-than-we-expected) -- Real-world AI credit system challenges: idempotency, race conditions, ledger design
-- [ColorWhistle SaaS Credits Guide](https://colorwhistle.com/saas-credits-system-guide/) -- Credit ledger architecture, FIFO expiry, wallet management patterns
-- [FlexPrice: Credit System Implementation](https://flexprice.io/blog/how-to-implement-credit-system-in-subscription-model) -- Subscription credit allocation and reset patterns
-- [Zluri: SaaS User Management](https://www.zluri.com/blog/saas-user-management) -- User lifecycle management best practices
-- [DataDab: Invite-Only SaaS](https://www.datadab.com/blog/invite-only-saas-growth/) -- Why invite-only works for growth control
-- [Userpilot: Invited User Onboarding](https://userpilot.com/blog/onboard-invited-users-saas/) -- Best practices for invited user registration flows
-- [Chris Dermody: Audit Logging Best Practices](https://chrisdermody.com/best-practices-for-audit-logging-in-a-saas-business-app/) -- Practical audit logging for SaaS applications
+- [Next.js Self-Hosting Official Guide](https://nextjs.org/docs/app/guides/self-hosting) -- Authoritative source on standalone mode, environment variable handling, SIGTERM graceful shutdown
+- [Next.js Docker Official Deployment Docs](https://nextjs.org/docs/app/building-your-application/deploying) -- Confirms Docker is fully supported, links to official templates
+- [Official Next.js Docker Example Dockerfile](https://raw.githubusercontent.com/vercel/next.js/canary/examples/with-docker/Dockerfile) -- Authoritative 3-stage Dockerfile with standalone mode, non-root user
+- [Uvicorn Production Settings](https://www.uvicorn.org/) -- SIGTERM handling, --timeout-graceful-shutdown option
+- [Dokploy Environment Variables Docs](https://docs.dokploy.com/docs/core/variables) -- Project/environment/service variable scopes, templating syntax
+- [Dokploy Applications Docs](https://docs.dokploy.com/docs/core/applications) -- Volume mounts, port config, restart policies
+- [Dokploy Going Production](https://docs.dokploy.com/docs/core/applications/going-production) -- Health check JSON config, update/rollback policy
 
-### Low Confidence (Single source, verify during implementation)
-- Credit deduction with `SELECT FOR UPDATE` atomicity -- Standard PostgreSQL pattern, but verify with SQLAlchemy async session behavior
-- APScheduler for auto-reset scheduled tasks -- Verify compatibility with FastAPI async lifecycle
+### Medium Confidence (Verified Against Multiple Sources)
+
+- [Runtime Next.js Environment Variables in Docker](https://nemanjamitic.com/blog/2025-12-13-nextjs-runtime-environment-variables/) -- Explains NEXT_PUBLIC_ build-time baking; runtime injection strategy; confirms server-side env vars work at container startup without rebuild
+- [Dokploy Network Discussion](https://github.com/Dokploy/dokploy/discussions/1067) -- dokploy-network behavior, inter-service communication via service name DNS
+- [Dokploy Database Connection Docs](https://docs.dokploy.com/docs/core/databases/connection) -- Internal host for managed databases; internal vs external connection strings
+- [uv Docker Multi-Stage Builds](https://digon.io/en/blog/2025_07_28_python_docker_images_with_uv) -- UV_LINK_MODE=copy, UV_COMPILE_BYTECODE=1, .venv copy pattern for runtime stage
+
+### Low Confidence (Single Source / Verify During Implementation)
+
+- Dokploy service-name DNS resolution for inter-service communication -- confirmed by Dokploy community (AnswerOverflow thread) but should be verified with actual deployment. Claimed: `http://backend:8000` where `backend` is the Dokploy application service name.
+- Next.js rewrite proxy correctly streams SSE -- claimed by Next.js docs (rewrites proxy all request types), but should be verified. If SSE doesn't stream through the Next.js rewrite, the `useSSEStream.ts` fix must use a different approach (NEXT_PUBLIC_BACKEND_URL for the SSE endpoint specifically).
 
 ---
-*Feature research for: Admin Portal, Credit System, Invitation Flow (v0.5)*
-*Researched: 2026-02-16*
+
+*Feature research for: Docker and Dokploy deployment (v0.5.1)*
+*Researched: 2026-02-18*
