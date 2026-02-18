@@ -1,0 +1,21 @@
+user_classes:
+  free_trial:
+    display_name: "Free Trial"
+    credits: 20
+    reset_policy: none
+  free:
+    display_name: "Free"
+    credits: 10
+    reset_policy: weekly
+  standard:
+    display_name: "Standard"
+    credits: 100
+    reset_policy: weekly
+  premium:
+    display_name: "Premium"
+    credits: 500
+    reset_policy: monthly
+  internal:
+    display_name: "Internal"
+    credits: 0
+    reset_policy: unlimited

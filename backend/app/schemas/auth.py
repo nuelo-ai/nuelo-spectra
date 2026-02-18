@@ -10,6 +10,7 @@ class SignupRequest(BaseModel):
     password: str = Field(..., min_length=8)
     first_name: str | None = None
     last_name: str | None = None
+    invite_token: str | None = None
 
 
 class LoginRequest(BaseModel):
@@ -69,3 +70,19 @@ class ChangePasswordRequest(BaseModel):
 
     current_password: str
     new_password: str = Field(..., min_length=8)
+
+
+class InviteRegisterRequest(BaseModel):
+    """Request schema for invite-based registration."""
+
+    token: str
+    first_name: str = Field(..., min_length=1, max_length=100)
+    last_name: str = Field(default="", max_length=100)
+    password: str = Field(..., min_length=8)
+
+
+class InviteValidateResponse(BaseModel):
+    """Response schema for invite token validation."""
+
+    email: str
+    valid: bool = True

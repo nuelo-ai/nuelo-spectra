@@ -72,6 +72,16 @@ class Settings(BaseSettings):
     search_num_results: int = 3
     search_timeout: float = 10.0
 
+    # Admin / Split-Horizon
+    spectra_mode: str = "dev"  # "public", "admin", or "dev"
+    admin_email: str = ""      # For seed-admin CLI
+    admin_password: str = ""   # For seed-admin CLI
+    admin_session_timeout_minutes: int = 30
+    admin_cors_origin: str = "http://localhost:3001"  # Admin frontend origin
+
+    # Scheduler
+    enable_scheduler: bool = False  # Set ENABLE_SCHEDULER=true for credit reset job
+
     model_config = SettingsConfigDict(env_file=".env")
 
     def get_cors_origins(self) -> list[str]:

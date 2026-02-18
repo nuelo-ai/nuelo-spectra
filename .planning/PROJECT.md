@@ -13,18 +13,18 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 **GitHub:** https://github.com/marwazihs/nuelo-spectra.git (private)
 **Remote:** origin
 **Branch:** master
-**Latest Tag:** v0.3 (2026-02-12)
+**Latest Tag:** v0.5 (2026-02-18)
 
-## Current Milestone: Planning Next
+## Latest Milestone: v0.5 Admin Portal (Shipped 2026-02-18)
 
-**Status:** v0.4 Data Visualization shipped (2026-02-15). Ready for `/gsd:new-milestone` to define v0.5.
+**Delivered:** Internal admin portal for platform management — user management, credit system, invitation flow, signup control, platform settings, and dashboard metrics — with split-horizon architecture and separate admin frontend.
 
 ## Current State
 
-**Shipped:** v0.4 Data Visualization (2026-02-15)
-**Status:** Planning next milestone
-**Codebase:** 23,177 LOC (9,173 Python app + 2,949 Python tests + 11,055 TypeScript/TSX)
-**Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily + Plotly (backend), Next.js 16 + React 19 + TanStack + Zustand + shadcn/ui + next-themes + Plotly.js (frontend)
+**Shipped:** v0.5 Admin Portal (2026-02-18)
+**Status:** Milestone complete, planning next milestone
+**Codebase:** ~44,000 LOC (Python app + Python tests + TypeScript/TSX across public frontend + admin frontend)
+**Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily + Plotly + APScheduler (backend), Next.js 16 + React 19 + TanStack + Zustand + shadcn/ui + next-themes + Plotly.js + Recharts (frontend + admin frontend)
 
 **What works:**
 - ✅ Complete authentication system with JWT, refresh tokens, and SMTP password reset
@@ -49,6 +49,13 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 - ✅ Chart type switcher for compatible types (bar ↔ line ↔ scatter) with client-side instant rendering
 - ✅ Dark/light theme toggle with Nord palette for all UI surfaces including charts (persists across sessions)
 - ✅ Production SMTP email service with DB-backed single-use password reset tokens
+- ✅ Admin portal with split-horizon architecture (SPECTRA_MODE: public/admin/dev)
+- ✅ Credit system with atomic deduction, tier-based allocations, and APScheduler auto-resets
+- ✅ User management (list, search, filter, activate/deactivate, password reset, tier change, credit adjust, delete)
+- ✅ Email invitation system with time-limited single-use tokens and invite-only registration
+- ✅ Platform settings with runtime configuration (signup toggle, default tier, invite expiry, credit cost)
+- ✅ Admin dashboard with metrics, Recharts trend charts, credit distribution, and audit log
+- ✅ Separate admin Next.js frontend (admin-frontend/) with shadcn/ui + Recharts
 
 **Known limitations:**
 - E2B sandboxes created per-execution (no warm pools - ~150ms cold start per query)
@@ -56,6 +63,10 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 - No query safety filter in Manager Agent (PII extraction, prompt injection not blocked)
 - Agent JSON responses not using Pydantic structured output (inconsistent across providers)
 - No Docker deployment package yet (local development only)
+- In-memory admin login lockout (upgrade to Redis for multi-instance)
+- In-memory token revocation set (same single-instance caveat)
+- Bulk credit adjustment by user class not yet implemented (CREDIT-11)
+- Per-tier credit overrides not yet in admin UI (SETTINGS-06, TIER-02)
 
 ## Requirements
 
@@ -304,9 +315,55 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **v0.4 Total: 43/43 requirements satisfied (100%)**
 
+**✅ v0.5 Admin Portal — Shipped 2026-02-18**
+
+**Admin Authentication (7/7):**
+- ✓ Admin accounts via is_admin flag, CLI seed, email+password auth — v0.5
+- ✓ Admin-only API access with 403 for non-admins — v0.5
+- ✓ Session timeout after configurable inactivity (default 30 min) — v0.5
+- ✓ All admin actions audit-logged (admin_id, action, target, timestamp, details) — v0.5
+
+**Admin Dashboard (7/7):**
+- ✓ Dashboard with total users, signups, sessions, files, messages, credit summary — v0.5
+- ✓ Recharts trend charts for signups and messages over time — v0.5
+
+**User Management (13/13):**
+- ✓ User list with pagination, search, filter, sort — v0.5
+- ✓ User profile, status, tier, credits, file/session counts — v0.5
+- ✓ Activate/deactivate, password reset, tier change, credit adjust, delete — v0.5
+
+**Signup Control (4/4):**
+- ✓ Global toggle, invite-only message, token-only registration, immediate effect — v0.5
+
+**User Invitation (8/8):**
+- ✓ Email invites with time-limited single-use links, revoke/resend — v0.5
+- ✓ Registration with pre-filled locked email, auto-login — v0.5
+
+**User Class Management (6/7):**
+- ✓ Static tiers in YAML, tier summary with user counts, tier assignment — v0.5
+- ⚠ TIER-02 deferred: Admin editing tier credit amounts via UI
+
+**Credit Management (12/13):**
+- ✓ Atomic deduction, zero-credits blocking, balance/history views, manual adjust/reset — v0.5
+- ✓ APScheduler auto-resets, idempotent reset tracking — v0.5
+- ⚠ CREDIT-11 deferred: Bulk-adjust credits by user class
+
+**Platform Settings (7/8):**
+- ✓ Centralized settings, signup toggle, default tier, invite expiry, credit cost — v0.5
+- ⚠ SETTINGS-06 deferred: Per-tier credit overrides
+
+**Architecture (10/10):**
+- ✓ Split-horizon SPECTRA_MODE, mode-aware CORS, separate admin frontend — v0.5
+- ✓ Defense-in-depth: network isolation + JWT + role enforcement + audit — v0.5
+
+**Database (9/9):**
+- ✓ 5 new tables, is_admin + user_class fields, Alembic migration with backfill — v0.5
+
+**v0.5 Total: 82/86 requirements satisfied (95%, 3 consciously deferred)**
+
 ### Active
 
-(No active requirements - ready for `/gsd:new-milestone` to define v0.5)
+(No active requirements — next milestone not yet defined. Run `/gsd:new-milestone` to start.)
 
 ### Out of Scope
 
@@ -316,7 +373,6 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 - **Google OAuth authentication** — Email/password sufficient for current validation
 - **PowerPoint export** — PDF export proves the concept first
 - **Billing and subscription management** — Validate product-market fit before payment infrastructure
-- **Credit tracking system** — No billing means no credits needed yet
 - **S3/cloud file storage** — Local storage sufficient; cloud storage adds deployment complexity
 - **Real-time collaboration** — Single-user experience for now
 - **Mobile native apps** — Web-responsive design only
@@ -391,6 +447,18 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | Chart failure non-fatal | Preserve analysis and data table on chart errors | ✓ Good — graceful degradation doesn't block core analytics value |
 | LLM-based chart intelligence | Manager hints, DA confirms visualization_requested | ✓ Good — two-phase decision reduces false positives |
 | Nord palette for charts | Consistent theme-aware colors across all UI | ✓ Good — professional aesthetic, readable in both modes |
+| Split-horizon SPECTRA_MODE | Same codebase, env var controls routing (public/admin/dev) | ✓ Good — simple deployment, no code duplication |
+| Separate admin Next.js app | admin-frontend/ not a route in public frontend | ✓ Good — independent deploy, no bundle bloat on public app |
+| is_admin flag on users table | Binary admin/non-admin, not separate admin table | ✓ Good — simple, single-instance sufficient |
+| NUMERIC(10,1) credits | Float precision for credit deduction | ✓ Good — avoids float rounding, supports 0.5 credit costs |
+| SELECT FOR UPDATE for credits | Atomic deduction prevents overdraw | ✓ Good — race condition proof at DB level |
+| Static tiers in YAML | user_classes.yaml, admin edits overrides | ✓ Good — version-controlled, simple for 3-5 tiers |
+| Platform settings with TTL cache | 30s cache, runtime changes without restart | ✓ Good — immediate effect for signup toggle, invite expiry |
+| String(20) for user_class | Not PostgreSQL ENUM | ✓ Good — avoids ALTER TYPE migration pain |
+| Three-step migration pattern | Add nullable → backfill → alter NOT NULL | ✓ Good — safe for production with existing data |
+| APScheduler for credit resets | In-process scheduler, not external cron | ✓ Good — single dep, configurable per tier |
+| Challenge codes for delete | Backend-driven, not client-side | ✓ Good — prevents accidental bulk deletion |
+| Deferred CREDIT-11, SETTINGS-06, TIER-02 | Bulk credit adjust + per-tier overrides | — Pending for future milestone |
 
 ---
-*Last updated: 2026-02-15 after completing v0.4 Data Visualization milestone*
+*Last updated: 2026-02-18 after v0.5 Admin Portal milestone*

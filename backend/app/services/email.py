@@ -137,6 +137,88 @@ async def send_password_reset_email(
         return False
 
 
+async def send_invite_email(
+    to_email: str,
+    invite_link: str,
+    expiry_date: str,
+    settings: Settings,
+) -> bool:
+    """Send invitation email via SMTP or log to console in dev mode.
+
+    Args:
+        to_email: Recipient email address
+        invite_link: Invitation acceptance URL with token
+        expiry_date: Human-readable expiry date string
+        settings: Application settings with SMTP config
+
+    Returns:
+        True if email sent successfully or logged (dev mode), False on error
+    """
+    # Dev mode: log invite link to console
+    if not is_smtp_configured(settings):
+        logger.info(
+            "Invitation email (dev mode)",
+            extra={
+                "email": to_email,
+                "event": "email_dev_mode",
+                "invite_link": invite_link,
+            },
+        )
+        logger.info("=" * 60)
+        logger.info("INVITATION (Dev Mode - SMTP not configured)")
+        logger.info(f"  To: {to_email}")
+        logger.info(f"  Link: {invite_link}")
+        logger.info(f"  Expires: {expiry_date}")
+        logger.info("=" * 60)
+        return True
+
+    # Production mode: send via SMTP
+    try:
+        # Render templates
+        html_template = _jinja_env.get_template("invite.html")
+        text_template = _jinja_env.get_template("invite.txt")
+
+        template_vars = {
+            "invite_link": invite_link,
+            "expiry_date": expiry_date,
+        }
+
+        html_body = html_template.render(**template_vars)
+        text_body = text_template.render(**template_vars)
+
+        # Build multipart email message
+        msg = EmailMessage()
+        msg["Subject"] = "You've been invited to join Spectra"
+        msg["From"] = f"{settings.smtp_from_name} <{settings.smtp_from_email}>"
+        msg["To"] = to_email
+
+        msg.set_content(text_body)
+        msg.add_alternative(html_body, subtype="html")
+
+        # Send via SMTP
+        await aiosmtplib.send(
+            msg,
+            hostname=settings.smtp_host,
+            port=settings.smtp_port,
+            username=settings.smtp_user,
+            password=settings.smtp_pass,
+            start_tls=True,
+        )
+
+        logger.info(
+            "Invitation email sent",
+            extra={"email": to_email, "event": "email_sent"},
+        )
+        return True
+
+    except Exception as e:
+        logger.error(
+            "Failed to send invitation email",
+            extra={"email": to_email, "event": "email_failed", "error": str(e)},
+        )
+        return False
+
+
 async def validate_smtp_connection(settings: Settings) -> bool:
     """Validate SMTP connection at application startup.
 

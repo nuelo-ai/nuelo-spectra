@@ -6,6 +6,7 @@
 - ✅ **v0.2 Intelligence & Integration** — Phases 7-13 (shipped 2026-02-10)
 - ✅ **v0.3 Multi-file Conversation Support** — Phases 14-19 (shipped 2026-02-12)
 - ✅ **v0.4 Data Visualization** — Phases 20-25 (shipped 2026-02-15)
+- ✅ **v0.5 Admin Portal** — Phases 26-32 (shipped 2026-02-18)
 
 ## Phases
 
@@ -58,11 +59,20 @@
 
 </details>
 
-## Progress
+<details>
+<summary>✅ v0.5 Admin Portal (Phases 26-32) — SHIPPED 2026-02-18</summary>
 
-**Execution Order:**
-Phases execute in numeric order: 20 -> 21 -> 22 -> 23 -> 24 -> 25
-Note: Phase 24 and Phase 25 can execute in parallel (both depend on Phase 23, not each other).
+- [x] Phase 26: Foundation (3/3 plans) — completed 2026-02-16
+- [x] Phase 27: Credit System (4/4 plans) — completed 2026-02-16
+- [x] Phase 28: Platform Config (2/2 plans) — completed 2026-02-16
+- [x] Phase 29: User Management (3/3 plans) — completed 2026-02-16
+- [x] Phase 30: Invitation System (3/3 plans) — completed 2026-02-17
+- [x] Phase 31: Dashboard & Admin Frontend (8/8 plans) — completed 2026-02-17
+- [x] Phase 32: Production Readiness (1/1 plan) — completed 2026-02-18
+
+</details>
+
+## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -90,4 +100,11 @@ Note: Phase 24 and Phase 25 can execute in parallel (both depend on Phase 23, no
 | 22. Graph Integration & Chart Intelligence | v0.4 | 2/2 | Complete | 2026-02-13 |
 | 23. Frontend Chart Rendering | v0.4 | 2/2 | Complete | 2026-02-13 |
 | 24. Chart Types & Export | v0.4 | 3/3 | Complete | 2026-02-13 |
-| 25. Theme Integration | v0.4 | 1/1 | Complete | 2026-02-13 |
+| 25. Theme Integration | v0.4 | 1/1 | Complete | 2026-02-14 |
+| 26. Foundation | v0.5 | 3/3 | Complete | 2026-02-16 |
+| 27. Credit System | v0.5 | 4/4 | Complete | 2026-02-16 |
+| 28. Platform Config | v0.5 | 2/2 | Complete | 2026-02-16 |
+| 29. User Management | v0.5 | 3/3 | Complete | 2026-02-16 |
+| 30. Invitation System | v0.5 | 3/3 | Complete | 2026-02-17 |
+| 31. Dashboard & Admin Frontend | v0.5 | 8/8 | Complete | 2026-02-17 |
+| 32. Production Readiness | v0.5 | 1/1 | Complete | 2026-02-18 |

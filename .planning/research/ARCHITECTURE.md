@@ -1,768 +1,877 @@
-# Architecture Patterns: Visualization Agent Integration (v0.4)
+# Architecture Patterns: Admin Portal Integration (v0.5)
 
-**Domain:** Data Visualization Agent for existing LangGraph multi-agent system
-**Researched:** 2026-02-12
-**Confidence:** HIGH (based on direct codebase analysis + verified library documentation)
+**Domain:** Admin portal for AI-powered data analytics platform
+**Researched:** 2026-02-16
+**Confidence:** HIGH (based on direct codebase analysis of existing Spectra v0.4 source code)
 
 ---
 
 ## Executive Summary
 
-The Visualization Agent integrates into the existing LangGraph graph as a new node positioned after the Data Analysis Agent's response node. The architecture follows a **JSON-over-the-wire** pattern: Python generates Plotly figure JSON inside the E2B sandbox, the JSON flows through the agent state, and react-plotly.js renders it natively in the frontend DataCard. This avoids HTML/iframe injection entirely -- the chart is rendered as a first-class React component from structured data.
+The admin portal integrates into the existing Spectra platform through three layers: (1) same FastAPI codebase with mode-gated router mounting via `SPECTRA_MODE` env var, (2) five new database tables plus two column additions to the existing `users` table in the same Alembic migration chain, and (3) a separate `admin-frontend/` Next.js application independent from the existing `frontend/`.
 
-The key architectural insight is that the Visualization Agent does NOT execute code itself. It generates Plotly Python code, which then runs in the same E2B sandbox pipeline the system already uses. The agent's role is to decide chart type, map data columns to axes, and produce correct Plotly Express or Graph Objects code. The E2B sandbox returns chart JSON (via `plotly.io.to_json()`), which streams to the frontend alongside the existing table data and analysis text.
+The core architectural principle is **shared models and services, isolated entry points**. Admin routers call the same database layer and reuse existing services (auth, email) but live in their own namespace (`/api/admin/`). The most critical integration point is credit deduction at the chat message layer -- credits must be checked and deducted BEFORE the expensive LangGraph agent pipeline runs, at the router level in `routers/chat.py`, not inside `ChatService.create_message`.
 
-This approach requires changes to 4 backend files, 5 frontend files, and 2 config files. No existing component needs to be rewritten -- all changes are additive or extend existing interfaces.
-
----
-
-## Current Architecture (Before -- v0.3)
-
-```
-User Query
-    |
-    v
-[Manager Agent] --MEMORY_SUFFICIENT--> [da_with_tools] --> [da_response] --> END
-    |
-    +-CODE_MODIFICATION/NEW_ANALYSIS--> [coding_agent] --> [code_checker] --> [execute]
-                                                                                |
-                                                                                v
-                                                                         [da_with_tools] --> [da_response] --> END
-                                                                              ^    |
-                                                                              |    v
-                                                                         [search_tools]
-```
-
-**Key source files (current):**
-- `backend/app/agents/graph.py` -- Graph assembly via `build_chat_graph()`
-- `backend/app/agents/state.py` -- `ChatAgentState` TypedDict with 25+ fields
-- `backend/app/agents/manager.py` -- Routes to `da_with_tools` or `coding_agent`
-- `backend/app/agents/data_analysis.py` -- `da_with_tools_node()`, `da_response_node()`
-- `backend/app/agents/coding.py` -- `coding_agent()` generates Python code
-- `backend/app/agents/code_checker.py` -- AST + LLM validation
-- `backend/app/services/sandbox/e2b_runtime.py` -- E2B execution
-- `backend/app/config/prompts.yaml` -- Per-agent LLM config + system prompts
-- `backend/app/config/allowlist.yaml` -- Allowed Python libraries for sandbox
-- `frontend/src/components/chat/DataCard.tsx` -- Renders query brief / table / analysis
-- `frontend/src/components/chat/ChatMessage.tsx` -- Routes to DataCard for structured responses
-- `frontend/src/hooks/useSSEStream.ts` -- Processes SSE events from backend stream
-- `frontend/src/types/chat.ts` -- TypeScript interfaces for stream events + messages
+Six components are modified (main.py, config.py, dependencies.py, models/user.py, routers/auth.py, routers/chat.py). Everything else is additive -- new models, new services, new router package, new frontend app. The agent system (`agents/`) is completely untouched.
 
 ---
 
-## Recommended Architecture (After -- v0.4)
+## Current Architecture (Before -- v0.4)
 
 ```
-User Query
+frontend/ (Next.js 16, port 3000)
     |
     v
-[Manager Agent] --MEMORY_SUFFICIENT--> [da_with_tools] --> [da_response] --> END
-    |                                                                         |
-    +-CODE_MODIFICATION/NEW_ANALYSIS-->                                       |
-         [coding_agent] --> [code_checker] --> [execute]                      |
-                                                  |                           |
-                                                  v                           |
-                                           [da_with_tools] --> [da_response] -+
-                                                ^    |              |
-                                                |    v              v
-                                           [search_tools]   {visualization_requested?}
-                                                              |              |
-                                                             NO            YES
-                                                              |              |
-                                                              v              v
-                                                            END     [visualization_agent]
-                                                                            |
-                                                                            v
-                                                                    [viz_execute]
-                                                                            |
-                                                                            v
-                                                                    [viz_response] --> END
+backend/ (FastAPI, port 8000)
+    |
+    +-- routers/: auth, chat, chat_sessions, files, search, health
+    +-- services/: auth, chat, chat_session, file, agent_service, email, search
+    +-- models/: User, File, ChatMessage, ChatSession, PasswordResetToken, SearchQuota
+    +-- agents/: LangGraph pipeline (manager, coding, code_checker, execute, data_analysis, visualization)
+    +-- config/: prompts.yaml, llm_providers.yaml, allowlist.yaml, search.yaml, settings.yaml
+    |
+    v
+PostgreSQL (single database, Alembic migrations)
 ```
 
-### Why this topology
+**Key source files affected by v0.5:**
+- `backend/app/main.py` -- Router mounting, CORS, lifespan
+- `backend/app/config.py` -- Settings class (Pydantic BaseSettings)
+- `backend/app/dependencies.py` -- `CurrentUser` dependency, `DbSession`
+- `backend/app/models/user.py` -- User model (id, email, hashed_password, first_name, last_name, is_active)
+- `backend/app/routers/auth.py` -- Signup, login, refresh, password reset
+- `backend/app/routers/chat.py` -- Chat query, stream, context management
+- `backend/app/services/chat.py` -- `ChatService.create_message`, `create_session_message`
+- `backend/app/schemas/user.py` -- `UserResponse` Pydantic model
 
-**The Visualization Agent sits AFTER `da_response` as a conditional branch** because:
+---
 
-1. **Minimal disruption** -- `da_response` continues to work identically for non-visualization queries. The existing test suite and behavior are unaffected.
-2. **Analysis context available** -- The Data Analysis Agent's interpretation text provides context for the Visualization Agent to select chart types and format labels.
-3. **Clean separation of concerns** -- The Data Analysis Agent interprets meaning ("sales are highest in East region"), the Visualization Agent renders that meaning visually.
-4. **No new Manager route needed** -- Adding a 4th route (VISUALIZATION) to the Manager would force visualization queries through a separate pipeline that duplicates coding -> checking -> executing. Instead, data computation happens normally, then visualization is applied as a post-processing step.
+## Recommended Architecture (After -- v0.5)
+
+```
+frontend/ (Next.js 16, port 3000)        admin-frontend/ (Next.js, port 3001)
+    |                                          |
+    v                                          v
+backend/ (FastAPI, port 8000, SPECTRA_MODE=dev serves all)
+    |
+    +-- SPECTRA_MODE gating in main.py:
+    |     public mode: auth, chat, files, sessions, search, health
+    |     admin mode:  /api/admin/* routers + health
+    |     dev mode:    all of the above
+    |
+    +-- routers/:
+    |     auth.py (MODIFIED: signup toggle + invite token)
+    |     chat.py (MODIFIED: credit check before query)
+    |     chat_sessions.py, files.py, search.py, health.py (unchanged)
+    |     admin/                    <-- NEW package
+    |       __init__.py             (aggregates sub-routers)
+    |       auth.py, dashboard.py, users.py, settings.py, invitations.py, credits.py
+    |
+    +-- services/:
+    |     auth.py, chat.py, chat_session.py, file.py, agent_service.py, email.py (existing)
+    |     credit.py                 <-- NEW: shared credit check + deduction
+    |     admin/                    <-- NEW package
+    |       audit.py, settings.py, user_management.py, invitation.py, credit.py
+    |
+    +-- models/:
+    |     user.py (MODIFIED: +is_admin, +user_class)
+    |     platform_settings.py      <-- NEW
+    |     user_credit.py            <-- NEW
+    |     credit_transaction.py     <-- NEW
+    |     invitation.py             <-- NEW
+    |     admin_audit_log.py        <-- NEW
+    |
+    +-- agents/: UNCHANGED (no admin awareness)
+    +-- config/:
+    |     user_classes.yaml         <-- NEW
+    |     (all others unchanged)
+    |
+    v
+PostgreSQL (same database, extended with 5 new tables + 2 column additions)
+```
 
 ---
 
 ## Component Boundaries
 
-### New Components (to create)
+### NEW Components
 
-| Component | File Path | Responsibility | Reads From State | Writes To State |
-|-----------|-----------|---------------|-----------------|-----------------|
-| Visualization Agent | `backend/app/agents/visualization.py` | LLM generates Plotly Python code from execution results + user intent | `execution_result`, `analysis`, `user_query`, `chart_hint` | `chart_code` |
-| Viz Execute Node | `backend/app/agents/graph.py` (function) | Runs chart code in E2B sandbox, parses chart JSON | `chart_code` | `chart_specs`, `chart_error` |
-| Viz Response Node | `backend/app/agents/graph.py` (function) | Assembles final state with chart data for streaming | `chart_specs`, `analysis`, `final_response` | `final_response`, `chart_specs` |
-| should_visualize | `backend/app/agents/graph.py` (function) | Conditional edge: routes to viz or END | `visualization_requested` | (routing only) |
-| ChartRenderer | `frontend/src/components/data/ChartRenderer.tsx` | Renders Plotly JSON using react-plotly.js `<Plot>` | Props: `chartSpecs` | (UI only) |
+| Component | Location | Responsibility | Communicates With |
+|-----------|----------|---------------|-------------------|
+| Admin router package | `routers/admin/__init__.py` | Aggregates all admin sub-routers under `/api/admin` | `main.py` mounts single combined router |
+| `admin/auth.py` router | `routers/admin/auth.py` | Admin login (same JWT, validates `is_admin`) | `dependencies.py` (`CurrentAdmin`), `services/auth.py` |
+| `admin/users.py` router | `routers/admin/users.py` | User list/search/filter, activate/deactivate, class change, delete | `services/admin/user_management.py` |
+| `admin/settings.py` router | `routers/admin/settings.py` | Platform settings CRUD | `services/admin/settings.py` |
+| `admin/invitations.py` router | `routers/admin/invitations.py` | Invite create/revoke/resend/list | `services/admin/invitation.py`, `services/email.py` |
+| `admin/credits.py` router | `routers/admin/credits.py` | Credit view/adjust/bulk-adjust/history | `services/admin/credit.py` |
+| `admin/dashboard.py` router | `routers/admin/dashboard.py` | Aggregate metrics (read-only) | All models via direct queries |
+| `services/credit.py` | `services/credit.py` | Credit check + atomic deduction (shared by chat router and admin) | `UserCredit`, `CreditTransaction` models |
+| `services/admin/audit.py` | `services/admin/audit.py` | Write audit log entries | `AdminAuditLog` model |
+| `services/admin/settings.py` | `services/admin/settings.py` | Get/set platform settings with cache | `PlatformSettings` model |
+| `services/admin/user_management.py` | `services/admin/user_management.py` | Admin user operations | `User`, `UserCredit` models |
+| `services/admin/invitation.py` | `services/admin/invitation.py` | Invitation lifecycle | `Invitation` model, `services/email.py` |
+| `services/admin/credit.py` | `services/admin/credit.py` | Admin credit adjustment, history queries | `UserCredit`, `CreditTransaction` models |
+| Admin frontend | `admin-frontend/` | Separate Next.js SPA for admin UI | Backend `/api/admin/*` endpoints only |
+| `user_classes.yaml` | `backend/app/config/user_classes.yaml` | Static tier definitions (free/standard/premium) | `services/admin/settings.py` reads with DB overrides |
 
-### Modified Components (existing files that need changes)
+### MODIFIED Components
 
-| Component | File Path | What Changes | Risk Level |
-|-----------|-----------|-------------|-----------|
-| `ChatAgentState` | `backend/app/agents/state.py` | Add 5 new fields (additive TypedDict extension) | LOW |
-| `build_chat_graph()` | `backend/app/agents/graph.py` | Add 3 nodes + 2 edges + 1 conditional edge; change `da_response` from finish point to conditional | MEDIUM |
-| `da_response_node()` | `backend/app/agents/data_analysis.py` | Add visualization intent detection to return dict | LOW |
-| `prompts.yaml` | `backend/app/config/prompts.yaml` | Add `visualization` agent config entry | LOW |
-| `allowlist.yaml` | `backend/app/config/allowlist.yaml` | Add `plotly` to `allowed_libraries` | LOW |
-| `agent_service.py` | `backend/app/services/agent_service.py` | Include `chart_specs` in metadata_json + node_complete event whitelist | LOW |
-| `DataCard.tsx` | `frontend/src/components/chat/DataCard.tsx` | Add chart section between table and analysis | MEDIUM |
-| `ChatMessage.tsx` | `frontend/src/components/chat/ChatMessage.tsx` | Pass `chart_specs` from `metadata_json` to DataCard | LOW |
-| `chat.ts` (types) | `frontend/src/types/chat.ts` | Add `chart_specs` to `StreamEvent`; add new event types | LOW |
-| `useSSEStream.ts` | `frontend/src/hooks/useSSEStream.ts` | Handle `visualization_started` event in switch | LOW |
-| `ChatInterface.tsx` | `frontend/src/components/chat/ChatInterface.tsx` | Extract chart_specs from viz events in `getStreamingDataCard()` | LOW |
+| Component | Location | What Changes | Risk |
+|-----------|----------|-------------|------|
+| `main.py` | `backend/app/main.py` | Add `SPECTRA_MODE` gating for router mounting; mode-aware CORS origins | MEDIUM -- central file, must not break existing routes |
+| `config.py` | `backend/app/config.py` | Add `spectra_mode: str = "dev"` and `admin_frontend_url: str` settings | LOW -- additive fields with defaults |
+| `dependencies.py` | `backend/app/dependencies.py` | Add `CurrentAdmin` dependency (wraps `CurrentUser` + `is_admin` check) | LOW -- additive, existing deps unchanged |
+| `models/user.py` | `backend/app/models/user.py` | Add `is_admin: Mapped[bool]` (default False) and `user_class: Mapped[str]` (default "free") | LOW -- additive columns with defaults |
+| `schemas/user.py` | `backend/app/schemas/user.py` | Add `is_admin` and `user_class` to `UserResponse` | LOW -- additive fields |
+| `routers/auth.py` | `backend/app/routers/auth.py` | Modify `signup` to check `allow_public_signup` setting and accept invite tokens | MEDIUM -- touches critical auth flow |
+| `routers/chat.py` | `backend/app/routers/chat.py` | Insert credit check before `agent_service.run_chat_query()` in query and stream endpoints | HIGH -- touches most critical user-facing flow |
 
-### Unchanged Components
+### UNCHANGED Components
 
 | Component | Why Unchanged |
 |-----------|--------------|
-| Manager Agent (`manager.py`) | No new routing path -- visualization is post-processing, not routing |
-| Coding Agent (`coding.py`) | Continues generating data-processing code only; chart code is separate |
-| Code Checker (`code_checker.py`) | Validates data code only; chart code has simpler validation (no data access) |
-| E2B Runtime (`e2b_runtime.py`) | Already supports arbitrary Python execution; no API changes needed |
-| Onboarding Agent (`onboarding.py`) | No interaction with visualization |
-| Chat Router (`chat.py`) | SSE streaming already forwards all node_complete events; no route changes |
-| `useChatMessages.ts` | Message format unchanged; chart data stored in existing `metadata_json` |
+| `agents/` (entire LangGraph pipeline) | Agent system has no admin awareness; credit check happens before agents run |
+| `services/file.py` | File management orthogonal to admin features |
+| `services/chat.py` | Message CRUD unchanged; credit gating at router level, not service level |
+| `services/agent_service.py` | Agent orchestration unchanged |
+| `routers/chat_sessions.py` | Session CRUD unchanged |
+| `routers/files.py` | File endpoints unchanged |
+| `routers/search.py` | Search functionality unchanged |
+| `routers/health.py` | Health check unchanged (mounted in all modes) |
+| `frontend/` | Minimal changes only -- invite signup page, credit display (deferred to Phase 4/6) |
 
 ---
 
-## Detailed Data Flow
+## New Database Models
 
-### Step-by-step for: "Show me a bar chart of sales by region"
+### Entity Relationship Additions
 
 ```
-1. MANAGER AGENT
-   Input:  user_query = "Show me a bar chart of sales by region"
-   Output: Command(goto="coding_agent", route=NEW_ANALYSIS)
-   Note:   Standard routing. Manager does NOT detect visualization intent.
+users (MODIFIED)
+  + is_admin: Boolean (default false)
+  + user_class: String/Enum (default 'free')
+  |
+  +-- 1:1 --> user_credits
+  |             id, user_id (FK unique), balance (Float), last_reset_at, created_at
+  |
+  +-- 1:N --> credit_transactions
+  |             id, user_id (FK), amount (Float), transaction_type, reason,
+  |             balance_after, admin_id (FK nullable), model_used (nullable), created_at
+  |
+  +-- 1:N --> invitations (as admin_id -- who created the invite)
+  |             id, email, token_hash, admin_id (FK), user_class,
+  |             status ('pending'|'accepted'|'expired'|'revoked'),
+  |             expires_at, accepted_at, created_at
+  |
+  +-- 1:N --> admin_audit_log (as admin_id -- who performed the action)
+                id, admin_id (FK), action, target_type, target_id,
+                details (JSON), ip_address, created_at
 
-2. CODING AGENT
-   Input:  user_query, data_profile
-   Output: generated_code = Python code that computes sales by region as JSON
-   Note:   Produces DATA, not charts. Identical to any non-viz query.
-   Example output:
-     import json
-     result = df.groupby('region')['sales'].sum().reset_index().to_dict('records')
-     print(json.dumps({"result": result}))
-
-3. CODE CHECKER
-   Input:  generated_code, user_query
-   Output: VALID -> Command(goto="execute")
-
-4. EXECUTE (E2B Sandbox)
-   Input:  generated_code + data files uploaded
-   Output: execution_result = '[{"region":"East","sales":50000},{"region":"West","sales":35000}]'
-   Note:   Standard sandbox execution, identical to current flow.
-
-5. DA_WITH_TOOLS (Data Analysis Agent)
-   Input:  execution_result, user_query
-   Output: AIMessage with analysis JSON (may search web if enabled)
-   Note:   Tool-calling loop unchanged.
-
-6. DA_RESPONSE (Data Analysis Agent response)
-   Input:  analysis from da_with_tools
-   Output: {
-     analysis: "Sales by region shows East leading at $50K...",
-     final_response: "Sales by region shows East leading at $50K...",
-     follow_up_suggestions: ["Break down by quarter", "Show customer count per region"],
-     visualization_requested: true,    // <-- NEW: detected from user_query
-     chart_hint: "bar",                // <-- NEW: extracted from "bar chart"
-     messages: [AIMessage(content=analysis)]
-   }
-
-7. CONDITIONAL EDGE: should_visualize()
-   Input:  state["visualization_requested"]
-   Output: "visualization_agent"  (because True)
-
-8. VISUALIZATION AGENT (NEW)
-   Input:  execution_result, analysis, user_query, chart_hint
-   LLM generates Plotly Python code:
-     import plotly.express as px
-     import plotly.io as pio
-     import json
-
-     data = [{"region":"East","sales":50000},{"region":"West","sales":35000},
-             {"region":"North","sales":42000},{"region":"South","sales":28000}]
-     fig = px.bar(data, x="region", y="sales", title="Sales by Region",
-                  color_discrete_sequence=["#6366f1"])
-     fig.update_layout(template="plotly_white", height=400,
-                       margin=dict(l=40, r=40, t=50, b=40))
-     chart_json = json.loads(pio.to_json(fig))
-     print(json.dumps({"chart": chart_json}))
-
-   Output: {"chart_code": <above code string>}
-   Note:   Data is EMBEDDED in code (not re-read from files).
-           This avoids a second file upload to E2B.
-
-9. VIZ_EXECUTE (NEW - E2B Sandbox)
-   Input:  chart_code (no data files needed)
-   Execution: Creates fresh E2B sandbox, runs chart code, parses stdout JSON
-   Output: {
-     chart_specs: [{"data": [...], "layout": {...}}],
-     chart_error: ""
-   }
-   Note:   Lightweight sandbox call (~1-2s). No file upload overhead.
-
-10. VIZ_RESPONSE (NEW)
-    Input:  chart_specs, analysis (from step 6)
-    Output: {
-      final_response: <analysis from step 6>,
-      chart_specs: [{"data": [...], "layout": {...}}],
-      messages: [AIMessage(content=analysis)]
-    }
-    Note:   Preserves the analysis text. Adds chart_specs to state.
-
-11. FRONTEND receives via SSE stream:
-    - node_complete: {node: "viz_execute", chart_specs: [...]}
-    - node_complete: {node: "viz_response", chart_specs: [...], final_response: "..."}
-
-12. DATACARD renders:
-    [Query Brief]           -- "Show me a bar chart of sales by region"
-    [Generated Code]        -- (collapsible, from step 2)
-    [Data Table]            -- (from execution_result, step 4)
-    [Chart]                 -- NEW: react-plotly.js renders from chart_specs
-    [Analysis]              -- (from step 6)
-    [Follow-ups]            -- (from step 6)
+platform_settings (NEW, standalone)
+  id, key (String unique), value (JSON), updated_by (FK users nullable), updated_at
 ```
 
-### Data format: chart_specs structure
+### Model Definitions
 
-```typescript
-// Each chart spec follows the Plotly JSON schema
-interface ChartSpec {
-  data: Array<{
-    type: string;        // "bar", "scatter", "pie", etc.
-    x?: any[];           // x-axis values
-    y?: any[];           // y-axis values
-    values?: any[];      // for pie charts
-    labels?: any[];      // for pie charts
-    marker?: object;     // styling
-    mode?: string;       // for scatter: "markers", "lines+markers"
-    name?: string;       // trace name (for legends)
-    [key: string]: any;  // other Plotly trace properties
-  }>;
-  layout: {
-    title?: { text: string };
-    template?: string;
-    height?: number;
-    width?: number;       // omitted for responsive
-    margin?: { l: number; r: number; t: number; b: number };
-    xaxis?: { title?: { text: string } };
-    yaxis?: { title?: { text: string } };
-    [key: string]: any;   // other Plotly layout properties
-  };
-}
+**User model additions (`backend/app/models/user.py`):**
+```python
+# Add to existing User class:
+is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+user_class: Mapped[str] = mapped_column(String(20), default="free")  # free, standard, premium
+```
 
-// State carries an array (milestone says "2-3 charts" possible)
-chart_specs: ChartSpec[]   // typically length 1, sometimes 2-3
+**`backend/app/models/platform_settings.py` (NEW):**
+```python
+class PlatformSettings(Base):
+    __tablename__ = "platform_settings"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    key: Mapped[str] = mapped_column(String(100), unique=True, index=True)
+    value: Mapped[dict] = mapped_column(JSON, nullable=False)
+    updated_by: Mapped[UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc)
+    )
+```
+
+**`backend/app/models/user_credit.py` (NEW):**
+```python
+class UserCredit(Base):
+    __tablename__ = "user_credits"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True
+    )
+    balance: Mapped[float] = mapped_column(default=0.0)
+    last_reset_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+```
+
+**`backend/app/models/credit_transaction.py` (NEW):**
+```python
+class CreditTransaction(Base):
+    __tablename__ = "credit_transactions"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    amount: Mapped[float] = mapped_column(nullable=False)  # negative=deduction, positive=grant
+    transaction_type: Mapped[str] = mapped_column(String(30))  # usage, admin_adjust, reset, signup_grant
+    reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    balance_after: Mapped[float] = mapped_column(nullable=False)
+    admin_id: Mapped[UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    model_used: Mapped[str | None] = mapped_column(String(100), nullable=True)  # future: per-model costs
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+```
+
+**`backend/app/models/invitation.py` (NEW):**
+```python
+class Invitation(Base):
+    __tablename__ = "invitations"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    email: Mapped[str] = mapped_column(String(255), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    admin_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
+    user_class: Mapped[str] = mapped_column(String(20), default="free")
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending, accepted, expired, revoked
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+```
+
+**`backend/app/models/admin_audit_log.py` (NEW):**
+```python
+class AdminAuditLog(Base):
+    __tablename__ = "admin_audit_log"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    admin_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), index=True)
+    action: Mapped[str] = mapped_column(String(100), index=True)  # 'user.deactivate', 'credits.adjust'
+    target_type: Mapped[str | None] = mapped_column(String(50), nullable=True)  # 'user', 'invitation', 'settings'
+    target_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    details: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
+    )
 ```
 
 ---
 
-## State Schema Changes
+## Critical Data Flow Changes
 
-### New fields added to ChatAgentState (state.py)
+### 1. Credit Deduction at Chat Message Layer (HIGHEST RISK)
+
+Credits must be checked and deducted BEFORE the LangGraph agent pipeline starts. Agents are expensive (multiple LLM calls, E2B sandbox). You cannot afford to run the pipeline and then discover the user has no credits.
+
+**Current flow:**
+```
+Router (chat.py query_with_ai) --> agent_service.run_chat_query() --> Agent pipeline --> Save message
+```
+
+**New flow:**
+```
+Router (chat.py query_with_ai)
+  --> credit_service.check_and_deduct(user_id, cost)  <-- NEW: deduct BEFORE agent runs
+  --> agent_service.run_chat_query()                    (unchanged)
+  --> Agent pipeline                                    (unchanged)
+  --> Save message                                      (unchanged)
+  |
+  +-- On InsufficientCreditsError: HTTP 402, no agent invocation
+```
+
+**Why deduct-before-execute (not reserve-then-confirm):** The reservation pattern adds complexity for marginal benefit. In practice, API credit systems charge for the attempt, not the result. If the agent fails, the user still consumed compute resources. This matches how OpenAI, Anthropic, and every LLM API works.
+
+**Implementation in `services/credit.py` (NEW shared service):**
+```python
+class CreditService:
+    @staticmethod
+    async def check_and_deduct(
+        db: AsyncSession, user_id: UUID, cost: float
+    ) -> CreditTransaction:
+        """Atomically check balance and deduct credits.
+
+        Uses SELECT FOR UPDATE to prevent race conditions from concurrent
+        chat messages overdrawing the balance.
+        """
+        result = await db.execute(
+            select(UserCredit)
+            .where(UserCredit.user_id == user_id)
+            .with_for_update()
+        )
+        credit = result.scalar_one_or_none()
+
+        if credit is None or credit.balance < cost:
+            raise InsufficientCreditsError(
+                balance=credit.balance if credit else 0.0,
+                required=cost
+            )
+
+        credit.balance -= cost
+        transaction = CreditTransaction(
+            user_id=user_id,
+            amount=-cost,
+            transaction_type="usage",
+            balance_after=credit.balance,
+        )
+        db.add(transaction)
+        await db.flush()  # flush within caller's transaction
+        return transaction
+```
+
+**Hook point in `routers/chat.py` -- four endpoints need credit checks:**
+1. `POST /{file_id}/query` (query_with_ai)
+2. `POST /{file_id}/stream` (stream_query)
+3. `POST /sessions/{session_id}/query` (session_query_with_ai)
+4. `POST /sessions/{session_id}/stream` (session_stream_query)
 
 ```python
-class ChatAgentState(TypedDict):
-    # ... all existing 25+ fields unchanged ...
+# Added before agent_service call in each endpoint:
+from app.services.credit import CreditService, InsufficientCreditsError
+from app.services.admin.settings import get_platform_setting
 
-    # NEW: Visualization Agent fields (v0.4)
-    visualization_requested: bool
-    """Whether da_response determined a chart should be generated.
-    Set by da_response_node based on user intent + data suitability.
-    Defaults to False. Read by should_visualize() conditional edge."""
-
-    chart_hint: str
-    """Optional chart type hint extracted from user query.
-    Examples: 'bar', 'line', 'pie', 'scatter', '' (empty = auto-select).
-    Set by da_response_node. Read by visualization_agent."""
-
-    chart_code: str
-    """Plotly Python code string generated by Visualization Agent.
-    Executed in E2B sandbox by viz_execute to produce chart_specs.
-    Empty string when no visualization is requested."""
-
-    chart_specs: list[dict]
-    """List of Plotly figure JSON objects: [{"data": [...], "layout": {...}}].
-    Each entry is one chart. Usually 1, sometimes 2-3 per milestone req.
-    Empty list when no visualization. Passed to frontend via SSE."""
-
-    chart_error: str
-    """Error from chart generation or execution. Empty string on success.
-    Non-fatal: analysis still returns even if chart fails."""
+credit_cost = await get_platform_setting(db, "default_credit_cost", default=1.0)
+try:
+    await CreditService.check_and_deduct(db, current_user.id, credit_cost)
+except InsufficientCreditsError as e:
+    raise HTTPException(
+        status_code=status.HTTP_402_PAYMENT_REQUIRED,
+        detail=f"Insufficient credits. Balance: {e.balance}, Required: {e.required}"
+    )
 ```
 
-**Backward compatibility:** All new fields use optional semantics via `.get()` with defaults in node functions. Existing checkpoints without these fields work because `state.get("visualization_requested", False)` returns `False`, skipping visualization entirely.
+**Why NOT deduct inside `ChatService.create_message`:** The existing `create_message` and `create_session_message` are called for BOTH user messages AND assistant responses. Hooking credit logic there would either double-charge (deduct on both) or require role-checking in a data layer method, violating separation of concerns. The router is the correct boundary because it represents a user-initiated action.
 
----
-
-## Graph Topology Changes
-
-### Changes to build_chat_graph() in graph.py
+### 2. Mode-Gated Router Mounting (main.py)
 
 ```python
-def build_chat_graph(checkpointer=None):
-    graph = StateGraph(ChatAgentState)
+# In main.py -- replace static router inclusion
+settings = get_settings()
 
-    # === EXISTING NODES (unchanged) ===
-    graph.add_node("manager", manager_node)
-    graph.add_node("coding_agent", coding_agent)
-    graph.add_node("code_checker", code_checker_node)
-    graph.add_node("execute", execute_in_sandbox)
-    graph.add_node("halt", halt_node)
-    graph.add_node("da_with_tools", da_with_tools_node)
-    graph.add_node("search_tools", ToolNode([search_web], handle_tool_errors=True))
-    graph.add_node("da_response", da_response_node)
+# Always mount health (needed for load balancer checks in all modes)
+app.include_router(health.router)
 
-    # === NEW NODES (v0.4 visualization) ===
-    graph.add_node("visualization_agent", visualization_agent_node)
-    graph.add_node("viz_execute", viz_execute_node)
-    graph.add_node("viz_response", viz_response_node)
+if settings.spectra_mode in ("public", "dev"):
+    app.include_router(auth.router)
+    app.include_router(files.router)
+    app.include_router(chat.router)
+    app.include_router(chat_sessions.router)
+    app.include_router(search.router)
 
-    # === EXISTING EDGES (unchanged) ===
-    graph.set_entry_point("manager")
-    graph.add_edge("coding_agent", "code_checker")
-    # code_checker routes via Command (no explicit edge needed)
-    graph.add_edge("execute", "da_with_tools")
-    graph.add_conditional_edges("da_with_tools", tools_condition, {
-        "tools": "search_tools",
-        "__end__": "da_response",
-    })
-    graph.add_edge("search_tools", "da_with_tools")
+if settings.spectra_mode in ("admin", "dev"):
+    from app.routers.admin import admin_router
+    app.include_router(admin_router, prefix="/api/admin")
+```
 
-    # === CHANGED: da_response routing (was finish point, now conditional) ===
-    # Previously: graph.set_finish_point("da_response")
-    # Now: conditionally route to visualization or end
-    graph.add_conditional_edges(
-        "da_response",
-        should_visualize,
-        {
-            "visualization_agent": "visualization_agent",
-            "__end__": "__end__",
-        },
+**CORS must also be mode-aware:**
+```python
+origins = []
+if settings.spectra_mode in ("public", "dev"):
+    origins.extend(settings.get_cors_origins())      # existing frontend origins
+if settings.spectra_mode in ("admin", "dev"):
+    origins.append(settings.admin_frontend_url)       # http://localhost:3001
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+```
+
+### 3. Admin Auth Dependency
+
+Reuse the existing JWT pipeline. Do NOT create a separate auth system.
+
+```python
+# In dependencies.py -- add after existing CurrentUser
+async def get_current_admin(
+    current_user: CurrentUser,
+) -> User:
+    """Verify current user has admin privileges.
+
+    Depends on CurrentUser (which handles JWT validation + user lookup).
+    Only adds the is_admin check.
+    """
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    return current_user
+
+CurrentAdmin = Annotated[User, Depends(get_current_admin)]
+```
+
+Every admin router endpoint uses `CurrentAdmin` instead of `CurrentUser`. This provides defense-in-depth: even if admin routers are accidentally mounted in public mode, non-admin users get 403.
+
+### 4. Signup Flow Modification
+
+The existing `POST /auth/signup` must check the `allow_public_signup` platform setting and accept invite tokens.
+
+```python
+# In routers/auth.py signup endpoint -- add before user creation:
+from app.services.admin.settings import get_platform_setting
+
+allow_signup = await get_platform_setting(db, "allow_public_signup", default=True)
+invite_token = signup_data.invite_token  # NEW optional field on SignupRequest schema
+
+if not allow_signup and not invite_token:
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Registration is currently invite-only"
     )
 
-    # === NEW EDGES (v0.4 visualization pipeline) ===
-    graph.add_edge("visualization_agent", "viz_execute")
-    graph.add_edge("viz_execute", "viz_response")
-
-    # === FINISH POINTS ===
-    graph.set_finish_point("viz_response")  # NEW
-    graph.set_finish_point("halt")          # unchanged
-
-    return graph.compile(checkpointer=checkpointer)
-
-
-def should_visualize(state: ChatAgentState) -> str:
-    """Conditional edge: route to visualization agent or end.
-
-    Returns 'visualization_agent' if da_response flagged visualization_requested.
-    Returns '__end__' otherwise (normal analysis-only response).
-    """
-    if state.get("visualization_requested", False):
-        return "visualization_agent"
-    return "__end__"
+if invite_token:
+    invitation = await InvitationService.validate_and_accept(db, invite_token, signup_data.email)
+    # invitation.user_class overrides default
 ```
+
+The `SignupRequest` schema gets one new optional field: `invite_token: str | None = None`. This is backward-compatible -- existing signup requests without the field continue to work.
+
+### 5. Audit Logging Pattern
+
+Implement as an explicit service function called in admin routers, NOT as middleware. Middleware-based audit logging is fragile: hard to capture semantic action names, target details, and admin identity reliably from raw request/response data.
+
+```python
+# In services/admin/audit.py
+async def log_admin_action(
+    db: AsyncSession,
+    admin_id: UUID,
+    action: str,                    # e.g., "user.deactivate", "credits.adjust", "settings.update"
+    target_type: str | None = None, # e.g., "user", "invitation", "settings"
+    target_id: str | None = None,
+    details: dict | None = None,
+    ip_address: str | None = None,
+) -> AdminAuditLog:
+    entry = AdminAuditLog(
+        admin_id=admin_id,
+        action=action,
+        target_type=target_type,
+        target_id=str(target_id) if target_id else None,
+        details=details,
+        ip_address=ip_address,
+    )
+    db.add(entry)
+    await db.flush()  # flush, NOT commit -- let caller's transaction handle atomicity
+    return entry
+```
+
+**Critical: audit log and business action in the same transaction:**
+```python
+# Good: atomic
+user.is_active = False
+await log_admin_action(db, admin.id, "user.deactivate", target_type="user", target_id=user_id)
+await db.commit()  # both succeed or both roll back
+
+# Bad: split transactions
+user.is_active = False
+await db.commit()
+await log_admin_action(db, admin.id, "user.deactivate", ...)
+await db.commit()  # if this fails, action is unlogged
+```
+
+### 6. Platform Settings Service
+
+Key-value store with in-memory cache. Settings change rarely (admin updates them occasionally), so a 30-second TTL avoids DB queries on every chat message (for credit cost lookups).
+
+```python
+# In services/admin/settings.py
+_settings_cache: dict[str, tuple[Any, datetime]] = {}
+CACHE_TTL = timedelta(seconds=30)
+
+async def get_platform_setting(db: AsyncSession, key: str, default: Any = None) -> Any:
+    """Get platform setting with 30-second in-memory cache."""
+    now = datetime.utcnow()
+    if key in _settings_cache:
+        value, cached_at = _settings_cache[key]
+        if now - cached_at < CACHE_TTL:
+            return value
+
+    result = await db.execute(
+        select(PlatformSettings.value).where(PlatformSettings.key == key)
+    )
+    row = result.scalar_one_or_none()
+    value = row if row is not None else default
+    _settings_cache[key] = (value, now)
+    return value
+```
+
+**Config resolution order** (for user class credits, credit costs, etc.):
+1. Check `platform_settings` table for the key
+2. Fall back to `user_classes.yaml` config default
+3. Fall back to hardcoded default
+
+This means the system works immediately after deployment with just the YAML -- no need to seed the `platform_settings` table.
 
 ---
 
-## Visualization Agent Design
-
-### Agent Node: visualization.py
+## Admin Router Package Structure
 
 ```python
-async def visualization_agent_node(state: ChatAgentState) -> dict:
-    """Generate Plotly Python code from execution results.
+# backend/app/routers/admin/__init__.py
+from fastapi import APIRouter
+from .auth import router as auth_router
+from .dashboard import router as dashboard_router
+from .users import router as users_router
+from .settings import router as settings_router
+from .invitations import router as invitations_router
+from .credits import router as credits_router
 
-    The agent receives:
-    - execution_result: JSON data from the Coding Agent's code
-    - analysis: Data Analysis Agent's interpretation
-    - user_query: Original user question (contains chart type hints)
-    - chart_hint: Extracted chart type ('bar', 'line', 'pie', 'scatter', '')
-
-    The agent generates Plotly Python code that:
-    1. Embeds the execution_result data as a Python literal
-    2. Creates appropriate Plotly figure(s)
-    3. Serializes to JSON via plotly.io.to_json()
-    4. Prints JSON to stdout for sandbox capture
-
-    Returns: {"chart_code": str}
-    """
+admin_router = APIRouter(tags=["Admin"])
+admin_router.include_router(auth_router, prefix="/auth", tags=["Admin Auth"])
+admin_router.include_router(dashboard_router, prefix="/dashboard", tags=["Admin Dashboard"])
+admin_router.include_router(users_router, prefix="/users", tags=["Admin Users"])
+admin_router.include_router(settings_router, prefix="/settings", tags=["Admin Settings"])
+admin_router.include_router(invitations_router, prefix="/invitations", tags=["Admin Invitations"])
+admin_router.include_router(credits_router, prefix="/credits", tags=["Admin Credits"])
 ```
 
-### Key prompt design principles for the Visualization Agent
-
-1. **Data is embedded, not loaded from files** -- The execution_result JSON is small (aggregated data). The agent writes it as a Python literal in the generated code. No file I/O needed.
-
-2. **Auto-select chart type unless user specifies** -- If chart_hint is empty, the agent infers from data shape:
-   - Categorical x + numeric y = bar chart
-   - Time series x + numeric y = line chart
-   - Parts of a whole = pie chart
-   - Two numeric columns = scatter plot
-
-3. **Multiple charts when appropriate** -- The milestone says "2-3 charts to show different perspectives." The agent decides when multiple views add value (e.g., bar chart + pie chart for the same data).
-
-4. **Consistent styling** -- The prompt specifies a standard template (`plotly_white`), consistent margins, and brand-aligned color palette.
-
-5. **Output format is strict** -- The code MUST end with:
-   ```python
-   chart_json = json.loads(pio.to_json(fig))
-   print(json.dumps({"chart": chart_json}))
-   ```
-   For multiple charts:
-   ```python
-   charts = [json.loads(pio.to_json(fig)) for fig in [fig1, fig2]]
-   print(json.dumps({"charts": charts}))
-   ```
-
-### Viz Execute Node
-
-The viz_execute node reuses the existing `E2BSandboxRuntime` with a lightweight call:
-
-```python
-async def viz_execute_node(state: ChatAgentState) -> dict:
-    """Execute Plotly chart code in E2B sandbox.
-
-    Key differences from the main execute_in_sandbox:
-    - No data files uploaded (data is embedded in code)
-    - Shorter timeout (chart generation is fast, ~5-10s)
-    - Parses chart JSON from stdout instead of execution_result
-    - Non-fatal: chart_error is set but does NOT halt the pipeline
-    """
-```
-
-**Non-fatal error handling:** If chart generation fails (LLM produces bad Plotly code, sandbox timeout), the response still includes the analysis text and data table. The chart section simply does not appear. This is critical -- a chart failure should never lose the analysis that was already computed.
-
-### Viz Response Node
-
-```python
-async def viz_response_node(state: ChatAgentState) -> dict:
-    """Assemble final response with chart data.
-
-    Emits the chart_specs alongside the existing analysis.
-    The final_response text is preserved from da_response (not overwritten).
-    """
-    writer = get_stream_writer()
-
-    chart_specs = state.get("chart_specs", [])
-    chart_error = state.get("chart_error", "")
-
-    if chart_error:
-        writer({
-            "type": "visualization_error",
-            "message": f"Chart generation failed: {chart_error}",
-        })
-
-    return {
-        "chart_specs": chart_specs,
-        # Preserve existing analysis and response
-        "final_response": state.get("final_response", state.get("analysis", "")),
-        "messages": state.get("messages", []),  # preserve existing messages
-    }
-```
+Result: `main.py` mounts one router: `app.include_router(admin_router, prefix="/api/admin")`. All admin endpoints are at `/api/admin/auth/...`, `/api/admin/users/...`, etc.
 
 ---
 
-## Frontend Integration
-
-### DataCard.tsx -- New Chart Section
-
-The chart section sits between Data Table and Analysis:
+## Admin Frontend Architecture
 
 ```
-[Query Brief]           -- existing, unchanged
-[Generated Code]        -- existing, unchanged (collapsible)
-[Data Table]            -- existing, unchanged
-[Chart(s)]              -- NEW
-[Analysis]              -- existing, unchanged
-[Follow-ups]            -- existing, unchanged
-[Sources]               -- existing, unchanged
+admin-frontend/
+  src/
+    app/                    # Next.js App Router pages
+      layout.tsx            # Admin shell (sidebar nav, auth check)
+      login/page.tsx
+      dashboard/page.tsx
+      users/
+        page.tsx            # User list with search/filter
+        [id]/page.tsx       # User detail (profile, credits, history)
+      settings/page.tsx     # Platform settings form
+      invitations/page.tsx  # Invitation list + create form
+      credits/page.tsx      # Credit overview, bulk actions
+      audit/page.tsx        # Audit log viewer with filters
+    lib/
+      api-client.ts         # Admin API client (same pattern as frontend/src/lib/api-client.ts)
+      query-client.ts       # TanStack Query client
+    components/
+      admin/                # Admin-specific UI components
+    hooks/                  # Custom hooks
+    types/                  # TypeScript types for admin API
 ```
 
-### New DataCard prop
+**Key decisions:**
+- Same stack as existing frontend: Next.js, TanStack Query, shadcn/ui -- consistency and developer familiarity
+- SPA mode is fine (no SSR needed for admin) -- use `"use client"` throughout
+- Share NO runtime code with `frontend/` -- independent apps with independent deployments and bundles
+- Copy the `api-client.ts` pattern but configure base URL to `/api/admin/`
 
-```typescript
-interface DataCardProps {
-  // ... existing props unchanged ...
-  chartSpecs?: Array<{ data: any[]; layout: any }>;  // NEW
-}
-```
-
-### ChartRenderer Component
-
-```tsx
-// frontend/src/components/data/ChartRenderer.tsx
-"use client";
-
-import dynamic from "next/dynamic";
-
-// Dynamic import: plotly.js requires window object, breaks SSR
-const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
-
-interface ChartRendererProps {
-  chartSpecs: Array<{ data: any[]; layout: any }>;
-}
-
-export function ChartRenderer({ chartSpecs }: ChartRendererProps) {
-  return (
-    <div className="space-y-4">
-      {chartSpecs.map((spec, idx) => (
-        <div key={idx} className="rounded-lg border bg-background p-2 overflow-hidden">
-          <Plot
-            data={spec.data}
-            layout={{
-              ...spec.layout,
-              autosize: true,
-              paper_bgcolor: "transparent",
-              plot_bgcolor: "transparent",
-            }}
-            config={{
-              responsive: true,
-              displayModeBar: true,
-              displaylogo: false,
-              modeBarButtonsToRemove: ["lasso2d", "select2d"],
-              toImageButtonOptions: {
-                format: "png",
-                filename: `spectra-chart-${idx}`,
-                height: 600,
-                width: 800,
-                scale: 2,
-              },
-            }}
-            useResizeHandler={true}
-            style={{ width: "100%", height: "100%" }}
-          />
-        </div>
-      ))}
-    </div>
-  );
-}
-```
-
-Architecture decisions for ChartRenderer:
-- **`dynamic(() => import(...), { ssr: false })`** -- Plotly.js accesses `window` and `document`. Without dynamic import, Next.js SSR fails with "window is not defined."
-- **`useResizeHandler={true}` + `autosize: true`** -- Chart resizes when DataCard or browser window resizes.
-- **`config.toImageButtonOptions`** -- Satisfies milestone requirement "user should be able to download the visualization as an image." The Plotly modebar includes a camera icon for PNG download.
-- **`paper_bgcolor: "transparent"`** -- Chart background inherits from DataCard's theme (light/dark mode compatible).
-- **`displayModeBar: true`** -- Shows hover/zoom/pan/download toolbar. Satisfies "interactive" requirement.
-
-### SSE Stream Integration
-
-The existing `node_complete` event forwarding in `agent_service.py` already passes any key present in the node's state update. The whitelist in `run_chat_query_stream` needs `chart_specs` added:
-
-```python
-# In agent_service.py, run_chat_query_stream():
-yield {
-    "type": "node_complete",
-    "node": node_name,
-    **{k: v for k, v in update.items()
-       if k in ("generated_code", "execution_result",
-                "analysis", "final_response", "error",
-                "routing_decision", "follow_up_suggestions",
-                "search_sources",
-                "chart_specs")}  # <-- ADD THIS
-}
-```
-
-Frontend `useSSEStream.ts` needs one new event handler:
-
-```typescript
-case "visualization_started":
-  newState.currentStatus = "Generating visualization...";
-  break;
-```
-
-Frontend `ChatInterface.tsx` `getStreamingDataCard()` extracts chart data:
-
-```typescript
-let chartSpecs: ChartSpec[] | undefined = undefined;
-const vizEvent = events.find(
-  (e) => e.type === "node_complete" && e.node === "viz_response"
-);
-if (vizEvent?.chart_specs && vizEvent.chart_specs.length > 0) {
-  chartSpecs = vizEvent.chart_specs;
-}
-```
+**Why a separate app, not a route in existing frontend:**
+1. **Deployment isolation** -- admin frontend deploys on Tailscale only; a route in the public frontend would expose admin code in the public bundle
+2. **Bundle isolation** -- admin components never ship to public users
+3. **Independent iteration** -- admin UI evolves without touching public app builds or test suites
 
 ---
 
 ## Patterns to Follow
 
-### Pattern 1: Agent as Code Generator, Not Code Executor
+### Pattern 1: Admin Router Package with Sub-Router Aggregation
 
-**What:** The Visualization Agent generates Plotly Python code but does NOT execute it. A separate `viz_execute` node runs the code in E2B. This mirrors the existing Coding Agent -> Code Checker -> Execute pattern.
+**What:** Bundle all admin routers into a single package with a combined router exported from `__init__.py`.
+**When:** Always.
+**Why:** Keeps `main.py` clean (one line to mount all admin routes). Matches how the existing codebase organizes routers by functional area.
 
-**When:** Always. This maintains the security boundary.
+### Pattern 2: Atomic Admin Operations (Audit + Action in Same Transaction)
 
-**Why:** The existing architecture separates code generation from code execution for security (sandbox isolation) and debuggability (code is visible in DataCard). The Visualization Agent follows the same contract.
+**What:** Always call `log_admin_action()` with `flush()` inside the same transaction as the business operation, then `commit()` once.
+**When:** Every admin write operation.
+**Why:** Ensures no admin action goes unlogged. If the audit write fails, the business action rolls back too.
 
-### Pattern 2: JSON-over-the-wire for Charts
+### Pattern 3: SELECT FOR UPDATE on Credit Operations
 
-**What:** Charts are serialized as Plotly JSON (`{data: [...], layout: {...}}`) and passed through the state/SSE stream. The frontend renders with react-plotly.js `<Plot>` component using native `data` and `layout` props.
+**What:** Use `select(...).with_for_update()` for all credit balance mutations.
+**When:** Every credit deduction or adjustment.
+**Why:** Prevents race conditions where two concurrent chat messages could overdraw credits. PostgreSQL row-level locking ensures serialized access to the balance row.
 
-**When:** Always. Never send HTML, SVG, or base64 images.
+### Pattern 4: Config File + DB Override for Settings
 
-**Why:**
-- Interactive: hover, zoom, pan are native Plotly features
-- Type-safe: Plotly JSON has a well-defined schema
-- Lightweight: ~5KB JSON vs ~100KB image or ~3MB embedded-HTML
-- Secure: no XSS risk -- react-plotly.js renders from structured data, not innerHTML
-- Themeable: layout properties can be overridden client-side for dark mode
+**What:** Static defaults in `user_classes.yaml`, runtime overrides in `platform_settings` table.
+**When:** For user class credits, credit costs, and any admin-configurable setting.
+**Why:** System works with just YAML on first deploy. Admins can override without code changes or redeployment. DB overrides take precedence.
 
-### Pattern 3: Conditional Post-Processing (not Routing)
+### Pattern 5: Credit Record on User Creation
 
-**What:** Visualization is a conditional post-processing step after `da_response`, controlled by a `should_visualize()` edge function.
-
-**When:** Every query that flows through the code generation path.
-
-**Why:** Visualization always needs data first. It is not an alternative path -- it is an extension of the analysis path. Keeping it after `da_response` means the analysis is always available even if chart generation fails.
-
-### Pattern 4: Embed Data in Chart Code
-
-**What:** The Visualization Agent embeds `execution_result` data directly into the generated Plotly code as a Python literal. The viz_execute sandbox does NOT re-upload data files.
-
-**When:** Always. Chart data is already computed and small (aggregated/processed).
-
-**Why:**
-- Avoids ~2-3 second file upload overhead per query
-- Simpler error handling (no file-not-found for charts)
-- execution_result is typically <100 rows of aggregated data
-- Chart code is self-contained and reproducible
-
-### Pattern 5: Non-Fatal Visualization Errors
-
-**What:** If chart generation or execution fails, the response still includes the analysis text and data table. The chart section simply does not render.
-
-**When:** Any chart-related failure (LLM generates invalid Plotly code, sandbox timeout, Plotly import error).
-
-**Why:** The user asked a question and got a complete answer (data + analysis). The chart is a bonus. Losing the entire response because a chart failed would be a poor user experience.
-
-**Implementation:** `viz_execute` writes to `chart_error` on failure instead of routing to `halt`. `viz_response` checks `chart_error` and emits a warning event but still returns the existing analysis.
-
-### Pattern 6: YAML-Configured Agent
-
-**What:** The Visualization Agent follows the established per-agent config pattern in `prompts.yaml`.
-
-**When:** Always. All 5 existing agents use this pattern.
-
-**Why:** Consistency. Enables using a cheaper/faster model for chart code generation since Plotly code is structurally simpler than data analysis code.
+**What:** When a user signs up, create a `UserCredit` row with initial balance based on their `user_class` allocation.
+**When:** In the signup flow (both public and invite-based).
+**Why:** Every user must have a credit record before they can send messages. Creating it at signup avoids null-check complexity throughout the credit service.
 
 ---
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: HTML Injection via dangerouslySetInnerHTML or iframe
+### Anti-Pattern 1: Middleware-Based Admin Auth
 
-**What:** Having the LLM generate a complete HTML page with embedded Plotly.js and injecting it into React.
+**What:** Using FastAPI middleware to check `is_admin` on all `/api/admin/` paths.
+**Why bad:** Middleware runs before dependency injection, so you do not have the `User` object. You would need to duplicate JWT parsing and DB lookup logic in middleware, creating two parallel auth paths.
+**Instead:** `CurrentAdmin` dependency on every admin endpoint. Reuses the existing auth pipeline.
 
-**Why bad:** XSS attack surface, no React integration (chart outside component tree), 3MB+ payload size (embedded plotly.js library), poor responsiveness (iframe sizing), no theme support.
+### Anti-Pattern 2: Credit Deduction in ChatService.create_message
 
-**Instead:** JSON-over-the-wire with react-plotly.js (Pattern 2).
+**What:** Hooking credit checks into the message persistence layer.
+**Why bad:** `create_message` is called for both user messages AND assistant responses. Credit logic in the data layer violates separation of concerns and risks double-charging.
+**Instead:** Deduct credits at the router level, before calling `agent_service.run_chat_query()`.
 
-### Anti-Pattern 2: Combining Data Code and Chart Code in Coding Agent
+### Anti-Pattern 3: Separate Auth System for Admin
 
-**What:** Having the Coding Agent generate both data processing AND Plotly chart code in a single block.
+**What:** Creating a parallel JWT/session system for admin users.
+**Why bad:** Doubles the auth surface area, requires separate token refresh logic, and creates confusion about which token to use when.
+**Instead:** Same JWT pipeline, same `users` table, `is_admin` flag checked by `CurrentAdmin` dependency.
 
-**Why bad:** Doubles prompt complexity. Chart errors trigger data retry loops (coupled failures). Code Checker must validate Plotly API. Violates single-responsibility.
+### Anti-Pattern 4: Sharing Components Between Frontend and Admin Frontend
 
-**Instead:** Coding Agent handles data. Visualization Agent handles charts. Separate concerns.
+**What:** Creating a shared component library (`packages/shared-ui/`) used by both apps.
+**Why bad:** Creates coupling between independently deployed apps. Shared library changes require coordinated deployments. Premature abstraction for a small admin UI.
+**Instead:** Copy the api-client pattern and use shadcn/ui in both. These apps have different audiences, different deployment lifecycles, and the admin app is small enough that duplication is preferable.
 
-### Anti-Pattern 3: Manager Agent Routing to Visualization
+### Anti-Pattern 5: Storing User Class Definitions in Database
 
-**What:** Adding a 4th route "VISUALIZATION" to the Manager that bypasses data analysis.
+**What:** A `user_classes` table that admins can add/remove tiers from at runtime.
+**Why bad:** Tier changes affect code paths (enum validation, Stripe integration in future, feature gating). Adding a tier at runtime without corresponding code changes leads to undefined behavior.
+**Instead:** Tiers defined in `user_classes.yaml` (require deploy to add new tier). Credit amounts per tier are overridable via `platform_settings`.
 
-**Why bad:** Visualization ALWAYS needs computed data. A separate route would duplicate the coding->checking->executing pipeline. Manager's 3-route logic is well-tested; a 4th route reduces routing accuracy.
+### Anti-Pattern 6: Admin-Only Database
 
-**Instead:** Visualization as post-processing after analysis (Pattern 3).
+**What:** Separate PostgreSQL database for admin data.
+**Why bad:** Admin actions need to read and write user data that lives in the main database. A separate database would require cross-database queries or data sync.
+**Instead:** Same database, new tables in the same schema, same Alembic migration chain.
 
-### Anti-Pattern 4: Storing Chart Images
+---
 
-**What:** Using `fig.write_image()` in E2B and returning base64 PNG/SVG.
+## Suggested Build Order
 
-**Why bad:** Static (no hover/zoom/pan), larger payload, not responsive, not themeable. The milestone explicitly requires "interactive" charts.
+Build order follows dependency chains. Each phase produces something independently testable.
 
-**Instead:** `plotly.io.to_json()` + react-plotly.js rendering.
+### Phase 1: Foundation (Database + Config + Mode Gating)
 
-### Anti-Pattern 5: Re-running Data Code for Visualization
+**Build:**
+1. Add `spectra_mode: str = "dev"` and `admin_frontend_url: str = "http://localhost:3001"` to `config.py`
+2. Add `is_admin` (Boolean, default False) and `user_class` (String, default "free") to User model
+3. Create all 5 new model files (platform_settings, user_credit, credit_transaction, invitation, admin_audit_log)
+4. Register new models in `models/__init__.py` for Alembic discovery
+5. Generate single Alembic migration
+6. Create `user_classes.yaml` config file
+7. Create `routers/admin/__init__.py` package structure (empty sub-routers)
+8. Implement `SPECTRA_MODE` gating in `main.py`
+9. Add `CurrentAdmin` dependency to `dependencies.py`
+10. Create `services/admin/` package with `audit.py` and `settings.py`
+11. Create admin seed CLI command (`python -m app.cli seed-admin --email admin@example.com`)
+12. Update `schemas/user.py` to include `is_admin` and `user_class`
 
-**What:** Having the Visualization Agent re-execute the original data query to get fresh data for charting.
+**Why first:** Everything else depends on schema, config, mode gating, and admin auth. Pure backend, fully testable via pytest and API calls.
 
-**Why bad:** Doubles E2B sandbox cost and latency. Data is already in `execution_result`. Risk of different results if data changed between calls.
+**Testable:** `SPECTRA_MODE=admin` starts with only health router + admin routes. `SPECTRA_MODE=dev` shows all. `/api/admin/` returns 403 for non-admin JWT. Admin seed CLI creates admin user.
 
-**Instead:** Embed `execution_result` in chart code (Pattern 4).
+### Phase 2: Credit System
+
+**Build:**
+1. Create `services/credit.py` (shared: `check_and_deduct`, `InsufficientCreditsError`)
+2. Create `services/admin/credit.py` (admin: adjust, bulk-adjust, balance view, history)
+3. Hook credit check into `routers/chat.py` -- all four query/stream endpoints
+4. Create `UserCredit` record on user signup (modify auth service)
+5. Create `routers/admin/credits.py` (admin endpoints)
+6. Seed `default_credit_cost` platform setting
+
+**Why second:** Credit deduction touches the most critical user-facing flow (chat). Building early surfaces integration issues before other features add complexity. Admin credit endpoints enable testing (manually grant credits, verify deduction).
+
+**Testable:** Chat message deducts credits. 402 returned when balance insufficient. Admin adjusts credits via API. Credit transaction history records all operations.
+
+### Phase 3: User Management + Platform Settings
+
+**Build:**
+1. Create `services/admin/user_management.py` (list, search, filter, activate, deactivate, change class, delete)
+2. Create `routers/admin/users.py`
+3. Create `routers/admin/settings.py` (CRUD)
+4. Implement `allow_public_signup` check in existing `routers/auth.py` signup
+5. Create `routers/admin/dashboard.py` (aggregate queries)
+
+**Why third:** Depends on Phase 1 (schema, admin auth) but not Phase 2. Built after Phase 2 so user class changes can immediately affect credit allocations.
+
+**Testable:** Admin lists/searches/filters users. Changing user class updates credit allocation. Toggling `allow_public_signup` blocks/allows public registration. Dashboard shows aggregate metrics.
+
+### Phase 4: Invitation System
+
+**Build:**
+1. Create `services/admin/invitation.py` (create, validate, accept, revoke, resend, list expired)
+2. Create invitation email template (reuse existing `services/email.py` patterns)
+3. Create `routers/admin/invitations.py`
+4. Modify `routers/auth.py` signup to accept and validate invite tokens
+5. Add invite signup page to public frontend (`/signup?invite=TOKEN`)
+
+**Why fourth:** Depends on signup control toggle (Phase 3), email service (existing), and User model changes (Phase 1). First phase that requires a public frontend change.
+
+**Testable:** Admin creates invite via API. Email sent. User clicks link, registers with pre-filled email. Invite marked accepted. Resend and revoke work.
+
+### Phase 5: Audit Log Completion + Dashboard Polish
+
+**Build:**
+1. Wire `log_admin_action()` calls into ALL admin endpoints from Phases 2-4
+2. Create audit log viewer endpoint (list, filter by action/admin/date range)
+3. Polish dashboard aggregate queries (add credit distribution, low-credit users)
+
+**Why fifth:** Audit log viewer is useful only after all admin actions are logging. Dashboard polish requires all data tables to exist.
+
+**Testable:** Every admin action appears in audit log. Audit viewer filters work. Dashboard shows complete metrics.
+
+### Phase 6: Admin Frontend
+
+**Build:**
+1. Initialize `admin-frontend/` Next.js project (shadcn/ui, TanStack Query, Zustand)
+2. Admin login page
+3. Dashboard page (charts, metrics)
+4. User management pages (list with search/filter, detail view)
+5. Platform settings page (form with save)
+6. Invitations page (list + create dialog)
+7. Credit management views (user credit detail, bulk adjust)
+8. Audit log viewer (table with date/action/admin filters)
+
+**Why last:** Frontend is a pure consumer of the API built in Phases 1-5. All endpoints are stable and tested before UI work begins.
+
+**Alternative:** Phase 6 can run in parallel with Phases 2-5 if a second developer builds UI against API stubs/mocks.
+
+**Testable:** Full admin portal accessible at `localhost:3001`.
 
 ---
 
 ## Scalability Considerations
 
-| Concern | At Current Scale | At 10K Users | At 1M Users |
-|---------|-----------------|--------------|-------------|
-| E2B cost | +1 lightweight sandbox per viz query (~$0.001) | Cache chart code for repeated patterns | Pre-compute charts for common aggregations |
-| Chart JSON size | ~5KB per chart, negligible | Stream separately if >100KB | Paginate multi-chart responses |
-| Plotly.js bundle | ~3.5MB loaded once, browser-cached | Use `plotly.js-basic-dist` (~1MB) | Lazy-load chart type modules |
-| LLM calls | +1 per viz query (Visualization Agent) | Use cheaper model (e.g., haiku) for chart code | Template-based chart generation (no LLM) |
-| Render perf | Single `<Plot>`, <100ms render | Virtualize charts in long conversations | IntersectionObserver for deferred rendering |
+| Concern | At 100 users | At 10K users | At 1M users |
+|---------|--------------|--------------|-------------|
+| Credit deduction concurrency | SELECT FOR UPDATE, fine | Still fine (row-level lock, microseconds) | Consider Redis-based credit balance caching |
+| Platform settings reads | DB hit per request (fast) | 30-second cache handles load | Move to Redis with pub/sub invalidation |
+| Audit log table growth | Negligible | ~100K rows/month, index on created_at | Partition by month, archive old data |
+| Dashboard aggregation queries | Direct COUNT/SUM queries | Add materialized views or cached metrics | Pre-computed metrics table, updated by cron |
+| User list with search | LIKE queries, fine | Add pg_trgm GIN index for fuzzy search | Elasticsearch for full-text |
+| Invitation token lookup | Hash index, instant | Same | Same (invites are low-volume) |
 
 ---
 
-## Suggested Build Order (Dependency-Aware)
+## Migration Strategy
 
-### Phase 1: Backend State + Agent (no frontend changes)
-1. `state.py` -- Add 5 new fields to `ChatAgentState`
-2. `allowlist.yaml` -- Add `plotly` to allowed_libraries
-3. `prompts.yaml` -- Add `visualization` agent config
-4. `visualization.py` -- New visualization agent node (LLM code generation)
-5. `graph.py` -- Add `viz_execute_node` function (E2B chart execution)
-6. `graph.py` -- Add `viz_response_node` function
-7. `graph.py` -- Add `should_visualize()` conditional edge function
-8. `graph.py` -- Wire nodes into `build_chat_graph()`, change `da_response` routing
+**Single Alembic migration** for all v0.5 schema changes because:
+1. All five tables are new (no data migration risk)
+2. The two User column additions are backward-compatible (both have defaults)
+3. Atomic: one migration to apply, one to roll back
 
-### Phase 2: Backend Integration (connects to existing pipeline)
-9. `data_analysis.py` -- Modify `da_response_node` to detect visualization intent
-10. `agent_service.py` -- Add `chart_specs` to metadata_json and node_complete whitelist
-11. Backend testing -- End-to-end test: query with viz intent produces chart_specs in state
+```bash
+alembic revision --autogenerate -m "add_admin_portal_tables_and_user_extensions"
 
-### Phase 3: Frontend Rendering
-12. `npm install react-plotly.js plotly.js` -- Install Plotly dependencies
-13. `ChartRenderer.tsx` -- New component with dynamic import
-14. `DataCard.tsx` -- Add `chartSpecs` prop, render ChartRenderer between table and analysis
-15. `chat.ts` -- Add `chart_specs` to `StreamEvent` type, add `visualization_started` event type
-16. `ChatMessage.tsx` -- Pass `metadata_json.chart_specs` to DataCard
-17. `useSSEStream.ts` -- Handle `visualization_started` event
-18. `ChatInterface.tsx` -- Extract `chart_specs` from viz events in `getStreamingDataCard()`
+# The migration creates:
+# 1. users.is_admin (Boolean, default=False, server_default=false)
+# 2. users.user_class (String(20), default='free', server_default='free')
+# 3. platform_settings table
+# 4. user_credits table
+# 5. credit_transactions table
+# 6. invitations table
+# 7. admin_audit_log table
+```
 
-### Phase 4: Polish + Edge Cases
-19. Dark mode -- Chart theme adaptation (detect theme, swap `plotly_white` / `plotly_dark`)
-20. Multi-chart support -- Test 2-3 charts per response, layout spacing
-21. Download as image -- Verify Plotly modebar PNG download works in DataCard context
-22. Responsive -- Chart resizes on window/panel toggle
-23. Error handling -- Chart failure shows warning, analysis still renders
-24. Chart skeleton -- Loading skeleton while viz_execute runs
+After migration, existing users get `is_admin=false` and `user_class='free'` via server defaults. Existing UserCredit rows need to be backfilled for existing users -- include a data migration step:
 
-### Rationale
-- State schema first: everything reads/writes it
-- Backend before frontend: frontend needs SSE events to consume
-- Single chart working end-to-end before multi-chart or dark mode
-- Error handling after happy path is validated
-- Polish after core functionality is solid
+```python
+# In the migration's upgrade():
+# After creating user_credits table, backfill for existing users
+op.execute("""
+    INSERT INTO user_credits (id, user_id, balance, created_at)
+    SELECT gen_random_uuid(), id, 10.0, NOW()
+    FROM users
+    WHERE id NOT IN (SELECT user_id FROM user_credits)
+""")
+```
+
+---
+
+## Complete File Structure
+
+```
+backend/app/
+  config.py                              # MODIFIED: +spectra_mode, +admin_frontend_url
+  main.py                                # MODIFIED: mode-gated routing, mode-aware CORS
+  dependencies.py                        # MODIFIED: +CurrentAdmin dependency
+  models/
+    user.py                              # MODIFIED: +is_admin, +user_class columns
+    platform_settings.py                 # NEW
+    user_credit.py                       # NEW
+    credit_transaction.py                # NEW
+    invitation.py                        # NEW
+    admin_audit_log.py                   # NEW
+  schemas/
+    user.py                              # MODIFIED: +is_admin, +user_class in UserResponse
+    admin/                               # NEW package
+      __init__.py
+      users.py                           # UserListResponse, UserDetailResponse, etc.
+      settings.py                        # PlatformSettingResponse, UpdateSettingRequest
+      invitations.py                     # InvitationCreate, InvitationResponse, etc.
+      credits.py                         # CreditAdjustRequest, CreditHistoryResponse, etc.
+      dashboard.py                       # DashboardMetrics, etc.
+  routers/
+    auth.py                              # MODIFIED: signup toggle + invite token
+    chat.py                              # MODIFIED: credit check before query (4 endpoints)
+    admin/                               # NEW package
+      __init__.py                        # Aggregates sub-routers into admin_router
+      auth.py                            # POST /api/admin/auth/login
+      dashboard.py                       # GET /api/admin/dashboard/metrics
+      users.py                           # GET/PATCH/DELETE /api/admin/users/...
+      settings.py                        # GET/PUT /api/admin/settings/...
+      invitations.py                     # GET/POST/PATCH /api/admin/invitations/...
+      credits.py                         # GET/POST /api/admin/credits/...
+  services/
+    credit.py                            # NEW: shared check_and_deduct
+    admin/                               # NEW package
+      __init__.py
+      audit.py                           # log_admin_action()
+      settings.py                        # get/set_platform_setting() with cache
+      user_management.py                 # list, search, activate, deactivate, etc.
+      invitation.py                      # create, validate, accept, revoke, resend
+      credit.py                          # admin adjust, bulk adjust, history queries
+  config/
+    user_classes.yaml                    # NEW: tier definitions
+
+admin-frontend/                          # NEW: entire directory (Phase 6)
+  package.json
+  next.config.js
+  src/
+    app/
+      layout.tsx
+      login/page.tsx
+      dashboard/page.tsx
+      users/page.tsx, [id]/page.tsx
+      settings/page.tsx
+      invitations/page.tsx
+      credits/page.tsx
+      audit/page.tsx
+    lib/
+      api-client.ts
+      query-client.ts
+    components/admin/
+    hooks/
+    types/
+```
 
 ---
 
 ## Sources
 
-- [plotly.io.to_json documentation (v6.5.0)](https://plotly.github.io/plotly.py-docs/generated/plotly.io.to_json.html) -- HIGH confidence
-- [react-plotly.js GitHub](https://github.com/plotly/react-plotly.js) -- HIGH confidence
-- [React plotly.js official docs](https://plotly.com/javascript/react/) -- HIGH confidence
-- [Plotly JSON chart schema](https://plotly.com/chart-studio-help/json-chart-schema/) -- HIGH confidence
-- [E2B Code Interpreter](https://github.com/e2b-dev/code-interpreter) -- HIGH confidence
-- [Generating Plotly JSON in Python for React](https://community.plotly.com/t/generating-plotly-json-in-python-and-displaying-in-react-clientside/59238) -- MEDIUM confidence
-- [LangGraph multi-agent workflows](https://blog.langchain.com/langgraph-multi-agent-workflows/) -- MEDIUM confidence
-- Direct codebase analysis of all 15+ source files -- HIGH confidence
-- Milestone requirements: `requirements/milestone-04-req.md` -- HIGH confidence
+- Direct analysis of existing Spectra v0.4 source code: `main.py`, `config.py`, `dependencies.py`, `models/user.py`, `routers/auth.py`, `routers/chat.py`, `services/chat.py`, `database.py`, `models/base.py`, all schemas -- HIGH confidence
+- `requirements/milestone-05-req.md` requirements document -- HIGH confidence
+- Existing Alembic migration chain (9 migrations) -- HIGH confidence
+- FastAPI dependency injection patterns (project convention) -- HIGH confidence
+- SQLAlchemy `SELECT FOR UPDATE` for concurrent credit operations -- standard PostgreSQL pattern, HIGH confidence
+- FastAPI CORS middleware with explicit origins (existing project pattern) -- HIGH confidence

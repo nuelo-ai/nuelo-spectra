@@ -162,3 +162,53 @@
 
 ---
 
+
+## v0.5 Admin Portal (Shipped: 2026-02-18)
+
+**Delivered:** Internal admin portal for platform management — user management, credit system, invitation flow, signup control, platform settings, and dashboard metrics — with split-horizon architecture and separate admin frontend
+
+**Phases completed:** 26-32 (7 phases, 24 plans total)
+
+**Key accomplishments:**
+
+- Built split-horizon architecture with SPECTRA_MODE routing (public/admin/dev), mode-aware CORS, and defense-in-depth security (Tailscale + JWT + role enforcement + audit logging)
+- Implemented credit system with NUMERIC(10,1) atomic deduction (SELECT FOR UPDATE), tier-based allocations from user_classes.yaml, APScheduler auto-resets, and admin manual adjustments
+- Created platform settings with runtime configuration via key-value DB table (30s TTL cache), signup toggle with immediate effect, and configurable invite expiry
+- Built full user management: paginated listing with search/filter/sort, activate/deactivate with token invalidation, password reset, tier change, credit adjust, and deletion with challenge codes
+- Deployed email invitation system with SHA-256 hashed time-limited single-use tokens, branded email templates, revoke/resend, and invite-only registration flow
+- Shipped complete admin Next.js frontend (admin-frontend/) with dashboard metrics, Recharts trend charts, credit distribution, user management, settings, invitations, and audit log pages
+
+**Stats:**
+
+- 7 phases, 24 plans executed
+- 127 commits over 2 days (Feb 16-17, 2026)
+- ~20,924 LOC across backend Python + admin-frontend TypeScript/TSX
+- 5 new database tables + 2 user table fields via Alembic migration
+- 1 new backend dependency (APScheduler), 1 new frontend library (Recharts)
+
+**Git range:** `feat(26-02)` → `fix(32-01)`
+
+**Requirements:** 82/86 satisfied (95%)
+- Admin Authentication: 7/7 (AUTH)
+- Admin Dashboard: 7/7 (DASH)
+- User Management: 13/13 (USER)
+- Signup Control: 4/4 (SIGNUP)
+- User Invitation: 8/8 (INVITE)
+- User Class Management: 6/7 (TIER) — TIER-02 deferred
+- Credit Management: 12/13 (CREDIT) — CREDIT-11 deferred
+- Platform Settings: 7/8 (SETTINGS) — SETTINGS-06 deferred
+- Split-Horizon Architecture: 10/10 (ARCH)
+- Database Changes: 9/9 (DB)
+
+### Known Gaps
+
+- **CREDIT-11**: Bulk-adjust credits by user class — deferred (admin adjusts individually for now)
+- **SETTINGS-06**: Per-tier credit overrides in platform_settings — deferred (YAML defaults sufficient)
+- **TIER-02**: Admin editing tier credit amounts via UI — deferred (requires SETTINGS-06)
+
+**Testing:** UAT v1 (16 issues found, all fixed in gap closure) + UAT v2 (19 tests, 18 passed, 1 inline fix) + Phase 32 production readiness closure
+
+**What's next:** v0.6 will be defined via `/gsd:new-milestone`
+
+---
+

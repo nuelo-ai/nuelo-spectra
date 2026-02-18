@@ -242,7 +242,24 @@ async def lifespan(app: FastAPI):
         app.state.checkpointer = checkpointer
         logging.getLogger("spectra").info("PostgreSQL checkpointer initialized")
 
+        # Start credit reset scheduler if enabled
+        # Scheduler only makes sense in public or dev mode (processes user credits)
+        # but we rely on the env var toggle rather than mode check
+        if settings.enable_scheduler:
+            from app.scheduler import setup_scheduler
+            sched = setup_scheduler()
+            sched.start()
+            logging.getLogger("spectra.scheduler").info(
+                "Credit reset scheduler started (15-min interval)"
+            )
+
         yield
+
+        # Shutdown scheduler if it was started
+        if settings.enable_scheduler:
+            from app.scheduler import scheduler
+            scheduler.shutdown(wait=False)
+            logging.getLogger("spectra.scheduler").info("Credit reset scheduler stopped")
 
     # Shutdown: dispose of database engine
     await engine.dispose()
@@ -256,23 +273,62 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Add CORS middleware
+# Determine operational mode
+mode = settings.spectra_mode
+if mode not in ("public", "admin", "dev"):
+    raise ValueError(f"Invalid SPECTRA_MODE: '{mode}'. Must be 'public', 'admin', or 'dev'")
+
+logger = logging.getLogger("spectra.mode")
+logger.info(f"Starting Spectra in {mode.upper()} mode")
+
+# Add CORS middleware (mode-aware)
 # IMPORTANT: Must use explicit origins (not wildcard) with allow_credentials=True
+cors_origins = settings.get_cors_origins()
+if mode in ("admin", "dev") and settings.admin_cors_origin:
+    if settings.admin_cors_origin not in cors_origins:
+        cors_origins.append(settings.admin_cors_origin)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.get_cors_origins(),  # Use method to parse JSON/list
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Admin-Token"],  # For sliding window token reissue
 )
 
-# Include routers
+# Health is always available (all modes)
 app.include_router(health.router)
-app.include_router(auth.router)
-app.include_router(files.router)
-app.include_router(chat.router)
-app.include_router(chat_sessions.router)
-app.include_router(search.router)
+
+# Public routes (public and dev modes)
+if mode in ("public", "dev"):
+    app.include_router(auth.router)
+    app.include_router(files.router)
+    app.include_router(chat.router)
+    app.include_router(chat_sessions.router)
+    app.include_router(search.router)
+
+    from app.routers import credits
+    app.include_router(credits.router)
+
+# Admin routes (admin and dev modes) -- lazy import to avoid loading admin code in public mode
+if mode in ("admin", "dev"):
+    from app.routers.admin import admin_router
+    from app.middleware.admin_token import AdminTokenReissueMiddleware
+
+    app.include_router(admin_router, prefix="/api/admin")
+    app.add_middleware(AdminTokenReissueMiddleware)
+
+# In public mode, catch-all for /api/admin/* to log warnings and return 404
+if mode == "public":
+    from fastapi import HTTPException
+
+    @app.api_route("/api/admin/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"], include_in_schema=False)
+    async def admin_route_not_found(path: str):
+        logging.getLogger("spectra.security").warning(
+            f"Request to admin route /api/admin/{path} in public mode"
+        )
+        raise HTTPException(status_code=404, detail="Not Found")
 
 
 @app.get("/")

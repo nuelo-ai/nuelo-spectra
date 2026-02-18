@@ -1,227 +1,275 @@
 # Project Research Summary
 
-**Project:** Spectra - AI-powered data analytics platform
-**Domain:** Data Visualization (v0.4) - AI-generated interactive Plotly charts
-**Researched:** 2026-02-12
+**Project:** Spectra v0.5 Admin Portal
+**Domain:** SaaS admin portal with user management, credit-based usage control, invitation-only signup, and split-horizon deployment
+**Researched:** 2026-02-16
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Spectra v0.4 adds AI-generated data visualization by introducing a 6th agent (Visualization Agent) that generates Plotly chart code executed in the E2B sandbox. The architecture leverages the existing code generation pipeline: the Visualization Agent produces Python code that creates Plotly figures and outputs JSON via `fig.to_json()`, which streams to the frontend for client-side rendering with plotly.js. This JSON-over-the-wire pattern avoids server-side image generation entirely—no Kaleido, no Chrome dependencies, no iframe security concerns.
+Spectra v0.5 adds the operational backbone for commercial SaaS operation: an admin portal with user management, credit-based usage metering, controlled signup via invitations, and split-horizon network deployment. The research reveals this is not exotic territory -- these are well-established SaaS patterns with proven solutions. The challenge is integration, not innovation.
 
-The recommended approach is a **two-pass execution model**: first, the Coding Agent generates data analysis code (existing flow unchanged), then the Visualization Agent conditionally generates chart code if appropriate. The Data Analysis Agent determines visualization intent based on user queries and data suitability, following an "err on the side of showing charts" policy. Charts render as interactive Plotly.js components within the existing DataCard structure, positioned between the data table and analysis explanation.
+The recommended approach builds on the existing FastAPI + PostgreSQL + Next.js stack with minimal new dependencies: APScheduler for credit reset scheduling (backend) and Recharts for admin dashboard charts (frontend). The split-horizon deployment is pure configuration (SPECTRA_MODE env var) with no new infrastructure beyond what Tailscale already provides. Most of the work is new models, new services, and new routers that follow existing patterns.
 
-The critical risk is **over-engineering the integration**. The existing pipeline (Manager → Coding → Code Checker → Execute → Data Analysis → Response) works well. Visualization must extend, not rewrite. The allowlist needs `plotly` added (1-line change), the sandbox output parser needs to capture chart JSON (20 lines), and the frontend needs a lazy-loaded PlotlyChart component (30 lines). The complexity is in prompt engineering—ensuring the LLM selects appropriate chart types and handles edge cases—not in architectural rewrites.
+The key risk is the credit deduction system. It appears deceptively simple but introduces three critical pitfalls: (1) race conditions from concurrent message requests overdrawing credit balances, (2) float precision drift accumulating over hundreds of transactions, and (3) deducting credits before the expensive agent pipeline runs but after the user commits to the action. Each has a known solution (SELECT FOR UPDATE, NUMERIC columns, reserve-then-confirm pattern), but all must be implemented correctly from day one -- retrofitting credit atomicity after launch is nearly impossible without database downtime. The invitation system and admin portal are straightforward by comparison, reusing existing auth and email infrastructure.
 
 ## Key Findings
 
 ### Recommended Stack
 
-**Backend additions:** Zero new Python dependencies. Plotly 6.0.1 is pre-installed in E2B sandbox. The Visualization Agent uses existing `langchain-core` and `langgraph` patterns. The only change is adding `plotly` to `allowlist.yaml`.
-
-**Frontend additions:** One new npm package (`plotly.js-dist-min` ~1MB gzipped). Avoid the outdated `react-plotly.js` wrapper (last updated 3 years ago); instead, use a custom 30-line component with `Plotly.newPlot()` and React `useRef`/`useEffect`.
+Almost everything needed already exists in the stack or comes from Python stdlib. The backend adds exactly one new dependency: APScheduler for scheduled credit resets. The admin frontend is a separate Next.js 16 app reusing the same libraries as the public frontend (TanStack Query, Zustand, shadcn/ui) plus Recharts for dashboard trend charts.
 
 **Core technologies:**
-- **Plotly (Python)**: Chart generation in sandbox—pre-installed, no pip install needed
-- **plotly.js (JavaScript)**: Client-side rendering + PNG/SVG export—`Plotly.downloadImage()` handles image export without server involvement
-- **JSON transport**: `fig.to_json()` produces 5-10KB payloads vs 3MB HTML strings—enables interactivity, theming, and type safety
+- **APScheduler (>=3.11.0)**: Periodic credit reset scheduler (weekly/monthly auto-allocation) -- lightweight, integrates with FastAPI's lifespan, no external dependencies. Chosen over Celery (too heavy), cron (not portable), and fastapi-utils (too simple).
+- **Recharts (^3.7.0)**: Admin dashboard charts (signups over time, credit usage trends) -- shadcn/ui's official charting library, 45KB vs Plotly's 1MB. Matches existing design system.
+- **Existing stack**: FastAPI, PostgreSQL + SQLAlchemy + Alembic, JWT auth (PyJWT), SMTP email (aiosmtplib + Jinja2), Next.js 16, React 19, TanStack Query, Zustand, Radix UI -- all unchanged.
+- **No new infrastructure**: Tailscale VPN (already in use), Docker Compose, PostgreSQL (same database, 5 new tables).
 
-**Critical decision:** Client-side export via `Plotly.downloadImage()` instead of server-side Kaleido. Kaleido v1.0 requires Chrome (not in E2B sandbox), has 50x performance regression, and Docker sandbox conflicts. Client-side export is instant, works offline, and requires no infrastructure.
+**Critical decision points:**
+- **NUMERIC(10,2) not FLOAT for credit values** -- float precision drift causes balance confusion after hundreds of transactions.
+- **Separate admin-frontend/ app, not a route** -- deployment isolation, bundle isolation, independent iteration.
+- **SPECTRA_MODE=public|admin|dev** -- same codebase, conditional router mounting, mode-aware CORS.
 
 ### Expected Features
 
-**Must have (table stakes):**
-- AI-selected chart types (bar, line, scatter, histogram, box, pie, donut)—users expect "show me sales trends" to produce a line chart without specifying type
-- Charts rendered in DataCard above table—visual insight first, exact values in table second
-- Interactive charts (zoom, pan, hover tooltips)—Plotly.js provides this by default, static images feel dated
-- PNG/SVG export—download buttons below chart, browser-side via `Plotly.downloadImage()`
-- Chart titles and axis labels—prompt engineering ensures meaningful labels, not raw column names
-- Automatic chart generation—AI decides when visualization adds value (not every query needs a chart)
+The requirements are well-scoped and appropriately defer Stripe integration, per-model credit costs, and self-service tier upgrades. v0.5 builds the internal plumbing (credit ledger, tier assignment, admin controls) that future monetization will plug into.
 
-**Should have (competitive):**
-- SVG export—higher quality than PNG for print and presentations (ChatGPT only exports PNG)
-- Dark mode chart theming—charts respect Spectra's light/dark toggle with transparent backgrounds and theme-aware colors
-- Chart + table + analysis unified in one DataCard—competitors show either chart OR table, Spectra shows both
-- Visualization Agent as separate 6th agent—specialized prompt for chart quality without polluting the Coding Agent's analysis focus
+**Must have (table stakes):**
+- Admin auth with CLI seed for first admin (chicken-and-egg solved)
+- User management: list/search/filter, activate/deactivate, delete with cascade
+- Credit system: balance per user, deduction on message send, out-of-credits blocking, transaction log
+- Signup control toggle with invite-only mode (immediate effect, no restart)
+- Invitation system: email invite with time-limited, single-use tokens
+- User class/tier assignment (free/standard/premium) determining credit allocation
+- Audit logging of all admin actions (who, what, when, target)
+- Platform settings key-value store (runtime config without redeployment)
+
+**Should have (differentiators):**
+- Admin dashboard with trend charts (signups, messages, credit usage over time)
+- Credit distribution overview by tier
+- Pending invitation management (revoke/resend)
+- User detail page with activity summary
+- Auto-reset credit policy configuration (manual/weekly/monthly)
 
 **Defer (v2+):**
-- Chart type switcher (bar ↔ line ↔ scatter)—nice-to-have after core charts work
-- Advanced chart types (heatmap, 3D, geo maps)—add based on user demand, each adds ~500KB to bundle
-- Chart persistence in database—currently transient (regenerated on query re-run), defer to `metadata_json` storage optimization
+- Stripe/payment integration (doubles scope, clean follow-on milestone)
+- Per-model credit costs (no user-facing model selection yet)
+- Dynamic tier creation via admin UI (static YAML is appropriate for 3-5 tiers)
+- Self-service tier upgrade (requires payment integration)
+- Real-time credit balance WebSocket (polling is sufficient)
 
 ### Architecture Approach
 
-The Visualization Agent integrates as a **conditional post-processing node** after `da_response` in the LangGraph graph. It does NOT execute code itself—it generates Plotly Python code, which the `viz_execute` node runs in E2B sandbox. This mirrors the existing Coding Agent → Code Checker → Execute pattern, maintaining separation of code generation from code execution.
+Shared models and services, isolated entry points. Admin routers call the same database layer and reuse existing services (auth, email) but live in their own namespace (`/api/admin/`). The most critical integration point is credit deduction at the chat message layer -- credits must be checked and deducted BEFORE the expensive LangGraph agent pipeline runs, at the router level in `routers/chat.py`.
 
 **Major components:**
-1. **Visualization Agent** (`visualization.py`)—LLM generates Plotly code from `execution_result`, user query, and chart hint; embeds data as Python literal (no file upload needed)
-2. **Viz Execute Node** (`viz_execute_node` in `graph.py`)—lightweight E2B sandbox call (~1-2s); parses chart JSON from stdout; non-fatal errors (chart failure doesn't lose analysis)
-3. **ChartRenderer Component** (`ChartRenderer.tsx`)—dynamic import (no SSR), custom wrapper with `Plotly.newPlot()`, responsive sizing, theme overrides
+1. **Mode-gated router mounting** -- `SPECTRA_MODE` env var controls which routers mount. Public mode: auth, chat, files, sessions, search. Admin mode: `/api/admin/*` routers. Dev mode: all. Lazy imports prevent admin routes leaking into public deployment.
+2. **Credit system** -- `UserCredit` table (1:1 with users), `CreditTransaction` append-only ledger. Deduction uses SELECT FOR UPDATE to prevent race conditions. Deduct BEFORE agent runs, not after (no refunds on failure matches LLM API billing patterns).
+3. **Platform settings service** -- Key-value DB table with 30-second in-memory cache. Settings change at runtime without restart. Precedence: DB overrides > YAML defaults > hardcoded fallbacks.
+4. **Admin router package** -- `routers/admin/__init__.py` aggregates 6 sub-routers (auth, dashboard, users, settings, invitations, credits) into single mount point.
+5. **Audit logging** -- `AdminAuditLog` table, logged in same transaction as business action (atomic). No middleware -- explicit service calls in admin routers for semantic action names.
+6. **Invitation system** -- Reuses existing password reset token pattern: `secrets.token_urlsafe(32)`, SHA-256 hash stored, email pre-filled and locked, single-use validation.
+7. **Admin frontend** -- Separate Next.js app at `admin-frontend/`, same stack as public frontend (TanStack Query, Zustand, shadcn/ui), API client points to `/api/admin/`.
 
-**Data flow:** Coding Agent produces tabular data → Data Analysis Agent interprets → decides visualization appropriate → Visualization Agent generates chart code → E2B executes → chart JSON streams via SSE → DataCard renders Plotly.js chart above table.
-
-**State schema changes:** 5 new fields on `ChatAgentState` (all additive, backward compatible): `visualization_requested`, `chart_hint`, `chart_code`, `chart_specs`, `chart_error`.
+**Database changes:**
+- Add `is_admin` (Boolean, default False), `user_class` (Enum, default 'free') to `users` table
+- Create 5 new tables: `platform_settings`, `user_credits`, `credit_transactions`, `invitations`, `admin_audit_log`
+- Single Alembic migration with three-step pattern for NOT NULL columns (add nullable, backfill, alter to NOT NULL)
 
 ### Critical Pitfalls
 
-1. **Plotly blocked by AST allowlist**—Current `allowlist.yaml` only permits pandas/numpy. The Code Checker rejects `import plotly` with "Module not in allowlist." This causes 100% failure rate for chart generation. **Prevention:** Add `plotly` to `allowed_libraries` in `allowlist.yaml` before any visualization work.
+Research identified 15 pitfalls across critical, moderate, and minor severity. The top 5 require explicit prevention during implementation:
 
-2. **Sandbox output pipeline cannot capture chart artifacts**—Current pipeline parses `{"result": ...}` from stdout. Plotly Figure objects are not JSON serializable. **Prevention:** Visualization Agent code must end with `print(json.dumps({"chart": json.loads(fig.to_json())}))`. Modify `execute_in_sandbox` to extract `chart` key from stdout JSON.
+1. **Credit deduction race condition** -- Two concurrent messages from the same user both read balance before either deducts, allowing overdraw. **Prevention:** Use `SELECT FOR UPDATE` (or `FOR NO KEY UPDATE`) to lock the row during balance check + deduction. Alternative: single atomic `UPDATE ... WHERE balance >= cost RETURNING balance`.
 
-3. **LLM generates wrong chart type for data shape**—Research shows 15-30% of LLM-generated charts use incorrect types (pie chart for 20+ categories, line chart for unordered categorical data). **Prevention:** Heuristic guardrails in prompt (categorical >8 values → bar not pie; <3 data points → table not chart). Include unique value counts in agent context.
+2. **Float precision drift** -- Using PostgreSQL FLOAT for credit values causes precision loss after hundreds of operations (0.1 + 0.2 = 0.30000000000000004). **Prevention:** Use NUMERIC(10,2) in PostgreSQL, Decimal in Python. Define credit costs in YAML as strings and parse with Decimal().
 
-4. **plotly.js bundle bloats frontend (~3MB)**—Full Plotly.js adds 3MB to every page load. **Prevention:** Use `plotly.js-dist-min` partial bundle (~1MB). Lazy load with `dynamic(() => import('./PlotlyChart'), { ssr: false })`. Only load when chart data exists.
+3. **Admin router leak to public deployment** -- Admin endpoints accidentally exposed in public mode if router imports have side effects or mode gating is wrong. **Prevention:** Lazy imports inside mode conditional, startup assertion test verifying no `/api/admin/*` routes in public mode.
 
-5. **Over-visualization**—Showing charts for every query creates "chart fatigue." A single scalar ("What is average revenue?") doesn't need a chart. **Prevention:** Data Analysis Agent decides `visualization_requested` based on query intent and data shape. Default to tables, opt-in to charts.
+4. **Alembic migration on production users table** -- Adding NOT NULL columns to existing users table fails without defaults. **Prevention:** Three-step migration: add nullable with server_default, backfill, alter to NOT NULL, optionally remove server_default.
+
+5. **Invitation token predictability** -- Weak randomness (UUID4, sequential IDs) or missing single-use enforcement allows unauthorized registrations. **Prevention:** Reuse existing password reset pattern: `secrets.token_urlsafe(32)`, SHA-256 hash storage, status='accepted' after use, expires_at check.
+
+**Additional high-risk areas:**
+- CORS configuration must be mode-aware (public origins in public mode, admin origins in admin mode, both in dev)
+- Credit deduction must happen BEFORE agent pipeline runs (agents are expensive, no refunds on failure)
+- Audit log and business action must be in same transaction (flush, not commit, until both complete)
+- Platform settings cache must not use `@lru_cache` (settings change at runtime)
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure follows a **dependency-aware build order**: state schema → output pipeline → agent integration → frontend rendering → polish.
+Based on dependency analysis and risk prioritization, suggest six sequential phases:
 
-### Phase 1: Infrastructure Preparation
-**Rationale:** Allowlist and state schema are prerequisites for all other work. Cannot generate chart code if Plotly is blocked, cannot store chart data if state has no `chart_specs` field.
-
-**Delivers:**
-- `plotly` added to `allowlist.yaml`
-- 5 new fields in `ChatAgentState` (`visualization_requested`, `chart_hint`, `chart_code`, `chart_specs`, `chart_error`)
-- E2B Plotly verification (confirm 6.0.1 pre-installed)
-
-**Addresses:** Pitfall #1 (allowlist blocking)
-
-**Complexity:** LOW—config changes only, no code logic
-
-### Phase 2: Output Pipeline Extension
-**Rationale:** Chart JSON must flow from sandbox to frontend before any agent can produce it. The output contract dictates what the Visualization Agent generates.
+### Phase 1: Foundation (Database + Config + Mode Gating)
+**Rationale:** Everything else depends on schema, config, mode gating, and admin auth. Pure backend, fully testable via pytest and API calls before any frontend work.
 
 **Delivers:**
-- Modify `execute_in_sandbox` (graph.py) to parse `{"result": ..., "chart": ...}` from stdout
-- Add `chart_specs` to SSE stream whitelist (agent_service.py)
-- New `viz_execute_node` function (lightweight E2B sandbox call, non-fatal error handling)
+- Alembic migration: add `is_admin`, `user_class` to users table, create 5 new tables
+- `SPECTRA_MODE` env var in settings, conditional router mounting in `main.py`
+- `CurrentAdmin` dependency (extends `CurrentUser` + `is_admin` check)
+- `routers/admin/__init__.py` package structure (empty sub-routers)
+- `services/admin/audit.py` and `services/admin/settings.py`
+- `user_classes.yaml` config file with tier definitions
+- CLI admin seed command (`python -m app.cli seed-admin`)
 
-**Addresses:** Pitfall #2 (output capture), Pitfall #6 (large JSON)
+**Addresses:** Pitfall 4 (migration), Pitfall 3 (mode gating), Pitfall 11 (admin bootstrap)
 
-**Complexity:** MEDIUM—modifying existing stdout parsing requires careful testing
+**Research flag:** Standard patterns, no research-phase needed.
 
-### Phase 3: Visualization Agent
-**Rationale:** With infrastructure ready and output pipeline extended, the agent can generate chart code that will be captured correctly.
-
-**Delivers:**
-- New `visualization.py` agent module with chart type selection heuristics
-- New `visualization` entry in `prompts.yaml` (LLM config + system prompt)
-- Chart code generation with embedded data (no file uploads)
-
-**Addresses:** Pitfall #3 (wrong chart type), Pitfall #10 (prompt conflicts)
-
-**Complexity:** HIGH—prompt engineering for chart type selection is the core UX challenge
-
-### Phase 4: Graph Integration
-**Rationale:** Wire the Visualization Agent into LangGraph as conditional post-processing after `da_response`.
+### Phase 2: Credit System (Highest Risk First)
+**Rationale:** Credit deduction touches the most critical user-facing flow (chat). Building early surfaces integration issues before other features add complexity. Admin credit endpoints enable testing (manually grant credits, verify deduction).
 
 **Delivers:**
-- Add `visualization_agent`, `viz_execute`, `viz_response` nodes to graph
-- Add `should_visualize()` conditional edge function
-- Modify `da_response_node` to detect visualization intent (set `visualization_requested` flag)
-- Change `da_response` from finish point to conditional routing
+- `services/credit.py` (shared: atomic `check_and_deduct`, `InsufficientCreditsError`)
+- `services/admin/credit.py` (admin: adjust, bulk-adjust, balance view, history)
+- Hook credit check into `routers/chat.py` -- all four query/stream endpoints
+- Create `UserCredit` record on user signup (modify auth service)
+- `routers/admin/credits.py` (admin endpoints)
+- Seed `default_credit_cost` platform setting
 
-**Addresses:** Pitfall #5 (over-visualization), Pitfall #11 (DA Agent misinterprets chart JSON)
+**Addresses:** Pitfall 1 (race condition with SELECT FOR UPDATE), Pitfall 2 (NUMERIC columns), Pitfall 8 (deduct before agent)
 
-**Complexity:** MEDIUM—routing changes in existing graph, but non-breaking (tabular flow unchanged)
+**Research flag:** Standard patterns, but CRITICAL to implement correctly. Phase-specific research: "How to implement reserve-then-confirm pattern for SSE streaming?"
 
-### Phase 5: Frontend Chart Rendering
-**Rationale:** Backend produces chart JSON; frontend must render it interactively in DataCard.
-
-**Delivers:**
-- `npm install plotly.js-dist-min` (~1MB partial bundle)
-- `ChartRenderer.tsx` component with dynamic import (no SSR)
-- Add `chartSpecs` prop to `DataCard.tsx`, render chart section between table and analysis
-- PNG/SVG download buttons via `Plotly.downloadImage()`
-
-**Addresses:** Pitfall #4 (bundle size), Pitfall #7 (no chart section), Pitfall #9 (Kaleido fails)
-
-**Complexity:** MEDIUM—lazy loading and dynamic import configuration
-
-### Phase 6: Theme & UX Polish
-**Rationale:** Core functionality works end-to-end; now refine visual integration.
+### Phase 3: User Management + Platform Settings
+**Rationale:** Depends on Phase 1 (schema, admin auth) but not Phase 2. Built after Phase 2 so user class changes can immediately affect credit allocations.
 
 **Delivers:**
-- Dark mode chart theming (transparent backgrounds, theme-aware colors)
-- Chart skeleton loader during streaming
-- Responsive chart sizing (`useResizeHandler`)
-- Chart-specific streaming events (`visualization_started`)
+- `services/admin/user_management.py` (list, search, filter, activate, deactivate, change class, delete)
+- `routers/admin/users.py`
+- `routers/admin/settings.py` (CRUD on platform_settings table)
+- Implement `allow_public_signup` check in existing `routers/auth.py` signup
+- `routers/admin/dashboard.py` (aggregate queries)
 
-**Addresses:** Pitfall #8 (dark mode mismatch), Pitfall #14 (interactivity conflicts)
+**Addresses:** Pitfall 10 (config precedence), Pitfall 15 (settings cache)
 
-**Complexity:** LOW—CSS and config tweaks
+**Research flag:** Standard CRUD patterns, no research-phase needed.
 
-### Phase 7: Multi-Chart & Edge Cases (Optional)
-**Rationale:** Single chart is MVP; multi-chart (2-3 charts per response) is enhancement.
+### Phase 4: Invitation System
+**Rationale:** Depends on signup control toggle (Phase 3), email service (existing), and user model changes (Phase 1). First phase that requires a public frontend change.
 
 **Delivers:**
-- Multi-chart output contract (`{"charts": [chart1, chart2]}`)
-- Tabbed or carousel layout in DataCard for multiple charts
-- Chart type switcher (bar ↔ line ↔ scatter within same data shape)
+- `services/admin/invitation.py` (create, validate, accept, revoke, resend, list expired)
+- Invitation email template (reuse existing `services/email.py` patterns)
+- `routers/admin/invitations.py`
+- Modify `routers/auth.py` signup to accept and validate invite tokens
+- Add invite signup page to public frontend (`/signup?invite=TOKEN`)
 
-**Addresses:** Pitfall #13 (layout chaos)
+**Addresses:** Pitfall 5 (token security)
 
-**Complexity:** MEDIUM—UI design for multi-chart layout
+**Research flag:** Standard patterns (existing password reset provides template), no research-phase needed.
+
+### Phase 5: Audit Log Completion + Dashboard Polish
+**Rationale:** Audit log viewer is useful only after all admin actions are logging. Dashboard polish requires all data tables to exist.
+
+**Delivers:**
+- Wire `log_admin_action()` calls into ALL admin endpoints from Phases 2-4
+- Audit log viewer endpoint (list, filter by action/admin/date range)
+- Dashboard aggregate queries: credit distribution, low-credit users, trend calculations
+- Recharts chart data endpoints
+
+**Addresses:** Pitfall 7 (audit log growth -- index on created_at DESC, LIMIT on queries)
+
+**Research flag:** Standard patterns, no research-phase needed.
+
+### Phase 6: Admin Frontend
+**Rationale:** Frontend is a pure consumer of the API built in Phases 1-5. All endpoints are stable and tested before UI work begins. Can run in parallel with Phases 2-5 if second developer builds UI against API stubs/mocks.
+
+**Delivers:**
+- Initialize `admin-frontend/` Next.js project (shadcn/ui, TanStack Query, Zustand, Recharts)
+- Admin login page
+- Dashboard page (Recharts charts, metrics)
+- User management pages (list with search/filter, detail view)
+- Platform settings page (form with save)
+- Invitations page (list + create dialog)
+- Credit management views (user credit detail, bulk adjust)
+- Audit log viewer (table with date/action/admin filters)
+
+**Addresses:** Pitfall 9 (CORS for dual frontends), Pitfall 14 (admin frontend talking to wrong backend mode)
+
+**Research flag:** Standard Next.js + shadcn patterns, no research-phase needed. May need phase-specific research: "Recharts best practices for admin dashboards with shadcn/ui".
 
 ### Phase Ordering Rationale
 
-- **Infrastructure before agents:** Cannot generate code if allowlist blocks it; cannot store data if state lacks fields
-- **Output pipeline before agent creation:** The agent generates what the pipeline expects; pipeline design dictates agent output format
-- **Backend before frontend:** Frontend needs SSE events with chart JSON; those events must exist before frontend can consume them
-- **Core features before polish:** Dark mode and multi-chart are enhancements on top of single-chart functionality
-- **Non-blocking phases:** Phase 6 (polish) and Phase 7 (multi-chart) can be deferred if timeline is tight—core value is in Phases 1-5
+- **Phase 1 first:** Foundation for everything. No admin functionality works without schema, mode gating, and admin auth.
+- **Phase 2 second (credit system):** Highest technical risk. Integration with existing chat flow is the most complex change. Build when codebase is simple, before other features add noise.
+- **Phase 3 before Phase 4:** User management provides immediate value and enables testing (create test users, assign classes). Invitation system depends on signup toggle from platform settings.
+- **Phase 5 after data-generating phases:** Audit log viewer and dashboard need data from Phases 2-4. Building them earlier produces empty UIs.
+- **Phase 6 last (or parallel):** Frontend depends on stable API contracts. Building after backend phases complete reduces rework from API changes.
+
+**Dependency chains:**
+- Database migration -> Admin auth -> All admin features
+- Platform settings table -> Signup toggle -> Invitation system
+- User model changes -> User class assignment -> Credit allocation
+- Credit system core -> Admin credit endpoints -> Dashboard credit charts
+
+**Avoids pitfall cascades:**
+- Phase 1 catches router leak (Pitfall 3) before any admin functionality is written
+- Phase 2 forces atomic credit design (Pitfall 1, 2) before integration spreads across codebase
+- Phase 4 invitation system reuses Phase 1 password reset pattern (Pitfall 5)
 
 ### Research Flags
 
-**Phases needing deeper research during planning:**
-- **Phase 3 (Visualization Agent):** Chart type selection heuristics need validation with real user queries. The prompt must handle ambiguous cases ("show me sales" could be bar, line, or pie depending on data). Consider A/B testing different prompt strategies.
-- **Phase 7 (Multi-Chart):** UI/UX for multi-chart layout is underspecified. Tabs vs. carousel vs. vertical stack needs user testing.
+**Phases likely needing deeper research during planning:**
+- **Phase 2 (Credit system):** Reserve-then-confirm pattern for SSE streaming. Specific question: "How to handle credit deduction when stream disconnects mid-agent-execution?"
+- **Phase 6 (Admin frontend):** Recharts integration with shadcn/ui chart components. Specific question: "What are the shadcn/ui Recharts chart components and how to use them for time-series data?"
 
 **Phases with standard patterns (skip research-phase):**
-- **Phase 1:** Config changes follow existing patterns (allowlist has precedent, state schema is TypedDict extension)
-- **Phase 2:** Stdout parsing modification uses existing `execute_in_sandbox` patterns
-- **Phase 5:** Dynamic import and lazy loading are well-documented Next.js patterns
+- **Phase 1:** Standard Alembic migration, FastAPI mode gating, dependency injection patterns (all existing in codebase)
+- **Phase 3:** Standard CRUD routers, SQLAlchemy queries, Pydantic schemas
+- **Phase 4:** Reuses existing password reset token pattern from `routers/auth.py`
+- **Phase 5:** Read-only aggregation queries, standard audit log table patterns
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Plotly 6.0.1 verified pre-installed in E2B via DeepWiki. plotly.js bundle sizes confirmed via npm. Client-side export verified in plotly.js source code. |
-| Features | MEDIUM-HIGH | Table stakes derived from ChatGPT/Julius AI competitive analysis. Chart type list (7 types) confirmed supported by `plotly.js-basic-dist-min`. SVG export confirmed in plotly.js source (despite misleading docs). |
-| Architecture | HIGH | JSON-over-the-wire pattern is proven (Dash uses it internally). Two-pass execution aligns with existing Coding Agent → Execute flow. Direct codebase analysis with line-number references confirms integration points. |
-| Pitfalls | HIGH | Allowlist blocking verified in `code_checker.py` AST validation. stdout capture limitations confirmed in `graph.py`. LLM chart type errors validated by academic research (Drawing Pandas benchmark, 15-30% failure rate). Bundle size verified via plotly.js releases. |
+| Stack | HIGH | One new backend dependency (APScheduler, well-established). One new frontend library (Recharts, shadcn-recommended). Everything else uses existing stack or Python stdlib. No exotic technologies. |
+| Features | HIGH | Well-understood SaaS patterns with established best practices. Requirements appropriately scoped (defer Stripe, per-model costs, self-service). Credit system most complex but has proven solutions. |
+| Architecture | HIGH | Direct codebase analysis of existing Spectra v0.4 source code (23K LOC). Integration points clearly identified. Mode-gated routing is pure configuration. |
+| Pitfalls | HIGH | Credit race condition (Pitfall 1) and float precision (Pitfall 2) are well-documented with standard solutions (SELECT FOR UPDATE, NUMERIC). Migration patterns (Pitfall 4) from official Alembic cookbook. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Chart type selection prompt quality:** The heuristics (categorical >8 values → bar not pie) are derived from research, but need validation with real Spectra queries. Plan for prompt iteration in Phase 3.
-- **Multi-chart UI/UX:** Milestone says "2-3 charts to show different perspectives," but does not specify layout. Tabs? Carousel? Vertical stack? This needs product decision before Phase 7 implementation.
-- **Chart persistence:** Currently chart JSON is transient (regenerated on query re-run). If users want to bookmark/share specific charts, `metadata_json` storage is needed. Defer decision to post-v0.4 based on usage patterns.
-- **Edge case handling:** What if execution_result has 10,000 rows? The Visualization Agent prompt must include data aggregation instructions ("limit to top 20 items"). This is addressed in STACK.md but needs enforcement in prompt.
+**Credit deduction timing with SSE streaming:** The research identifies that credits should be deducted BEFORE the agent runs (to avoid wasting LLM costs), but the `/chat/{file_id}/stream` endpoint is a long-lived SSE connection that can disconnect mid-stream. The reserve-then-confirm pattern is mentioned but not fully detailed. During Phase 2 planning, research: "How do production AI chat APIs handle credit deduction for streaming responses?" (OpenAI, Anthropic billing patterns).
+
+**Auto-reset scheduler reliability:** The requirements specify weekly/monthly auto-reset, but the research flags this as moderate complexity (Pitfall 12: timezone handling, idempotency, failure recovery). For v0.5, start with admin-triggered manual reset. Add automated reset as a v0.5.x enhancement after core credit system is validated. No gap blocking v0.5.0.
+
+**Audit log growth at scale:** Pitfall 7 identifies unbounded audit log growth, but also notes that for Spectra's scale (single developer, likely <100 admin actions/day), a simple indexed table is sufficient for years. Partitioning is premature optimization. The gap: no monitoring/alerting when audit log exceeds 1M rows. Defer to v0.6+ operations milestone.
+
+**CORS configuration complexity:** Pitfall 9 identifies that mode-aware CORS is required, but the exact implementation pattern is not detailed. During Phase 6 planning (or Phase 1 if admin frontend starts in parallel), verify: "FastAPI CORSMiddleware with dynamic origins based on settings".
+
+**Coexistence with existing SearchQuota:** Integration pitfall flagged: existing `SearchQuota` model already implements daily per-user usage tracking for web searches. Credit system introduces second usage-tracking mechanism. During Phase 2 planning, decide: web searches deduct credits OR use existing quota system, not both. Likely answer: deprecate SearchQuota, migrate to credit system for all usage tracking.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Direct codebase analysis: `graph.py`, `state.py`, `coding.py`, `code_checker.py`, `data_analysis.py`, `allowlist.yaml`, `prompts.yaml`, `DataCard.tsx` (line-number references throughout research files)
-- [E2B Code Interpreter Sandbox Environment](https://deepwiki.com/e2b-dev/code-interpreter/2.1-sandbox-environment)—Pre-installed packages list confirms Plotly 6.0.1
-- [plotly.js source: toimage.js](https://github.com/plotly/plotly.js/blob/master/src/snapshot/toimage.js)—Confirms SVG export in open-source (format: 'png' | 'jpeg' | 'webp' | 'svg')
-- [Plotly Python to_json docs](https://plotly.github.io/plotly.py-docs/generated/plotly.io.to_json.html)—JSON export API
-- [react-plotly.js GitHub](https://github.com/plotly/react-plotly.js)—Factory pattern for partial bundles
+- Direct analysis of existing Spectra v0.4 source code: `main.py`, `config.py`, `dependencies.py`, `models/user.py`, `routers/auth.py`, `routers/chat.py`, `services/chat.py` -- architecture patterns verified against actual codebase
+- `requirements/milestone-05-req.md` -- feature scope and acceptance criteria
+- Existing Alembic migration chain (9 migrations) -- migration patterns
+- FastAPI dependency injection patterns (project convention)
 
 ### Secondary (MEDIUM confidence)
-- [Drawing Pandas: LLM Plotting Code Benchmark (arxiv 2412.02764)](https://arxiv.org/html/2412.02764v1)—15-30% chart type selection errors, LLMs underperform with Plotly vs Matplotlib
-- [Are LLMs Ready for Visualization? (arxiv 2403.06158)](https://arxiv.org/html/2403.06158v1)—LLMs struggle with Plotly, chart type selection heuristics needed
-- [Building a Data Visualization Agent with LangGraph](https://blog.langchain.com/data-viz-agent/)—Multi-agent patterns for visualization
-- [Kaleido GitHub Issue #379](https://github.com/plotly/Kaleido/issues/379)—Docker sandbox-in-sandbox failures
-- [Kaleido GitHub Issue #400](https://github.com/plotly/Kaleido/issues/400)—50x performance regression in v1.0
+- [APScheduler PyPI](https://pypi.org/project/APScheduler/) -- v3.11.2 current, actively maintained
+- [FastAPI + APScheduler patterns](https://sentry.io/answers/schedule-tasks-with-fastapi/) -- Lifespan integration pattern
+- [Recharts npm](https://www.npmjs.com/package/recharts) -- v3.7.0 current
+- [shadcn/ui Chart Component](https://ui.shadcn.com/docs/components/radix/chart) -- Built on Recharts
+- [Preventing Postgres Race Conditions with SELECT FOR UPDATE](https://on-systems.tech/blog/128-preventing-read-committed-sql-concurrency-errors/) -- Credit race condition patterns
+- [Transaction Locking to Prevent Race Conditions](https://sqlfordevs.com/transaction-locking-prevent-race-condition) -- PostgreSQL locking strategies
+- [Working with Money in Postgres](https://www.crunchydata.com/blog/working-with-money-in-postgres) -- NUMERIC vs FLOAT for monetary values
+- [PostgreSQL Numeric Types Documentation](https://www.postgresql.org/docs/current/datatype-numeric.html) -- Official float warning
+- [Best Practices for Alembic Schema Migration](https://www.pingcap.com/article/best-practices-alembic-schema-migration/) -- Migration patterns
+- [Alembic Cookbook](https://alembic.sqlalchemy.org/en/latest/cookbook.html) -- Official migration patterns
+- [EnterpriseReady Audit Logging Guide](https://www.enterpriseready.io/features/audit-log/) -- Audit log patterns
+- [FastAPI CORS Documentation](https://fastapi.tiangolo.com/tutorial/cors/) -- Official CORS reference
+- [Stigg: Building AI Credits](https://www.stigg.io/blog-posts/weve-built-ai-credits-and-it-was-harder-than-we-expected) -- Real-world AI credit system challenges
 
-### Tertiary (LOW confidence, verify during implementation)
-- [plotly.js-basic-dist-min bundle composition](https://community.plotly.com/t/how-can-i-reduce-bundle-size-of-plotly-js-in-react-app/89910)—Community forum confirms basic bundle includes bar, scatter, pie, line; verify box plot inclusion during npm install
-- [E2B auto-detection for charts](https://e2b.dev/docs/code-interpreting/create-charts-visualizations/interactive-charts)—E2B only auto-detects matplotlib, NOT Plotly (Plotly requires explicit JSON output)
+### Tertiary (LOW confidence)
+- Credit auto-reset scheduler timezone handling -- APScheduler supports cron expressions with timezone, but need to verify behavior during DST transitions
+- Recharts React 19 compatibility -- v3.7.0 supports React 19 but may need `--legacy-peer-deps` for `react-is` peer dependency
 
 ---
-*Research completed: 2026-02-12*
+*Research completed: 2026-02-16*
 *Ready for roadmap: yes*

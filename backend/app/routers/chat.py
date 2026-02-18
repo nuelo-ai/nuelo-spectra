@@ -1,6 +1,7 @@
 """Chat message API endpoints."""
 
 import json
+from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request, status
@@ -18,10 +19,38 @@ from app.schemas.chat import (
 from app.services import agent_service
 from app.services.chat import ChatService
 from app.services.chat_session import ChatSessionService
+from app.services.credit import CreditService
 from app.services.file import FileService
 from app.agents.graph import get_or_create_graph
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
+
+
+async def _deduct_credits_or_raise(db: DbSession, user_id: UUID) -> None:
+    """Deduct credits from user or raise HTTP 402 if insufficient.
+
+    Reads default_credit_cost from platform_settings (runtime-configurable).
+    Commits the credit deduction independently before agent execution.
+    Unlimited users pass through (CreditService logs but doesn't deduct).
+    """
+    from app.services import platform_settings
+    cost_value = await platform_settings.get(db, "default_credit_cost")
+    credit_cost = Decimal(str(cost_value))
+    deduction = await CreditService.deduct_credit(db, user_id, credit_cost)
+    if not deduction.success:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail={
+                "error": "insufficient_credits",
+                "message": deduction.error_message,
+                "balance": float(deduction.balance),
+                "next_reset": (
+                    deduction.next_reset.isoformat() if deduction.next_reset else None
+                ),
+            },
+        )
+    # Commit credit deduction BEFORE agent runs -- deduction is independent of agent success
+    await db.commit()
 
 
 @router.get("/{file_id}/messages", response_model=ChatMessageList)
@@ -138,6 +167,9 @@ async def query_with_ai(
         HTTPException: 404 if file not found or doesn't belong to user
         HTTPException: 400 if file hasn't been onboarded yet
     """
+    # Deduct credit before agent execution (pre-send gate)
+    await _deduct_credits_or_raise(db, current_user.id)
+
     # Verify file ownership (done inside agent_service.run_chat_query)
     # Run chat query through agent pipeline
     result = await agent_service.run_chat_query(
@@ -191,6 +223,9 @@ async def stream_query(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="File not found"
         )
+
+    # Deduct credit before streaming starts (pre-send gate)
+    await _deduct_credits_or_raise(db, current_user.id)
 
     settings = get_settings()
     event_counter = 0
@@ -399,6 +434,9 @@ async def session_query_with_ai(
             detail="No files linked to this session. Please link a file before querying."
         )
 
+    # Deduct credit before agent execution (pre-send gate)
+    await _deduct_credits_or_raise(db, current_user.id)
+
     # Run chat query through agent pipeline (session-based)
     result = await agent_service.run_chat_query(
         db, None, current_user.id, body.content,
@@ -460,6 +498,9 @@ async def session_stream_query(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No files linked to this session. Please link a file before querying."
         )
+
+    # Deduct credit before streaming starts (pre-send gate)
+    await _deduct_credits_or_raise(db, current_user.id)
 
     settings = get_settings()
     event_counter = 0

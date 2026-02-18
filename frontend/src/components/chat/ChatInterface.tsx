@@ -597,7 +597,9 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
                   id: "error",
                   file_id: null,
                   role: "assistant",
-                  content: "Something went wrong. Please try again.",
+                  content: streamError.includes("credits")
+                    ? streamError
+                    : "Something went wrong. Please try again.",
                   message_type: "error",
                   metadata_json: null,
                   created_at: new Date().toISOString(),

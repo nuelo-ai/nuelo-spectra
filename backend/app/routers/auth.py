@@ -18,6 +18,8 @@ from app.models.user import User
 from app.schemas.auth import (
     ChangePasswordRequest,
     ForgotPasswordRequest,
+    InviteRegisterRequest,
+    InviteValidateResponse,
     LoginRequest,
     MessageResponse,
     ProfileUpdateRequest,
@@ -41,6 +43,16 @@ _reset_cooldowns: dict[str, float] = {}
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
+@router.get("/signup-status")
+async def get_signup_status(
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Public endpoint: check if signup is allowed. No auth required."""
+    from app.services import platform_settings
+    allowed = await platform_settings.get(db, "allow_public_signup")
+    return {"signup_allowed": allowed}
+
+
 @router.post("/signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def signup(
     signup_data: SignupRequest,
@@ -60,8 +72,42 @@ async def signup(
     Raises:
         HTTPException: 409 if email already registered
     """
+    # Check if public signup is allowed
+    from app.services import platform_settings
+    allow_signup = await platform_settings.get(db, "allow_public_signup")
+
+    if not allow_signup:
+        invite_token = getattr(signup_data, "invite_token", None)
+        if not invite_token:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Public registration is currently disabled. An invitation is required.",
+            )
+        # Validate invite token
+        token_hash = hashlib.sha256(invite_token.encode()).hexdigest()
+        from app.models.invitation import Invitation
+        result = await db.execute(
+            select(Invitation).where(
+                Invitation.token_hash == token_hash,
+                Invitation.status == "pending",
+                Invitation.expires_at > datetime.now(timezone.utc),
+            )
+        )
+        invitation = result.scalar_one_or_none()
+        if not invitation:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid or expired invitation token.",
+            )
+        # Mark invitation as accepted
+        invitation.status = "accepted"
+        invitation.accepted_at = datetime.now(timezone.utc)
+
+    # Read default user class from platform settings
+    default_class = await platform_settings.get(db, "default_user_class")
+
     # Create user (raises 409 if email exists)
-    user = await auth_service.create_user(db, signup_data)
+    user = await auth_service.create_user(db, signup_data, default_class=default_class)
 
     # Auto-login: create tokens for new user
     tokens = create_tokens(str(user.id), settings)
@@ -101,6 +147,10 @@ async def login(
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"}
         )
+
+    # Track last login time
+    user.last_login_at = datetime.now(timezone.utc)
+    await db.commit()
 
     # Create tokens
     tokens = create_tokens(str(user.id), settings)
@@ -395,3 +445,112 @@ async def change_password_endpoint(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )
+
+
+@router.get("/invite-validate", response_model=InviteValidateResponse)
+async def invite_validate(
+    token: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> InviteValidateResponse:
+    """Public endpoint: validate an invite token and return the associated email.
+
+    Used to pre-fill the registration form with the invited email address.
+    Read-only check -- does not modify the invitation.
+
+    Args:
+        token: Raw invite token from the URL
+        db: Database session
+
+    Returns:
+        Email associated with the invitation
+
+    Raises:
+        HTTPException: 400 if token is invalid or expired
+    """
+    from app.models.invitation import Invitation
+
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    result = await db.execute(
+        select(Invitation).where(
+            Invitation.token_hash == token_hash,
+            Invitation.status == "pending",
+            Invitation.expires_at > datetime.now(timezone.utc),
+        )
+    )
+    invitation = result.scalar_one_or_none()
+
+    if not invitation:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This invite has expired. Contact your administrator for a new one.",
+        )
+
+    return InviteValidateResponse(email=invitation.email, valid=True)
+
+
+@router.post("/invite-register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+async def invite_register(
+    body: InviteRegisterRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> TokenResponse:
+    """Register a new user via invitation token and return auth tokens (auto-login).
+
+    The email is taken from the invitation record (not user input) to prevent
+    email enumeration. The invitation is marked as accepted (single-use).
+    A FOR UPDATE lock prevents concurrent registration with the same token.
+
+    Args:
+        body: Invite registration data (token, first_name, last_name, password)
+        db: Database session
+        settings: Application settings
+
+    Returns:
+        Access and refresh tokens for immediate login
+
+    Raises:
+        HTTPException: 403 if token is invalid or expired
+        HTTPException: 409 if email already registered
+    """
+    from app.models.invitation import Invitation
+    from app.services import platform_settings
+
+    # Hash token and look up invitation with pessimistic lock
+    token_hash = hashlib.sha256(body.token.encode()).hexdigest()
+    result = await db.execute(
+        select(Invitation).where(
+            Invitation.token_hash == token_hash,
+            Invitation.status == "pending",
+            Invitation.expires_at > datetime.now(timezone.utc),
+        ).with_for_update()
+    )
+    invitation = result.scalar_one_or_none()
+
+    if not invitation:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This invite has expired. Contact your administrator for a new one.",
+        )
+
+    # Mark invitation as accepted (single-use)
+    invitation.status = "accepted"
+    invitation.accepted_at = datetime.now(timezone.utc)
+
+    # Read default user class from platform settings
+    default_class = await platform_settings.get(db, "default_user_class")
+
+    # Build a SignupRequest-compatible object with email from invitation record
+    signup_data = SignupRequest(
+        email=invitation.email,
+        password=body.password,
+        first_name=body.first_name.strip(),
+        last_name=body.last_name.strip() if body.last_name else None,
+    )
+
+    # Create user (raises 409 if email already exists)
+    user = await auth_service.create_user(db, signup_data, default_class=default_class)
+
+    # Auto-login: generate tokens
+    tokens = create_tokens(str(user.id), settings)
+
+    return TokenResponse(**tokens)
