@@ -9,10 +9,10 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 
 ## Current Position
 
-Phase: All v0.5 phases complete (26-32)
-Plan: All 24 plans complete
-Status: v0.5 milestone shipped
-Last activity: 2026-02-18 -- Completed v0.5 Admin Portal milestone
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-18 — Milestone v0.5.1 started
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅
 
@@ -66,5 +66,5 @@ See PROJECT.md Key Decisions table for full decision log.
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed v0.5 Admin Portal milestone archival
-Resume with: `/gsd:new-milestone` to start next milestone
+Stopped at: Started v0.5.1 milestone, defining requirements
+Resume with: `/gsd:plan-phase 33` after requirements and roadmap are set

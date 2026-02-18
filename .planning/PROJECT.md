@@ -19,10 +19,22 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **Delivered:** Internal admin portal for platform management — user management, credit system, invitation flow, signup control, platform settings, and dashboard metrics — with split-horizon architecture and separate admin frontend.
 
+## Current Milestone: v0.5.1 Docker and Dokploy Support
+
+**Goal:** Package Spectra for production deployment — Dockerfiles for all 3 services, Docker Compose for local dev, and 3 separate Dokploy service configurations with production hardening and DEPLOYMENT.md guide.
+
+**Target features:**
+- Dockerfiles for backend (FastAPI), public frontend (Next.js), and admin frontend (Next.js)
+- Docker Compose for local development (all services + PostgreSQL)
+- 3 separate Dokploy service configurations (not a single Compose stack)
+- Production hardening (health checks, non-root users, restart policies, secrets)
+- Dokploy managed PostgreSQL (not containerized by us)
+- DEPLOYMENT.md step-by-step deployment guide
+
 ## Current State
 
 **Shipped:** v0.5 Admin Portal (2026-02-18)
-**Status:** Milestone complete, planning next milestone
+**Status:** v0.5.1 started — defining requirements
 **Codebase:** ~44,000 LOC (Python app + Python tests + TypeScript/TSX across public frontend + admin frontend)
 **Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily + Plotly + APScheduler (backend), Next.js 16 + React 19 + TanStack + Zustand + shadcn/ui + next-themes + Plotly.js + Recharts (frontend + admin frontend)
 
@@ -363,7 +375,17 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 ### Active
 
-(No active requirements — next milestone not yet defined. Run `/gsd:new-milestone` to start.)
+<!-- v0.5.1 Docker and Dokploy Support — see REQUIREMENTS.md for full REQ-IDs -->
+
+- [ ] Dockerfile for FastAPI backend service
+- [ ] Dockerfile for public Next.js frontend service
+- [ ] Dockerfile for admin Next.js frontend service
+- [ ] Docker Compose for local development (all services + PostgreSQL)
+- [ ] Dokploy service configuration for backend
+- [ ] Dokploy service configuration for public frontend
+- [ ] Dokploy service configuration for admin frontend
+- [ ] Production hardening (health checks, non-root users, restart policies, env secrets)
+- [ ] DEPLOYMENT.md step-by-step deployment guide
 
 ### Out of Scope
 
@@ -461,4 +483,4 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | Deferred CREDIT-11, SETTINGS-06, TIER-02 | Bulk credit adjust + per-tier overrides | — Pending for future milestone |
 
 ---
-*Last updated: 2026-02-18 after v0.5 Admin Portal milestone*
+*Last updated: 2026-02-18 after v0.5.1 milestone start*
