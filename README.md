@@ -14,6 +14,7 @@ Spectra bridges the gap between raw data and actionable insights. Upload your da
 - **Intelligent Routing**: Manager Agent skips code generation for simple queries (~40% faster)
 - **Multi-Provider LLM**: Choose from Anthropic, OpenAI, Google, Ollama, or OpenRouter per agent
 - **Production Security**: E2B Firecracker microVM isolation for safe code execution
+- **Admin Portal**: Internal admin dashboard with user management, credit system, invitations, and platform settings
 
 ## Features
 
@@ -27,16 +28,18 @@ Spectra bridges the gap between raw data and actionable insights. Upload your da
 - **Multi-LLM Support**: 6 providers with per-agent configuration
 - **Authentication**: JWT with refresh tokens and secure password reset
 - **Theming**: Dark/light mode with Nord palette
+- **Admin Portal**: Separate admin app for user management, credits, invitations, platform settings, and audit logging
 
 ## Tech Stack
 
 | Layer | Technologies |
 |-------|-------------|
-| **Backend** | FastAPI, Python 3.12+, PostgreSQL 16, SQLAlchemy 2.0 (async), asyncpg |
-| **AI/Agents** | LangGraph, LangChain, 5 agents with YAML prompts, Tavily web search |
+| **Backend** | FastAPI, Python 3.12+, PostgreSQL 16, SQLAlchemy 2.0 (async), asyncpg, APScheduler |
+| **AI/Agents** | LangGraph, LangChain, 6 agents with YAML prompts, Tavily web search |
 | **LLM Providers** | Anthropic (default), OpenAI, Google, Ollama, OpenRouter |
 | **Sandbox** | E2B Firecracker microVMs, AST validation, library allowlisting |
 | **Frontend** | Next.js 16, React 19, TypeScript 5, TanStack Query, Zustand, shadcn/ui, next-themes, Tailwind CSS 4 |
+| **Admin Frontend** | Next.js 16, React 19, TanStack Query, Zustand, shadcn/ui, Recharts |
 | **Email** | aiosmtplib, Jinja2 templates, DB-backed reset tokens |
 
 ## AI Agent Architecture
@@ -91,8 +94,8 @@ cd backend
 pip install uv && uv sync
 cp .env.example .env
 # Edit .env with your configuration (see Environment Variables below)
-alembic upgrade head
-uvicorn app.main:app --reload
+uv run alembic upgrade head
+uv run uvicorn app.main:app --reload
 
 # Windows (PowerShell)
 cd backend
@@ -100,8 +103,8 @@ pip install uv
 uv sync
 copy .env.example .env
 # Edit .env with your configuration
-alembic upgrade head
-uvicorn app.main:app --reload
+uv run alembic upgrade head
+uv run uvicorn app.main:app --reload
 
 # API at http://localhost:8000, docs at http://localhost:8000/docs
 ```
@@ -111,6 +114,14 @@ uvicorn app.main:app --reload
 cd frontend
 npm install && npm run dev
 # App at http://localhost:3000
+```
+
+**Admin Frontend (new terminal, optional):**
+```bash
+cd admin-frontend
+npm install && npm run dev
+# Admin portal at http://localhost:3001
+# Requires backend running in dev mode (SPECTRA_MODE=dev)
 ```
 
 ### Environment Variables
@@ -129,6 +140,7 @@ Copy `backend/.env.example` to `backend/.env` and fill in:
 | `CORS_ORIGINS` | Allowed CORS origins (e.g., `["http://localhost:3000"]`) |
 | `E2B_API_KEY` | E2B sandbox API key from [e2b.dev](https://e2b.dev/dashboard) |
 | `ANTHROPIC_API_KEY` | Anthropic API key (default LLM provider) |
+| `SPECTRA_MODE` | Router mode: `dev` (all routes), `public` (user-facing only), `admin` (admin-only). Default: `dev` |
 
 **Optional:**
 | Variable | Description |
@@ -141,13 +153,25 @@ Copy `backend/.env.example` to `backend/.env` and fill in:
 | `SMTP_HOST` | SMTP server (leave empty for dev mode console logging) |
 | `SMTP_PORT` | SMTP port |
 | `SMTP_USER` / `SMTP_PASS` | SMTP credentials |
+| `ADMIN_EMAIL` | Admin account email (for `seed-admin` CLI command) |
+| `ADMIN_PASSWORD` | Admin account password (for `seed-admin` CLI command) |
 | `LANGSMITH_API_KEY` | LangSmith tracing key |
+
+### Seed Admin Account (Optional)
+
+Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `backend/.env`, then:
+
+```bash
+cd backend
+uv run python -m app.cli seed-admin
+```
 
 ### Verify Installation
 
 1. Backend health: `http://localhost:8000/health`
 2. LLM health: `http://localhost:8000/health/llm`
 3. Open `http://localhost:3000`, sign up, upload a CSV, and ask a question
+4. Admin portal (optional): `http://localhost:3001`, log in with seeded admin credentials
 
 ## Configuration
 
@@ -220,7 +244,13 @@ allowed_libraries:
 
 Changes to YAML configs require server restart.
 
-## Current Status (v0.4)
+## Current Status (v0.5)
+
+### v0.5 Admin Portal (February 2026)
+- Internal admin portal for platform management (separate Next.js app)
+- Split-horizon architecture with `SPECTRA_MODE` routing (public/admin/dev)
+- User management, credit system, email invitations, platform settings, audit logging
+- Admin dashboard with metrics, trend charts, and credit distribution
 
 ### v0.4 Data Visualization (February 2026)
 - 6th AI agent (Visualization Agent) generates Plotly chart code with intelligent discretion
@@ -270,4 +300,4 @@ MIT License - See LICENSE file for details.
 
 - **GitHub**: [github.com/marwazihs/nuelo-spectra](https://github.com/marwazihs/nuelo-spectra)
 - **Issues**: Report bugs or request features via GitHub Issues
-- **Version**: v0.4 (February 2026)
+- **Version**: v0.5 (February 2026)
