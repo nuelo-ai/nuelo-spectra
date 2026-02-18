@@ -69,7 +69,7 @@
 - [x] **Phase 29: User Management** - Admin user list, search, filter, and all user account operations (completed 2026-02-16)
 - [x] **Phase 30: Invitation System** - Email invites with time-limited single-use tokens and invite-only registration (completed 2026-02-17)
 - [x] **Phase 31: Dashboard & Admin Frontend** - Admin Next.js app with dashboard metrics, trend charts, and all admin UI pages (completed 2026-02-17)
-- [ ] **Phase 32: Production Readiness** - Fix production-blocking invite URL hardcoding, resolve misleading settings control, remove dead route
+- [x] **Phase 32: Production Readiness** - Fix production-blocking invite URL hardcoding, resolve misleading settings control, remove dead route (completed 2026-02-18)
 
 ## Phase Details
 
@@ -227,4 +227,4 @@ Note: Phase 28 can start after Phase 26 (does not depend on Phase 27). Phase 30 
 | 29. User Management | v0.5 | Complete    | 2026-02-16 | - |
 | 30. Invitation System | v0.5 | Complete    | 2026-02-17 | - |
 | 31. Dashboard & Admin Frontend | v0.5 | Complete    | 2026-02-17 | - |
-| 32. Production Readiness | v0.5 | 0/1 | Pending | - |
+| 32. Production Readiness | 1/1 | Complete   | 2026-02-18 | - |

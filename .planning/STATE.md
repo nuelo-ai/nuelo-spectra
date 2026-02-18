@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-16)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** v0.5 Admin Portal -- Phase 31 Dashboard & Admin Frontend
+**Current focus:** Phase 32 Production Readiness -- gap closure
 
 ## Current Position
 
-Phase: 31 of 31 (Dashboard & Admin Frontend)
-Plan: 8 of 8 complete (gap closure)
-Status: All gap closure plans complete
-Last activity: 2026-02-17 -- Completed 31-08 Public Frontend Bug Fixes (v0.5 gap closure)
+Phase: 32 of 32 (Production Readiness)
+Plan: 1 of 1 complete
+Status: Phase 32 complete
+Last activity: 2026-02-17 -- Completed 32-01 Production Readiness Gap Closure
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 gap closure 8/8 ✅
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 gap closure 8/8 ✅ | Phase 32 1/1 ✅
 
 ## Performance Metrics
 
@@ -65,6 +65,9 @@ v0.5 Architecture decisions (from requirements + research):
 - 31-07: Backend-driven challenge codes for delete operations instead of client-side generation
 - 31-08: Used updateUser from useAuth context for invite auto-login
 - 31-08: Credit balance hook uses apiClient for automatic token refresh
+- 32-01: BASE_URL="/api" constant for all frontend API calls -- relative paths via Next.js rewrite
+- 32-01: credit_reset_policy removed from settings contract -- orphaned DB rows left in place (harmless)
+- 32-01: Dead PUT /api/admin/tiers/users/{user_id} route removed from tiers router
 
 ### Pending Todos
 
@@ -82,5 +85,5 @@ v0.5 Architecture decisions (from requirements + research):
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 31-08-PLAN.md (Public Frontend Bug Fixes) -- all gap closure plans complete
-Resume with: v0.5 UAT re-verification or milestone completion
+Stopped at: Completed 32-01-PLAN.md (Production Readiness Gap Closure)
+Resume with: Deployment preparation or next milestone planning
