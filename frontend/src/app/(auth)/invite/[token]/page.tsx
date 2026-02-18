@@ -38,7 +38,7 @@ export default function InviteRegisterPage() {
       return;
     }
 
-    fetch(`http://localhost:8000/auth/invite-validate?token=${encodeURIComponent(token)}`)
+    fetch(`/api/auth/invite-validate?token=${encodeURIComponent(token)}`)
       .then(async (res) => {
         if (!res.ok) {
           throw new Error("Invalid token");
@@ -71,7 +71,7 @@ export default function InviteRegisterPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8000/auth/invite-register", {
+      const response = await fetch("/api/auth/invite-register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
