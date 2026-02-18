@@ -19,9 +19,9 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **Delivered:** Internal admin portal for platform management — user management, credit system, invitation flow, signup control, platform settings, and dashboard metrics — with split-horizon architecture and separate admin frontend.
 
-## Current Milestone: v0.5.1 Docker and Dokploy Support
+## Current Milestone: v0.6 Docker and Dokploy Support
 
-**Goal:** Package Spectra for production deployment — Dockerfiles for all 3 services, Docker Compose for local dev, and 3 separate Dokploy service configurations with production hardening and DEPLOYMENT.md guide.
+**Goal:** Package Spectra for production deployment — Dockerfiles for all 3 services, Docker Compose for local dev, 3 separate Dokploy service configurations with production hardening, version display in both frontends, and DEPLOYMENT.md guide.
 
 **Target features:**
 - Dockerfiles for backend (FastAPI), public frontend (Next.js), and admin frontend (Next.js)
@@ -29,12 +29,13 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 - 3 separate Dokploy service configurations (not a single Compose stack)
 - Production hardening (health checks, non-root users, restart policies, secrets)
 - Dokploy managed PostgreSQL (not containerized by us)
+- App version display on settings/profile page in both frontends (from backend /version API)
 - DEPLOYMENT.md step-by-step deployment guide
 
 ## Current State
 
 **Shipped:** v0.5 Admin Portal (2026-02-18)
-**Status:** v0.5.1 started — defining requirements
+**Status:** v0.6 started — defining requirements
 **Codebase:** ~44,000 LOC (Python app + Python tests + TypeScript/TSX across public frontend + admin frontend)
 **Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily + Plotly + APScheduler (backend), Next.js 16 + React 19 + TanStack + Zustand + shadcn/ui + next-themes + Plotly.js + Recharts (frontend + admin frontend)
 
@@ -385,6 +386,7 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 - [ ] Dokploy service configuration for public frontend
 - [ ] Dokploy service configuration for admin frontend
 - [ ] Production hardening (health checks, non-root users, restart policies, env secrets)
+- [ ] App version display on settings/profile page in both frontends (fetched from backend /version endpoint)
 - [ ] DEPLOYMENT.md step-by-step deployment guide
 
 ### Out of Scope

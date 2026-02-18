@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 Phase: Not started (defining requirements)
 Plan: —
 Status: Defining requirements
-Last activity: 2026-02-18 — Milestone v0.5.1 started
+Last activity: 2026-02-18 — Milestone v0.6 started
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅
 
@@ -67,4 +67,4 @@ See PROJECT.md Key Decisions table for full decision log.
 
 Last session: 2026-02-18
 Stopped at: Started v0.5.1 milestone, defining requirements
-Resume with: `/gsd:plan-phase 33` after requirements and roadmap are set
+Resume with: `/gsd:plan-phase 33` after roadmap is set
