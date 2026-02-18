@@ -1,13 +1,13 @@
 # Project Research Summary
 
-**Project:** Spectra — Docker + Dokploy Deployment (v0.5.1)
+**Project:** Spectra — Docker + Dokploy Deployment (v0.6)
 **Domain:** Containerizing a FastAPI + 2x Next.js monorepo for self-hosted Dokploy PaaS
 **Researched:** 2026-02-18
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Spectra v0.5.1 is a "wrap the existing app" milestone, not a new feature build. The app is already production-functional; the goal is to containerize three services (FastAPI backend, Next.js public frontend, Next.js admin frontend) and deploy them to a self-hosted Dokploy instance. All three services get their own multi-stage Dockerfile. Dokploy is configured as three independent Application services — one per Dockerfile — sharing a common Docker overlay network (`dokploy-network`) and a Dokploy-managed PostgreSQL database. The recommended deployment model uses individual Dokploy Applications rather than a single Docker Compose deployment, enabling independent rollback and update cadences per service.
+Spectra v0.6 is a "wrap the existing app" milestone, not a new feature build. The app is already production-functional; the goal is to containerize three services (FastAPI backend, Next.js public frontend, Next.js admin frontend) and deploy them to a self-hosted Dokploy instance. All three services get their own multi-stage Dockerfile. Dokploy is configured as three independent Application services — one per Dockerfile — sharing a common Docker overlay network (`dokploy-network`) and a Dokploy-managed PostgreSQL database. The recommended deployment model uses individual Dokploy Applications rather than a single Docker Compose deployment, enabling independent rollback and update cadences per service.
 
 The most important finding from codebase inspection is that two pre-work changes must happen before any Dockerfile is valid: (1) two hardcoded `http://localhost:8000` direct fetch calls in `useSSEStream.ts` and `register/page.tsx` must be changed to relative `/api/...` paths, and (2) both `next.config.ts` files must get `output: 'standalone'` added and have their rewrite destinations updated to read `process.env.BACKEND_URL` instead of the hardcoded localhost URL. Without these two pre-work items, Docker images will build successfully but fail silently at runtime — the hardest class of bug to diagnose.
 
@@ -99,11 +99,11 @@ See full details in `.planning/research/PITFALLS.md`.
 
 The research strongly suggests a 4-phase delivery structure with strict sequencing driven by dependencies. Phases 1 and 2 are the core of the milestone; Phase 3 validates end-to-end; Phase 4 produces the documentation artifact and the live production deployment.
 
-### Phase 1: Pre-Work Code Changes
+### Phase 33: Pre-Work and Version API
 
-**Rationale:** Two source code changes must exist in the repository before any Dockerfile is written. They are both blocking for Docker correctness, and fixing them first keeps the Dockerfile authoring phase clean — no Dockerfile needs to contain workarounds for application-layer bugs. These are the easiest items in the milestone (simple string replacements and a `next.config.ts` update) and must be first because everything downstream depends on them.
+**Rationale:** Two source code changes must exist in the repository before any Dockerfile is written — they are blocking for Docker correctness. Version display is grouped here because it requires a new backend endpoint (`GET /version`) and frontend UI additions that are independent of Docker and can ship in the same phase. These are the easiest items in the milestone (simple string replacements, a `next.config.ts` update, a small API endpoint, and UI additions) and must be first because everything downstream depends on the pre-work.
 
-**Delivers:** A codebase where no hardcoded localhost URLs exist, both Next.js apps are configured for standalone output, both rewrite destinations read `process.env.BACKEND_URL`, and both frontends have a `/api/health` route for Dokploy health checks.
+**Delivers:** A codebase where no hardcoded localhost URLs exist, both Next.js apps are configured for standalone output, both rewrite destinations read `process.env.BACKEND_URL`, both frontends have a `/api/health` route for Dokploy health checks, the backend exposes `GET /version`, and users can see the app version on the settings/profile page in both frontends.
 
 **Addresses (from FEATURES.md):**
 - Fix `frontend/src/hooks/useSSEStream.ts` line 112: `http://localhost:8000/chat/...` → `/api/chat/...`
@@ -112,6 +112,9 @@ The research strongly suggests a 4-phase delivery structure with strict sequenci
 - Update rewrite destinations to `process.env.BACKEND_URL || 'http://localhost:8000'` in both `next.config.ts` files
 - Create `frontend/src/app/api/health/route.ts` returning `{status: "ok"}`
 - Create `admin-frontend/src/app/api/health/route.ts` returning `{status: "ok"}`
+- Add `GET /version` endpoint to FastAPI backend (reads `APP_VERSION` env var, returns `{"version": "...", "environment": "..."}`)
+- Display app version on public frontend settings/profile page (fetched from `/api/version`)
+- Display app version on admin frontend settings page (fetched from `/api/version`)
 
 **Avoids (from PITFALLS.md):**
 - Pitfall 1 (NEXT_PUBLIC_ baked as `undefined`): rewrite destination now reads from env var
@@ -122,7 +125,7 @@ The research strongly suggests a 4-phase delivery structure with strict sequenci
 
 ---
 
-### Phase 2: Dockerfiles and .dockerignore
+### Phase 34: Dockerfiles and .dockerignore
 
 **Rationale:** Writing the three Dockerfiles is the core infrastructure work of the milestone. The backend Dockerfile is built first because both frontends depend on the backend being deployed (needed to confirm `BACKEND_URL`). The entrypoint script (`docker-entrypoint.sh`) is written alongside the backend Dockerfile as an inseparable deliverable. `.dockerignore` files must be written before or simultaneously with the Dockerfiles — never after, because any `docker build` run without `.dockerignore` risks baking secrets into layers permanently.
 
@@ -158,7 +161,7 @@ The research strongly suggests a 4-phase delivery structure with strict sequenci
 
 ---
 
-### Phase 3: Docker Compose and Local Validation
+### Phase 35: Docker Compose and Local Validation
 
 **Rationale:** The `docker-compose.yml` is the integration test for the three Dockerfiles. It proves all services start correctly together, that inter-service networking works, that the uploads volume persists across `docker-compose down && up`, and that the local dev workflow is viable. Writing Compose after the Dockerfiles (not simultaneously) ensures each Dockerfile is independently validated before adding the orchestration layer. The smoke test checklist in this phase serves as the acceptance criteria for the entire milestone.
 
@@ -180,7 +183,7 @@ The research strongly suggests a 4-phase delivery structure with strict sequenci
 
 ---
 
-### Phase 4: Dokploy Deployment and DEPLOYMENT.md
+### Phase 36: Dokploy Deployment and DEPLOYMENT.md
 
 **Rationale:** DEPLOYMENT.md comes last because it documents a process that cannot be written accurately until Dockerfiles and Compose are fully validated. Dokploy deployment configuration lives entirely in the UI (no config files exist), so the DEPLOYMENT.md is the only artifact from this phase beyond the live production deployment itself. Writing documentation before the implementation is known leads to inaccurate guides.
 
