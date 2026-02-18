@@ -2,19 +2,19 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-16)
+See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** Phase 32 Production Readiness -- gap closure
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 32 of 32 (Production Readiness)
-Plan: 1 of 1 complete
-Status: Phase 32 complete
-Last activity: 2026-02-17 -- Completed 32-01 Production Readiness Gap Closure
+Phase: All v0.5 phases complete (26-32)
+Plan: All 24 plans complete
+Status: v0.5 milestone shipped
+Last activity: 2026-02-18 -- Completed v0.5 Admin Portal milestone
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 gap closure 8/8 ✅ | Phase 32 1/1 ✅
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅
 
 ## Performance Metrics
 
@@ -34,40 +34,20 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 gap closure 8/8 ✅ |
 - Plans per day: ~8 plans/day
 
 **Velocity (v0.4):**
-- Total plans completed: 15 (Phases 20-25 complete)
+- Total plans completed: 11 (Phases 20-25 complete)
 - Total execution time: ~3 days (Feb 12-14, 2026)
-- Plans per day: ~5 plans/day
+- Plans per day: ~4 plans/day
+
+**Velocity (v0.5):**
+- Total plans completed: 24 (Phases 26-32 complete)
+- Total execution time: ~2 days (Feb 16-17, 2026)
+- Plans per day: ~12 plans/day
 
 ## Accumulated Context
 
 ### Decisions
 
 See PROJECT.md Key Decisions table for full decision log.
-
-v0.5 Architecture decisions (from requirements + research):
-- Split-horizon deployment: same FastAPI codebase, `SPECTRA_MODE` env var (public/admin/dev)
-- Lazy import of admin_router inside mode check to avoid loading admin code in public mode
-- Catch-all /api/admin/* in public mode logs WARNING for security monitoring
-- X-Admin-Token exposed in CORS headers for sliding window token reissue
-- Admin frontend: separate Next.js app (`admin-frontend/`), not a route in existing frontend
-- Credit system: NUMERIC(10,1) precision, SELECT FOR UPDATE for atomicity, deduct before agent runs
-- Static user tiers: defined in `user_classes.yaml`, admin edits credit overrides in platform_settings
-- Platform settings: key-value DB table with 30s TTL cache, runtime changes without restart
-- Admin auth: `is_admin` flag on users table, first admin seeded via CLI, defense-in-depth (JWT + DB check)
-- No separate admin refresh token; sliding window reissue via AdminTokenReissueMiddleware
-- In-memory login lockout for admin (upgrade to Redis for multi-instance)
-- In-memory token revocation set with TTL for immediate logout on user deactivation (same single-instance caveat)
-- Audit entries added to caller's transaction (no separate commit)
-- String(20) for user_class (not PostgreSQL ENUM) to avoid ALTER TYPE migration pain
-- Three-step migration pattern: add columns with server_default, create tables, backfill data
-- One new backend dep (APScheduler), one new frontend lib (Recharts)
-- 31-07: Render UserTable inline (not DataTableShell) to support sort indicators on headers
-- 31-07: Backend-driven challenge codes for delete operations instead of client-side generation
-- 31-08: Used updateUser from useAuth context for invite auto-login
-- 31-08: Credit balance hook uses apiClient for automatic token refresh
-- 32-01: BASE_URL="/api" constant for all frontend API calls -- relative paths via Next.js rewrite
-- 32-01: credit_reset_policy removed from settings contract -- orphaned DB rows left in place (harmless)
-- 32-01: Dead PUT /api/admin/tiers/users/{user_id} route removed from tiers router
 
 ### Pending Todos
 
@@ -78,12 +58,13 @@ v0.5 Architecture decisions (from requirements + research):
 
 ### Blockers/Concerns
 
-- Credit deduction timing with SSE streaming: resolved -- deduct before agent, no refund on failure (implemented in 27-03)
+- In-memory admin login lockout: upgrade to Redis for multi-instance deployment
+- In-memory token revocation set: same single-instance caveat
 - SearchQuota coexistence: web searches keep separate quota for now (not deducting credits)
 - E2B sandboxes created per-execution (no warm pools) -- acceptable for now
 
 ## Session Continuity
 
-Last session: 2026-02-17
-Stopped at: Completed 32-01-PLAN.md (Production Readiness Gap Closure)
-Resume with: Deployment preparation or next milestone planning
+Last session: 2026-02-18
+Stopped at: Completed v0.5 Admin Portal milestone archival
+Resume with: `/gsd:new-milestone` to start next milestone
