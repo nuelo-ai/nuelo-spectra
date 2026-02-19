@@ -15,8 +15,8 @@ Code changes that must land before any Dockerfile is valid. Two confirmed localh
 - [x] **PRE-01**: Developer can verify the public frontend makes all API calls via `/api/` proxy — no hardcoded `http://localhost:8000` in `useSSEStream.ts` (line 112) or `register/page.tsx` (line 26)
 - [x] **PRE-02**: Both Next.js apps support standalone build output compatible with multi-stage Docker images (`output: 'standalone'` added to both `next.config.ts` files)
 - [x] **PRE-03**: Both Next.js apps read the backend URL from `process.env.BACKEND_URL` at startup rather than hardcoding `localhost:8000` in rewrite destinations (defaults to `http://localhost:8000` for local dev without Docker)
-- [ ] **PRE-04**: Public frontend exposes `GET /api/health` returning `{status: "ok"}` for Dokploy health monitoring
-- [ ] **PRE-05**: Admin frontend exposes `GET /api/health` returning `{status: "ok"}` for Dokploy health monitoring
+- [x] **PRE-04**: Public frontend exposes `GET /api/health` returning `{status: "ok"}` for Dokploy health monitoring
+- [x] **PRE-05**: Admin frontend exposes `GET /api/health` returning `{status: "ok"}` for Dokploy health monitoring
 
 ### Docker Images (DOCK)
 
@@ -41,9 +41,9 @@ Local development orchestration. Validates all three Dockerfiles work together b
 
 App version visible on settings/profile page in both frontends, fetched from backend at runtime. No rebuild required to update the displayed version.
 
-- [ ] **VER-01**: Backend exposes `GET /version` endpoint returning `{"version": "<APP_VERSION env var>", "environment": "<SPECTRA_MODE>"}` — `APP_VERSION` defaults to `"dev"` if env var not set
-- [ ] **VER-02**: User can view the app version on the public frontend settings/profile page (fetched from `GET /api/version`)
-- [ ] **VER-03**: Admin can view the app version on the admin frontend settings page (fetched from `GET /api/version`)
+- [x] **VER-01**: Backend exposes `GET /version` endpoint returning `{"version": "<APP_VERSION env var>", "environment": "<SPECTRA_MODE>"}` — `APP_VERSION` defaults to `"dev"` if env var not set
+- [x] **VER-02**: User can view the app version on the public frontend settings/profile page (fetched from `GET /api/version`)
+- [x] **VER-03**: Admin can view the app version on the admin frontend settings page (fetched from `GET /api/version`)
 
 ### Dokploy Deployment (DPLY)
 
@@ -93,11 +93,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PRE-01 | Phase 33 | Complete |
 | PRE-02 | Phase 33 | Complete |
 | PRE-03 | Phase 33 | Complete |
-| PRE-04 | Phase 33 | Pending |
-| PRE-05 | Phase 33 | Pending |
-| VER-01 | Phase 33 | Pending |
-| VER-02 | Phase 33 | Pending |
-| VER-03 | Phase 33 | Pending |
+| PRE-04 | Phase 33 | Complete |
+| PRE-05 | Phase 33 | Complete |
+| VER-01 | Phase 33 | Complete |
+| VER-02 | Phase 33 | Complete |
+| VER-03 | Phase 33 | Complete |
 | DOCK-01 | Phase 34 | Pending |
 | DOCK-02 | Phase 34 | Pending |
 | DOCK-03 | Phase 34 | Pending |

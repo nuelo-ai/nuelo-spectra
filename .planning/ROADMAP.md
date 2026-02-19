@@ -77,7 +77,7 @@
 
 **Milestone Goal:** Package Spectra for production deployment — fix localhost hardcodes, add version API, write Dockerfiles for all 3 services, Docker Compose for local dev, and configure 3 separate Dokploy Application services with HTTPS domains and a DEPLOYMENT.md guide.
 
-- [ ] **Phase 33: Pre-Work and Version API** — Fix localhost hardcodes, enable standalone builds, add /api/health routes, and expose GET /version endpoint with display in both frontends
+- [x] **Phase 33: Pre-Work and Version API** — Fix localhost hardcodes, enable standalone builds, add /api/health routes, and expose GET /version endpoint with display in both frontends (completed 2026-02-19)
 - [ ] **Phase 34: Dockerfiles and Entrypoint** — Write .dockerignore files (before any docker build), entrypoint script with pg_isready + Alembic, and all 3 production Dockerfiles
 - [ ] **Phase 35: Docker Compose and Local Validation** — Write docker-compose.yml, bring up the full stack locally, and validate all services work together end-to-end
 - [ ] **Phase 36: Dokploy Deployment and DEPLOYMENT.md** — Deploy 4 services to Dokploy (public backend + frontend via HTTPS, admin backend + frontend via Tailscale-only), configure volumes and env vars, and write DEPLOYMENT.md
@@ -185,7 +185,7 @@ Plans:
 | 30. Invitation System | v0.5 | 3/3 | Complete | 2026-02-17 |
 | 31. Dashboard & Admin Frontend | v0.5 | 8/8 | Complete | 2026-02-17 |
 | 32. Production Readiness | v0.5 | 1/1 | Complete | 2026-02-18 |
-| 33. Pre-Work and Version API | 1/2 | In Progress|  | - |
+| 33. Pre-Work and Version API | 2/2 | Complete   | 2026-02-19 | - |
 | 34. Dockerfiles and Entrypoint | v0.6 | 0/3 | Not started | - |
 | 35. Docker Compose and Local Validation | v0.6 | 0/1 | Not started | - |
 | 36. Dokploy Deployment and DEPLOYMENT.md | v0.6 | 0/3 | Not started | - |

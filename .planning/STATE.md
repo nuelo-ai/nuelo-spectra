@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 ## Current Position
 
 Phase: 33 of 36 (Pre-Work and Version API)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-19 — Completed 33-01-PLAN.md (pre-work localhost removal + standalone config)
+Plan: 2 of 2 in current phase
+Status: Phase 33 complete
+Last activity: 2026-02-19 — Completed 33-02-PLAN.md (health endpoints + version API + version display)
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 🚧
 
@@ -38,6 +38,8 @@ Recent decisions affecting v0.6:
 - Dokploy-managed PostgreSQL — simpler, managed backups, no containerization needed
 - `.dockerignore` before any `docker build` — non-negotiable security gate
 - [Phase 33]: BACKEND_URL uses nullish coalescing fallback to localhost:8000 for local dev compatibility
+- [Phase 33]: Dual-mount version router at / and /api prefix for proxy compatibility with both frontends
+- [Phase 33]: os.getenv for APP_VERSION instead of Pydantic Settings — deployment metadata with dev default
 
 ### Pending Todos
 
@@ -55,5 +57,5 @@ Recent decisions affecting v0.6:
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 33-01-PLAN.md
-Resume with: `/gsd:execute-phase 33` (plan 02 next)
+Stopped at: Completed 33-02-PLAN.md — Phase 33 fully complete
+Resume with: `/gsd:plan-phase 34`
