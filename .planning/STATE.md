@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 ## Current Position
 
 Phase: 33 of 36 (Pre-Work and Version API)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-18 — v0.6 roadmap created, Phase 33 ready to plan
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-19 — Completed 33-01-PLAN.md (pre-work localhost removal + standalone config)
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 🚧
 
@@ -37,6 +37,7 @@ Recent decisions affecting v0.6:
 - Runtime `process.env.BACKEND_URL` in rewrites (not build-time `NEXT_PUBLIC_`) — no image rebuild on URL change
 - Dokploy-managed PostgreSQL — simpler, managed backups, no containerization needed
 - `.dockerignore` before any `docker build` — non-negotiable security gate
+- [Phase 33]: BACKEND_URL uses nullish coalescing fallback to localhost:8000 for local dev compatibility
 
 ### Pending Todos
 
@@ -53,6 +54,6 @@ Recent decisions affecting v0.6:
 
 ## Session Continuity
 
-Last session: 2026-02-18
-Stopped at: v0.6 roadmap created — 4 phases (33-36), 23 requirements mapped, 100% coverage
-Resume with: `/gsd:plan-phase 33`
+Last session: 2026-02-19
+Stopped at: Completed 33-01-PLAN.md
+Resume with: `/gsd:execute-phase 33` (plan 02 next)

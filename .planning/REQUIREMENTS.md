@@ -12,9 +12,9 @@ Requirements for Docker containerization and Dokploy production deployment. Cont
 
 Code changes that must land before any Dockerfile is valid. Two confirmed localhost:8000 hardcodes bypass the Next.js rewrite proxy and silently fail in Docker.
 
-- [ ] **PRE-01**: Developer can verify the public frontend makes all API calls via `/api/` proxy — no hardcoded `http://localhost:8000` in `useSSEStream.ts` (line 112) or `register/page.tsx` (line 26)
-- [ ] **PRE-02**: Both Next.js apps support standalone build output compatible with multi-stage Docker images (`output: 'standalone'` added to both `next.config.ts` files)
-- [ ] **PRE-03**: Both Next.js apps read the backend URL from `process.env.BACKEND_URL` at startup rather than hardcoding `localhost:8000` in rewrite destinations (defaults to `http://localhost:8000` for local dev without Docker)
+- [x] **PRE-01**: Developer can verify the public frontend makes all API calls via `/api/` proxy — no hardcoded `http://localhost:8000` in `useSSEStream.ts` (line 112) or `register/page.tsx` (line 26)
+- [x] **PRE-02**: Both Next.js apps support standalone build output compatible with multi-stage Docker images (`output: 'standalone'` added to both `next.config.ts` files)
+- [x] **PRE-03**: Both Next.js apps read the backend URL from `process.env.BACKEND_URL` at startup rather than hardcoding `localhost:8000` in rewrite destinations (defaults to `http://localhost:8000` for local dev without Docker)
 - [ ] **PRE-04**: Public frontend exposes `GET /api/health` returning `{status: "ok"}` for Dokploy health monitoring
 - [ ] **PRE-05**: Admin frontend exposes `GET /api/health` returning `{status: "ok"}` for Dokploy health monitoring
 
@@ -90,9 +90,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PRE-01 | Phase 33 | Pending |
-| PRE-02 | Phase 33 | Pending |
-| PRE-03 | Phase 33 | Pending |
+| PRE-01 | Phase 33 | Complete |
+| PRE-02 | Phase 33 | Complete |
+| PRE-03 | Phase 33 | Complete |
 | PRE-04 | Phase 33 | Pending |
 | PRE-05 | Phase 33 | Pending |
 | VER-01 | Phase 33 | Pending |
