@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 ## Current Position
 
 Phase: 34 of 36 (Dockerfiles and Entrypoint)
-Plan: 1 of 3 in current phase (plan 01 complete)
-Status: Executing phase 34 — dockerignore files and entrypoint created
-Last activity: 2026-02-19 — Completed plan 34-01 (dockerignore + entrypoint)
+Plan: 3 of 3 in current phase (phase 34 complete)
+Status: Phase 34 complete — all Dockerfiles and entrypoint created
+Last activity: 2026-02-19 — Completed plan 34-03 (frontend Dockerfiles)
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 🚧
 
@@ -45,6 +45,11 @@ Recent decisions affecting v0.6:
 - [Phase 34-01]: BuildKit per-Dockerfile .dockerignore naming — each service excludes other service dirs to minimize build context
 - [Phase 34-01]: Entrypoint uses /app/.venv/bin/python explicitly (uv installs to .venv)
 - [Phase 34-01]: 30 retries x 2s = 60s max PostgreSQL wait in entrypoint
+- [Phase 34-02]: uv binary from ghcr.io/astral-sh/uv:latest, UV_COMPILE_BYTECODE=1 for faster startup
+- [Phase 34-02]: No CMD in backend Dockerfile — entrypoint handles everything
+- [Phase 34-02]: postgresql-client installed via apt-get for pg_isready (resolved blocker)
+- [Phase 34-03]: BACKEND_URL as runtime ENV not build ARG in frontend Dockerfiles — route handler proxies read at request time
+- [Phase 34-03]: admin-frontend Dockerfile skips public/ COPY (no public assets exist)
 
 ### Pending Todos
 
@@ -57,12 +62,12 @@ Recent decisions affecting v0.6:
 
 - Dokploy internal service hostname format: MEDIUM confidence — verify in Dokploy UI after first backend deploy before setting `BACKEND_URL` in frontend services; fallback is public HTTPS domain for `BACKEND_URL`
 - ~~SSE streaming through Next.js rewrite proxy in Docker~~ RESOLVED — route handler proxy streams SSE correctly, verified with curl
-- `pg_isready` availability in `python:3.12-slim`: not included by default — install `postgresql-client` via apt-get OR use pure-Python TCP loop; decide in Phase 34
+- ~~`pg_isready` availability in `python:3.12-slim`: not included by default~~ RESOLVED — `postgresql-client` installed via apt-get in Dockerfile.backend runtime stage
 - Phase 34 plans reference BACKEND_URL as Docker build-arg for rewrites — this is no longer needed; BACKEND_URL is runtime env var now. Plans (especially 34-03) need adjustment during execution.
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 34-01-PLAN.md (dockerignore files + backend entrypoint)
-Resume with: `/gsd:execute-phase 34` (continues with plan 34-02)
+Stopped at: Completed 34-02-PLAN.md (backend Dockerfile)
+Resume with: `/gsd:execute-phase 34` (continues with plan 34-03)
 Note: Phase 34 plans reference BACKEND_URL as Docker build-arg — this is no longer needed; BACKEND_URL is runtime env var now. Plans (especially 34-03) need adjustment during execution.
