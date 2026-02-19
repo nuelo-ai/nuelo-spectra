@@ -21,7 +21,7 @@ from app.services.chat_session import ChatSessionService
 router = APIRouter(prefix="/sessions", tags=["Chat Sessions"])
 
 
-@router.post("/", response_model=ChatSessionResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ChatSessionResponse, status_code=status.HTTP_201_CREATED)
 async def create_session(
     body: ChatSessionCreate,
     current_user: CurrentUser,
@@ -47,7 +47,7 @@ async def create_session(
     )
 
 
-@router.get("/", response_model=ChatSessionList)
+@router.get("", response_model=ChatSessionList)
 async def list_sessions(
     current_user: CurrentUser,
     db: DbSession,
