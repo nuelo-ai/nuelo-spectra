@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** Phase 34 — Dockerfiles and Entrypoint
+**Current focus:** Phase 35 — Docker Compose Local Validation
 
 ## Current Position
 
-Phase: 34 of 36 (Dockerfiles and Entrypoint)
-Plan: 3 of 3 in current phase (phase 34 complete)
-Status: Phase 34 complete — all Dockerfiles and entrypoint created
-Last activity: 2026-02-19 — Completed plan 34-03 (frontend Dockerfiles)
+Phase: 35 of 36 (Docker Compose Local Validation)
+Plan: 1 of 1 in current phase (phase 35 complete)
+Status: Phase 35 complete — Docker Compose stack configured
+Last activity: 2026-02-19 — Completed plan 35-01 (Docker Compose and env template)
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 🚧
 
@@ -50,6 +50,10 @@ Recent decisions affecting v0.6:
 - [Phase 34-02]: postgresql-client installed via apt-get for pg_isready (resolved blocker)
 - [Phase 34-03]: BACKEND_URL as runtime ENV not build ARG in frontend Dockerfiles — route handler proxies read at request time
 - [Phase 34-03]: admin-frontend Dockerfile skips public/ COPY (no public assets exist)
+- [Phase 35-01]: Modern compose.yaml naming (no version field, not docker-compose.yml)
+- [Phase 35-01]: env_file for secrets with inline environment overrides for non-secret config
+- [Phase 35-01]: Admin frontend maps host 3001 to container 3000 (no PORT env var override)
+- [Phase 35-01]: Backend healthcheck via depends_on service_healthy for startup ordering
 
 ### Pending Todos
 
@@ -68,5 +72,5 @@ Recent decisions affecting v0.6:
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 34-03-PLAN.md (frontend Dockerfiles) — Phase 34 complete
-Resume with: `/gsd:execute-phase 35` (next phase)
+Stopped at: Completed 35-01-PLAN.md (Docker Compose and env template) — Phase 35 complete
+Resume with: `/gsd:execute-phase 36` (next phase)

@@ -32,10 +32,10 @@ Production Docker images for all three services. `.dockerignore` files are writt
 
 Local development orchestration. Validates all three Dockerfiles work together before Dokploy configuration.
 
-- [ ] **COMP-01**: Developer can bring up the full local stack with `docker compose up` — backend on port 8000, public frontend on port 3000, admin frontend on port 3001, PostgreSQL on port 5432
-- [ ] **COMP-02**: File uploads survive `docker compose down && docker compose up` — named volume `uploads_data` mounted at `/app/uploads` in backend service
-- [ ] **COMP-03**: Backend service starts only after PostgreSQL passes its healthcheck (`depends_on: condition: service_healthy` — not just `depends_on` without condition)
-- [ ] **COMP-04**: Docker Compose sets correct `SPECTRA_MODE` per service (`public` for backend serving public frontend, `dev` for local dev to serve both) and `BACKEND_URL=http://backend:8000` for inter-service routing
+- [x] **COMP-01**: Developer can bring up the full local stack with `docker compose up` — backend on port 8000, public frontend on port 3000, admin frontend on port 3001, PostgreSQL on port 5432
+- [x] **COMP-02**: File uploads survive `docker compose down && docker compose up` — named volume `uploads_data` mounted at `/app/uploads` in backend service
+- [x] **COMP-03**: Backend service starts only after PostgreSQL passes its healthcheck (`depends_on: condition: service_healthy` — not just `depends_on` without condition)
+- [x] **COMP-04**: Docker Compose sets correct `SPECTRA_MODE` per service (`public` for backend serving public frontend, `dev` for local dev to serve both) and `BACKEND_URL=http://backend:8000` for inter-service routing
 
 ### Version Display (VER)
 
@@ -103,10 +103,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DOCK-03 | Phase 34 | Complete |
 | DOCK-04 | Phase 34 | Complete |
 | DOCK-05 | Phase 34 | Complete |
-| COMP-01 | Phase 35 | Pending |
-| COMP-02 | Phase 35 | Pending |
-| COMP-03 | Phase 35 | Pending |
-| COMP-04 | Phase 35 | Pending |
+| COMP-01 | Phase 35 | Complete |
+| COMP-02 | Phase 35 | Complete |
+| COMP-03 | Phase 35 | Complete |
+| COMP-04 | Phase 35 | Complete |
 | DPLY-01 | Phase 36 | Pending |
 | DPLY-02 | Phase 36 | Pending |
 | DPLY-03 | Phase 36 | Pending |
