@@ -94,11 +94,11 @@
   3. `GET /api/health` returns `{"status": "ok"}` on both the public frontend (port 3000) and admin frontend (port 3001) when running locally
   4. `GET /version` on the backend returns `{"version": "<APP_VERSION>", "environment": "<SPECTRA_MODE>"}` — version shows `"dev"` when `APP_VERSION` env var is unset
   5. User on the public settings page and admin on the admin settings page both see the app version fetched live from the backend — no page rebuild required to reflect a version change
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 33-01: Fix localhost hardcodes and enable standalone output
-- [ ] 33-02: Add health routes to both frontends and expose version endpoint + display
+- [ ] 33-01-PLAN.md — Fix localhost hardcodes and enable standalone output (PRE-01, PRE-02, PRE-03)
+- [ ] 33-02-PLAN.md — Add health routes, backend version endpoint, and version display in both frontends (PRE-04, PRE-05, VER-01, VER-02, VER-03)
 
 ### Phase 34: Dockerfiles and Entrypoint
 **Goal**: Three production Docker images exist and each builds and runs correctly in isolation — the backend image waits for PostgreSQL, runs migrations, and starts uvicorn as PID 1; both frontend images serve the Next.js standalone app with `BACKEND_URL` controlling the proxy destination at runtime; no secrets are baked into any image layer
