@@ -142,12 +142,12 @@ Plans:
   4. Admin frontend is live at `admin.spectra.ts.net` via Tailscale only — admin login works, user management and platform settings respond correctly, not reachable from public internet
   5. A file uploaded via the production public frontend survives a Dokploy redeploy — named volume at `/app/uploads` configured, file records in PostgreSQL match files on disk
   6. `DEPLOYMENT.md` covers all 4 service configs with env var tables, Tailscale installation and Tailscale-only binding for admin services, volume mount, public SSL, `SECRET_KEY` generation, and smoke test checklist for both public and VPN-only services
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 36-01: Install Tailscale on host, deploy public backend to Dokploy and verify migrations + health
-- [ ] 36-02: Deploy admin backend (Tailscale-only) and both frontends, verify end-to-end split-horizon routing
-- [ ] 36-03: Configure public domains/SSL, verify Tailscale isolation, write DEPLOYMENT.md
+- [ ] 36-01-PLAN.md — Prerequisites + public backend deployment: Tailscale install, VPS firewall, DB setup, public backend with volume mount (DPLY-01, DPLY-05, DPLY-06)
+- [ ] 36-02-PLAN.md — Admin backend + both frontends deployment, split-horizon routing verification (DPLY-02, DPLY-03, DPLY-04, DPLY-05)
+- [ ] 36-03-PLAN.md — Public HTTPS domains/SSL, full smoke test, write DEPLOYMENT.md (DPLY-07, DPLY-08)
 
 ## Progress
 
@@ -187,5 +187,5 @@ Plans:
 | 32. Production Readiness | v0.5 | 1/1 | Complete | 2026-02-18 |
 | 33. Pre-Work and Version API | v0.6 | 2/2 | Complete | 2026-02-19 |
 | 34. Dockerfiles and Entrypoint | v0.6 | 3/3 | Complete | 2026-02-19 |
-| 35. Docker Compose and Local Validation | 1/1 | Complete    | 2026-02-19 | - |
+| 35. Docker Compose and Local Validation | v0.6 | 1/1 | Complete | 2026-02-19 |
 | 36. Dokploy Deployment and DEPLOYMENT.md | v0.6 | 0/3 | Not started | - |
