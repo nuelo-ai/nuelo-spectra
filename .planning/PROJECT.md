@@ -483,6 +483,8 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | APScheduler for credit resets | In-process scheduler, not external cron | ✓ Good — single dep, configurable per tier |
 | Challenge codes for delete | Backend-driven, not client-side | ✓ Good — prevents accidental bulk deletion |
 | Deferred CREDIT-11, SETTINGS-06, TIER-02 | Bulk credit adjust + per-tier overrides | — Pending for future milestone |
+| Route handler proxy over next.config.ts rewrites | Rewrites buffer SSE, bake BACKEND_URL at build time, strip trailing slashes causing auth loss | ✓ Good — SSE streams correctly, BACKEND_URL is runtime, no trailing slash issues |
+| APP_VERSION in Pydantic Settings (not os.getenv) | Pydantic extra=forbid rejects unknown .env vars; consistent with other config | ✓ Good — validates at startup, single source of truth |
 
 ---
-*Last updated: 2026-02-18 after v0.5.1 milestone start*
+*Last updated: 2026-02-19 after Phase 33 proxy fixes*

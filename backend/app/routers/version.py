@@ -1,5 +1,5 @@
-import os
 from fastapi import APIRouter
+from app.config import get_settings
 
 router = APIRouter(tags=["Version"])
 
@@ -7,7 +7,8 @@ router = APIRouter(tags=["Version"])
 @router.get("/version")
 async def get_version():
     """Returns application version and deployment environment."""
+    settings = get_settings()
     return {
-        "version": os.getenv("APP_VERSION", "dev"),
-        "environment": os.getenv("SPECTRA_MODE", "dev"),
+        "version": settings.app_version,
+        "environment": settings.spectra_mode,
     }

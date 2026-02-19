@@ -312,9 +312,9 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
         </div>
       </div>
 
-      {/* Main content area — centered greeting */}
-      <div className="flex-1 flex items-center justify-center px-6">
-        <div className="max-w-2xl w-full space-y-8 text-center">
+      {/* Main content area — centered greeting, scrollable when suggestions overflow */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-6 flex flex-col">
+        <div className="max-w-2xl w-full space-y-8 text-center py-8 mx-auto my-auto">
           {/* Subtle decorative element */}
           <div className="flex justify-center">
             <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-gray-200/60 to-gray-300/40 dark:from-[#434C5E]/40 dark:to-[#3B4252]/40 border border-gray-300/50 dark:border-[#4C566A]/50 flex items-center justify-center">

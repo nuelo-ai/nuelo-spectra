@@ -35,7 +35,7 @@ key-files:
 
 key-decisions:
   - "Dual-mount version router at / and /api prefix for proxy compatibility with both frontends"
-  - "os.getenv for APP_VERSION instead of Pydantic Settings — deployment metadata with dev default"
+  - "APP_VERSION in Pydantic Settings (moved from os.getenv) — validates at startup, consistent with other config"
 
 patterns-established:
   - "Next.js route handlers take priority over rewrites for service-local endpoints"
@@ -85,12 +85,15 @@ Each task was committed atomically:
 
 ## Decisions Made
 - Dual-mounted version router at both `/` and `/api` prefix to support both proxy path structures (public strips /api/, admin keeps /api/)
-- Used `os.getenv` directly for APP_VERSION instead of Pydantic Settings -- deployment metadata with simple default
 - Show only version in public frontend, but both version and environment in admin frontend for operational visibility
+
+### Post-Testing Update
+- Moved APP_VERSION from `os.getenv` to Pydantic Settings field (`app_version: str = "dev"`) — validates at startup, consistent with other config, prevents extra_forbidden error when APP_VERSION is in .env
+- Version router now uses `settings.app_version` and `settings.spectra_mode` instead of raw `os.getenv`
 
 ## Deviations from Plan
 
-None - plan executed exactly as written.
+- **Minor:** APP_VERSION moved from os.getenv to Pydantic Settings after .env validation error (Pydantic `extra=forbid` rejects unknown env vars).
 
 ## Issues Encountered
 None

@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** Phase 33 — Pre-Work and Version API
+**Current focus:** Phase 34 — Dockerfiles and Entrypoint
 
 ## Current Position
 
-Phase: 33 of 36 (Pre-Work and Version API)
-Plan: 2 of 2 in current phase
-Status: Phase 33 complete
-Last activity: 2026-02-19 — Completed 33-02-PLAN.md (health endpoints + version API + version display)
+Phase: 34 of 36 (Dockerfiles and Entrypoint)
+Plan: 0 of 3 in current phase (plans created, ready to execute)
+Status: Phase 33 complete with proxy fixes verified and committed
+Last activity: 2026-02-19 — Committed proxy fixes, all tests pass
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 🚧
 
@@ -34,12 +34,14 @@ Recent decisions affecting v0.6:
 - `python:3.12-slim` for backend base image — glibc required for asyncpg/psycopg binary wheels; Alpine incompatible
 - `node:22-alpine` for both frontend base images — Alpine safe for Next.js; saves ~100MB per image
 - `output: 'standalone'` in both Next.js configs — required for multi-stage Docker images
-- Runtime `process.env.BACKEND_URL` in rewrites (not build-time `NEXT_PUBLIC_`) — no image rebuild on URL change
 - Dokploy-managed PostgreSQL — simpler, managed backups, no containerization needed
 - `.dockerignore` before any `docker build` — non-negotiable security gate
 - [Phase 33]: BACKEND_URL uses nullish coalescing fallback to localhost:8000 for local dev compatibility
 - [Phase 33]: Dual-mount version router at / and /api prefix for proxy compatibility with both frontends
-- [Phase 33]: os.getenv for APP_VERSION instead of Pydantic Settings — deployment metadata with dev default
+- [Phase 33]: APP_VERSION in Pydantic Settings (moved from os.getenv) — validates at startup, consistent with other config
+- [Phase 33 post-test]: Replaced next.config.ts rewrites with catch-all route handler proxies — rewrites buffer SSE, bake BACKEND_URL at build time, strip trailing slashes
+- [Phase 33 post-test]: Backend middleware strips trailing slashes + redirect_slashes=False — consistent routing regardless of caller
+- [Phase 33 post-test]: BACKEND_URL is now runtime env var (read by route handler at request time) — no build-arg needed for Docker, better than original rewrite approach
 
 ### Pending Todos
 
@@ -51,11 +53,13 @@ Recent decisions affecting v0.6:
 ### Blockers/Concerns
 
 - Dokploy internal service hostname format: MEDIUM confidence — verify in Dokploy UI after first backend deploy before setting `BACKEND_URL` in frontend services; fallback is public HTTPS domain for `BACKEND_URL`
-- SSE streaming through Next.js rewrite proxy in Docker: LOW confidence — verify during Phase 35 smoke test; if proxy doesn't stream correctly, `useSSEStream.ts` may need `NEXT_PUBLIC_BACKEND_URL` approach
+- ~~SSE streaming through Next.js rewrite proxy in Docker~~ RESOLVED — route handler proxy streams SSE correctly, verified with curl
 - `pg_isready` availability in `python:3.12-slim`: not included by default — install `postgresql-client` via apt-get OR use pure-Python TCP loop; decide in Phase 34
+- Phase 34 plans reference BACKEND_URL as Docker build-arg for rewrites — this is no longer needed; BACKEND_URL is runtime env var now. Plans (especially 34-03) need adjustment during execution.
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 33-02-PLAN.md — Phase 33 fully complete
-Resume with: `/gsd:plan-phase 34`
+Stopped at: Phase 33 fully complete with proxy fixes committed. Phase 34 plans ready.
+Resume with: `/gsd:execute-phase 34`
+Note: Phase 34 plans need minor adjustment — BACKEND_URL is now runtime env var, not build-arg.

@@ -7,6 +7,9 @@ import json
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
+    # App metadata
+    app_version: str = "dev"
+
     # Database
     database_url: str
 

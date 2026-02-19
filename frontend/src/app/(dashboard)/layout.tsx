@@ -50,7 +50,7 @@ export default function DashboardLayout({
     <SidebarProvider defaultOpen={true}>
       <div className="flex h-screen overflow-hidden w-full">
         <ChatSidebar />
-        <main className="flex-1 overflow-hidden transition-all duration-300 ease-in-out">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out">
           {children}
         </main>
         {currentSessionId && (

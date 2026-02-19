@@ -22,9 +22,9 @@ re_verification: false
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
 | 1 | `useSSEStream.ts` and `register/page.tsx` contain no `http://localhost:8000` strings — all API calls go through `/api/` proxy | VERIFIED | Line 112 of useSSEStream.ts: `fetch('/api/chat/sessions/${sessionId}/stream')`; line 26 of register/page.tsx: `fetch("/api/auth/signup-status")`. grep on `frontend/src` for `http://localhost:8000` returns zero matches. |
-| 2 | Both `next.config.ts` files have `output: 'standalone'` and rewrite destinations read `process.env.BACKEND_URL` (defaulting to `http://localhost:8000` locally) | VERIFIED | `frontend/next.config.ts` line 4: `output: "standalone"`, line 9: `${process.env.BACKEND_URL ?? "http://localhost:8000"}/:path*`. `admin-frontend/next.config.ts` identical pattern but keeps `/api/` prefix in destination. |
+| 2 | Both `next.config.ts` files have `output: 'standalone'` and backend URL is configurable (defaulting to `http://localhost:8000` locally) | RE-VERIFIED | Both `next.config.ts` have `output: "standalone"` (rewrites removed). Backend URL configured via `process.env.BACKEND_URL` in catch-all route handler proxies (`app/api/[...slug]/route.ts`) — read at **runtime**, not build-time. |
 | 3 | `GET /api/health` returns `{"status": "ok"}` on both frontends when running locally | VERIFIED | Both `frontend/src/app/api/health/route.ts` and `admin-frontend/src/app/api/health/route.ts` export `GET()` returning `NextResponse.json({ status: "ok" })`. Files are 5 lines each, full implementations. |
-| 4 | `GET /version` on the backend returns `{"version": "<APP_VERSION>", "environment": "<SPECTRA_MODE>"}` — version shows `"dev"` when `APP_VERSION` env var is unset | VERIFIED | `backend/app/routers/version.py` implements `GET /version` with `os.getenv("APP_VERSION", "dev")` and `os.getenv("SPECTRA_MODE", "dev")`. Router mounted twice in main.py: `app.include_router(version.router)` and `app.include_router(version.router, prefix="/api")`. |
+| 4 | `GET /version` on the backend returns `{"version": "<APP_VERSION>", "environment": "<SPECTRA_MODE>"}` — version shows `"dev"` when `APP_VERSION` env var is unset | RE-VERIFIED | `backend/app/routers/version.py` implements `GET /version` using `settings.app_version` and `settings.spectra_mode` (Pydantic Settings, default "dev"). Router mounted twice in main.py at `/` and `/api` prefix. |
 | 5 | User on the public settings page and admin on the admin settings page both see the app version fetched live from the backend | VERIFIED | `frontend/src/components/settings/AccountInfo.tsx` imports `useAppVersion` and renders `{versionData?.version ?? "—"}`. `admin-frontend/src/components/settings/SettingsForm.tsx` imports `useAppVersion` and renders an App Version card with both version and environment fields. |
 
 **Score:** 5/5 truths verified
@@ -39,8 +39,10 @@ re_verification: false
 |----------|----------|--------|---------|
 | `frontend/src/hooks/useSSEStream.ts` | SSE streaming without hardcoded localhost | VERIFIED | Line 112: `fetch('/api/chat/sessions/${sessionId}/stream', {...})` — full 351-line streaming implementation, no localhost. |
 | `frontend/src/app/(auth)/register/page.tsx` | Register page without hardcoded localhost | VERIFIED | Line 26: `fetch("/api/auth/signup-status")` — full 155-line page component. |
-| `frontend/next.config.ts` | Standalone output + runtime-configurable BACKEND_URL | VERIFIED | Contains `output: "standalone"` and `process.env.BACKEND_URL ?? "http://localhost:8000"` in rewrite destination. |
-| `admin-frontend/next.config.ts` | Standalone output + runtime-configurable BACKEND_URL | VERIFIED | Contains `output: "standalone"` and `process.env.BACKEND_URL ?? "http://localhost:8000"` in rewrite destination, with `/api/` prefix kept. |
+| `frontend/next.config.ts` | Standalone output | RE-VERIFIED | Contains `output: "standalone"`. Rewrites removed (replaced by route handler proxy). |
+| `admin-frontend/next.config.ts` | Standalone output | RE-VERIFIED | Contains `output: "standalone"`. Rewrites removed (replaced by route handler proxy). |
+| `frontend/src/app/api/[...slug]/route.ts` | Catch-all proxy with SSE streaming | VERIFIED | Strips `/api/` prefix, reads BACKEND_URL at runtime, streams SSE via ReadableStream. |
+| `admin-frontend/src/app/api/[...slug]/route.ts` | Catch-all proxy preserving /api/ prefix | VERIFIED | Keeps `/api/` prefix, forwards X-Admin-Token header, reads BACKEND_URL at runtime. |
 
 ### Plan 02 Artifacts (PRE-04, PRE-05, VER-01, VER-02, VER-03)
 
@@ -48,7 +50,7 @@ re_verification: false
 |----------|----------|--------|---------|
 | `frontend/src/app/api/health/route.ts` | GET /api/health returning `{status: "ok"}` | VERIFIED | Exports `GET` function returning `NextResponse.json({ status: "ok" })`. 5 lines, no stub. |
 | `admin-frontend/src/app/api/health/route.ts` | GET /api/health returning `{status: "ok"}` | VERIFIED | Identical implementation. Exports `GET` returning `NextResponse.json({ status: "ok" })`. |
-| `backend/app/routers/version.py` | GET /version endpoint | VERIFIED | Exports `router`, implements `get_version()` using `os.getenv("APP_VERSION", "dev")` and `os.getenv("SPECTRA_MODE", "dev")`. |
+| `backend/app/routers/version.py` | GET /version endpoint | RE-VERIFIED | Exports `router`, implements `get_version()` using `settings.app_version` and `settings.spectra_mode` (Pydantic Settings). |
 | `frontend/src/hooks/useAppVersion.ts` | TanStack Query hook fetching /api/version | VERIFIED | Exports `useAppVersion`, uses `apiClient.get("/version")` (apiClient prepends `/api/` base path, producing `/api/version` fetch). |
 | `admin-frontend/src/hooks/useAppVersion.ts` | TanStack Query hook fetching /api/version | VERIFIED | Exports `useAppVersion`, uses `adminApiClient.get("/api/version")` — correct path for admin proxy which keeps `/api/` prefix. |
 | `frontend/src/components/settings/AccountInfo.tsx` | Account info card with version display | VERIFIED | Imports `useAppVersion`, calls it, renders `{versionData?.version ?? "—"}` in "App Version" Label section. |
@@ -60,13 +62,13 @@ re_verification: false
 
 | From | To | Via | Status | Details |
 |------|----|-----|--------|---------|
-| `frontend/src/hooks/useSSEStream.ts` | backend `/chat/sessions/{id}/stream` | Next.js `/api/` rewrite proxy (strips `/api/`) | WIRED | `fetch('/api/chat/sessions/${sessionId}/stream')` — response body consumed via ReadableStream reader. Full streaming pipeline present. |
-| `frontend/src/app/(auth)/register/page.tsx` | backend `/auth/signup-status` | Next.js `/api/` rewrite proxy | WIRED | `fetch("/api/auth/signup-status").then(r => r.json()).then(data => setSignupAllowed(data.signup_allowed))` — response consumed and state set. |
-| `frontend/next.config.ts rewrites` | backend | `process.env.BACKEND_URL ?? 'http://localhost:8000'` | WIRED | `BACKEND_URL` present in rewrite destination template literal. Fallback preserves local dev behavior. |
-| `admin-frontend/next.config.ts rewrites` | backend | `process.env.BACKEND_URL ?? 'http://localhost:8000'` | WIRED | `BACKEND_URL` present in rewrite destination template literal with `/api/` prefix. |
-| `frontend/src/hooks/useAppVersion.ts` | backend `/version` | `apiClient.get('/version')` → `/api/version` → rewrite strips `/api/` → backend `/version` | WIRED | `apiClient.get("/version")` call present, response checked with `res.ok`, then `res.json()` returned to query. |
-| `admin-frontend/src/hooks/useAppVersion.ts` | backend `/api/version` | `adminApiClient.get('/api/version')` → Next.js rewrite keeps `/api/` → backend `/api/version` | WIRED | `adminApiClient.get("/api/version")` call present, response handled identically. |
-| `backend/app/main.py` | `backend/app/routers/version.py` | `app.include_router(version.router)` twice | WIRED | Line 23: `from app.routers import ... version`. Line 302: `app.include_router(version.router)`. Line 303: `app.include_router(version.router, prefix="/api")`. Both mounts confirmed. |
+| `frontend/src/hooks/useSSEStream.ts` | backend `/chat/sessions/{id}/stream` | Route handler proxy (strips `/api/`) | WIRED | `fetch('/api/chat/sessions/${sessionId}/stream')` → route handler → `BACKEND_URL/chat/sessions/{id}/stream`. SSE streamed via ReadableStream. Verified with curl. |
+| `frontend/src/app/(auth)/register/page.tsx` | backend `/auth/signup-status` | Route handler proxy | WIRED | `fetch("/api/auth/signup-status")` → route handler → `BACKEND_URL/auth/signup-status`. |
+| `frontend/src/app/api/[...slug]/route.ts` | backend | `process.env.BACKEND_URL ?? 'http://localhost:8000'` | WIRED | Runtime env var, strips `/api/` prefix, streams SSE. |
+| `admin-frontend/src/app/api/[...slug]/route.ts` | backend | `process.env.BACKEND_URL ?? 'http://localhost:8000'` | WIRED | Runtime env var, keeps `/api/` prefix, forwards X-Admin-Token. |
+| `frontend/src/hooks/useAppVersion.ts` | backend `/version` | `apiClient.get('/version')` → route handler strips `/api/` → backend `/version` | WIRED | Verified with curl: returns `{"version": "v0.5", "environment": "dev"}`. |
+| `admin-frontend/src/hooks/useAppVersion.ts` | backend `/api/version` | `adminApiClient.get('/api/version')` → route handler keeps `/api/` → backend `/api/version` | WIRED | Verified with curl. |
+| `backend/app/main.py` | `backend/app/routers/version.py` | `app.include_router(version.router)` twice | WIRED | Dual mount at `/` and `/api` prefix. Also includes trailing slash middleware and `redirect_slashes=False`. |
 
 ---
 
@@ -76,10 +78,10 @@ re_verification: false
 |-------------|-------------|-------------|--------|----------|
 | PRE-01 | 33-01-PLAN.md | No hardcoded `http://localhost:8000` in `useSSEStream.ts` or `register/page.tsx` | SATISFIED | Both files use `/api/` relative paths. `grep -r "http://localhost:8000" frontend/src` → 0 matches. |
 | PRE-02 | 33-01-PLAN.md | Both `next.config.ts` files have `output: 'standalone'` | SATISFIED | Both configs contain `output: "standalone"` at the top of the `nextConfig` object. |
-| PRE-03 | 33-01-PLAN.md | Both Next.js apps read backend URL from `process.env.BACKEND_URL` | SATISFIED | Both configs use `process.env.BACKEND_URL ?? "http://localhost:8000"` in rewrite destinations. |
+| PRE-03 | 33-01-PLAN.md | Both Next.js apps read backend URL from `process.env.BACKEND_URL` | SATISFIED | Both route handler proxies (`app/api/[...slug]/route.ts`) use `process.env.BACKEND_URL ?? "http://localhost:8000"` at runtime. |
 | PRE-04 | 33-02-PLAN.md | Public frontend exposes `GET /api/health` returning `{status: "ok"}` | SATISFIED | `frontend/src/app/api/health/route.ts` exports `GET` returning `NextResponse.json({ status: "ok" })`. |
 | PRE-05 | 33-02-PLAN.md | Admin frontend exposes `GET /api/health` returning `{status: "ok"}` | SATISFIED | `admin-frontend/src/app/api/health/route.ts` exports `GET` returning `NextResponse.json({ status: "ok" })`. |
-| VER-01 | 33-02-PLAN.md | Backend exposes `GET /version` returning `{"version": ..., "environment": ...}` | SATISFIED | `backend/app/routers/version.py` implements the endpoint; router mounted at `/` and `/api` prefix in `main.py`. |
+| VER-01 | 33-02-PLAN.md | Backend exposes `GET /version` returning `{"version": ..., "environment": ...}` | SATISFIED | `backend/app/routers/version.py` uses Pydantic Settings (`settings.app_version`, `settings.spectra_mode`); router mounted at `/` and `/api` prefix. |
 | VER-02 | 33-02-PLAN.md | User can view app version on public frontend settings page | SATISFIED | `AccountInfo.tsx` imports and calls `useAppVersion`, renders `versionData?.version ?? "—"`. |
 | VER-03 | 33-02-PLAN.md | Admin can view app version on admin frontend settings page | SATISFIED | `SettingsForm.tsx` imports and calls `useAppVersion`, renders App Version Card with version and environment. |
 
@@ -99,33 +101,36 @@ No stubs, placeholder returns, TODO comments, or empty implementations found in 
 
 ---
 
-## Human Verification Required
+## Human Verification Completed
 
-### 1. Health Endpoint Response at Runtime
+All items verified via curl testing on 2026-02-19:
 
-**Test:** Run `next dev` in `frontend/` and `admin-frontend/`, then `curl http://localhost:3000/api/health` and `curl http://localhost:3001/api/health`
-**Expected:** Both return `{"status":"ok"}` with HTTP 200
-**Why human:** Next.js route handler priority over rewrites is a framework behavior that cannot be verified by static file analysis
+### 1. Health Endpoint Response at Runtime — PASSED
+- `curl localhost:3000/api/health` → `{"status":"ok"}` (200)
+- `curl localhost:3001/api/health` → `{"status":"ok"}` (200)
 
-### 2. Version Endpoint Proxy Resolution
+### 2. Version Endpoint Proxy Resolution — PASSED
+- `curl localhost:3000/api/version` → `{"version":"v0.5","environment":"dev"}` (200)
+- `curl localhost:3001/api/version` → `{"version":"v0.5","environment":"dev"}` (200)
 
-**Test:** With backend running, visit the public frontend settings page and admin frontend settings page
-**Expected:** Both show a version string (e.g., "dev") fetched live from the backend
-**Why human:** The full proxy chain (apiClient → /api/version → rewrite → backend /version) requires a running backend to confirm end-to-end
+### 3. Full Proxy Chain (login, files, sessions, SSE) — PASSED
+- Login through proxy: token issued
+- File list through proxy: 10 files returned with auth header
+- Session creation (POST /sessions): succeeds (was failing with rewrite approach due to trailing slash 307 redirect)
+- Session list (GET /sessions): returns sessions correctly
+- SSE streaming through proxy: events arrive individually, not buffered
+- Admin login + dashboard through proxy: works correctly
 
-### 3. Standalone Build Output Completeness
-
-**Test:** Run `npm run build` in `frontend/` and `admin-frontend/`
-**Expected:** Both produce a `.next/standalone/` directory suitable for multi-stage Docker image copying
-**Why human:** The `output: "standalone"` setting takes effect at build time and cannot be verified without running the build
+### 4. Standalone Build Output — PENDING
+- Deferred to Phase 34 (Dockerfiles will exercise this)
 
 ---
 
 ## Gaps Summary
 
-No gaps found. All 5 success criteria from the ROADMAP are satisfied by substantive, wired implementations. All 8 requirements (PRE-01 through PRE-05, VER-01 through VER-03) are accounted for with direct implementation evidence. The 4 commits cited in the SUMMARYs (`1d63839`, `63fc340`, `0ffd30d`, `3caca06`) exist in git history and correspond to the claimed work.
+No gaps found. All 5 success criteria satisfied. All 8 requirements accounted for. Post-testing revealed and fixed 3 critical issues with the rewrite approach (SSE buffering, build-time BACKEND_URL, trailing slash auth loss). The route handler proxy approach is architecturally superior for Docker deployment.
 
 ---
 
-_Verified: 2026-02-18_
-_Verifier: Claude (gsd-verifier)_
+_Initial verification: 2026-02-18 (gsd-verifier)_
+_Re-verified after proxy fixes: 2026-02-19 (manual curl testing)_
