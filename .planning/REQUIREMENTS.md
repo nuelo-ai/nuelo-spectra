@@ -25,8 +25,8 @@ Production Docker images for all three services. `.dockerignore` files are writt
 - [x] **DOCK-01**: Each service has a `.dockerignore` that excludes `.env` files, `.venv`, `node_modules`, `.next`, `__pycache__`, and `uploads/` — no secrets baked into image layers
 - [x] **DOCK-02**: Backend has `backend/docker-entrypoint.sh` that waits for PostgreSQL readiness (`pg_isready`), runs `alembic upgrade head`, then starts uvicorn as PID 1 via `exec` (graceful shutdown)
 - [x] **DOCK-03**: Developer can build `Dockerfile.backend` to produce a production Python image (`python:3.12-slim` base, uv multi-stage, non-root user, `GET /health` HEALTHCHECK, `/app/uploads` volume declaration)
-- [ ] **DOCK-04**: Developer can build `Dockerfile.frontend` to produce a production Next.js standalone image (`node:22-alpine`, 3-stage build, non-root user, `GET /api/health` HEALTHCHECK)
-- [ ] **DOCK-05**: Developer can build `Dockerfile.admin` to produce a production Next.js standalone image (identical pattern to `Dockerfile.frontend`, container port 3000)
+- [x] **DOCK-04**: Developer can build `Dockerfile.frontend` to produce a production Next.js standalone image (`node:22-alpine`, 3-stage build, non-root user, `GET /api/health` HEALTHCHECK)
+- [x] **DOCK-05**: Developer can build `Dockerfile.admin` to produce a production Next.js standalone image (identical pattern to `Dockerfile.frontend`, container port 3000)
 
 ### Docker Compose (COMP)
 
@@ -101,8 +101,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DOCK-01 | Phase 34 | Complete |
 | DOCK-02 | Phase 34 | Complete |
 | DOCK-03 | Phase 34 | Complete |
-| DOCK-04 | Phase 34 | Pending |
-| DOCK-05 | Phase 34 | Pending |
+| DOCK-04 | Phase 34 | Complete |
+| DOCK-05 | Phase 34 | Complete |
 | COMP-01 | Phase 35 | Pending |
 | COMP-02 | Phase 35 | Pending |
 | COMP-03 | Phase 35 | Pending |

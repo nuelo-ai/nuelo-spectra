@@ -63,11 +63,10 @@ Recent decisions affecting v0.6:
 - Dokploy internal service hostname format: MEDIUM confidence — verify in Dokploy UI after first backend deploy before setting `BACKEND_URL` in frontend services; fallback is public HTTPS domain for `BACKEND_URL`
 - ~~SSE streaming through Next.js rewrite proxy in Docker~~ RESOLVED — route handler proxy streams SSE correctly, verified with curl
 - ~~`pg_isready` availability in `python:3.12-slim`: not included by default~~ RESOLVED — `postgresql-client` installed via apt-get in Dockerfile.backend runtime stage
-- Phase 34 plans reference BACKEND_URL as Docker build-arg for rewrites — this is no longer needed; BACKEND_URL is runtime env var now. Plans (especially 34-03) need adjustment during execution.
+- ~~Phase 34 plans reference BACKEND_URL as Docker build-arg for rewrites~~ RESOLVED — 34-03 used ENV not ARG, adjusted during execution
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 34-02-PLAN.md (backend Dockerfile)
-Resume with: `/gsd:execute-phase 34` (continues with plan 34-03)
-Note: Phase 34 plans reference BACKEND_URL as Docker build-arg — this is no longer needed; BACKEND_URL is runtime env var now. Plans (especially 34-03) need adjustment during execution.
+Stopped at: Completed 34-03-PLAN.md (frontend Dockerfiles) — Phase 34 complete
+Resume with: `/gsd:execute-phase 35` (next phase)
