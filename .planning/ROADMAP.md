@@ -79,7 +79,7 @@
 
 - [x] **Phase 33: Pre-Work and Version API** — Fix localhost hardcodes, enable standalone builds, add /api/health routes, and expose GET /version endpoint with display in both frontends (completed 2026-02-19)
 - [x] **Phase 34: Dockerfiles and Entrypoint** — Write .dockerignore files (before any docker build), entrypoint script with pg_isready + Alembic, and all 3 production Dockerfiles (completed 2026-02-19)
-- [ ] **Phase 35: Docker Compose and Local Validation** — Write docker-compose.yml, bring up the full stack locally, and validate all services work together end-to-end
+- [ ] **Phase 35: Docker Compose and Local Validation** — Write compose.yaml, bring up the full stack locally, and validate all services work together end-to-end
 - [ ] **Phase 36: Dokploy Deployment and DEPLOYMENT.md** — Deploy 4 services to Dokploy (public backend + frontend via HTTPS, admin backend + frontend via Tailscale-only), configure volumes and env vars, and write DEPLOYMENT.md
 
 ## Phase Details
@@ -126,10 +126,10 @@ Plans:
   2. A file uploaded via the local public frontend at `http://localhost:3000` survives `docker compose down && docker compose up` — the file still appears in the file list and is downloadable after restart
   3. Backend container starts only after the PostgreSQL healthcheck passes — `depends_on: condition: service_healthy` is verified by inspecting container startup logs showing pg_isready wait before uvicorn launch
   4. Developer can log into the admin frontend at `http://localhost:3001`, and the admin API routes respond correctly — `SPECTRA_MODE` is set correctly per service so public routes and admin routes are properly isolated
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 35-01: Write docker-compose.yml and run end-to-end local validation smoke tests
+- [ ] 35-01-PLAN.md — Create compose.yaml, .env.docker.example, and validate full stack end-to-end (COMP-01, COMP-02, COMP-03, COMP-04)
 
 ### Phase 36: Dokploy Deployment and DEPLOYMENT.md
 **Goal**: Four Spectra services are running in production — public backend and public frontend accessible via public HTTPS, admin backend and admin frontend accessible only via Tailscale VPN; file uploads persist across redeployments; DEPLOYMENT.md gives a complete step-by-step guide for this split-horizon deployment
@@ -186,6 +186,6 @@ Plans:
 | 31. Dashboard & Admin Frontend | v0.5 | 8/8 | Complete | 2026-02-17 |
 | 32. Production Readiness | v0.5 | 1/1 | Complete | 2026-02-18 |
 | 33. Pre-Work and Version API | v0.6 | 2/2 | Complete | 2026-02-19 |
-| 34. Dockerfiles and Entrypoint | 3/3 | Complete    | 2026-02-19 | - |
+| 34. Dockerfiles and Entrypoint | v0.6 | 3/3 | Complete | 2026-02-19 |
 | 35. Docker Compose and Local Validation | v0.6 | 0/1 | Not started | - |
 | 36. Dokploy Deployment and DEPLOYMENT.md | v0.6 | 0/3 | Not started | - |
