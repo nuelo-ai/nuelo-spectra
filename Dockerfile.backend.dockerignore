@@ -1,0 +1,38 @@
+# Dockerfile.backend.dockerignore
+# BuildKit per-Dockerfile ignore — controls build context for backend image
+
+# === Secrets ===
+**/.env
+**/.env.*
+!**/.env.example
+
+# === Python artifacts ===
+**/.venv
+**/venv
+**/__pycache__
+**/*.pyc
+**/*.pyo
+
+# === Node artifacts ===
+**/node_modules
+**/.next
+
+# === User data ===
+**/uploads
+
+# === Repository / docs ===
+**/.git
+**/.planning
+**/*.md
+
+# === Test files ===
+**/tests
+**/.pytest_cache
+
+# === IDE config ===
+**/.vscode
+**/.idea
+
+# === Other services (not needed in backend image) ===
+frontend/
+admin-frontend/

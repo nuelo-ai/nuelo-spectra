@@ -1,0 +1,38 @@
+# Dockerfile.admin.dockerignore
+# BuildKit per-Dockerfile ignore — controls build context for admin image
+
+# === Secrets ===
+**/.env
+**/.env.*
+!**/.env.example
+
+# === Python artifacts ===
+**/.venv
+**/venv
+**/__pycache__
+**/*.pyc
+**/*.pyo
+
+# === Node artifacts ===
+**/node_modules
+**/.next
+
+# === User data ===
+**/uploads
+
+# === Repository / docs ===
+**/.git
+**/.planning
+**/*.md
+
+# === Test files ===
+**/tests
+**/.pytest_cache
+
+# === IDE config ===
+**/.vscode
+**/.idea
+
+# === Other services (not needed in admin image) ===
+backend/
+frontend/
