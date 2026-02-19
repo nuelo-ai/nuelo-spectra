@@ -20,7 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.database import engine
-from app.routers import auth, chat, chat_sessions, files, health, search
+from app.routers import auth, chat, chat_sessions, files, health, search, version
 
 # Get settings
 settings = get_settings()
@@ -299,6 +299,8 @@ app.add_middleware(
 
 # Health is always available (all modes)
 app.include_router(health.router)
+app.include_router(version.router)           # GET /version — for public frontend proxy
+app.include_router(version.router, prefix="/api")  # GET /api/version — for admin frontend proxy
 
 # Public routes (public and dev modes)
 if mode in ("public", "dev"):
