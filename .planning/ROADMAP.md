@@ -110,12 +110,12 @@ Plans:
   3. Developer runs `docker build -f Dockerfile.backend .` and the resulting image starts against a local PostgreSQL, responds to `GET /health`, and runs as a non-root user
   4. Developer runs `docker build -f Dockerfile.frontend .` and the resulting image serves the public Next.js app on port 3000 with `BACKEND_URL` controlling the rewrite destination — responds to `GET /api/health`
   5. Developer runs `docker build -f Dockerfile.admin .` and the resulting image serves the admin Next.js app on port 3000 — same pattern as frontend, responds to `GET /api/health`
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 34-01: Write .dockerignore files and backend entrypoint script
-- [ ] 34-02: Write Dockerfile.backend (python:3.12-slim, uv multi-stage, non-root, HEALTHCHECK)
-- [ ] 34-03: Write Dockerfile.frontend and Dockerfile.admin (node:22-alpine, 3-stage standalone, non-root, HEALTHCHECK)
+- [ ] 34-01-PLAN.md — Write .dockerignore files and backend entrypoint script (DOCK-01, DOCK-02)
+- [ ] 34-02-PLAN.md — Write Dockerfile.backend with uv multi-stage build (DOCK-03)
+- [ ] 34-03-PLAN.md — Write Dockerfile.frontend and Dockerfile.admin with 3-stage standalone builds (DOCK-04, DOCK-05)
 
 ### Phase 35: Docker Compose and Local Validation
 **Goal**: The full Spectra stack runs locally with a single `docker compose up` command — all three services start in the correct order, file uploads persist across `docker compose down && docker compose up`, inter-service networking works, and each service runs with the correct `SPECTRA_MODE`
@@ -185,8 +185,7 @@ Plans:
 | 30. Invitation System | v0.5 | 3/3 | Complete | 2026-02-17 |
 | 31. Dashboard & Admin Frontend | v0.5 | 8/8 | Complete | 2026-02-17 |
 | 32. Production Readiness | v0.5 | 1/1 | Complete | 2026-02-18 |
-| 33. Pre-Work and Version API | 2/2 | Complete    | 2026-02-19 | - |
+| 33. Pre-Work and Version API | v0.6 | 2/2 | Complete | 2026-02-19 |
 | 34. Dockerfiles and Entrypoint | v0.6 | 0/3 | Not started | - |
 | 35. Docker Compose and Local Validation | v0.6 | 0/1 | Not started | - |
 | 36. Dokploy Deployment and DEPLOYMENT.md | v0.6 | 0/3 | Not started | - |
-
