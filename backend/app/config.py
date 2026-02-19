@@ -77,8 +77,10 @@ class Settings(BaseSettings):
 
     # Admin / Split-Horizon
     spectra_mode: str = "dev"  # "public", "admin", or "dev"
-    admin_email: str = ""      # For seed-admin CLI
-    admin_password: str = ""   # For seed-admin CLI
+    admin_email: str = ""          # For seed-admin CLI
+    admin_password: str = ""       # For seed-admin CLI
+    admin_first_name: str = "Admin"  # For seed-admin CLI
+    admin_last_name: str = "User"    # For seed-admin CLI
     admin_session_timeout_minutes: int = 30
     admin_cors_origin: str = "http://localhost:3001"  # Admin frontend origin
 
