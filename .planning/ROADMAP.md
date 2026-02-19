@@ -145,7 +145,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 36-01-PLAN.md — Prerequisites + public backend deployment: Tailscale install, VPS firewall, DB setup, public backend with volume mount (DPLY-01, DPLY-05, DPLY-06)
+- [x] 36-01-PLAN.md — Prerequisites + public backend deployment: Tailscale install, VPS firewall, DB setup, public backend with volume mount (DPLY-01, DPLY-05, DPLY-06)
 - [ ] 36-02-PLAN.md — Admin backend + both frontends deployment, split-horizon routing verification (DPLY-02, DPLY-03, DPLY-04, DPLY-05)
 - [ ] 36-03-PLAN.md — Public HTTPS domains/SSL, full smoke test, write DEPLOYMENT.md (DPLY-07, DPLY-08)
 
@@ -188,4 +188,4 @@ Plans:
 | 33. Pre-Work and Version API | v0.6 | 2/2 | Complete | 2026-02-19 |
 | 34. Dockerfiles and Entrypoint | v0.6 | 3/3 | Complete | 2026-02-19 |
 | 35. Docker Compose and Local Validation | v0.6 | 1/1 | Complete | 2026-02-19 |
-| 36. Dokploy Deployment and DEPLOYMENT.md | v0.6 | 0/3 | Not started | - |
+| 36. Dokploy Deployment and DEPLOYMENT.md | v0.6 | 1/3 | In progress | - |

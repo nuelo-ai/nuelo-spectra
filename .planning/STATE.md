@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** Phase 35 — Docker Compose Local Validation
+**Current focus:** Phase 36 — Dokploy Deployment and DEPLOYMENT.md
 
 ## Current Position
 
-Phase: 35 of 36 (Docker Compose Local Validation)
-Plan: 1 of 1 in current phase (phase 35 complete)
-Status: Phase 35 complete — Docker Compose stack configured
-Last activity: 2026-02-19 — Completed plan 35-01 (Docker Compose and env template)
+Phase: 36 of 36 (Dokploy Deployment and DEPLOYMENT.md)
+Plan: 2 of 3 in current phase (plan 36-01 complete)
+Status: Phase 36 in progress — public backend deployed to Dokploy
+Last activity: 2026-02-19 — Completed plan 36-01 (Prerequisites + public backend deployment)
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 🚧
 
@@ -54,6 +54,9 @@ Recent decisions affecting v0.6:
 - [Phase 35-01]: env_file for secrets with inline environment overrides for non-secret config
 - [Phase 35-01]: Admin frontend maps host 3001 to container 3000 (no PORT env var override)
 - [Phase 35-01]: Backend healthcheck via depends_on service_healthy for startup ordering
+- [Phase 36-01]: iptables DOCKER-USER chain instead of VPS cloud firewall — Hostinger VPS, Docker bypasses UFW
+- [Phase 36-01]: Tailscale subnet routing not needed — dokploy-network is Swarm overlay (VXLAN), published host ports sufficient
+- [Phase 36-01]: Dokploy branch set to develop for testing deployment before final merge to master
 
 ### Pending Todos
 
@@ -64,7 +67,7 @@ Recent decisions affecting v0.6:
 
 ### Blockers/Concerns
 
-- Dokploy internal service hostname format: MEDIUM confidence — verify in Dokploy UI after first backend deploy before setting `BACKEND_URL` in frontend services; fallback is public HTTPS domain for `BACKEND_URL`
+- ~~Dokploy internal service hostname format: MEDIUM confidence~~ RESOLVED — verified after public backend deploy; Dokploy uses Docker Swarm overlay network, published host ports accessible via Tailscale IP
 - ~~SSE streaming through Next.js rewrite proxy in Docker~~ RESOLVED — route handler proxy streams SSE correctly, verified with curl
 - ~~`pg_isready` availability in `python:3.12-slim`: not included by default~~ RESOLVED — `postgresql-client` installed via apt-get in Dockerfile.backend runtime stage
 - ~~Phase 34 plans reference BACKEND_URL as Docker build-arg for rewrites~~ RESOLVED — 34-03 used ENV not ARG, adjusted during execution
@@ -72,5 +75,5 @@ Recent decisions affecting v0.6:
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 35-01-PLAN.md (Docker Compose and env template) — Phase 35 complete
-Resume with: `/gsd:execute-phase 36` (next phase)
+Stopped at: Completed 36-01-PLAN.md (Prerequisites + public backend deployment)
+Resume with: Continue Phase 36, Plan 36-02 (Admin backend + both frontends deployment)
