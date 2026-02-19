@@ -336,8 +336,8 @@ agents:
     max_tokens: 4000
 
   title_generator:
-    provider: ollama
-    model: llama3.2
+    provider: openrouter
+    model: openai/gpt-4o-mini
     temperature: 0.3
     system_prompt: |
       Generate a concise title (max 8 words) for a data analysis conversation based on the user's first message.
