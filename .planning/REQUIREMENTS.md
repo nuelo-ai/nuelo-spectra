@@ -22,8 +22,8 @@ Code changes that must land before any Dockerfile is valid. Two confirmed localh
 
 Production Docker images for all three services. `.dockerignore` files are written before any `docker build` is run to prevent secrets leaking into image layers.
 
-- [ ] **DOCK-01**: Each service has a `.dockerignore` that excludes `.env` files, `.venv`, `node_modules`, `.next`, `__pycache__`, and `uploads/` — no secrets baked into image layers
-- [ ] **DOCK-02**: Backend has `backend/docker-entrypoint.sh` that waits for PostgreSQL readiness (`pg_isready`), runs `alembic upgrade head`, then starts uvicorn as PID 1 via `exec` (graceful shutdown)
+- [x] **DOCK-01**: Each service has a `.dockerignore` that excludes `.env` files, `.venv`, `node_modules`, `.next`, `__pycache__`, and `uploads/` — no secrets baked into image layers
+- [x] **DOCK-02**: Backend has `backend/docker-entrypoint.sh` that waits for PostgreSQL readiness (`pg_isready`), runs `alembic upgrade head`, then starts uvicorn as PID 1 via `exec` (graceful shutdown)
 - [ ] **DOCK-03**: Developer can build `Dockerfile.backend` to produce a production Python image (`python:3.12-slim` base, uv multi-stage, non-root user, `GET /health` HEALTHCHECK, `/app/uploads` volume declaration)
 - [ ] **DOCK-04**: Developer can build `Dockerfile.frontend` to produce a production Next.js standalone image (`node:22-alpine`, 3-stage build, non-root user, `GET /api/health` HEALTHCHECK)
 - [ ] **DOCK-05**: Developer can build `Dockerfile.admin` to produce a production Next.js standalone image (identical pattern to `Dockerfile.frontend`, container port 3000)
@@ -98,8 +98,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VER-01 | Phase 33 | Complete |
 | VER-02 | Phase 33 | Complete |
 | VER-03 | Phase 33 | Complete |
-| DOCK-01 | Phase 34 | Pending |
-| DOCK-02 | Phase 34 | Pending |
+| DOCK-01 | Phase 34 | Complete |
+| DOCK-02 | Phase 34 | Complete |
 | DOCK-03 | Phase 34 | Pending |
 | DOCK-04 | Phase 34 | Pending |
 | DOCK-05 | Phase 34 | Pending |

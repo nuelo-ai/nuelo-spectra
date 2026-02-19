@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 ## Current Position
 
 Phase: 34 of 36 (Dockerfiles and Entrypoint)
-Plan: 0 of 3 in current phase (plans created, ready to execute)
-Status: Phase 33 complete with proxy fixes verified and committed
-Last activity: 2026-02-19 — Committed proxy fixes, all tests pass
+Plan: 1 of 3 in current phase (plan 01 complete)
+Status: Executing phase 34 — dockerignore files and entrypoint created
+Last activity: 2026-02-19 — Completed plan 34-01 (dockerignore + entrypoint)
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 🚧
 
@@ -42,6 +42,9 @@ Recent decisions affecting v0.6:
 - [Phase 33 post-test]: Replaced next.config.ts rewrites with catch-all route handler proxies — rewrites buffer SSE, bake BACKEND_URL at build time, strip trailing slashes
 - [Phase 33 post-test]: Backend middleware strips trailing slashes + redirect_slashes=False — consistent routing regardless of caller
 - [Phase 33 post-test]: BACKEND_URL is now runtime env var (read by route handler at request time) — no build-arg needed for Docker, better than original rewrite approach
+- [Phase 34-01]: BuildKit per-Dockerfile .dockerignore naming — each service excludes other service dirs to minimize build context
+- [Phase 34-01]: Entrypoint uses /app/.venv/bin/python explicitly (uv installs to .venv)
+- [Phase 34-01]: 30 retries x 2s = 60s max PostgreSQL wait in entrypoint
 
 ### Pending Todos
 
@@ -60,6 +63,6 @@ Recent decisions affecting v0.6:
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Phase 33 fully complete with proxy fixes committed. Phase 34 plans ready.
-Resume with: `/gsd:execute-phase 34`
-Note: Phase 34 plans need minor adjustment — BACKEND_URL is now runtime env var, not build-arg.
+Stopped at: Completed 34-01-PLAN.md (dockerignore files + backend entrypoint)
+Resume with: `/gsd:execute-phase 34` (continues with plan 34-02)
+Note: Phase 34 plans reference BACKEND_URL as Docker build-arg — this is no longer needed; BACKEND_URL is runtime env var now. Plans (especially 34-03) need adjustment during execution.
