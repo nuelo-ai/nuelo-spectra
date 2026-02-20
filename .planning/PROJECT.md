@@ -19,10 +19,23 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **Delivered:** Internal admin portal for platform management — user management, credit system, invitation flow, signup control, platform settings, and dashboard metrics — with split-horizon architecture and separate admin frontend.
 
+## Current Milestone: v0.6 Docker and Dokploy Support
+
+**Goal:** Package Spectra for production deployment — Dockerfiles for all 3 services, Docker Compose for local dev, 3 separate Dokploy service configurations with production hardening, version display in both frontends, and DEPLOYMENT.md guide.
+
+**Target features:**
+- Dockerfiles for backend (FastAPI), public frontend (Next.js), and admin frontend (Next.js)
+- Docker Compose for local development (all services + PostgreSQL)
+- 3 separate Dokploy service configurations (not a single Compose stack)
+- Production hardening (health checks, non-root users, restart policies, secrets)
+- Dokploy managed PostgreSQL (not containerized by us)
+- App version display on settings/profile page in both frontends (from backend /version API)
+- DEPLOYMENT.md step-by-step deployment guide
+
 ## Current State
 
 **Shipped:** v0.5 Admin Portal (2026-02-18)
-**Status:** Milestone complete, planning next milestone
+**Status:** v0.6 started — defining requirements
 **Codebase:** ~44,000 LOC (Python app + Python tests + TypeScript/TSX across public frontend + admin frontend)
 **Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily + Plotly + APScheduler (backend), Next.js 16 + React 19 + TanStack + Zustand + shadcn/ui + next-themes + Plotly.js + Recharts (frontend + admin frontend)
 
@@ -363,7 +376,18 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 ### Active
 
-(No active requirements — next milestone not yet defined. Run `/gsd:new-milestone` to start.)
+<!-- v0.5.1 Docker and Dokploy Support — see REQUIREMENTS.md for full REQ-IDs -->
+
+- [ ] Dockerfile for FastAPI backend service
+- [ ] Dockerfile for public Next.js frontend service
+- [ ] Dockerfile for admin Next.js frontend service
+- [ ] Docker Compose for local development (all services + PostgreSQL)
+- [ ] Dokploy service configuration for backend
+- [ ] Dokploy service configuration for public frontend
+- [ ] Dokploy service configuration for admin frontend
+- [ ] Production hardening (health checks, non-root users, restart policies, env secrets)
+- [ ] App version display on settings/profile page in both frontends (fetched from backend /version endpoint)
+- [ ] DEPLOYMENT.md step-by-step deployment guide
 
 ### Out of Scope
 
@@ -459,6 +483,8 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | APScheduler for credit resets | In-process scheduler, not external cron | ✓ Good — single dep, configurable per tier |
 | Challenge codes for delete | Backend-driven, not client-side | ✓ Good — prevents accidental bulk deletion |
 | Deferred CREDIT-11, SETTINGS-06, TIER-02 | Bulk credit adjust + per-tier overrides | — Pending for future milestone |
+| Route handler proxy over next.config.ts rewrites | Rewrites buffer SSE, bake BACKEND_URL at build time, strip trailing slashes causing auth loss | ✓ Good — SSE streams correctly, BACKEND_URL is runtime, no trailing slash issues |
+| APP_VERSION in Pydantic Settings (not os.getenv) | Pydantic extra=forbid rejects unknown .env vars; consistent with other config | ✓ Good — validates at startup, single source of truth |
 
 ---
-*Last updated: 2026-02-18 after v0.5 Admin Portal milestone*
+*Last updated: 2026-02-19 after Phase 33 proxy fixes*

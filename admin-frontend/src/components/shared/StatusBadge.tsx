@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 type StatusType = "active" | "inactive";
-type TierType = "free" | "standard" | "premium";
+type TierType = "free_trial" | "free" | "standard" | "premium" | "internal";
 type InvitationStatusType = "pending" | "accepted" | "revoked" | "expired";
 
 interface StatusBadgeProps {
@@ -19,9 +19,11 @@ const statusStyles: Record<StatusType, string> = {
 };
 
 const tierStyles: Record<TierType, string> = {
+  free_trial: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400",
   free: "bg-gray-100 text-gray-800 dark:bg-gray-800/40 dark:text-gray-400",
   standard: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-400",
   premium: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-400",
+  internal: "bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-400",
 };
 
 const invitationStyles: Record<InvitationStatusType, string> = {
@@ -35,7 +37,10 @@ function getLabel(type: string, value: string): string {
   if (type === "status") {
     return value === "active" || value === "true" ? "Active" : "Inactive";
   }
-  return value.charAt(0).toUpperCase() + value.slice(1);
+  return value
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 }
 
 function getStyle(type: string, value: string): string {

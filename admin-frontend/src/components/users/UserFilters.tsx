@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SearchIcon, XIcon } from "lucide-react";
 import type { UserListParams } from "@/types/user";
+import { useTiers } from "@/hooks/useTiers";
 
 interface UserFiltersProps {
   filters: UserListParams;
@@ -20,6 +21,7 @@ interface UserFiltersProps {
 }
 
 export function UserFilters({ filters, onFilterChange }: UserFiltersProps) {
+  const { data: tiers } = useTiers();
   const [searchInput, setSearchInput] = useState(filters.search || "");
 
   const handleSearch = useCallback(() => {
@@ -119,9 +121,11 @@ export function UserFilters({ filters, onFilterChange }: UserFiltersProps) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Tiers</SelectItem>
-            <SelectItem value="free">Free</SelectItem>
-            <SelectItem value="standard">Standard</SelectItem>
-            <SelectItem value="premium">Premium</SelectItem>
+            {tiers?.map((tier) => (
+              <SelectItem key={tier.name} value={tier.name}>
+                {tier.display_name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 

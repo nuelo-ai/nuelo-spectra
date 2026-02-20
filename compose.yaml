@@ -1,0 +1,72 @@
+# compose.yaml — Spectra Local Development Stack
+#
+# Usage:
+#   docker compose up --build      Start all services (build images first)
+#   docker compose down             Stop and remove containers (preserves data)
+#   docker compose down -v          Stop, remove containers AND delete volumes (full reset)
+
+services:
+  db:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: spectra
+      POSTGRES_PASSWORD: spectra
+      POSTGRES_DB: spectra
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spectra -d spectra"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - uploads_data:/app/uploads
+    env_file:
+      - path: .env.docker
+        required: false
+    environment:
+      DATABASE_URL: postgresql+asyncpg://spectra:spectra@db:5432/spectra
+      SPECTRA_MODE: dev
+    depends_on:
+      db:
+        condition: service_healthy
+
+  public-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:3000"
+    environment:
+      BACKEND_URL: http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  admin-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.admin
+    ports:
+      - "3001:3000"
+    environment:
+      BACKEND_URL: http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+    driver: local
+  uploads_data:
+    driver: local

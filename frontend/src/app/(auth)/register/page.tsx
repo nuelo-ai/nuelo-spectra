@@ -23,7 +23,7 @@ export default function RegisterPage() {
   const [signupAllowed, setSignupAllowed] = useState<boolean | null>(null);
 
   useEffect(() => {
-    fetch("http://localhost:8000/auth/signup-status")
+    fetch("/api/auth/signup-status")
       .then((r) => r.json())
       .then((data) => setSignupAllowed(data.signup_allowed))
       .catch(() => setSignupAllowed(true)); // Fail open for display

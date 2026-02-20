@@ -43,10 +43,10 @@ export function AdminHeader() {
 
   const pageTitle = getPageTitle(pathname);
   const initials = user
-    ? `${user.first_name[0]}${user.last_name[0]}`.toUpperCase()
+    ? `${(user.first_name || "A")[0]}${(user.last_name || "")[0]}`.toUpperCase()
     : "A";
   const fullName = user
-    ? `${user.first_name} ${user.last_name}`
+    ? `${user.first_name || ""} ${user.last_name || ""}`.trim() || "Admin"
     : "Admin";
 
   return (

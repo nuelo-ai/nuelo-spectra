@@ -1,275 +1,283 @@
 # Project Research Summary
 
-**Project:** Spectra v0.5 Admin Portal
-**Domain:** SaaS admin portal with user management, credit-based usage control, invitation-only signup, and split-horizon deployment
-**Researched:** 2026-02-16
+**Project:** Spectra — Docker + Dokploy Deployment (v0.6)
+**Domain:** Containerizing a FastAPI + 2x Next.js monorepo for self-hosted Dokploy PaaS
+**Researched:** 2026-02-18
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Spectra v0.5 adds the operational backbone for commercial SaaS operation: an admin portal with user management, credit-based usage metering, controlled signup via invitations, and split-horizon network deployment. The research reveals this is not exotic territory -- these are well-established SaaS patterns with proven solutions. The challenge is integration, not innovation.
+Spectra v0.6 is a "wrap the existing app" milestone, not a new feature build. The app is already production-functional; the goal is to containerize three services (FastAPI backend, Next.js public frontend, Next.js admin frontend) and deploy them to a self-hosted Dokploy instance. All three services get their own multi-stage Dockerfile. Dokploy is configured as three independent Application services — one per Dockerfile — sharing a common Docker overlay network (`dokploy-network`) and a Dokploy-managed PostgreSQL database. The recommended deployment model uses individual Dokploy Applications rather than a single Docker Compose deployment, enabling independent rollback and update cadences per service.
 
-The recommended approach builds on the existing FastAPI + PostgreSQL + Next.js stack with minimal new dependencies: APScheduler for credit reset scheduling (backend) and Recharts for admin dashboard charts (frontend). The split-horizon deployment is pure configuration (SPECTRA_MODE env var) with no new infrastructure beyond what Tailscale already provides. Most of the work is new models, new services, and new routers that follow existing patterns.
+The most important finding from codebase inspection is that two pre-work changes must happen before any Dockerfile is valid: (1) two hardcoded `http://localhost:8000` direct fetch calls in `useSSEStream.ts` and `register/page.tsx` must be changed to relative `/api/...` paths, and (2) both `next.config.ts` files must get `output: 'standalone'` added and have their rewrite destinations updated to read `process.env.BACKEND_URL` instead of the hardcoded localhost URL. Without these two pre-work items, Docker images will build successfully but fail silently at runtime — the hardest class of bug to diagnose.
 
-The key risk is the credit deduction system. It appears deceptively simple but introduces three critical pitfalls: (1) race conditions from concurrent message requests overdrawing credit balances, (2) float precision drift accumulating over hundreds of transactions, and (3) deducting credits before the expensive agent pipeline runs but after the user commits to the action. Each has a known solution (SELECT FOR UPDATE, NUMERIC columns, reserve-then-confirm pattern), but all must be implemented correctly from day one -- retrofitting credit atomicity after launch is nearly impossible without database downtime. The invitation system and admin portal are straightforward by comparison, reusing existing auth and email infrastructure.
+The principal risks are all configuration-correctness problems, not capability gaps. Docker and Dokploy are mature, well-documented technologies. The risks are: secrets baked into image layers from missing `.dockerignore` files (critical security), file uploads lost on redeploy from missing volume mounts (data loss), backend starting before PostgreSQL is ready from missing `pg_isready` wait logic (intermittent deployment failure), and wrong `SPECTRA_MODE` per service silently breaking routing or exposing admin routes publicly (security and feature breakage). Every one of these risks has a clear, low-effort prevention pattern documented in PITFALLS.md.
+
+---
 
 ## Key Findings
 
 ### Recommended Stack
 
-Almost everything needed already exists in the stack or comes from Python stdlib. The backend adds exactly one new dependency: APScheduler for scheduled credit resets. The admin frontend is a separate Next.js 16 app reusing the same libraries as the public frontend (TanStack Query, Zustand, shadcn/ui) plus Recharts for dashboard trend charts.
+See full details in `.planning/research/STACK-docker-dokploy.md`.
+
+The technology choices are narrow and well-established. `python:3.12-slim` (Debian bookworm-slim, not Alpine) is the only viable base image for the backend: asyncpg and psycopg-binary ship manylinux binary wheels that require glibc; Alpine's musl libc is incompatible and would force compiling from source. `node:22-alpine` is the correct base for both Next.js frontends — Next.js has no native modules requiring glibc, so Alpine is safe and saves ~100MB per image. The `uv` binary is copied from `ghcr.io/astral-sh/uv:latest` into the backend builder stage; `uv sync --locked --no-dev` provides reproducible, fast dependency installation from the existing `uv.lock` file. All three Dockerfiles use multi-stage builds: a builder stage installs dependencies and compiles assets, a leaner runner stage copies only what is needed for runtime.
+
+Dokploy v0.26.x is the deployment platform. The Dockerfile build type (not Nixpacks) is required because uv lock files are not understood by Nixpacks v1.x and multi-stage builds are not supported by Nixpacks. There is no `dokploy.yml` config file — all Dokploy configuration lives in the web UI. Traefik (bundled with Dokploy) handles TLS termination and domain routing automatically; no manual Traefik configuration is needed.
 
 **Core technologies:**
-- **APScheduler (>=3.11.0)**: Periodic credit reset scheduler (weekly/monthly auto-allocation) -- lightweight, integrates with FastAPI's lifespan, no external dependencies. Chosen over Celery (too heavy), cron (not portable), and fastapi-utils (too simple).
-- **Recharts (^3.7.0)**: Admin dashboard charts (signups over time, credit usage trends) -- shadcn/ui's official charting library, 45KB vs Plotly's 1MB. Matches existing design system.
-- **Existing stack**: FastAPI, PostgreSQL + SQLAlchemy + Alembic, JWT auth (PyJWT), SMTP email (aiosmtplib + Jinja2), Next.js 16, React 19, TanStack Query, Zustand, Radix UI -- all unchanged.
-- **No new infrastructure**: Tailscale VPN (already in use), Docker Compose, PostgreSQL (same database, 5 new tables).
-
-**Critical decision points:**
-- **NUMERIC(10,2) not FLOAT for credit values** -- float precision drift causes balance confusion after hundreds of transactions.
-- **Separate admin-frontend/ app, not a route** -- deployment isolation, bundle isolation, independent iteration.
-- **SPECTRA_MODE=public|admin|dev** -- same codebase, conditional router mounting, mode-aware CORS.
+- `python:3.12-slim`: Backend base image — glibc required for asyncpg/psycopg binary wheels; `-slim` reduces image size ~200MB vs full image
+- `node:22-alpine`: Frontend base image (both apps) — Node 22 is active LTS; Alpine safe for Next.js; saves ~100MB per image
+- `uv` (via `ghcr.io/astral-sh/uv:latest`): Python dep management in Docker — project already uses uv.lock; `uv sync --locked` is reproducible and fast
+- `output: 'standalone'` (Next.js built-in): Reduces Next.js image from ~7GB to ~300MB by tracing and copying only required files
+- Dokploy v0.26.x: Self-hosted PaaS — manages 3 services as independent Applications with Traefik-based routing; Dockerfile build type required
+- Docker Compose v2 (no `version:` field): Local dev orchestration — `version:` field is officially obsolete in Compose v2 and triggers warnings in Docker 25+
 
 ### Expected Features
 
-The requirements are well-scoped and appropriately defer Stripe integration, per-model credit costs, and self-service tier upgrades. v0.5 builds the internal plumbing (credit ledger, tier assignment, admin controls) that future monetization will plug into.
+See full details in `.planning/research/FEATURES.md`.
 
-**Must have (table stakes):**
-- Admin auth with CLI seed for first admin (chicken-and-egg solved)
-- User management: list/search/filter, activate/deactivate, delete with cascade
-- Credit system: balance per user, deduction on message send, out-of-credits blocking, transaction log
-- Signup control toggle with invite-only mode (immediate effect, no restart)
-- Invitation system: email invite with time-limited, single-use tokens
-- User class/tier assignment (free/standard/premium) determining credit allocation
-- Audit logging of all admin actions (who, what, when, target)
-- Platform settings key-value store (runtime config without redeployment)
+This milestone is primarily infrastructure work. There are no new user-facing capabilities. The feature set is defined entirely by what is required for a working, production-safe Docker deployment.
 
-**Should have (differentiators):**
-- Admin dashboard with trend charts (signups, messages, credit usage over time)
-- Credit distribution overview by tier
-- Pending invitation management (revoke/resend)
-- User detail page with activity summary
-- Auto-reset credit policy configuration (manual/weekly/monthly)
+**Must have (table stakes — P1, all blocking):**
+- Fix hardcoded `localhost:8000` in `useSSEStream.ts` (line 112) and `register/page.tsx` (line 26) — without this, SSE chat streaming and signup status check fail in Docker
+- `output: 'standalone'` in both `next.config.ts` files — required for Next.js Docker images to exist at all
+- `process.env.BACKEND_URL` in both `next.config.ts` rewrite destinations — required for inter-service routing in Docker
+- Health check API routes in both frontends (`/api/health` returning `{status: "ok"}`) — required for Dokploy health monitoring
+- Backend Dockerfile (multi-stage, uv-based, non-root user, HEALTHCHECK, volume declaration at `/app/uploads`)
+- Public frontend Dockerfile (3-stage standalone, non-root user, HEALTHCHECK)
+- Admin frontend Dockerfile (3-stage standalone, non-root user, HEALTHCHECK)
+- `docker-compose.yml` for local dev (all 3 services + postgres with health check, uploads named volume)
+- `DEPLOYMENT.md` step-by-step Dokploy guide
 
-**Defer (v2+):**
-- Stripe/payment integration (doubles scope, clean follow-on milestone)
-- Per-model credit costs (no user-facing model selection yet)
-- Dynamic tier creation via admin UI (static YAML is appropriate for 3-5 tiers)
-- Self-service tier upgrade (requires payment integration)
-- Real-time credit balance WebSocket (polling is sufficient)
+**Should have (P2 — production hardening, low effort):**
+- `.dockerignore` for each service — prevents secrets leakage and bloated build contexts; non-negotiable security item
+- Alembic migration in backend entrypoint before uvicorn starts — prevents broken schema on first deploy
+- `pg_isready` wait loop in backend entrypoint — prevents race condition startup failures on cold deploys
+- Build cache layer optimization (copy dependency files before app source)
+- `NEXT_TELEMETRY_DISABLED=1` and `UV_COMPILE_BYTECODE=1` — minor production polish
+
+**Defer (not this milestone):**
+- Redis for in-memory state (token revocation, admin lockout) — single-instance limitation documented in PROJECT.md; only matters at 2+ replicas
+- CI/CD image registry pipeline — Dokploy direct-from-git is sufficient at single-developer scale
+- Structured JSON logging — current logging is readable; not needed at 1-user scale
+- Read-only root filesystem — security enhancement; complex to configure for marginal single-instance benefit
 
 ### Architecture Approach
 
-Shared models and services, isolated entry points. Admin routers call the same database layer and reuse existing services (auth, email) but live in their own namespace (`/api/admin/`). The most critical integration point is credit deduction at the chat message layer -- credits must be checked and deducted BEFORE the expensive LangGraph agent pipeline runs, at the router level in `routers/chat.py`.
+See full details in `.planning/research/ARCHITECTURE.md`.
+
+All three Dockerfiles sit at the monorepo root and use the repo root as the Docker build context. This is the correct configuration for Dokploy: "Docker Context Path" is set to `.` (repo root) for all three services, and "Dockerfile Path" differs per service (`Dockerfile.backend`, `Dockerfile.frontend`, `Dockerfile.admin`). Each Dockerfile COPYs only from its own subdirectory. All three Dokploy Application services join `dokploy-network` automatically, enabling inter-service communication via Docker service names as DNS hostnames (e.g., `http://spectra-backend:8000`). The key architectural insight is that Next.js `rewrites()` in `next.config.ts` are evaluated at Node.js server startup — not at build time — meaning `process.env.BACKEND_URL` is a runtime environment variable, not a build-time ARG. This eliminates the `NEXT_PUBLIC_` bake-in problem for the backend URL entirely.
+
+The backend entrypoint script is the critical sequencing mechanism: `pg_isready` wait loop then `alembic upgrade head` then `exec uvicorn`. The `exec` prefix replaces the shell with uvicorn as PID 1 so Docker SIGTERM signals reach uvicorn directly for graceful shutdown. File uploads use a named Docker volume (`spectra_uploads`) mounted at `/app/uploads` — named volumes persist independently of container lifecycle and Dokploy redeployments.
 
 **Major components:**
-1. **Mode-gated router mounting** -- `SPECTRA_MODE` env var controls which routers mount. Public mode: auth, chat, files, sessions, search. Admin mode: `/api/admin/*` routers. Dev mode: all. Lazy imports prevent admin routes leaking into public deployment.
-2. **Credit system** -- `UserCredit` table (1:1 with users), `CreditTransaction` append-only ledger. Deduction uses SELECT FOR UPDATE to prevent race conditions. Deduct BEFORE agent runs, not after (no refunds on failure matches LLM API billing patterns).
-3. **Platform settings service** -- Key-value DB table with 30-second in-memory cache. Settings change at runtime without restart. Precedence: DB overrides > YAML defaults > hardcoded fallbacks.
-4. **Admin router package** -- `routers/admin/__init__.py` aggregates 6 sub-routers (auth, dashboard, users, settings, invitations, credits) into single mount point.
-5. **Audit logging** -- `AdminAuditLog` table, logged in same transaction as business action (atomic). No middleware -- explicit service calls in admin routers for semantic action names.
-6. **Invitation system** -- Reuses existing password reset token pattern: `secrets.token_urlsafe(32)`, SHA-256 hash stored, email pre-filled and locked, single-use validation.
-7. **Admin frontend** -- Separate Next.js app at `admin-frontend/`, same stack as public frontend (TanStack Query, Zustand, shadcn/ui), API client points to `/api/admin/`.
-
-**Database changes:**
-- Add `is_admin` (Boolean, default False), `user_class` (Enum, default 'free') to `users` table
-- Create 5 new tables: `platform_settings`, `user_credits`, `credit_transactions`, `invitations`, `admin_audit_log`
-- Single Alembic migration with three-step pattern for NOT NULL columns (add nullable, backfill, alter to NOT NULL)
+1. `Dockerfile.backend` — multi-stage Python image; entrypoint handles DB readiness + Alembic migrations before uvicorn starts
+2. `Dockerfile.frontend` — 3-stage Next.js standalone image; `BACKEND_URL` env var controls rewrite destination at runtime
+3. `Dockerfile.admin` — identical pattern to frontend; connects to same backend via `BACKEND_URL`; `SPECTRA_MODE=admin` on the backend it targets
+4. `backend/docker-entrypoint.sh` — `pg_isready` wait + `alembic upgrade head` + `exec uvicorn`; ensures deployment never starts a broken backend
+5. `docker-compose.yml` — local dev orchestration; postgres with health check; named volume `uploads_data`; `depends_on: condition: service_healthy`
+6. `DEPLOYMENT.md` — step-by-step Dokploy configuration guide covering all 3 services, env vars, volumes, and domain assignment
 
 ### Critical Pitfalls
 
-Research identified 15 pitfalls across critical, moderate, and minor severity. The top 5 require explicit prevention during implementation:
+See full details in `.planning/research/PITFALLS.md`.
 
-1. **Credit deduction race condition** -- Two concurrent messages from the same user both read balance before either deducts, allowing overdraw. **Prevention:** Use `SELECT FOR UPDATE` (or `FOR NO KEY UPDATE`) to lock the row during balance check + deduction. Alternative: single atomic `UPDATE ... WHERE balance >= cost RETURNING balance`.
+1. **No `.dockerignore` in the repo — secrets baked into image layers** — The repo currently has no `.dockerignore` file anywhere. Without one, `COPY . .` in any Dockerfile pulls in `.env` files containing `ANTHROPIC_API_KEY`, `E2B_API_KEY`, `TAVILY_API_KEY`, `SECRET_KEY` (JWT), `SMTP_PASS`, and `ADMIN_PASSWORD`. These are permanently stored in Docker layer history, recoverable with `docker history --no-trunc`. Prevention: write `.dockerignore` for each service before writing any `COPY` instruction. Exclude `.env`, `.env.*`, `.venv`, `node_modules`, `__pycache__`, `.next`, `uploads/`.
 
-2. **Float precision drift** -- Using PostgreSQL FLOAT for credit values causes precision loss after hundreds of operations (0.1 + 0.2 = 0.30000000000000004). **Prevention:** Use NUMERIC(10,2) in PostgreSQL, Decimal in Python. Define credit costs in YAML as strings and parse with Decimal().
+2. **Hardcoded `localhost:8000` in `useSSEStream.ts` and `register/page.tsx`** — These two files bypass the Next.js rewrite proxy and directly fetch `http://localhost:8000`. In Docker, `localhost` resolves to the frontend container itself. SSE streaming fails; signup status check fails with `ECONNREFUSED`. Both failures produce no obvious error at the UI layer. Fix: change both to relative `/api/...` paths. This must happen before any Docker image is built.
 
-3. **Admin router leak to public deployment** -- Admin endpoints accidentally exposed in public mode if router imports have side effects or mode gating is wrong. **Prevention:** Lazy imports inside mode conditional, startup assertion test verifying no `/api/admin/*` routes in public mode.
+3. **Alembic migration + `pg_isready` must be in entrypoint before uvicorn** — FastAPI's `lifespan()` in `main.py` creates an `AsyncConnectionPool` and runs `checkpointer.setup()` at startup. If PostgreSQL is not ready, the entire lifespan throws, uvicorn never starts, and Dokploy marks the deployment failed. The backend entrypoint script must: (1) loop `pg_isready` until PostgreSQL accepts connections, (2) run `alembic upgrade head`, then (3) `exec uvicorn`. Running Alembic inside FastAPI lifespan creates async/sync event loop conflicts and is the wrong approach.
 
-4. **Alembic migration on production users table** -- Adding NOT NULL columns to existing users table fails without defaults. **Prevention:** Three-step migration: add nullable with server_default, backfill, alter to NOT NULL, optionally remove server_default.
+4. **`SPECTRA_MODE` set incorrectly per service causes silent failure or security breach** — `SPECTRA_MODE=public` on the admin backend means all admin API calls return 404 (admin router not mounted). `SPECTRA_MODE=dev` on the public-facing backend exposes `/api/admin/*` endpoints to the public internet. Neither failure produces an obvious error at startup — the backend starts normally and appears healthy. Prevention: explicitly set and verify `SPECTRA_MODE` for each Dokploy service as a named deployment checklist item.
 
-5. **Invitation token predictability** -- Weak randomness (UUID4, sequential IDs) or missing single-use enforcement allows unauthorized registrations. **Prevention:** Reuse existing password reset pattern: `secrets.token_urlsafe(32)`, SHA-256 hash storage, status='accepted' after use, expires_at check.
+5. **File uploads volume mount is non-negotiable** — The backend writes user uploads to `/app/uploads`. Without a named Docker volume (`spectra_uploads` mounted at `/app/uploads`), all user files are lost on every Dokploy redeploy. This creates a broken state: PostgreSQL retains file records but the files are gone from disk. File download endpoints return 404 for files that appear in the list. Prevention: configure the named volume in Dokploy Advanced → Mounts before the first production deployment.
 
-**Additional high-risk areas:**
-- CORS configuration must be mode-aware (public origins in public mode, admin origins in admin mode, both in dev)
-- Credit deduction must happen BEFORE agent pipeline runs (agents are expensive, no refunds on failure)
-- Audit log and business action must be in same transaction (flush, not commit, until both complete)
-- Platform settings cache must not use `@lru_cache` (settings change at runtime)
+---
 
 ## Implications for Roadmap
 
-Based on dependency analysis and risk prioritization, suggest six sequential phases:
+The research strongly suggests a 4-phase delivery structure with strict sequencing driven by dependencies. Phases 1 and 2 are the core of the milestone; Phase 3 validates end-to-end; Phase 4 produces the documentation artifact and the live production deployment.
 
-### Phase 1: Foundation (Database + Config + Mode Gating)
-**Rationale:** Everything else depends on schema, config, mode gating, and admin auth. Pure backend, fully testable via pytest and API calls before any frontend work.
+### Phase 33: Pre-Work and Version API
 
-**Delivers:**
-- Alembic migration: add `is_admin`, `user_class` to users table, create 5 new tables
-- `SPECTRA_MODE` env var in settings, conditional router mounting in `main.py`
-- `CurrentAdmin` dependency (extends `CurrentUser` + `is_admin` check)
-- `routers/admin/__init__.py` package structure (empty sub-routers)
-- `services/admin/audit.py` and `services/admin/settings.py`
-- `user_classes.yaml` config file with tier definitions
-- CLI admin seed command (`python -m app.cli seed-admin`)
+**Rationale:** Two source code changes must exist in the repository before any Dockerfile is written — they are blocking for Docker correctness. Version display is grouped here because it requires a new backend endpoint (`GET /version`) and frontend UI additions that are independent of Docker and can ship in the same phase. These are the easiest items in the milestone (simple string replacements, a `next.config.ts` update, a small API endpoint, and UI additions) and must be first because everything downstream depends on the pre-work.
 
-**Addresses:** Pitfall 4 (migration), Pitfall 3 (mode gating), Pitfall 11 (admin bootstrap)
+**Delivers:** A codebase where no hardcoded localhost URLs exist, both Next.js apps are configured for standalone output, both rewrite destinations read `process.env.BACKEND_URL`, both frontends have a `/api/health` route for Dokploy health checks, the backend exposes `GET /version`, and users can see the app version on the settings/profile page in both frontends.
 
-**Research flag:** Standard patterns, no research-phase needed.
+**Addresses (from FEATURES.md):**
+- Fix `frontend/src/hooks/useSSEStream.ts` line 112: `http://localhost:8000/chat/...` → `/api/chat/...`
+- Fix `frontend/src/app/(auth)/register/page.tsx` line 26: `http://localhost:8000/auth/signup-status` → `/api/auth/signup-status`
+- Add `output: 'standalone'` to `frontend/next.config.ts` and `admin-frontend/next.config.ts`
+- Update rewrite destinations to `process.env.BACKEND_URL || 'http://localhost:8000'` in both `next.config.ts` files
+- Create `frontend/src/app/api/health/route.ts` returning `{status: "ok"}`
+- Create `admin-frontend/src/app/api/health/route.ts` returning `{status: "ok"}`
+- Add `GET /version` endpoint to FastAPI backend (reads `APP_VERSION` env var, returns `{"version": "...", "environment": "..."}`)
+- Display app version on public frontend settings/profile page (fetched from `/api/version`)
+- Display app version on admin frontend settings page (fetched from `/api/version`)
 
-### Phase 2: Credit System (Highest Risk First)
-**Rationale:** Credit deduction touches the most critical user-facing flow (chat). Building early surfaces integration issues before other features add complexity. Admin credit endpoints enable testing (manually grant credits, verify deduction).
+**Avoids (from PITFALLS.md):**
+- Pitfall 1 (NEXT_PUBLIC_ baked as `undefined`): rewrite destination now reads from env var
+- SSE streaming failure in Docker: localhost hardcode removed
+- Missing standalone output: would make the multi-stage Dockerfile pattern non-functional
 
-**Delivers:**
-- `services/credit.py` (shared: atomic `check_and_deduct`, `InsufficientCreditsError`)
-- `services/admin/credit.py` (admin: adjust, bulk-adjust, balance view, history)
-- Hook credit check into `routers/chat.py` -- all four query/stream endpoints
-- Create `UserCredit` record on user signup (modify auth service)
-- `routers/admin/credits.py` (admin endpoints)
-- Seed `default_credit_cost` platform setting
+**Research flag:** None needed. These are direct, unambiguous code changes.
 
-**Addresses:** Pitfall 1 (race condition with SELECT FOR UPDATE), Pitfall 2 (NUMERIC columns), Pitfall 8 (deduct before agent)
+---
 
-**Research flag:** Standard patterns, but CRITICAL to implement correctly. Phase-specific research: "How to implement reserve-then-confirm pattern for SSE streaming?"
+### Phase 34: Dockerfiles and .dockerignore
 
-### Phase 3: User Management + Platform Settings
-**Rationale:** Depends on Phase 1 (schema, admin auth) but not Phase 2. Built after Phase 2 so user class changes can immediately affect credit allocations.
+**Rationale:** Writing the three Dockerfiles is the core infrastructure work of the milestone. The backend Dockerfile is built first because both frontends depend on the backend being deployed (needed to confirm `BACKEND_URL`). The entrypoint script (`docker-entrypoint.sh`) is written alongside the backend Dockerfile as an inseparable deliverable. `.dockerignore` files must be written before or simultaneously with the Dockerfiles — never after, because any `docker build` run without `.dockerignore` risks baking secrets into layers permanently.
 
-**Delivers:**
-- `services/admin/user_management.py` (list, search, filter, activate, deactivate, change class, delete)
-- `routers/admin/users.py`
-- `routers/admin/settings.py` (CRUD on platform_settings table)
-- Implement `allow_public_signup` check in existing `routers/auth.py` signup
-- `routers/admin/dashboard.py` (aggregate queries)
+**Delivers:** Three production-ready Docker images that build and run locally. The backend image starts cleanly against a local PostgreSQL (waits for readiness, runs migrations, then starts uvicorn). Both frontend images serve the Next.js app correctly with `BACKEND_URL` controlling the rewrite destination at runtime.
 
-**Addresses:** Pitfall 10 (config precedence), Pitfall 15 (settings cache)
+**Build order within this phase:**
+1. `.dockerignore` files (all three service directories, before any `docker build` is run)
+2. `backend/docker-entrypoint.sh` (`pg_isready` wait + `alembic upgrade head` + `exec uvicorn`)
+3. `Dockerfile.backend` (`python:3.12-slim`, multi-stage, uv-based, non-root `appuser`, HEALTHCHECK at `/health`, `/app/uploads` volume)
+4. `Dockerfile.frontend` (`node:22-alpine`, 3-stage standalone, non-root `nextjs:nodejs`, HEALTHCHECK at `/api/health`, PORT=3000)
+5. `Dockerfile.admin` (identical pattern to frontend, PORT=3000 in container / 3001 on host in Compose)
 
-**Research flag:** Standard CRUD patterns, no research-phase needed.
+**Uses (from STACK.md):**
+- `python:3.12-slim` for backend (glibc required for asyncpg and psycopg binary wheels; Alpine would break both)
+- `ghcr.io/astral-sh/uv:latest` binary copy pattern for fast, reproducible Python deps
+- `node:22-alpine` for both frontends (Node 22 active LTS; Alpine safe for Next.js; no glibc-dependent native modules)
+- Multi-stage build pattern for all three services (builder stage + lean runtime stage)
+- `uv sync --locked --no-dev --compile-bytecode` for production backend dep install
 
-### Phase 4: Invitation System
-**Rationale:** Depends on signup control toggle (Phase 3), email service (existing), and user model changes (Phase 1). First phase that requires a public frontend change.
+**Implements (from ARCHITECTURE.md):**
+- Monorepo build context strategy: all Dockerfiles at repo root, Docker context = `.`, explicit subdirectory COPYs
+- Entrypoint script with `exec` for SIGTERM signal forwarding to uvicorn (PID 1)
+- Named volume declaration for `/app/uploads` in Dockerfile.backend
+- Non-root users in all images (security baseline)
 
-**Delivers:**
-- `services/admin/invitation.py` (create, validate, accept, revoke, resend, list expired)
-- Invitation email template (reuse existing `services/email.py` patterns)
-- `routers/admin/invitations.py`
-- Modify `routers/auth.py` signup to accept and validate invite tokens
-- Add invite signup page to public frontend (`/signup?invite=TOKEN`)
+**Avoids (from PITFALLS.md):**
+- Pitfall 4: Secrets in image layers — `.dockerignore` written first, `.env` excluded before any `COPY`
+- Pitfall 3: Migration race condition — `pg_isready` loop in entrypoint before `alembic upgrade head`
+- Pitfall 6: Wrong monorepo build context — Dockerfiles at root with explicit `COPY backend/` scoping
+- Pitfall 2: File upload loss — volume declared in Dockerfile.backend and verified with smoke test
 
-**Addresses:** Pitfall 5 (token security)
+**Research flag:** None needed. All three Dockerfile patterns are from official documentation (uv Docker integration guide, Next.js official Docker example, official Python Docker Hub). HIGH confidence.
 
-**Research flag:** Standard patterns (existing password reset provides template), no research-phase needed.
+---
 
-### Phase 5: Audit Log Completion + Dashboard Polish
-**Rationale:** Audit log viewer is useful only after all admin actions are logging. Dashboard polish requires all data tables to exist.
+### Phase 35: Docker Compose and Local Validation
 
-**Delivers:**
-- Wire `log_admin_action()` calls into ALL admin endpoints from Phases 2-4
-- Audit log viewer endpoint (list, filter by action/admin/date range)
-- Dashboard aggregate queries: credit distribution, low-credit users, trend calculations
-- Recharts chart data endpoints
+**Rationale:** The `docker-compose.yml` is the integration test for the three Dockerfiles. It proves all services start correctly together, that inter-service networking works, that the uploads volume persists across `docker-compose down && up`, and that the local dev workflow is viable. Writing Compose after the Dockerfiles (not simultaneously) ensures each Dockerfile is independently validated before adding the orchestration layer. The smoke test checklist in this phase serves as the acceptance criteria for the entire milestone.
 
-**Addresses:** Pitfall 7 (audit log growth -- index on created_at DESC, LIMIT on queries)
+**Delivers:** A working `docker-compose.yml` at the repo root that brings up all 3 services plus local PostgreSQL with `docker compose up`. Validated smoke tests: login works, SSE chat streaming works through the Next.js rewrite proxy, file upload persists after `docker-compose down && up`, admin frontend reaches admin API routes.
 
-**Research flag:** Standard patterns, no research-phase needed.
+**Addresses (from FEATURES.md):**
+- `docker-compose.yml` with all 3 services plus `postgres:16-alpine` with healthcheck
+- Named volume `uploads_data` at `/app/uploads` for upload persistence
+- `depends_on: condition: service_healthy` on backend (waits for postgres healthcheck to pass)
+- Standardized port mapping: backend 8000, public frontend 3000, admin frontend 3001:3000
+- `restart: unless-stopped` for all services
 
-### Phase 6: Admin Frontend
-**Rationale:** Frontend is a pure consumer of the API built in Phases 1-5. All endpoints are stable and tested before UI work begins. Can run in parallel with Phases 2-5 if second developer builds UI against API stubs/mocks.
+**Avoids (from PITFALLS.md):**
+- Pitfall 2: File upload loss — verified by uploading a file, running `docker-compose down && up`, confirming file still accessible
+- Pitfall 3: Migration race condition — postgres healthcheck + `depends_on: condition: service_healthy` handles startup ordering
+- Pitfall 5: Wrong SPECTRA_MODE — `SPECTRA_MODE` explicitly set per service in Compose env vars and verified against expected behavior
 
-**Delivers:**
-- Initialize `admin-frontend/` Next.js project (shadcn/ui, TanStack Query, Zustand, Recharts)
-- Admin login page
-- Dashboard page (Recharts charts, metrics)
-- User management pages (list with search/filter, detail view)
-- Platform settings page (form with save)
-- Invitations page (list + create dialog)
-- Credit management views (user credit detail, bulk adjust)
-- Audit log viewer (table with date/action/admin filters)
+**Research flag:** None needed. Docker Compose v2 patterns are thoroughly documented. The `depends_on: condition: service_healthy` pattern is standard.
 
-**Addresses:** Pitfall 9 (CORS for dual frontends), Pitfall 14 (admin frontend talking to wrong backend mode)
+---
 
-**Research flag:** Standard Next.js + shadcn patterns, no research-phase needed. May need phase-specific research: "Recharts best practices for admin dashboards with shadcn/ui".
+### Phase 36: Dokploy Deployment and DEPLOYMENT.md
+
+**Rationale:** DEPLOYMENT.md comes last because it documents a process that cannot be written accurately until Dockerfiles and Compose are fully validated. Dokploy deployment configuration lives entirely in the UI (no config files exist), so the DEPLOYMENT.md is the only artifact from this phase beyond the live production deployment itself. Writing documentation before the implementation is known leads to inaccurate guides.
+
+**Delivers:** A production deployment on Dokploy with all three services running behind HTTPS domains. `DEPLOYMENT.md` captures every manual step: Dokploy project creation, 3 Application service configurations (Dockerfile path, context path, port), environment variable tables per service, volume mount configuration (`spectra_uploads` → `/app/uploads`), domain assignment, SSL, and a post-deploy verification checklist.
+
+**Addresses (from FEATURES.md):**
+- `DEPLOYMENT.md` step-by-step Dokploy guide
+- `SPECTRA_MODE` explicitly set per service in Dokploy env vars UI (deployment checklist item)
+- `ENABLE_SCHEDULER=true` on backend
+- `CORS_ORIGINS` configured with actual production frontend domains
+- Named volume `spectra_uploads` at `/app/uploads` configured in Dokploy Advanced → Mounts
+- `SECRET_KEY` generated once (`python -c "import secrets; print(secrets.token_hex(32))"`) and documented
+
+**Avoids (from PITFALLS.md):**
+- Pitfall 5: Wrong SPECTRA_MODE — deployment checklist includes per-service mode verification and smoke test
+- Pitfall 7: JWT secret changes on restart — `SECRET_KEY` generated once and stored only in Dokploy env vars UI
+- Pitfall 4: Secrets not in Dockerfiles or committed files — all secrets injected via Dokploy env vars panel
+
+**Research flag:** LOW — one targeted verification needed at deployment time. The exact internal Docker hostname Dokploy assigns to each service on `dokploy-network` is MEDIUM confidence (community-confirmed but not officially documented by Dokploy). Resolution: inspect the Dokploy UI → service → Network settings for the actual internal hostname after first backend deployment, then update `BACKEND_URL` in the frontend services accordingly. Fallback: use the backend's public domain URL for `BACKEND_URL` (goes through Traefik instead of internal network, slightly higher latency but fully functional).
+
+---
 
 ### Phase Ordering Rationale
 
-- **Phase 1 first:** Foundation for everything. No admin functionality works without schema, mode gating, and admin auth.
-- **Phase 2 second (credit system):** Highest technical risk. Integration with existing chat flow is the most complex change. Build when codebase is simple, before other features add noise.
-- **Phase 3 before Phase 4:** User management provides immediate value and enables testing (create test users, assign classes). Invitation system depends on signup toggle from platform settings.
-- **Phase 5 after data-generating phases:** Audit log viewer and dashboard need data from Phases 2-4. Building them earlier produces empty UIs.
-- **Phase 6 last (or parallel):** Frontend depends on stable API contracts. Building after backend phases complete reduces rework from API changes.
-
-**Dependency chains:**
-- Database migration -> Admin auth -> All admin features
-- Platform settings table -> Signup toggle -> Invitation system
-- User model changes -> User class assignment -> Credit allocation
-- Credit system core -> Admin credit endpoints -> Dashboard credit charts
-
-**Avoids pitfall cascades:**
-- Phase 1 catches router leak (Pitfall 3) before any admin functionality is written
-- Phase 2 forces atomic credit design (Pitfall 1, 2) before integration spreads across codebase
-- Phase 4 invitation system reuses Phase 1 password reset pattern (Pitfall 5)
+- **Pre-work first, non-negotiable:** The two localhost hardcodes and `output: 'standalone'` must be in the repo before any Docker image is built. There is no Dockerfile-level workaround for these application-layer issues.
+- **`.dockerignore` before `docker build`, absolute:** Any `docker build` run without `.dockerignore` risks writing API keys and JWT secrets permanently into image layer history. This cannot be undone without deleting and rebuilding the image. Treat `.dockerignore` authoring as a prerequisite gating step, not a follow-up.
+- **Backend Dockerfile before frontend Dockerfiles:** Both frontend images need `BACKEND_URL` to be a known value for validation. The backend Dockerfile is also simpler (no 3-stage pattern) and builds confidence before the more complex frontend multi-stage builds.
+- **Docker Compose before Dokploy:** Local validation catches configuration errors cheaply (no VPS required, fast iteration). Finding that the entrypoint script fails or the volume mount is misconfigured during local testing is far cheaper than debugging on a remote Dokploy instance.
+- **DEPLOYMENT.md last:** Documentation written before the implementation is validated is speculation. Write it last, against a working deployment.
 
 ### Research Flags
 
-**Phases likely needing deeper research during planning:**
-- **Phase 2 (Credit system):** Reserve-then-confirm pattern for SSE streaming. Specific question: "How to handle credit deduction when stream disconnects mid-agent-execution?"
-- **Phase 6 (Admin frontend):** Recharts integration with shadcn/ui chart components. Specific question: "What are the shadcn/ui Recharts chart components and how to use them for time-series data?"
+Phases with standard patterns (no research-phase needed — research is complete):
+- **Phase 1 (Pre-Work):** Direct code changes with no ambiguity
+- **Phase 2 (Dockerfiles):** All patterns from official documentation; HIGH confidence
+- **Phase 3 (Docker Compose):** Standard Compose v2 patterns; HIGH confidence
 
-**Phases with standard patterns (skip research-phase):**
-- **Phase 1:** Standard Alembic migration, FastAPI mode gating, dependency injection patterns (all existing in codebase)
-- **Phase 3:** Standard CRUD routers, SQLAlchemy queries, Pydantic schemas
-- **Phase 4:** Reuses existing password reset token pattern from `routers/auth.py`
-- **Phase 5:** Read-only aggregation queries, standard audit log table patterns
+Phases needing one targeted verification during implementation:
+- **Phase 4 (Dokploy):** Verify the exact internal service hostname format on `dokploy-network` after first deployment before setting `BACKEND_URL` in frontend services. MEDIUM confidence on the specific naming convention.
+
+---
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | One new backend dependency (APScheduler, well-established). One new frontend library (Recharts, shadcn-recommended). Everything else uses existing stack or Python stdlib. No exotic technologies. |
-| Features | HIGH | Well-understood SaaS patterns with established best practices. Requirements appropriately scoped (defer Stripe, per-model costs, self-service). Credit system most complex but has proven solutions. |
-| Architecture | HIGH | Direct codebase analysis of existing Spectra v0.4 source code (23K LOC). Integration points clearly identified. Mode-gated routing is pure configuration. |
-| Pitfalls | HIGH | Credit race condition (Pitfall 1) and float precision (Pitfall 2) are well-documented with standard solutions (SELECT FOR UPDATE, NUMERIC). Migration patterns (Pitfall 4) from official Alembic cookbook. |
+| Stack | HIGH | All technology choices verified against official docs (Next.js upgrade guide, uv Docker guide, Python Speed, Dokploy docs, Docker Hub). Versions confirmed as of 2026-02-18. |
+| Features | HIGH | Code inspection of actual files confirmed both hardcoded localhost bugs (line numbers verified). All other features are additive (new Dockerfiles, new config files). No feature ambiguity. |
+| Architecture | MEDIUM-HIGH | Docker and Next.js standalone patterns are HIGH confidence from official docs. Dokploy inter-service networking via `dokploy-network` DNS is MEDIUM confidence — community-confirmed but not officially documented by Dokploy. |
+| Pitfalls | HIGH | All 7 critical pitfalls verified against official Docker docs, official Next.js docs, and official Dokploy docs. Two pitfalls (no `.dockerignore`, hardcoded localhost) confirmed by direct codebase inspection. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-**Credit deduction timing with SSE streaming:** The research identifies that credits should be deducted BEFORE the agent runs (to avoid wasting LLM costs), but the `/chat/{file_id}/stream` endpoint is a long-lived SSE connection that can disconnect mid-stream. The reserve-then-confirm pattern is mentioned but not fully detailed. During Phase 2 planning, research: "How do production AI chat APIs handle credit deduction for streaming responses?" (OpenAI, Anthropic billing patterns).
+- **Dokploy internal service hostname format:** Not officially documented. Community sources confirm services communicate by service name on `dokploy-network`. Verify in the Dokploy UI (Network/Container settings tab of each deployed service) before configuring `BACKEND_URL` in the frontend services. Fallback if internal hostname doesn't resolve: use the backend's public HTTPS domain for `BACKEND_URL` — this routes through Traefik and is fully functional, just slightly higher latency than the internal network path.
 
-**Auto-reset scheduler reliability:** The requirements specify weekly/monthly auto-reset, but the research flags this as moderate complexity (Pitfall 12: timezone handling, idempotency, failure recovery). For v0.5, start with admin-triggered manual reset. Add automated reset as a v0.5.x enhancement after core credit system is validated. No gap blocking v0.5.0.
+- **SSE streaming through Next.js rewrite proxy:** Next.js docs state rewrites proxy all request types including streaming responses. This is marked LOW confidence in FEATURES.md because it was not verified for POST-based SSE specifically in a Docker proxy chain. Verify during Phase 3 smoke testing by running a chat session end-to-end through the Docker Compose stack. If the Next.js rewrite does not stream SSE correctly, the `useSSEStream.ts` fix must use a `NEXT_PUBLIC_BACKEND_URL` env var for that one endpoint specifically (a larger change that requires understanding the build-time vs runtime distinction for `NEXT_PUBLIC_` vars).
 
-**Audit log growth at scale:** Pitfall 7 identifies unbounded audit log growth, but also notes that for Spectra's scale (single developer, likely <100 admin actions/day), a simple indexed table is sufficient for years. Partitioning is premature optimization. The gap: no monitoring/alerting when audit log exceeds 1M rows. Defer to v0.6+ operations milestone.
+- **`pg_isready` availability in `python:3.12-slim`:** The entrypoint script uses `pg_isready` for the DB readiness check. `python:3.12-slim` does not include PostgreSQL client tools by default. Two options: (1) install `postgresql-client` via `apt-get` in the runtime stage (adds a layer, small image size increase, cleanest solution), or (2) use a pure-Python TCP connection loop instead of `pg_isready` (no extra dependency). Decide during Phase 2 when writing `docker-entrypoint.sh`.
 
-**CORS configuration complexity:** Pitfall 9 identifies that mode-aware CORS is required, but the exact implementation pattern is not detailed. During Phase 6 planning (or Phase 1 if admin frontend starts in parallel), verify: "FastAPI CORSMiddleware with dynamic origins based on settings".
-
-**Coexistence with existing SearchQuota:** Integration pitfall flagged: existing `SearchQuota` model already implements daily per-user usage tracking for web searches. Credit system introduces second usage-tracking mechanism. During Phase 2 planning, decide: web searches deduct credits OR use existing quota system, not both. Likely answer: deprecate SearchQuota, migrate to credit system for all usage tracking.
+---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Direct analysis of existing Spectra v0.4 source code: `main.py`, `config.py`, `dependencies.py`, `models/user.py`, `routers/auth.py`, `routers/chat.py`, `services/chat.py` -- architecture patterns verified against actual codebase
-- `requirements/milestone-05-req.md` -- feature scope and acceptance criteria
-- Existing Alembic migration chain (9 migrations) -- migration patterns
-- FastAPI dependency injection patterns (project convention)
+- Next.js official self-hosting guide — standalone mode, runtime env vars, Docker pattern — https://nextjs.org/docs/app/guides/self-hosting
+- Next.js official upgrade guide (v16) — Node.js 20.9+ minimum requirement confirmed — https://nextjs.org/docs/app/guides/upgrading/version-16
+- Next.js official Docker example Dockerfile — authoritative 3-stage standalone pattern — https://github.com/vercel/next.js/tree/canary/examples/with-docker
+- uv official Docker integration guide — multi-stage build pattern, `uv sync --locked` — https://docs.astral.sh/uv/guides/integration/docker/
+- Dokploy official docs — build types, env var scopes, volumes, Application model — https://docs.dokploy.com/docs/core/applications/build-type
+- Docker official docs — `version:` field obsolete, build context, secrets in layers — https://docs.docker.com/reference/compose-file/version-and-name/
+- psycopg official docs — binary package bundles its own libpq, no system libpq-dev needed — https://www.psycopg.org/psycopg3/docs/basic/install.html
+- pythonspeed.com — `python:3.12-slim` recommendation for production Docker images — https://pythonspeed.com/articles/base-image-python-docker-images/
+- Docker official build secrets docs — ARG/ENV secrets baked into layers — https://docs.docker.com/reference/build-checks/secrets-used-in-arg-or-env/
 
 ### Secondary (MEDIUM confidence)
-- [APScheduler PyPI](https://pypi.org/project/APScheduler/) -- v3.11.2 current, actively maintained
-- [FastAPI + APScheduler patterns](https://sentry.io/answers/schedule-tasks-with-fastapi/) -- Lifespan integration pattern
-- [Recharts npm](https://www.npmjs.com/package/recharts) -- v3.7.0 current
-- [shadcn/ui Chart Component](https://ui.shadcn.com/docs/components/radix/chart) -- Built on Recharts
-- [Preventing Postgres Race Conditions with SELECT FOR UPDATE](https://on-systems.tech/blog/128-preventing-read-committed-sql-concurrency-errors/) -- Credit race condition patterns
-- [Transaction Locking to Prevent Race Conditions](https://sqlfordevs.com/transaction-locking-prevent-race-condition) -- PostgreSQL locking strategies
-- [Working with Money in Postgres](https://www.crunchydata.com/blog/working-with-money-in-postgres) -- NUMERIC vs FLOAT for monetary values
-- [PostgreSQL Numeric Types Documentation](https://www.postgresql.org/docs/current/datatype-numeric.html) -- Official float warning
-- [Best Practices for Alembic Schema Migration](https://www.pingcap.com/article/best-practices-alembic-schema-migration/) -- Migration patterns
-- [Alembic Cookbook](https://alembic.sqlalchemy.org/en/latest/cookbook.html) -- Official migration patterns
-- [EnterpriseReady Audit Logging Guide](https://www.enterpriseready.io/features/audit-log/) -- Audit log patterns
-- [FastAPI CORS Documentation](https://fastapi.tiangolo.com/tutorial/cors/) -- Official CORS reference
-- [Stigg: Building AI Credits](https://www.stigg.io/blog-posts/weve-built-ai-credits-and-it-was-harder-than-we-expected) -- Real-world AI credit system challenges
+- Dokploy `dokploy-network` inter-service communication — community source confirming service name DNS resolution — https://torchtree.com/en/post/dokploy-container-network-issue/
+- Dokploy discussion on `dokploy-network` and domain configuration — https://github.com/Dokploy/dokploy/discussions/1067
+- Runtime Next.js env vars in Docker — confirms server-side vars work at startup without image rebuild — https://nemanjamitic.com/blog/2025-12-13-nextjs-runtime-environment-variables/
+- FastAPI + Alembic + Docker entrypoint pattern (uv-based, consistent with all other sources) — https://blog.devops.dev/a-scalable-approach-to-fastapi-projects-with-postgresql-alembic-pytest-and-docker-using-uv-78ebf6f7fb9a
+- uv Docker multi-stage builds — `UV_COMPILE_BYTECODE=1`, `.venv` copy pattern — https://digon.io/en/blog/2025_07_28_python_docker_images_with_uv
 
-### Tertiary (LOW confidence)
-- Credit auto-reset scheduler timezone handling -- APScheduler supports cron expressions with timezone, but need to verify behavior during DST transitions
-- Recharts React 19 compatibility -- v3.7.0 supports React 19 but may need `--legacy-peer-deps` for `react-is` peer dependency
+### Tertiary (LOW confidence — verify during implementation)
+- Dokploy service-name DNS resolution for `BACKEND_URL` — community thread, not official docs
+- Next.js rewrite proxy correctly streams POST-based SSE responses — stated in Next.js docs but not explicitly verified in a Docker proxy chain scenario
+
+### Codebase inspection (direct, HIGH confidence)
+- `frontend/src/hooks/useSSEStream.ts` line 112 — confirmed hardcoded `http://localhost:8000/chat/...`
+- `frontend/src/app/(auth)/register/page.tsx` line 26 — confirmed hardcoded `http://localhost:8000/auth/signup-status`
+- `frontend/next.config.ts` and `admin-frontend/next.config.ts` — confirmed missing `output: 'standalone'` and hardcoded rewrite destinations
+- `backend/app/config.py` — confirmed `upload_dir: str = "uploads"` default and `secret_key: str` with no default (correct: Pydantic raises ValidationError if not set)
+- Repo root — confirmed no `.dockerignore` exists anywhere in the repository
 
 ---
-*Research completed: 2026-02-16*
+*Research completed: 2026-02-18*
 *Ready for roadmap: yes*

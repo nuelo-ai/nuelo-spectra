@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from starlette.formparsers import MultiPartParser
+from starlette.requests import Request
 
 # Override Starlette default 1MB limit for file uploads (50MB)
 MultiPartParser.max_file_size = 1024 * 1024 * 50
@@ -20,7 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.database import engine
-from app.routers import auth, chat, chat_sessions, files, health, search
+from app.routers import auth, chat, chat_sessions, files, health, search, version
 
 # Get settings
 settings = get_settings()
@@ -270,8 +271,20 @@ app = FastAPI(
     title="Spectra API",
     version="0.1.0",
     description="AI-powered data analytics platform backend",
-    lifespan=lifespan
+    lifespan=lifespan,
+    redirect_slashes=False,
 )
+
+
+@app.middleware("http")
+async def strip_trailing_slash(request: Request, call_next):
+    """Normalize paths by stripping trailing slashes so the API works
+    regardless of whether the caller includes one. Required because
+    the Next.js route-handler proxy may or may not preserve them."""
+    if request.url.path != "/" and request.url.path.endswith("/"):
+        request.scope["path"] = request.url.path.rstrip("/")
+    return await call_next(request)
+
 
 # Determine operational mode
 mode = settings.spectra_mode
@@ -299,6 +312,8 @@ app.add_middleware(
 
 # Health is always available (all modes)
 app.include_router(health.router)
+app.include_router(version.router)           # GET /version — for public frontend proxy
+app.include_router(version.router, prefix="/api")  # GET /api/version — for admin frontend proxy
 
 # Public routes (public and dev modes)
 if mode in ("public", "dev"):

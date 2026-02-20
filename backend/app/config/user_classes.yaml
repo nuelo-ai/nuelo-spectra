@@ -1,7 +1,7 @@
 user_classes:
   free_trial:
     display_name: "Free Trial"
-    credits: 20
+    credits: 100
     reset_policy: none
   free:
     display_name: "Free"

@@ -30,16 +30,24 @@ async def authenticate_admin(db: AsyncSession, email: str, password: str) -> Use
     return user
 
 
-async def seed_admin(db: AsyncSession, email: str, password: str) -> User:
+async def seed_admin(
+    db: AsyncSession,
+    email: str,
+    password: str,
+    first_name: str = "Admin",
+    last_name: str = "User",
+) -> User:
     """Create or update the seeded admin user. Idempotent.
 
     If a user with the given email exists, resets their password and
-    ensures is_admin=True. If not, creates a new admin user.
+    ensures is_admin=True with names populated. If not, creates a new admin user.
 
     Args:
         db: Database session
         email: Admin email
         password: Plain text password
+        first_name: Admin first name
+        last_name: Admin last name
 
     Returns:
         The created or updated admin user
@@ -49,10 +57,16 @@ async def seed_admin(db: AsyncSession, email: str, password: str) -> User:
     if user:
         user.hashed_password = hash_password(password)
         user.is_admin = True
+        if not user.first_name:
+            user.first_name = first_name
+        if not user.last_name:
+            user.last_name = last_name
     else:
         user = User(
             email=email,
             hashed_password=hash_password(password),
+            first_name=first_name,
+            last_name=last_name,
             is_admin=True,
             user_class="free",
         )

@@ -2,7 +2,7 @@
 
 **Project:** Spectra
 **Strategy:** Development Branch with Semantic Versioning
-**Last Updated:** 2026-02-18
+**Last Updated:** 2026-02-20
 
 ---
 
@@ -76,30 +76,49 @@ hotfix/*  →  Emergency fixes for current stable version (if needed)
 | `develop` | Active development for next milestone | ❌ No | Pre-release tags (v0.2-beta, optional) |
 | `hotfix/*` | Bug fixes and minor changes for current release | ❌ No | Patch tags (v0.1.1, v0.1.2) |
 
+### Remote Branch Policy
+
+**Both `master` and `develop` are always pushed to the remote repository:**
+
+- `origin/master` — stable, production-ready code; what Dokploy production services pull from
+- `origin/develop` — work in progress; never deployed to production
+
+```bash
+# After every milestone, both branches are pushed:
+git push origin master
+git push origin develop
+```
+
+This means the remote always reflects both the latest stable release and the current development state.
+
+---
+
+## Production Deployment Branch
+
+**Dokploy production services always use `master` branch.**
+
+- All 4 Dokploy Application services (`spectra-public-backend`, `spectra-admin-backend`, `spectra-public-frontend`, `spectra-admin-frontend`) are configured to build from `master`
+- `develop` branch is **never** deployed to production
+- When a milestone is complete: merge `develop` → `master`, push both, then trigger Dokploy redeployment on each service
+
+This ensures the live beta app always runs code that has been audited, verified, and released.
+
 ---
 
 ## Development Workflow
 
 ### Starting New Milestone
 
-When starting a new milestone (e.g., v0.2):
+When starting a new milestone (e.g., v0.7):
 
 ```bash
-# 1. Ensure current release is tagged
-git checkout master
-git tag v0.1  # if not already tagged
-git push origin v0.1
+# 1. Ensure you're on develop
+git checkout develop
 
-# 2. Create develop branch from master
-git checkout -b develop
-
-# 3. Push develop branch to remote
-git push -u origin develop
-
-# 4. All GSD phases work on develop
-/gsd:plan-phase 7
-/gsd:execute-phase 7
-# ... all Phase 7-11 commits go to develop ...
+# 2. All GSD phases work on develop
+/gsd:plan-phase 37
+/gsd:execute-phase 37
+# ... all phase commits go to develop ...
 
 # Develop branch accumulates all phase work
 ```
@@ -113,9 +132,9 @@ git push -u origin develop
 git branch --show-current  # should show "develop"
 
 # Normal GSD workflow
-/gsd:plan-phase 7
-/gsd:execute-phase 7
-/gsd:verify-phase 7
+/gsd:plan-phase 37
+/gsd:execute-phase 37
+/gsd:verify-phase 37
 
 # All commits automatically go to develop
 # GSD atomic commits continue as normal
@@ -123,7 +142,7 @@ git branch --show-current  # should show "develop"
 
 ### Releasing New Version
 
-When milestone is complete and tested:
+When milestone is complete and audit passes:
 
 ```bash
 # 1. Ensure all work is committed on develop
@@ -131,40 +150,37 @@ git checkout develop
 git status  # should be clean
 
 # 2. Run final milestone audit
-/gsd:audit-milestone v0.2
+/gsd:audit-milestone
 
 # 3. Switch to master and merge
 git checkout master
 git merge develop --no-ff  # create merge commit for clarity
 
 # 4. Tag the release
-git tag v0.2
-git tag -a v0.2 -m "Release v0.2: Intelligence & Integration
+git tag -a v0.6 -m "Release v0.6: Docker and Dokploy Support
 
 Features:
-- AI agent memory persistence (12K token window)
-- Multi-LLM provider support (Ollama + OpenRouter)
-- Smart query suggestions (5-6 grouped)
-- Web search tool integration (Serper.dev)
-- Production SMTP email infrastructure
+- Fixed localhost hardcodes, standalone Next.js builds
+- Version API endpoint with live display in both frontends
+- Production Dockerfiles for backend, public frontend, admin frontend
+- Docker Compose for local development validation
+- Deployed 4 Dokploy services with Tailscale split-horizon architecture
+- DEPLOYMENT.md complete guide
 
-43 requirements completed across 5 phases (Phases 7-11).
-5 days development time (Feb 7-12, 2026)."
+24 requirements completed across 4 phases (Phases 33-36)."
 
-# 5. Push master and tags
+# 5. Push master with tag
 git push origin master
-git push origin v0.2
+git push origin v0.6
 
-# 6. Update MILESTONES.md with release notes
-# (GSD handles this via /gsd:complete-milestone)
+# 6. Push develop to keep remote in sync
+git push origin develop
 
-# 7. Optionally delete develop branch
-git branch -d develop
-git push origin --delete develop
-
-# 8. For next milestone, create new develop branch from master
-git checkout -b develop
+# 7. Complete milestone via GSD
+/gsd:complete-milestone v0.6
 ```
+
+**After release:** Dokploy services automatically pick up the new code on next redeploy (they pull from `master`).
 
 ---
 
@@ -177,7 +193,7 @@ Use a `hotfix/*` branch for bug fixes, minor improvements, or small changes to a
 ```bash
 # 1. Create patch branch from master
 git checkout master
-git checkout -b hotfix/v0.1.1
+git checkout -b hotfix/v0.6.1
 
 # 2. Make changes (bug fix, minor improvement, config update, etc.)
 # ... make changes ...
@@ -187,18 +203,18 @@ git commit -m "fix: correct authentication timeout logic"
 
 # 3. Merge to master and tag
 git checkout master
-git merge hotfix/v0.1.1 --no-ff
-git tag -a v0.1.1 -m "v0.1.1: [brief description of change]"
+git merge hotfix/v0.6.1 --no-ff
+git tag -a v0.6.1 -m "v0.6.1: [brief description of change]"
 git push origin master
-git push origin v0.1.1
+git push origin v0.6.1
 
 # 4. Merge back to develop (keep develop in sync)
 git checkout develop
-git merge hotfix/v0.1.1
+git merge hotfix/v0.6.1
 git push origin develop
 
 # 5. Delete patch branch
-git branch -d hotfix/v0.1.1
+git branch -d hotfix/v0.6.1
 ```
 
 ### Option B: Direct Master Patch (Simple/Emergency)
@@ -211,7 +227,7 @@ git commit -m "fix: critical security patch"
 # or: git commit -m "chore: minor UI label correction"
 
 # 2. Tag patch version
-git tag -a v0.1.1 -m "v0.1.1: [brief description]"
+git tag -a v0.6.1 -m "v0.6.1: [brief description]"
 git push origin master --tags
 
 # 3. Merge back to develop immediately
@@ -229,24 +245,24 @@ git push origin develop
 ```bash
 # Stable releases (on master only)
 git tag v0.1
-git tag v0.2
+git tag v0.6
 git tag v1.0
 
 # Patch releases (bug fixes, minor improvements, small changes)
-git tag v0.1.1
-git tag v0.1.2
+git tag v0.6.1
+git tag v0.6.2
 git tag v1.0.1
 
 # Annotated tags (preferred for releases)
-git tag -a v0.2 -m "Release v0.2: Intelligence & Integration"
+git tag -a v0.6 -m "Release v0.6: Docker and Dokploy Support"
 ```
 
 ### Pre-release Tags (Optional)
 
 ```bash
 # Beta/RC tags on develop branch (optional)
-git tag v0.2-beta.1
-git tag v0.2-rc.1
+git tag v0.6-beta.1
+git tag v0.6-rc.1
 
 # Use for testing before merge to master
 ```
@@ -265,11 +281,11 @@ When working with GSD:
    ```
 
 2. **GSD atomic commits respect current branch:**
-   - `/gsd:execute-phase 7` commits go to current branch (develop)
+   - `/gsd:execute-phase 37` commits go to current branch (develop)
    - Planning docs in `.planning/` also committed to current branch
 
 3. **Before merging to master:**
-   - Run `/gsd:audit-milestone v0.2` to verify completion
+   - Run `/gsd:audit-milestone` to verify completion
    - Ensure all UAT tests pass
    - Review all commits since branch creation
 
@@ -294,7 +310,7 @@ Current `.planning/config.json` setting:
 ### Pre-Release (on develop branch)
 
 - [ ] All phase plans executed and verified
-- [ ] `/gsd:audit-milestone v0.x` passes
+- [ ] `/gsd:audit-milestone` passes
 - [ ] All UAT tests passed
 - [ ] No critical bugs or blockers
 - [ ] All commits include proper messages
@@ -307,71 +323,71 @@ Current `.planning/config.json` setting:
 - [ ] Switch to master: `git checkout master`
 - [ ] Merge develop: `git merge develop --no-ff`
 - [ ] Resolve any conflicts
-- [ ] Tag release: `git tag v0.x`
-- [ ] Push: `git push origin master --tags`
-- [ ] Verify GitHub shows correct tag
-- [ ] Update GitHub release notes (optional)
+- [ ] Tag release: `git tag -a v0.x -m "Release v0.x: ..."`
+- [ ] Push master: `git push origin master`
+- [ ] Push tag: `git push origin v0.x`
+- [ ] Push develop: `git push origin develop`
+- [ ] Verify GitHub shows correct tag on master
+- [ ] Update Dokploy services to use `master` branch (if not already set)
+- [ ] Trigger redeployment on each Dokploy service
 
 ### Post-Release
 
-- [ ] Optionally delete develop branch
-- [ ] Create new develop branch for next milestone
+- [ ] Create new develop branch if deleted (or continue on existing develop)
 - [ ] Update PROJECT.md with next milestone goals
 - [ ] `/gsd:new-milestone v0.x` for next version
 
 ---
 
-## Example: v0.2 Release
+## Example: v0.6 Release
 
 ### Development Phase
 
 ```bash
-# Feb 6, 2026: Start v0.2 development
-git checkout master
-git checkout -b develop
-git push -u origin develop
-
-# Feb 6-12, 2026: Execute Phase 7-11 on develop
-/gsd:plan-phase 7
-/gsd:execute-phase 7
+# Feb 18-20, 2026: Execute Phases 33-36 on develop
+/gsd:plan-phase 33
+/gsd:execute-phase 33
 # ... all phase work ...
-/gsd:audit-milestone v0.2
+/gsd:audit-milestone  # passes
 
-# Feb 12, 2026: All phases complete, ready to release
+# Feb 20, 2026: Ready to release
 ```
 
 ### Release Phase
 
 ```bash
-# Feb 12, 2026: Merge and release
+# Feb 20, 2026: Merge and release
 git checkout master
 git merge develop --no-ff
 
-git tag -a v0.2 -m "Release v0.2: Intelligence & Integration
+git tag -a v0.6 -m "Release v0.6: Docker and Dokploy Support
 
 Features:
-- AI agent memory persistence
-- Multi-LLM provider support
-- Smart query suggestions
-- Web search tool integration
-- Production SMTP email
+- Fixed localhost hardcodes, standalone Next.js builds
+- Version API with live display in both frontends
+- Production Dockerfiles (backend, frontend, admin)
+- Docker Compose for local dev validation
+- 4 Dokploy services with Tailscale split-horizon
+- DEPLOYMENT.md complete guide
 
-43 requirements completed, 5 phases."
+24 requirements completed, 4 phases."
 
 git push origin master
-git push origin v0.2
+git push origin v0.6
 
-# Clean up (optional)
-git branch -d develop
+# Keep develop in sync
+git push origin develop
+
+# Both branches now on remote, master is production source
 ```
 
-### Next Milestone
+### Update Dokploy
 
-```bash
-# Feb 13, 2026: Start v0.3 development
-git checkout -b develop
-/gsd:new-milestone v0.3
-```
+After pushing master, update each Dokploy service to use `master` branch and redeploy:
+- `spectra-public-backend` → Branch: `master` → Deploy
+- `spectra-admin-backend` → Branch: `master` → Deploy
+- `spectra-public-frontend` → Branch: `master` → Deploy
+- `spectra-admin-frontend` → Branch: `master` → Deploy
 
 ---
 
@@ -391,7 +407,7 @@ git checkout develop
 git tag
 
 # View tag details
-git show v0.2
+git show v0.6
 
 # View commit log with tags
 git log --oneline --decorate --graph
@@ -446,6 +462,7 @@ git push --force origin master  # only if safe
 # Merge master into develop to sync
 git checkout develop
 git merge master
+git push origin develop
 
 # Resolve any conflicts, then continue work
 ```
@@ -471,15 +488,16 @@ git push -u origin develop
 
 1. **Always work on develop branch** during milestone development
 2. **Never commit directly to master** except for emergency hotfixes
-3. **Tag every release** on master (v0.1, v0.2, etc.)
+3. **Tag every release** on master (v0.1, v0.6, etc.)
 4. **Use descriptive tag messages** (include feature summary)
-5. **Merge develop to master only when milestone complete** and tested
-6. **Use `--no-ff` for merge commits** (preserves branch history)
-7. **Delete develop branch after release** (optional, keeps repo clean)
-8. **Create new develop branch from master** for each milestone
+5. **Merge develop to master only when milestone audit passes**
+6. **Always push both branches** after a release (`git push origin master && git push origin develop`)
+7. **Use `--no-ff` for merge commits** (preserves branch history)
+8. **Dokploy services always point to `master`** — never deploy from `develop`
 
 ---
 
-*Last Updated: 2026-02-18*
+*Last Updated: 2026-02-20*
 *Strategy Established: v0.2 milestone*
+*Updated: v0.6 milestone — clarified remote branch policy and Dokploy branch requirement*
 *Next Review: After v1.0 release*

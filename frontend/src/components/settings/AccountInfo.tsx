@@ -6,11 +6,13 @@
  */
 
 import { useAuth } from "@/hooks/useAuth";
+import { useAppVersion } from "@/hooks/useAppVersion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 
 export function AccountInfo() {
   const { user } = useAuth();
+  const { data: versionData } = useAppVersion();
 
   if (!user) {
     return null;
@@ -47,6 +49,13 @@ export function AccountInfo() {
               Active
             </span>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>App Version</Label>
+          <p className="text-sm text-muted-foreground">
+            {versionData?.version ?? "\u2014"}
+          </p>
         </div>
       </CardContent>
     </Card>

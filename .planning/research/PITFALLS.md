@@ -1,501 +1,481 @@
-# Domain Pitfalls: v0.3 Multi-File Conversation Support
+# Pitfalls Research: Docker + Dokploy Deployment
 
-**Domain:** AI Data Analytics Platform -- UX restructure from file-tab-centric to chat-session-centric architecture
-**Researched:** 2026-02-11
-**Confidence:** HIGH (derived from direct codebase analysis + verified technical sources)
+**Domain:** Containerizing and deploying an existing FastAPI + Next.js monorepo to Dokploy
+**Researched:** 2026-02-18
+**Confidence:** HIGH (based on official Next.js docs, Docker official docs, verified GitHub issues, and Dokploy documentation)
 
-**Context:** Spectra v0.3 transforms the application from a file-tab-centric model (each file = one chat tab, 1:1 relationships) to a chat-session-centric model (ChatGPT-style conversations that can link multiple files, many-to-many relationships). This touches every layer: database schema, API routes, agent state, sandbox execution, frontend layout, and state management. The existing codebase has 96 validated requirements across v0.1 and v0.2 that must continue working.
+**Context:** Spectra is adding Docker containerization and Dokploy deployment to an existing production app. The app has two Next.js frontends (`frontend/`, `admin-frontend/`) and one FastAPI backend (`backend/`) in a monorepo, with SPECTRA_MODE env var controlling routing, file uploads stored on local disk, Alembic migrations, and multiple API keys in environment variables. No Dockerfiles exist yet.
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes at this level cause data loss, broken existing functionality, or require significant rewrites.
+Mistakes at this level cause silent failures, broken deploys, or security exposures.
 
-### Pitfall 1: Data Migration Destroys LangGraph Checkpoint Thread IDs
+### Pitfall 1: NEXT_PUBLIC_API_URL Baked as `undefined` at Build Time
 
 **What goes wrong:**
-The current `thread_id` format in LangGraph checkpoints is `file_{file_id}_user_{user_id}` (see `agent_service.py` line 175 and 336). When v0.3 introduces a `ChatSession` model with its own UUID, the thread_id scheme must change to `session_{session_id}_user_{user_id}`. If the migration creates new chat sessions for existing file-chat relationships but does NOT migrate the corresponding LangGraph checkpoint records in the `checkpoint` and `checkpoint_blobs` PostgreSQL tables, **all existing conversation memory is silently lost**. Users will open their migrated chats and find the AI has no memory of previous interactions, despite chat messages still being visible from the `chat_messages` table.
+Both Next.js apps make API calls through a proxy rewrite configured in `next.config.ts`. Currently `frontend/next.config.ts` rewrites `/api/:path*` to `http://localhost:8000/:path*` and `admin-frontend/next.config.ts` rewrites to `http://localhost:8000/api/:path*`. In Docker, `localhost` inside the container refers to the container itself, not the backend service. If the rewrite destination is hardcoded to `localhost:8000`, the Next.js server-side proxy will fail with `ECONNREFUSED` — no requests reach the backend.
+
+More critically: any `NEXT_PUBLIC_` variables (like `NEXT_PUBLIC_API_URL`) must be provided at `docker build` time as `ARG` values, not injected at container runtime. If they are passed only at `docker run` time (as `--env` flags or in `docker-compose.yml`'s `environment:` block), `next build` runs during the image build step — before those runtime env values exist — and the variable is baked into the compiled JavaScript as `undefined`.
 
 **Why it happens:**
-LangGraph's `AsyncPostgresSaver` stores checkpoints keyed by `thread_id` in its own tables (`checkpoint`, `checkpoint_blobs`, `checkpoint_writes`). These tables are NOT part of the application's SQLAlchemy model -- they are managed by LangGraph's `setup()` method. Developers naturally focus on migrating the application tables (`files`, `chat_messages`) and forget that LangGraph has its own state tables with thread_id as the primary lookup key.
+Next.js inlines `NEXT_PUBLIC_*` values during the `next build` process by doing string replacement in the compiled JavaScript output. The build happens inside the Dockerfile's `RUN npm run build` step. At that point, only `ARG` values (build arguments) and build-stage environment variables are available. Container runtime `environment:` values in `docker-compose.yml` are not available during `docker build`. Developers familiar with runtime env injection assume Docker works the same way as their local `.env` file.
 
-**Consequences:**
-- All v0.1/v0.2 conversation context is lost (Manager Agent cannot route to MEMORY_SUFFICIENT or CODE_MODIFICATION for existing conversations)
-- Users must re-explain context that the AI previously understood
-- The context usage display (`/chat/{file_id}/context-usage`) will show 0% for migrated sessions
+**Spectra-specific impact:**
+If `NEXT_PUBLIC_API_URL` is undefined, API calls in the public frontend will silently point to `undefined` and fail. The admin frontend has no `NEXT_PUBLIC_` vars currently (it uses relative `/api` paths via rewrites), but the rewrite destination `http://localhost:8000/api/:path*` must become `http://backend:8000/api/:path*` (the Docker service name) to work inside the container network.
 
-**Prevention:**
-1. Write the migration in three steps: (a) create new tables, (b) populate junction table from existing 1:1 relationships AND update LangGraph checkpoint thread_ids, (c) drop old foreign keys
-2. The checkpoint migration must UPDATE the `thread_id` column in LangGraph's `checkpoint`, `checkpoint_blobs`, and `checkpoint_writes` tables to map from `file_{file_id}_user_{user_id}` to `session_{session_id}_user_{user_id}`
-3. Write a verification query that counts checkpoints before and after migration to ensure no records were lost
-4. Test the migration on a database dump before running against production
+**How to avoid:**
+1. In each `next.config.ts`, make the rewrite destination configurable via an environment variable:
+   ```typescript
+   const backendUrl = process.env.BACKEND_URL || "http://localhost:8000";
+   const nextConfig: NextConfig = {
+     async rewrites() {
+       return [{ source: "/api/:path*", destination: `${backendUrl}/api/:path*` }];
+     },
+   };
+   ```
+2. Pass `BACKEND_URL` as a Docker `ARG` so it is available at build time:
+   ```dockerfile
+   ARG BACKEND_URL=http://backend:8000
+   ENV BACKEND_URL=$BACKEND_URL
+   RUN npm run build
+   ```
+3. For any `NEXT_PUBLIC_*` variables added in the future, always pass them as build `ARG`s, not runtime `ENV` in `docker-compose.yml`.
+4. Do NOT use `docker-compose.yml`'s `environment:` block for `NEXT_PUBLIC_*` — it runs after the image is built.
 
-**Detection:**
-- After migration, open an existing chat session and ask a follow-up question. If the Manager Agent routes to NEW_ANALYSIS instead of MEMORY_SUFFICIENT for a question that clearly references prior context, the checkpoint migration failed
-- Check `SELECT COUNT(*) FROM checkpoint` before and after migration -- the count should remain the same
+**Warning signs:**
+- API calls from the Next.js app return `fetch failed` or `ECONNREFUSED` in container logs
+- Browser network tab shows requests to `undefined/api/...` or `http://localhost:8000/api/...`
+- The app renders but all data-fetching fails silently (auth, file list, chat all broken)
+- `console.log(process.env.NEXT_PUBLIC_API_URL)` returns `undefined` in the browser
 
-**Phase to address:** Database Migration phase (must be the first phase of v0.3 implementation)
+**Severity:** BLOCKING — the app silently renders but no data loads. No obvious error message to diagnose.
+
+**Phase to address:**
+Phase 1 (Dockerfiles) — Before writing any Dockerfile for the Next.js apps, update `next.config.ts` rewrites to use `BACKEND_URL` env var. Verify by running `docker build` and inspecting the compiled `.next/` output.
 
 ---
 
-### Pitfall 2: Chat Messages Table Migration Breaks `cascade="all, delete-orphan"`
+### Pitfall 2: File Uploads Lost on Container Restart
 
 **What goes wrong:**
-Currently, `ChatMessage` has a required `file_id` FK with `ondelete="CASCADE"` and `nullable=False` (see `chat_message.py` lines 25-29). The `File` model has `cascade="all, delete-orphan"` on its `chat_messages` relationship (see `file.py` lines 45-49). In v0.3, messages belong to a chat **session**, not a file. If the migration simply adds a `session_id` FK and makes `file_id` nullable (or removes it), the cascade delete behavior changes in dangerous ways:
-
-- If `file_id` is made nullable without removing the cascade, deleting a file will CASCADE-delete messages that belong to a session with multiple files, destroying messages about other files
-- If cascade is changed to only work on sessions, deleting a file no longer cleans up messages about that file (orphaned analysis results referencing a deleted file)
-- The junction table (`session_files`) adds a third entity. Deleting a file must remove it from all sessions' file lists, but should NOT delete the session or its messages
+The backend stores uploaded files at `backend/uploads/{user_id}/{file_uuid}.csv`. The `settings.upload_dir` defaults to `"uploads"` (relative path). In Docker, this resolves to `/app/uploads` inside the container's writable layer. When Dokploy redeploys (new image pushed), the old container is destroyed and a new one starts. All files in `/app/uploads` are gone. Users find their uploaded datasets have disappeared, but database records still exist (file rows remain in PostgreSQL), creating a broken state: DB says the file exists, but the file is not on disk.
 
 **Why it happens:**
-The 1:1 assumption is baked deep into the data model. `cascade="all, delete-orphan"` works perfectly when one file owns all its messages. In a many-to-many world, "ownership" is ambiguous -- messages belong to sessions, files are linked to sessions, and deleting a file should not destroy an entire session's conversation history.
+Container filesystems are ephemeral by design. Anything written inside the container (outside of mounted volumes) is discarded when the container is replaced. The `FileService.upload_file` method writes to `Path(settings.upload_dir) / str(user_id)` which is a path inside the container unless a volume is mounted at that path. The Alembic migration tables and LangGraph checkpoint tables survive in PostgreSQL (external service), but files on local disk do not.
 
-**Consequences:**
-- Data loss: deleting File A cascades to delete all messages in Session X, even though Session X also contains analysis of File B
-- Orphan data: sessions reference deleted files, causing 404 errors when trying to load file context
-- Broken file deletion: users delete a file expecting cleanup, but the relationship topology prevents clean deletion
+**Spectra-specific impact:**
+`FileService.upload_file` saves to disk first, then creates a DB record. On redeploy: DB records point to files that no longer exist. The Onboarding Agent stored the data summary, but agents that re-read the file for new queries (E2B sandbox receives the file path) will get a FileNotFoundError. The admin file management UI will show files that 404 on download.
 
-**Prevention:**
-1. Messages must move from `file_id` FK to `session_id` FK. The `file_id` on `ChatMessage` should be removed entirely (or kept only as an optional metadata field for "which file was this message primarily about")
-2. Define clear cascade rules:
-   - Deleting a session: CASCADE delete all messages in that session
-   - Deleting a file: remove from junction table (`session_files`), do NOT cascade to sessions or messages
-   - If a file is the ONLY file in a session, optionally warn the user before deletion
-3. Write explicit tests for every combination: delete file with single-session, delete file with multi-session, delete session, delete user (should cascade through sessions to messages)
-4. Execute the migration as a three-step process (per PostgreSQL best practice): first migration adds the new table and column, second migration copies data, third migration removes old column
+**How to avoid:**
+1. In `docker-compose.yml` (and Dokploy volume config), mount a named volume to the upload directory:
+   ```yaml
+   services:
+     backend:
+       volumes:
+         - uploads_data:/app/uploads
+   volumes:
+     uploads_data:
+   ```
+2. Set `UPLOAD_DIR=/app/uploads` explicitly as an environment variable so the path is predictable.
+3. In Dokploy's application settings, configure a persistent volume mount: host path or named volume at `/app/uploads`.
+4. Verify volume persistence by uploading a file, then redeploying and confirming the file is still accessible.
 
-**Detection:**
-- After migration, delete a file that is linked to multiple sessions. Check that the other session's messages are intact
-- Run `SELECT COUNT(*) FROM chat_messages WHERE session_id IN (SELECT id FROM chat_sessions WHERE ...)` before and after file deletion
+**Warning signs:**
+- Users report "my files disappeared after the update"
+- Backend logs show `FileNotFoundError` for existing DB file records
+- File download endpoints return 404 for files that appear in the list
+- `docker exec backend ls /app/uploads` returns empty after redeploy
 
-**Phase to address:** Database Migration phase (same migration as Pitfall 1)
+**Severity:** BLOCKING — user data loss after every deployment. Silent (no error at upload time, fails only when files are accessed post-redeploy).
+
+**Phase to address:**
+Phase 1 (Dockerfiles) — Add the volume mount to `docker-compose.yml` before any production deployment. Add a post-deploy smoke test that verifies an uploaded file survives a container restart.
 
 ---
 
-### Pitfall 3: Agent State Assumes Single File Context -- Multi-File Breaks Code Generation
+### Pitfall 3: FastAPI Starts Before PostgreSQL Is Ready (Migration Race Condition)
 
 **What goes wrong:**
-The entire agent pipeline is built around a single file. The evidence is pervasive:
-
-- `ChatAgentState` has singular `file_id`, `file_path`, `data_summary`, `data_profile`, `user_context` fields (see `state.py` lines 60-79)
-- `execute_in_sandbox` reads ONE file from disk and uploads it as `df` to the sandbox (see `graph.py` lines 286-356)
-- The Coding Agent's system prompt uses `{data_profile}` singular (see `coding.py` line 170)
-- Manager Agent builds thread_id from a single `file_id` (see `agent_service.py` line 175)
-- The sandbox injects `df = pd.read_csv(...)` as a single dataframe (see `graph.py` lines 340-355)
-
-When a session has 3 linked files, the system must load 3 data profiles, upload 3 files to the sandbox, and generate code that references `df_sales`, `df_customers`, `df_products` instead of just `df`. Simply passing all 3 profiles as `data_profile` will work for small files but will **blow through the LLM context window** for files with many columns.
+`main.py` runs Alembic-dependent startup logic in `lifespan()`: it initializes the `AsyncPostgresSaver` checkpointer (`checkpointer.setup()` creates LangGraph tables), connects to the DB engine, and the SQLAlchemy `engine` is created at module import time. If the FastAPI container starts before the PostgreSQL container is ready to accept connections, the backend crashes on startup with `asyncpg.exceptions.TooManyConnectionsError`, `Connection refused`, or `FATAL: the database system is starting up`. Docker Compose's `depends_on` does not wait for the database to be ready — it only waits for the container to start.
 
 **Why it happens:**
-The original architecture was designed for "one file, one conversation" and this assumption permeates every layer. Changing the state schema, prompt templates, sandbox file loading, and code generation patterns all at once creates a massive blast radius.
+PostgreSQL container starts in seconds, but it takes additional time (5-30 seconds on cold start) to initialize the data directory and accept connections. `depends_on: postgres` only means the postgres container process started, not that PostgreSQL accepted its first connection. Without an explicit wait mechanism, FastAPI's SQLAlchemy engine tries to connect before PostgreSQL is ready. In Dokploy, services may start in parallel without dependency ordering.
 
-**Consequences:**
-- Code generation produces code referencing `df` when there are 3 dataframes, causing `NameError` in the sandbox
-- Data profiles for 3 large files (each with 50+ columns) can consume 3,000-5,000 tokens of context, leaving less room for conversation history
-- Manager Agent routing breaks because the routing prompt no longer has a clear "this is the file" context
-- CODE_MODIFICATION route fails because previous code referenced `df` but new code needs named dataframes
+**Spectra-specific impact:**
+The `lifespan()` function in `main.py` has multiple DB-dependent operations in sequence: LLM validation (httpx calls, safe), then `validate_smtp_connection` (safe), then `AsyncConnectionPool` for LangGraph checkpointer (DB-dependent), then `checkpointer.setup()` (DB-dependent). If the pool creation fails, the entire `lifespan()` throws, FastAPI never starts serving requests, and health checks fail. Dokploy will mark the deployment as failed and may not retry.
 
-**Prevention:**
-1. Extend `ChatAgentState` to support lists: `file_ids: list[str]`, `file_paths: list[str]`, `data_summaries: dict[str, str]` (keyed by file_id), `data_profiles: dict[str, str]` (keyed by file_id)
-2. Change the sandbox file loading to iterate over all linked files and assign named dataframes: `df_{sanitized_filename}` or `df_1`, `df_2`, etc.
-3. Build a compact "multi-file context block" for prompts that summarizes all files in ~500 tokens total (file name + column count + key columns), with full profiles available on-demand via a separate tool or only for the primary file being referenced
-4. Implement a "file relevance filter" in the Coding Agent prompt that asks the LLM which files are relevant to the query before loading full profiles
-5. Keep backward compatibility: if a session has exactly 1 file, continue using `df` as the dataframe name to avoid breaking user expectations
+**How to avoid:**
+1. Add a `wait-for-db.sh` script that loops until PostgreSQL accepts a connection, then exec the main process:
+   ```bash
+   #!/bin/bash
+   echo "Waiting for PostgreSQL..."
+   until pg_isready -h "$POSTGRES_HOST" -p 5432 -U "$POSTGRES_USER"; do
+     sleep 1
+   done
+   echo "PostgreSQL ready. Running migrations..."
+   alembic upgrade head
+   echo "Starting FastAPI..."
+   exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+   ```
+2. Use this as the Docker `CMD` or `ENTRYPOINT`:
+   ```dockerfile
+   COPY scripts/entrypoint.sh /entrypoint.sh
+   RUN chmod +x /entrypoint.sh
+   CMD ["/entrypoint.sh"]
+   ```
+3. Run `alembic upgrade head` inside this script before starting uvicorn — this ensures migrations run before the app serves any traffic.
+4. In `docker-compose.yml`, add a healthcheck to the postgres service and use `depends_on: condition: service_healthy` for the backend:
+   ```yaml
+   postgres:
+     healthcheck:
+       test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER"]
+       interval: 5s
+       timeout: 5s
+       retries: 10
+   backend:
+     depends_on:
+       postgres:
+         condition: service_healthy
+   ```
 
-**Detection:**
-- Create a session with 2+ files and ask a cross-file question like "Compare sales in file A with customers in file B". If the generated code references `df` instead of named dataframes, the multi-file support is incomplete
+**Warning signs:**
+- Backend container exits immediately on first deploy with `Connection refused` in logs
+- LangGraph checkpointer tables missing from DB after deploy (setup() never ran)
+- Dokploy marks deployment as failed on the first attempt but works on retry
+- `asyncpg.exceptions.TooManyConnectionsError` in backend logs during startup
 
-**Phase to address:** Agent System Enhancement phase (after database migration, before frontend restructure)
+**Severity:** BLOCKING — backend may start before DB is ready, causing deployment failures. Intermittent: sometimes works on retry, making it hard to diagnose.
+
+**Phase to address:**
+Phase 1 (Dockerfiles) — Write the entrypoint script as part of the backend Dockerfile. Test by intentionally delaying the postgres container and verifying the backend waits correctly.
 
 ---
 
-### Pitfall 4: E2B Sandbox Memory Overflow with Multiple Large Files
+### Pitfall 4: Secrets Baked into Docker Image Layers
 
 **What goes wrong:**
-E2B sandboxes have **512 MiB RAM by default** with 2 vCPU (confirmed via E2B pricing documentation). The current system uploads one file to the sandbox per execution. With multi-file support, uploading 3 CSV files of 20-30MB each means pandas needs to load all three into memory simultaneously. A 30MB CSV can easily consume 100-300MB of RAM in pandas (due to object dtype overhead, index allocation, and type inference). Three such files would require 300-900MB -- exceeding the default 512MB sandbox limit and causing `MemoryError` or silent OOM kills.
+A `.env` file or `ARG` instruction in a Dockerfile permanently stores secrets (API keys, JWT secret, SMTP password) in the image's layer history. Even if the `.env` file is later deleted with `RUN rm .env`, Docker layers are immutable — the file exists in an earlier layer and is recoverable with `docker history --no-trunc` or by extracting earlier layers. If the image is pushed to Docker Hub or a public registry, all secrets are exposed. This is the most common and most severe Docker security mistake.
 
 **Why it happens:**
-The per-execution sandbox model (see `e2b_runtime.py`) creates a fresh sandbox, uploads data, runs code, and tears down. There is no persistent sandbox state or file caching. Every query re-uploads all files, and pandas must re-parse all of them from scratch.
+Developers often copy their entire project directory with `COPY . .` which includes the `.env` file if it is not in `.dockerignore`. Alternatively, secrets are passed as Docker `ARG` values which also persist in layer history (unlike BuildKit secrets). The `.env` file approach feels natural because it works identically to local development.
 
-**Consequences:**
-- `MemoryError` during `pd.read_csv()` or `pd.read_excel()` for the second or third file
-- Sandbox timeout as pandas struggles with large files in low-memory environments
-- Retry loop wastes 3 attempts on the same OOM condition (the Code Checker cannot detect memory issues pre-execution)
-- Users with large files cannot use cross-file analysis at all
-- E2B cost increases if sandbox compute needs upgrading (Pro plan required for custom RAM)
+**Spectra-specific impact:**
+The `backend/.env` file contains: `ANTHROPIC_API_KEY`, `E2B_API_KEY`, `TAVILY_API_KEY`, `OPENROUTER_API_KEY`, `SECRET_KEY` (JWT), `SMTP_PASS`, and `ADMIN_PASSWORD`. If any of these end up in a Docker image layer, they are exposed to anyone with image pull access. The `SECRET_KEY` is particularly dangerous — leaking it allows forging admin JWTs.
 
-**Prevention:**
-1. Implement a file size budget: calculate total memory estimate before uploading (rule of thumb: CSV file size * 3-5x for pandas memory). If estimated memory exceeds 400MB, either:
-   - Warn the user and suggest sampling
-   - Only load columns needed for the query (selective column loading in generated code)
-   - Upgrade sandbox compute for that execution (Pro plan allows custom CPU/RAM via `--memory-mb` flag on template build)
-2. Generate smarter code that loads only required columns: `pd.read_csv(file, usecols=['col_a', 'col_b'])`
-3. For cross-file analysis, consider loading files sequentially and aggregating results rather than loading all into memory simultaneously
-4. Add a pre-flight memory estimation step that checks `sum(file_sizes) * 5` against sandbox RAM and returns an early error with actionable guidance instead of burning 3 retries on an OOM
+**How to avoid:**
+1. Create `.dockerignore` at the monorepo root and in each service directory:
+   ```
+   .env
+   .env.*
+   !.env.example
+   .git
+   node_modules/
+   __pycache__/
+   .venv/
+   venv/
+   *.pyc
+   ```
+2. Never use `ARG SECRET_KEY` or `ENV SECRET_KEY=...` in Dockerfiles for secrets.
+3. Pass secrets at container runtime only, via `docker-compose.yml`'s `environment:` block referencing host env vars:
+   ```yaml
+   environment:
+     - SECRET_KEY=${SECRET_KEY}
+     - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+   ```
+4. In Dokploy, use the "Environment Variables" section of each service to inject secrets at runtime (they are not stored in image layers).
+5. Use BuildKit secret mounts if a secret is needed at build time (e.g., private npm registry):
+   ```dockerfile
+   RUN --mount=type=secret,id=npm_token npm install
+   ```
+6. Scan images before pushing: `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image spectra-backend:latest`
 
-**Detection:**
-- Upload 3 files each >15MB, link to same session, ask a cross-file question. If the sandbox times out or returns MemoryError, this pitfall is active
-- Monitor E2B execution times -- if they spike significantly when multiple files are involved, memory pressure is the likely cause
+**Warning signs:**
+- `docker history spectra-backend:latest` shows `ARG` or `ENV` entries with key names
+- `docker run --rm spectra-backend:latest env` outputs API keys
+- `.env` file is not listed in `.dockerignore`
+- `COPY . .` instruction in Dockerfile without a restrictive `.dockerignore`
 
-**Phase to address:** Agent System Enhancement phase (alongside Pitfall 3)
+**Severity:** BLOCKING (security) — silent in operation but catastrophically exposed if images reach any registry.
+
+**Phase to address:**
+Phase 1 (Dockerfiles) — Write `.dockerignore` files before writing any `COPY` instruction. Add a CI check that runs `docker history` on built images and fails if any secrets pattern is found.
 
 ---
 
-### Pitfall 5: Frontend Navigation Restructure Breaks SSE Stream Lifecycle
+### Pitfall 5: Wrong SPECTRA_MODE Per Service Silently Breaks Routing
 
 **What goes wrong:**
-The current architecture has `ChatInterface` as a child of `DashboardPage` (see `dashboard/page.tsx` lines 88-93), with the SSE stream managed by `useSSEStream` hook inside `ChatInterface`. When the layout restructures from tab-based to sidebar-based chat navigation, switching between chat sessions will **unmount and remount** `ChatInterface`. If an SSE stream is active during a session switch, the stream must be properly aborted and cleaned up. The current `useSSEStream` hook has an `AbortController` cleanup in `useEffect` (see `useSSEStream.ts` lines 266-272), but there are several failure modes:
-
-1. The stream's save logic in `run_chat_query_stream` (which saves chat history to the database, see `agent_service.py` lines 409-453) may not execute if the client disconnects mid-stream
-2. The `request.is_disconnected()` check in the router (see `chat.py` line 206) may not trigger fast enough
-3. If the user switches away during the stream and back to the same session, they will see stale state (the stream completed but the component re-mounted without the completion data)
+The `SPECTRA_MODE` env var controls which routers FastAPI registers. `public` mode registers public routes only; `admin` mode registers admin routes only; `dev` mode registers both. If `SPECTRA_MODE` is set to `dev` on the public-facing service, the admin API endpoints (`/api/admin/*`) are exposed to the public internet — a security breach. If set to `public` on the admin service, all admin API calls return 404 and the admin frontend appears completely broken with no obvious error. Both failures are silent: the app starts successfully, logs no warnings, and appears to function normally until someone tries to use it.
 
 **Why it happens:**
-In the current tab-based UI, switching tabs does NOT unmount `ChatInterface` -- it just hides/shows it (tabs are rendered conditionally by `currentTabId` but the component stays in the React tree for the active tab). In the new sidebar navigation model, clicking a different chat session likely causes a route change via Next.js App Router, which unmounts the current page component and mounts a new one. This fundamentally changes the stream lifecycle. The Next.js documentation confirms that "layouts preserve state, remain interactive, and do not rerender on navigation" but **pages do not** -- they unmount and remount.
+There are two FastAPI instances planned for production: one serving the public frontend (SPECTRA_MODE=public) and one serving the admin frontend (SPECTRA_MODE=admin). Developers copying environment variables between services, or using a shared `.env` file, may set the same `SPECTRA_MODE` value for both services. The `dev` mode is appropriate locally but must never be used in production.
 
-**Consequences:**
-- Chat messages are not saved to the database (the stream was aborted before the save logic ran)
-- LangGraph checkpoint is in an inconsistent state (partial execution saved, but no completion)
-- Users lose AI responses that were generating when they switched sessions
-- Returning to the session shows a stale message list (missing the response that was in-flight)
+**Spectra-specific impact:**
+- `SPECTRA_MODE=admin` on the public service: users cannot log in (auth router not registered), file upload fails (files router not registered). Silent 404 on all user-facing routes.
+- `SPECTRA_MODE=public` on the admin service: admin dashboard loads, login works, then every admin API call returns 404.
+- `SPECTRA_MODE=dev` on both (the "it works in dev, let me just copy the config" failure): admin routes exposed publicly, enabling credential enumeration and potential admin login attempts from the internet.
 
-**Prevention:**
-1. Design the chat session view as a **layout-level component** that persists across session switches, not a page-level component that unmounts. Use a `[sessionId]` dynamic route with the chat interface in the layout
-2. Alternatively, keep `ChatInterface` mounted for the active session using CSS `display: none` instead of conditional rendering, and use Zustand to track which session is visible
-3. Add a server-side safety net: if the backend detects a client disconnect during streaming (via `request.is_disconnected()`), save whatever progress was made with a `status: "interrupted"` flag in the message metadata
-4. Show a confirmation dialog before allowing session switch during active streaming: "AI is still processing. Switch anyway?"
-5. After switching back to a session, always refetch messages from the server to catch any that were saved during disconnection
+**How to avoid:**
+1. Use separate `docker-compose` services with explicitly different environment variables:
+   ```yaml
+   backend-public:
+     environment:
+       SPECTRA_MODE: public
+   backend-admin:
+     environment:
+       SPECTRA_MODE: admin
+   ```
+2. In Dokploy, create two separate Application services for the backend, each with its own environment variable set.
+3. Add a startup log line that prominently displays the active mode: `logger.info(f"Starting Spectra in {mode.upper()} mode")` — this already exists in `main.py`.
+4. Add a health check endpoint that returns the current mode (NOT sensitive config, just the mode string) so Dokploy health checks can verify the correct mode is running.
+5. Never use `SPECTRA_MODE=dev` in production. If you need both admin and public on one process (dev only), that is the dev mode — not a production configuration.
 
-**Detection:**
-- Start a long-running query (cross-file analysis), immediately switch to another session via sidebar, then switch back. If the response is missing, this pitfall is active
-- Check the database: if `chat_messages` is missing the assistant response for queries that were visually generating, the save-on-disconnect is failing
+**Warning signs:**
+- Admin frontend shows 404 on every API call after login
+- Public frontend login returns 404 (router not mounted)
+- Backend logs show `Starting Spectra in DEV mode` on a production deployment
+- Admin routes accessible from the public internet (check with `curl https://your-public-domain/api/admin/users`)
 
-**Phase to address:** Frontend Restructure phase (must be designed before implementing sidebar navigation)
+**Severity:** BLOCKING (wrong mode = feature completely broken) AND security risk (dev mode in production).
+
+**Phase to address:**
+Phase 2 (Dokploy Services) — When configuring Dokploy services, explicitly set and verify `SPECTRA_MODE` for each service as a named check in the deployment task. Add post-deploy smoke test that calls `GET /health` and checks the mode in logs.
 
 ---
 
-## Moderate Pitfalls
-
-### Pitfall 6: Context Window Token Explosion with Multi-File Metadata
+### Pitfall 6: Monorepo Build Context Set to Wrong Directory
 
 **What goes wrong:**
-The current context window is configured at 12,000 tokens (see PROJECT.md line 142). Each file's data profile (generated by `OnboardingAgent.profile_data()`) typically consumes 400-1,200 tokens depending on column count and data types. The Manager Agent's routing prompt already includes conversation history, previous code, and execution results (see `manager.py` lines 121-130). Adding metadata for 3-5 linked files could push the prompt from ~3,000 tokens to ~6,000 tokens, leaving only 6,000 tokens for conversation history -- a 50% reduction in effective conversation memory.
-
-Research confirms this is a known pattern: "A single metadata query for millions of labels with their associated attributes can easily produce tens of millions of tokens, far beyond any LLM's context window." While Spectra's scale is smaller, the same principle applies -- multi-file metadata accumulates fast and degrades model performance even before hitting hard token limits (attention concentrates on beginning and end of input, causing "context rot").
+Docker's `COPY` instruction can only access files within the build context directory. In a monorepo with structure `spectra-dev/backend/`, `spectra-dev/frontend/`, `spectra-dev/admin-frontend/`, if the Dockerfile for the backend is at `backend/Dockerfile` and the Docker build context is set to `backend/`, then `COPY . .` copies only backend files — correct. But if the Dockerfile tries to `COPY ../shared/ /app/shared/` to access a shared directory, it fails with `COPY failed: forbidden path outside the build context`. Conversely, if the build context is set to the monorepo root (`spectra-dev/`), then `COPY . .` copies everything including `node_modules/`, `.venv/`, `.git/`, `.env` files, and the entire `frontend/` directory into the backend image — massively bloating the image and potentially including secrets.
 
 **Why it happens:**
-The 12,000 token limit was sized for single-file conversations. Nobody recalibrated for multi-file contexts where each file contributes metadata overhead.
+Monorepo Docker builds require careful coordination between: (1) where the Dockerfile is, (2) what directory is the build context, and (3) what `.dockerignore` applies to that context. In Dokploy's Application settings, the "Docker Context Path" and "Dockerfile Path" are configured separately. Setting context to the wrong path is the most common source of `COPY` failures and image bloat.
 
-**Prevention:**
-1. Implement tiered metadata inclusion: full profile for the "primary" file being discussed, compact summaries (name + column list only, ~100 tokens each) for secondary files
-2. Consider increasing the context window to 16,000-20,000 tokens for sessions with 3+ files
-3. Add a `file_count` check in the routing prompt builder -- if >2 files, use compressed profiles
-4. Generate a "multi-file summary" at session-link time that summarizes all files in one block (~200-300 tokens) instead of concatenating individual profiles
+**Spectra-specific impact:**
+The monorepo has three separate services each needing its own Docker build:
+- `frontend/Dockerfile` — context should be `frontend/`
+- `admin-frontend/Dockerfile` — context should be `admin-frontend/`
+- `backend/Dockerfile` — context should be `backend/`
 
-**Detection:**
-- Add 4 files to a session, have a 10-message conversation, then check context usage. If it hits 85% warning after only a few exchanges, the metadata overhead is too high
+Each service's `.dockerignore` must live in its context directory. If the context is set to the monorepo root instead:
+- `node_modules/` from frontend (hundreds of MB) ends up in the backend image
+- `backend/.venv/` (hundreds of MB) ends up in the frontend image
+- `backend/.env` (with API keys) ends up in every image
 
-**Phase to address:** Agent System Enhancement phase
+**How to avoid:**
+1. Place each Dockerfile inside its service directory (`backend/Dockerfile`, `frontend/Dockerfile`, `admin-frontend/Dockerfile`).
+2. Place a `.dockerignore` inside each service directory that excludes the service's own build artifacts.
+3. In `docker-compose.yml`, set context to the service subdirectory:
+   ```yaml
+   services:
+     backend:
+       build:
+         context: ./backend
+         dockerfile: Dockerfile
+     frontend:
+       build:
+         context: ./frontend
+         dockerfile: Dockerfile
+   ```
+4. In Dokploy Application settings: set "Docker Context Path" to `./backend` (or `./frontend`), and "Dockerfile Path" to `Dockerfile`.
+5. Verify by running `docker build` locally with the exact context path and confirming the image size is reasonable (backend: ~500MB-1GB, Next.js: ~200-400MB with standalone output).
+
+**Warning signs:**
+- `COPY failed: file not found in build context` errors during `docker build`
+- Docker image sizes are unexpectedly large (>2GB for a simple service)
+- `docker run backend python -m pip list` shows no packages (COPY copied wrong directory)
+- Build succeeds but the wrong files are present in the container
+
+**Severity:** BLOCKING — build fails or produces broken images. Build-time error (easy to detect during development if tested locally first).
+
+**Phase to address:**
+Phase 1 (Dockerfiles) — Test each `docker build` command locally with the explicit context path before configuring Dokploy. Check image sizes.
 
 ---
 
-### Pitfall 7: Thread ID Collision When Same File Appears in Multiple Sessions
+### Pitfall 7: JWT_SECRET_KEY Randomly Generated Per Container Restart
 
 **What goes wrong:**
-If the old thread_id format `file_{file_id}_user_{user_id}` is kept but sessions are introduced, two sessions linking the same file would share the same checkpoint. This means conversation history from Session A bleeds into Session B. The Manager Agent in Session B would see Session A's messages and make routing decisions based on the wrong context. The new format `session_{session_id}_user_{user_id}` solves this, but only if it is adopted consistently across ALL code paths.
-
-The specific code paths that construct or use thread_id:
-- `agent_service.py` line 175: `thread_id = f"file_{file_id}_user_{user_id}"`
-- `agent_service.py` line 336: same pattern for stream version
-- `chat.py` line 264: context-usage endpoint uses same pattern
-- `chat.py` line 316: trim-context endpoint uses same pattern
+If `SECRET_KEY` (the JWT signing key) is generated randomly at startup instead of being a fixed secret, every container restart invalidates all existing user sessions. Users will be logged out mid-session. Worse: if the public backend and admin backend services use different `SECRET_KEY` values, admin tokens issued by the admin service cannot be verified by the public service (or vice versa, if they ever share token verification logic).
 
 **Why it happens:**
-Search-and-replace of the thread_id pattern is easy to get wrong. If even one endpoint retains the old format, it will look up the wrong checkpoint and produce confusing behavior.
+In local development, `SECRET_KEY` may be set to a generated value in `.env` or even hardcoded. In production Docker environments, if `SECRET_KEY` is not explicitly provided as an environment variable, Pydantic's `BaseSettings` may fall back to a default value (if one is set in `config.py`) or raise a validation error. Some developers generate a random `SECRET_KEY` at container startup as a "sensible default" — this causes session invalidation on every deploy.
 
-**Prevention:**
-1. Centralize thread_id construction into a single utility function: `def make_thread_id(session_id: UUID, user_id: UUID) -> str`
-2. Use that function everywhere -- no inline string formatting
-3. Add a grep-based CI check or test that scans all Python files for the old `file_{` pattern in thread_id construction
-4. Write an integration test that creates 2 sessions with the same file, sends different messages to each, and verifies that checkpoint states are independent
+**Spectra-specific impact:**
+The `backend/app/config.py` has `secret_key: str` with no default value, meaning Pydantic will raise `ValidationError` if `SECRET_KEY` is not set — which is the correct behavior and prevents the random-generation problem. However, if a developer adds a fallback default (`secret_key: str = secrets.token_hex(32)`) to make local startup easier, every container restart generates a new key and invalidates all JWTs.
 
-**Detection:**
-- Open the same file in two different sessions, have different conversations. If the context bleeds across sessions, the thread_id is still file-based
+**How to avoid:**
+1. Generate a single `SECRET_KEY` once: `python -c "import secrets; print(secrets.token_hex(32))"` and store it in Dokploy's environment variables (not in the image, not in `.env` files committed to git).
+2. Use the same `SECRET_KEY` value for both the public backend and admin backend services.
+3. Never set a dynamic default for `secret_key` in `config.py`. The existing behavior (no default = fail to start if not set) is correct.
+4. Document the `SECRET_KEY` generation procedure in the deployment runbook.
 
-**Phase to address:** Database Migration phase (define the utility function) + Agent System Enhancement phase (adopt everywhere)
+**Warning signs:**
+- Users are logged out after every deployment
+- JWT verification errors in logs after container restart
+- `Settings()` startup logs show `secret_key` being set to a random value
+- Admin tokens fail to authenticate on the public backend (different keys)
 
----
+**Severity:** ANNOYING (users get logged out on deploy) to BLOCKING (if secret changes break service-to-service token verification).
 
-### Pitfall 8: API Route Structure Break -- `/chat/{file_id}/...` Becomes `/chat/{session_id}/...`
-
-**What goes wrong:**
-All current chat endpoints use `file_id` as the path parameter:
-- `GET /chat/{file_id}/messages` (chat.py line 26)
-- `POST /chat/{file_id}/messages` (chat.py line 68)
-- `POST /chat/{file_id}/query` (chat.py line 108)
-- `POST /chat/{file_id}/stream` (chat.py line 151)
-- `GET /chat/{file_id}/context-usage` (chat.py line 238)
-- `POST /chat/{file_id}/trim-context` (chat.py line 288)
-
-The frontend's `useSSEStream` hardcodes the URL pattern (see `useSSEStream.ts` line 94): `fetch(\`http://localhost:8000/chat/${fileId}/stream\`...)`. The `useChatMessages` hook uses `apiClient.get(\`/chat/${fileId}/messages\`)` (see `useChatMessages.ts` line 14). The `ChatMessageResponse` type includes `file_id` (see `types/chat.ts` line 8).
-
-Changing from `{file_id}` to `{session_id}` requires updating 6 backend routes, 3+ frontend hooks, all TypeScript types, and the Pydantic response schemas simultaneously. If the frontend and backend are not updated atomically, the application breaks entirely.
-
-**Why it happens:**
-The API contract is tightly coupled to the 1:1 file-chat model. There is no API versioning, and the parameter name `file_id` is used in URLs, function signatures, and type definitions.
-
-**Prevention:**
-1. **Do NOT introduce API versioning** for a single-developer project. Just change the routes.
-2. Create a comprehensive checklist of every file that references `file_id` in a chat context:
-   - Backend: `routers/chat.py`, `services/chat.py`, `services/agent_service.py`, `schemas/chat.py`
-   - Frontend: `hooks/useChatMessages.ts`, `hooks/useSSEStream.ts`, `types/chat.ts`, `components/chat/ChatInterface.tsx`
-3. Update backend and frontend in the same commit/phase
-4. Use TypeScript compiler as verification: rename `file_id` to `session_id` in the types and let `tsc --noEmit` find every broken reference
-
-**Detection:**
-- After changing backend routes, run the frontend and check browser DevTools Network tab. Any 404s on `/chat/` endpoints indicate missed updates
-- Run `tsc --noEmit` to catch TypeScript type mismatches
-
-**Phase to address:** API + Frontend Migration (backend and frontend updated together in same phase)
+**Phase to address:**
+Phase 2 (Dokploy Services) — When configuring environment variables in Dokploy, generate `SECRET_KEY` once and use it for all backend services. Add it to the deployment checklist.
 
 ---
 
-### Pitfall 9: Zustand TabStore Replacement Creates State Synchronization Bugs
+## Technical Debt Patterns
 
-**What goes wrong:**
-The current `useTabStore` (see `tabStore.ts`) manages `tabs: FileTab[]` and `currentTabId`. The v0.3 replacement needs a `useChatSessionStore` managing `sessions: ChatSession[]` and `currentSessionId`. During the transition, if both stores coexist temporarily, components may read from the wrong store. The dashboard page (`dashboard/page.tsx`), file sidebar (`FileSidebar.tsx`), and chat interface (`ChatInterface.tsx`) all import from `useTabStore`. Forgetting to migrate even one component creates a state synchronization bug where clicking a sidebar item updates the new store but the main content area still reads from the old store.
+Shortcuts that seem reasonable but create long-term problems.
 
-Additionally, Zustand stores are singletons -- if a component imports `useTabStore` and another imports `useChatSessionStore`, they are completely independent state trees with no synchronization.
-
-**Why it happens:**
-Zustand stores are imported by reference. If `useTabStore` is still imported in even one component while others use the new `useChatSessionStore`, the UI becomes inconsistent. The visual result is that clicking navigation does nothing in some parts of the UI.
-
-**Prevention:**
-1. Create the new store first, then do a single commit that replaces ALL imports of `useTabStore` with the new store
-2. Delete `tabStore.ts` when all imports are removed -- the TypeScript compiler will catch any remaining references as import errors
-3. Use `tsc --noEmit` as your verification tool: it will fail if any component still imports the deleted store
-4. The new store must also handle the "no session selected" empty state that maps to the greeting screen requirement
-
-**Detection:**
-- Click a chat session in the sidebar. If the main content area does not update (still shows the old tab's chat or the empty state), the stores are out of sync
-- Run `tsc --noEmit` after deleting the old store file
-
-**Phase to address:** Frontend Restructure phase
+| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
+|----------|-------------------|----------------|-----------------|
+| Use `SPECTRA_MODE=dev` in production | One process handles everything | Admin routes exposed publicly, no isolation | Never in production |
+| Skip `.dockerignore`, use `COPY . .` | Simpler Dockerfile | Bloated images, potential secret leakage | Never |
+| Mount source code as volume (`./backend:/app`) | Live code changes without rebuild | Works locally, breaks in Dokploy (no local filesystem on server) | Local dev only |
+| Hardcode `localhost:8000` in `next.config.ts` | Works locally | Broken in Docker (localhost = container itself) | Never |
+| Store `SECRET_KEY` in `.env` committed to git | Easy team sharing | Security breach if repo is ever public | Never |
+| Skip entrypoint wait-for-db script | Simpler deployment | Intermittent startup failures on cold deploys | Never in production |
+| Use the same `.env` file for public and admin backends | One file to manage | Wrong `SPECTRA_MODE` silently breaks routing | Never in production |
+| Use `output: 'export'` (static) for Next.js | Smaller image, no Node server | No rewrites, no server-side rendering, no API routes | Only if Next.js is fully static (Spectra is not) |
 
 ---
 
-### Pitfall 10: Query Suggestions Break When Session Has No Files or Multiple Files
+## Integration Gotchas
 
-**What goes wrong:**
-Currently, query suggestions are generated during file onboarding and stored on the `File` model as `query_suggestions` (see `file.py` line 31). The `ChatInterface` loads suggestions via `useFileSummary(fileId)` (see `ChatInterface.tsx` line 65). In v0.3, a new chat session starts with no files linked. The requirements state: "Before user can initiate a chat, user will be asked to link or add a file to the chat" (requirement 1 in milestone-03-req.md). But the query suggestions only exist on files, not sessions.
+Common mistakes when connecting services inside Docker and Dokploy.
 
-When a file is linked to a session, the suggestions must be loaded for that file. When multiple files are linked, whose suggestions should be shown? Showing all suggestions from all files creates a confusing, overly long list. Showing none until files are linked is acceptable but needs a clear empty state.
-
-**Why it happens:**
-Suggestions are a file-level concern in v0.1/v0.2 and there is no session-level suggestion concept. The hook `useFileSummary(fileId)` is called with a single file ID.
-
-**Prevention:**
-1. When the first file is linked to a session, display that file's suggestions
-2. When multiple files are linked, merge suggestions by de-duplicating similar queries, or only show suggestions for the most recently linked file
-3. Show a clear "Link a file to start chatting" state for empty sessions, with the "Add File" button prominently displayed
-4. Do NOT generate new "cross-file" suggestions at link time -- too expensive (requires LLM call) and slow. Reuse existing per-file suggestions
-
-**Detection:**
-- Create a new session, link 2 files. If suggestions are blank or only from one file with no indication of the other, the suggestion merging is incomplete
-
-**Phase to address:** Frontend Restructure phase
+| Integration | Common Mistake | Correct Approach |
+|-------------|----------------|------------------|
+| Next.js → Backend | Rewrite destination uses `localhost:8000` | Use `http://backend:8000` (Docker service name) or env var `BACKEND_URL` |
+| FastAPI → PostgreSQL | `DATABASE_URL=postgresql://...@localhost/...` | Use `postgresql://...@postgres/...` (service name) or `db` — whatever the compose service is named |
+| FastAPI → PostgreSQL (async) | `postgresql://` prefix instead of `postgresql+asyncpg://` | SQLAlchemy async requires `postgresql+asyncpg://` driver prefix |
+| LangGraph checkpointer → PostgreSQL | `postgresql+asyncpg://` prefix — asyncpg driver incompatible with psycopg | LangGraph's `AsyncPostgresSaver` requires `postgresql://` (psycopg3), not asyncpg |
+| Backend startup → PostgreSQL | No wait-for-db logic | Entrypoint script with `pg_isready` loop before `alembic upgrade head` |
+| Dokploy services → each other | Services in different Dokploy applications cannot communicate on `dokploy-network` by default | Add `dokploy-network` external network to both services in `docker-compose.yml` |
+| E2B sandbox | E2B makes outbound calls to `api.e2b.dev` — no Docker networking change needed | E2B is external cloud; only the `E2B_API_KEY` env var matters |
+| APScheduler | APScheduler runs inside FastAPI — works in Docker as long as DB is available | Set `ENABLE_SCHEDULER=true` only on the public backend service, not admin |
 
 ---
 
-### Pitfall 11: File Deletion Orphans Sandbox File References in Stored Code
+## Performance Traps
 
-**What goes wrong:**
-When a user deletes a file, the file is removed from disk and its database record is deleted. However, existing `chat_messages` for sessions that used this file contain `metadata_json.generated_code` referencing the deleted file's path (e.g., `pd.read_csv('/home/user/sales_data.csv')`). If a user later asks a follow-up question that triggers CODE_MODIFICATION route, the Coding Agent will attempt to modify code that references a non-existent file, and the sandbox will fail with `FileNotFoundError`.
+Patterns that work in development but cause problems in production containers.
 
-In the multi-file world, this is worse: deleting one of three linked files means existing code that references all three files is now partially broken. The other two files still work, but any cross-file analysis that included the deleted file will fail on re-execution.
-
-**Why it happens:**
-Generated code is stored as a string in `metadata_json` and contains hardcoded file paths. There is no mechanism to invalidate or update stored code when files are deleted or unlinked from sessions.
-
-**Prevention:**
-1. When a file is removed from a session (unlinked) or deleted entirely, update the session's agent state to clear `previous_code` so the Manager Agent cannot route to CODE_MODIFICATION referencing the deleted file
-2. Add a visual indicator to affected DataCards: "File [name] is no longer available. Results shown are from the original analysis."
-3. The Manager Agent should be aware of linked files: when `previous_code` references a file that is no longer linked, route to NEW_ANALYSIS instead of CODE_MODIFICATION
-4. Consider storing the list of files referenced by each code execution in the message metadata, so the frontend can cross-reference against currently linked files
-
-**Detection:**
-- Link a file to a session, run a query, then unlink the file. Ask a follow-up that triggers code modification. If the sandbox crashes with FileNotFoundError and retries 3 times before halting, the file unlinking is not clearing stale state
-
-**Phase to address:** Agent System Enhancement phase + Frontend Restructure phase (visual indicators)
+| Trap | Symptoms | Prevention | When It Breaks |
+|------|----------|------------|----------------|
+| No multi-stage Dockerfile for Next.js | Image includes all `node_modules` (dev deps) — 1-2GB image | Use Next.js `standalone` output + multi-stage build | Every deploy (slow build, slow push) |
+| `echo=True` in SQLAlchemy engine in production | All SQL queries logged to stdout, high log volume | Set `echo=False` in production via env var | From first request |
+| No Next.js `output: 'standalone'` | Image includes full Next.js + all node_modules | Add `output: 'standalone'` to `next.config.ts` | Every deploy (300MB → 100MB savings) |
+| Python `.venv` in Docker context | `.venv/` copied into image (hundreds of MB of redundant packages) | Exclude `.venv/` in `.dockerignore`, install deps fresh via `pip install -r requirements.txt` | Build time (slow builds, bloated images) |
+| Uvicorn with single worker | Handles only 1 concurrent request | Use `--workers 2` or `--workers 4` for production (adjust to available CPU) | >5 concurrent users |
 
 ---
 
-## Minor Pitfalls
+## Security Mistakes
 
-### Pitfall 12: SSE Stream URL Hardcoded to localhost
+Docker and Dokploy-specific security issues.
 
-**What goes wrong:**
-The `useSSEStream` hook hardcodes `http://localhost:8000` (see `useSSEStream.ts` line 94) instead of using the centralized `apiClient`. This already exists in v0.2, but during v0.3's frontend restructure, if this URL is not centralized, the new session-based stream endpoint will perpetuate the pattern and block any future deployment to a non-localhost environment.
-
-**Prevention:**
-While restructuring the stream hook for session-based URLs, also extract the base URL into a shared constant or use `apiClient`'s configured base URL. This is an opportunistic fix during the required URL changes.
-
-**Phase to address:** Frontend Restructure phase (fix alongside the `file_id` to `session_id` URL change)
-
----
-
-### Pitfall 13: Chat History Sidebar Performance with Many Sessions
-
-**What goes wrong:**
-The v0.3 requirements call for a chat history sidebar showing all sessions. If a user creates 50+ sessions over time, loading all session metadata on every page load creates unnecessary API overhead and slow sidebar rendering. The current `FileSidebar` loads all files at once (see `FileSidebar.tsx` using `useFiles()` hook), which works for files (users rarely have >20) but may not scale for chat sessions.
-
-**Prevention:**
-1. Paginate chat sessions in the API (load last 20, with "Load more" button or virtual scroll)
-2. Only load session title and last message timestamp for the sidebar -- not full message lists or file details
-3. Use TanStack Query's `staleTime` to prevent re-fetching on every navigation
-4. Group sessions by date (Today, Yesterday, Last 7 days, Older) for easier scanning
-
-**Phase to address:** Frontend Restructure phase
+| Mistake | Risk | Prevention |
+|---------|------|------------|
+| `.env` file not in `.dockerignore` | API keys, JWT secret baked into image layers | Add `.env*` to `.dockerignore` in every service directory |
+| `ARG SECRET_KEY` in Dockerfile | Secret persists in `docker history` output | Pass secrets at runtime only via compose `environment:` or Dokploy env vars |
+| Running container as root | Container escape → root on host | Add `USER appuser` in Dockerfile, create non-root user |
+| `SPECTRA_MODE=dev` in production | Admin API exposed publicly | Always use `public` or `admin` mode in production |
+| Using `latest` tag for images | Undetermined image version, unpredictable deploys | Tag images with git SHA or semantic version |
+| Exposing PostgreSQL port publicly | Database accessible from internet | PostgreSQL should only be reachable by the backend service, not bound to `0.0.0.0` |
+| CORS_ORIGINS=* in production | Any website can make authenticated requests to the API | Set explicit origins (e.g., `["https://app.spectra.io"]`) in the public backend |
 
 ---
 
-### Pitfall 14: "My Files" Screen and Chat File Modal Share Component but Expect Different Behavior
+## "Looks Done But Isn't" Checklist
 
-**What goes wrong:**
-The v0.3 requirements introduce a "My Files" screen accessible from the sidebar AND a file selection modal within chat sessions. Both need to show a list of files. The existing `FileSidebar` component (see `FileSidebar.tsx`) currently serves as the file list -- clicking a file opens a tab. In v0.3:
-- Clicking a file in "My Files" should navigate to file detail or start a new chat
-- Clicking a file in the "Link File" modal should link the file to the current session and close the modal
+Things that appear to work but are missing critical pieces.
 
-If the same file list component is reused in both contexts without a clear mode differentiation, clicking a file will perform the wrong action in one of the two contexts.
-
-**Prevention:**
-1. Build the file list as a reusable component with an `onSelect` callback prop
-2. In "My Files" context: `onSelect` navigates to file detail or creates new session
-3. In "Link File" modal context: `onSelect` calls the session-file linking API and closes modal
-4. Do NOT couple file list behavior to a global store or hardcoded navigation -- keep it prop-driven
-5. Each context should clearly indicate its purpose with different headers ("My Files" vs "Link a file to this chat")
-
-**Phase to address:** Frontend Restructure phase
+- [ ] **Volume mount:** File uploads survive a container restart — verify by uploading a file, running `docker-compose down && docker-compose up`, then confirming the file is still accessible
+- [ ] **NEXT_PUBLIC_ vars:** API calls work in the Docker container — verify by building the image WITHOUT any `.env` file and running `docker run spectra-frontend` then checking the browser network tab
+- [ ] **Migrations run:** Alembic tables exist after first deploy — run `docker exec backend alembic current` and confirm the revision matches the latest migration
+- [ ] **SPECTRA_MODE correct:** Run `docker logs backend-public | grep "Starting Spectra"` and confirm `PUBLIC` mode; same for admin service confirming `ADMIN` mode
+- [ ] **Secrets not in layers:** Run `docker history --no-trunc spectra-backend:latest | grep -i key` and confirm no API keys appear
+- [ ] **Backend URL in frontend:** Open the public frontend in a browser pointed at the Docker deployment and verify the network tab shows requests going to the correct backend URL (not `localhost:8000`)
+- [ ] **DB ready before backend:** Force-stop and restart the postgres container; confirm the backend waits and reconnects rather than exiting
+- [ ] **No hardcoded localhost:** Run `grep -r "localhost:8000" frontend/src admin-frontend/src` and confirm no hardcoded localhost references remain after the `next.config.ts` update
 
 ---
 
-### Pitfall 15: Dark Mode Added During Layout Restructure Compounds CSS Complexity
+## Recovery Strategies
 
-**What goes wrong:**
-The v0.3 requirements mention "Allow users to switch between light and dark mode" (milestone-03-req.md line 93). If dark mode is implemented alongside the layout restructure, the CSS changes compound. New sidebar components, chat history items, file linking modals, and the "My Files" screen all need dark mode variants tested simultaneously with the new layout.
+When pitfalls occur despite prevention, how to recover.
 
-**Why it happens:**
-Two large UI changes at the same time (layout restructure + theme system) make it impossible to tell whether a visual bug is from the layout change or the dark mode implementation.
-
-**Prevention:**
-1. Use shadcn/ui's built-in dark mode support (already in the stack via Tailwind CSS)
-2. Implement dark mode AFTER the layout restructure is complete and visually verified in light mode
-3. All new components should use Tailwind semantic colors (`bg-background`, `text-foreground`, `border`) rather than hardcoded colors -- this makes dark mode nearly automatic when the theme is toggled
-4. The existing components already follow this pattern (verified in `ChatInterface.tsx`, `DashboardLayout.tsx`), so maintain consistency in all new components
-
-**Phase to address:** Final polish phase (after all structural changes are stable)
+| Pitfall | Recovery Cost | Recovery Steps |
+|---------|---------------|----------------|
+| NEXT_PUBLIC_ baked as `undefined` | LOW | Rebuild image with correct `ARG BACKEND_URL=...` passed to `docker build`, redeploy |
+| File uploads lost after redeploy | HIGH | Files cannot be recovered from container filesystem. Instruct users to re-upload. Add volume mount immediately before next deploy to prevent recurrence. |
+| Migration race condition failure | LOW | Re-trigger deploy in Dokploy. Add entrypoint wait script before next deploy. Check `docker logs backend` to confirm "PostgreSQL ready" before startup. |
+| Secrets in image layers | HIGH | Immediately rotate all exposed keys (E2B, Anthropic, Tavily, OpenRouter, JWT secret). Rebuild image without secrets in layers. Push new image and delete old image from registry. |
+| Wrong SPECTRA_MODE | LOW | Update environment variable in Dokploy, redeploy. No data loss, just service downtime during redeploy. |
+| Monorepo context issues | LOW | Fix `context:` path in `docker-compose.yml` or Dokploy settings. Rebuild. |
+| JWT secret changes on restart | MEDIUM | Set `SECRET_KEY` as persistent env var in Dokploy. Redeploy. All current sessions invalidated (users must re-login). |
 
 ---
 
-### Pitfall 16: Alembic Not Set Up -- Manual Schema Migration Risk
+## Pitfall-to-Phase Mapping
 
-**What goes wrong:**
-The project does not currently have Alembic configured for database migrations (no `alembic/` directory found in the project root, only in `.venv`). Previous schema changes likely used `Base.metadata.create_all()` or manual SQL. The v0.3 migration requires adding a `chat_sessions` table, a `session_files` junction table, migrating `chat_messages.file_id` to `chat_messages.session_id`, and updating LangGraph checkpoint thread_ids -- all while preserving existing data. Without Alembic, these changes are manual SQL scripts that cannot be rolled back, version-tracked, or tested incrementally.
+How roadmap phases should address these pitfalls.
 
-**Prevention:**
-1. Set up Alembic before starting any v0.3 database work
-2. Create an initial migration that captures the current schema as the baseline
-3. Write all v0.3 schema changes as Alembic migrations with proper `upgrade()` and `downgrade()` functions
-4. Test migrations on a copy of production data before applying
-
-**Phase to address:** Database Migration phase (prerequisite: set up Alembic first)
-
----
-
-## Phase-Specific Warnings
-
-| Phase Topic | Likely Pitfall | Severity | Mitigation |
-|---|---|---|---|
-| Database Migration | Pitfall 1: LangGraph checkpoint thread_id orphaning | CRITICAL | Write checkpoint migration alongside schema migration |
-| Database Migration | Pitfall 2: Cascade delete topology change | CRITICAL | Redefine ownership: sessions own messages, not files |
-| Database Migration | Pitfall 7: Thread ID collision across sessions | MODERATE | Centralize thread_id construction in utility function |
-| Database Migration | Pitfall 16: No Alembic setup | MODERATE | Set up Alembic before any schema changes |
-| Agent System Enhancement | Pitfall 3: Single-file assumptions in agent state | CRITICAL | Extend state schema to support file lists + multi-profile prompts |
-| Agent System Enhancement | Pitfall 4: Sandbox memory overflow with multiple files | CRITICAL | Pre-flight memory estimation, selective column loading |
-| Agent System Enhancement | Pitfall 6: Context window token explosion | MODERATE | Tiered metadata, compressed file profiles |
-| Agent System Enhancement | Pitfall 11: Deleted file orphans in code history | MODERATE | Clear stale state on file unlink, visual indicators |
-| API + Frontend Migration | Pitfall 8: Frontend-backend URL contract breakage | MODERATE | Update backend and frontend in same phase, use tsc as validator |
-| Frontend Restructure | Pitfall 5: SSE stream lifecycle on navigation | CRITICAL | Layout-level chat component or CSS-based session switching |
-| Frontend Restructure | Pitfall 9: Zustand store replacement state sync | MODERATE | Single commit for all store imports, delete old store |
-| Frontend Restructure | Pitfall 10: Query suggestions for multi-file sessions | MODERATE | Merge suggestions or use most-recent file's |
-| Frontend Restructure | Pitfall 12: Hardcoded localhost URL | MINOR | Fix alongside required URL pattern changes |
-| Frontend Restructure | Pitfall 13: Chat history sidebar performance | MINOR | Paginate sessions, load minimal metadata |
-| Frontend Restructure | Pitfall 14: File list dual-mode confusion | MINOR | Prop-driven onSelect callback, no global coupling |
-| Final Polish | Pitfall 15: Dark mode + layout restructure CSS conflict | MINOR | Implement dark mode after layout is stable |
-
----
-
-## Integration Risk Assessment
-
-The highest risk in v0.3 is the **cross-cutting nature of the changes**. Unlike v0.2 (which added new capabilities to an existing structure), v0.3 **restructures the existing foundation**. Every layer depends on the 1:1 file-chat assumption:
-
-| Layer | Current Assumption | v0.3 Change | Risk Level |
-|---|---|---|---|
-| Database | `ChatMessage.file_id` is required FK | Move to `ChatMessage.session_id` | HIGH -- data migration with cascade semantics |
-| LangGraph Checkpoints | `thread_id = file_{file_id}_user_{user_id}` | Change to `session_{session_id}_user_{user_id}` | HIGH -- silent data loss if missed |
-| Agent State | Singular `file_id`, `file_path`, `data_profile` | Lists of files, multi-profile context | HIGH -- prompt + code gen redesign |
-| Sandbox Execution | Upload one file, inject `df = pd.read_csv(...)` | Upload N files, inject `df_1`, `df_2`, etc. | HIGH -- memory limits at 512MB |
-| API Routes | `/chat/{file_id}/...` all 6 endpoints | `/chat/{session_id}/...` | MODERATE -- mechanical but many touchpoints |
-| Frontend State | `useTabStore` with `FileTab[]` | New `useChatSessionStore` with `ChatSession[]` | MODERATE -- single commit replacement |
-| Frontend Layout | Tabs in dashboard page, file sidebar | Sidebar chat history + session navigation | MODERATE -- but SSE lifecycle is critical |
-| Chat Types | `ChatMessageResponse.file_id`, `useChatMessages(fileId)` | All references change to `session_id` | MODERATE -- TypeScript compiler catches most |
-
-**Recommendation:** Do NOT attempt to change all layers simultaneously. The migration must proceed in strict dependency order:
-1. **Database schema + migration** (new tables + data migration + LangGraph checkpoint migration)
-2. **Backend API + Agent system** (new routes + multi-file agent state + sandbox changes)
-3. **Frontend restructure** (new layout + state management + dark mode)
-
-Each phase should be independently deployable and testable. The database can change while the backend still uses old routes (with a compatibility shim). The backend can change while the frontend still uses old URLs (briefly). But the frontend cannot change without the backend, and the backend cannot change without the database.
-
----
-
-## Regression Risk: v0.1 and v0.2 Requirements
-
-There are 96 validated requirements that must continue working. The highest-risk regressions:
-
-| Requirement | Why At Risk | Regression Test |
-|---|---|---|
-| "Each file has its own chat tab" (v0.1 File-10) | Tabs are being removed. Existing behavior must map to sessions. | Verify files uploaded via "My Files" create their own session |
-| "Chat history persists per file across browser sessions" (v0.1 AI-07) | Messages now belong to sessions, not files | Verify messages appear in the correct session after migration |
-| "Independent conversation memory per file tab" (v0.2 Memory-04) | Memory now scoped to session, not file | Verify sessions have independent checkpoints |
-| "Context persists after browser refresh" (v0.2 Memory-02) | New session routing must survive refresh | Verify URL includes session ID and restores state on refresh |
-| "Warning dialog before closing chat tab" (v0.2 Memory-03) | No tabs to close. Sessions persist in sidebar. | Determine if this requirement still applies or is replaced |
-| "New chat tabs display 5-6 query suggestions" (v0.2 Suggest-01) | Suggestions were per-file, now need per-session behavior | Verify suggestions appear when first file is linked to session |
-| "User can switch between file tabs with independent chat histories" (v0.1 File-09) | Tabs replaced by sessions. Must still be able to switch. | Verify sidebar navigation switches between sessions independently |
-
-**Phase to address:** Every phase should run the full test suite. Write migration-specific regression tests before starting.
+| Pitfall | Prevention Phase | Verification |
+|---------|------------------|--------------|
+| NEXT_PUBLIC_ baked as `undefined` | Phase 1: Dockerfiles | Build `frontend` image without env file; confirm API calls work in container |
+| File uploads lost on restart | Phase 1: Dockerfiles | Upload file, run `docker-compose down && up`, confirm file accessible |
+| Migration race condition | Phase 1: Dockerfiles | Force postgres delay; confirm backend waits with `pg_isready` loop |
+| Secrets in image layers | Phase 1: Dockerfiles | `docker history spectra-backend:latest` shows no key values |
+| Wrong SPECTRA_MODE | Phase 2: Dokploy Services | Smoke test: public frontend cannot access `/api/admin/*`; admin frontend can |
+| Monorepo build context | Phase 1: Dockerfiles | Local `docker build` with explicit context path succeeds; check image size |
+| JWT secret per restart | Phase 2: Dokploy Services | Redeploy backend; existing browser session still works (no re-login required) |
 
 ---
 
 ## Sources
 
-- **Codebase analysis:** Direct inspection of `agent_service.py`, `state.py`, `graph.py`, `chat_message.py`, `file.py`, `tabStore.ts`, `ChatInterface.tsx`, `useSSEStream.ts`, `useChatMessages.ts`, `coding.py`, `manager.py`, `e2b_runtime.py`, `chat.py` (router), `database.py`, and all schema/type files
-- [E2B Pricing -- default 512 MiB RAM, 2 vCPU](https://e2b.dev/pricing)
-- [E2B Custom Sandbox Compute](https://e2b.dev/blog/customize-sandbox-compute) -- Pro plan allows `--memory-mb` and `--cpu-count` customization
-- [LangGraph Persistence Documentation](https://docs.langchain.com/oss/python/langgraph/persistence) -- checkpoint thread_id structure and management
-- [LangGraph Threads Migration Tool](https://github.com/farouk09/langgraph-threads-migration) -- community tool for checkpoint data migration
-- [PostgreSQL Migration Best Practices](https://medium.com/shelf-io-engineering/how-to-safely-migrate-millions-of-rows-across-postgres-production-tables-35de77322eb0) -- three-step migration pattern (schema, data, cleanup)
-- [PostgreSQL Relationship Migration (Miro Engineering)](https://medium.com/miro-engineering/sql-migrations-in-postgresql-part-1-bc38ec1cbe75) -- separate schema and data migrations
-- [Next.js Layouts and Pages](https://nextjs.org/docs/app/building-your-application/routing/pages-and-layouts) -- layouts preserve state, pages do not
-- [Next.js Layout State Reset Discussion](https://github.com/vercel/next.js/discussions/49749) -- known issue with state reset on dynamic segment navigation
-- [Context Window Overflow Patterns (Redis)](https://redis.io/blog/context-window-overflow/) -- multi-file metadata token explosion
-- [Context Window Problem (Factory.ai)](https://factory.ai/news/context-window-problem) -- repository summary strategy for reducing token overhead
-- [Zustand Store Persistence and Versioning](https://zustand.docs.pmnd.rs/integrations/persisting-store-data) -- migration functions for breaking store changes
-- [Zustand with Next.js App Router](https://zustand.docs.pmnd.rs/guides/nextjs) -- setup patterns and state sharing
-- [Pandas Scaling to Large Datasets](https://pandas.pydata.org/docs/user_guide/scale.html) -- memory management, chunked reading, selective column loading
+### Next.js NEXT_PUBLIC_ Build-Time Behavior
+- [Next.js Official Docs: Environment Variables](https://nextjs.org/docs/pages/guides/environment-variables) — "After being built, your app will no longer respond to changes to these environment variables"
+- [Runtime environment variables in Next.js — build reusable Docker images](https://nemanjamitic.com/blog/2025-12-13-nextjs-runtime-environment-variables/) — December 2025
+- [docker image with NEXT_PUBLIC_ env variables · vercel/next.js Discussion #17641](https://github.com/vercel/next.js/discussions/17641) — Official repo discussion, ongoing
+- [Solving Next.js Env Var Puzzles in Docker Containers](https://junkangworld.com/blog/solving-nextjs-env-var-puzzles-in-docker-containers)
+- [Better support for runtime environment variables · vercel/next.js Discussion #44628](https://github.com/vercel/next.js/discussions/44628)
+
+### Docker Secrets and Layer Security
+- [SecretsUsedInArgOrEnv — Docker Official Docs](https://docs.docker.com/reference/build-checks/secrets-used-in-arg-or-env/)
+- [Don't leak your Docker image's build secrets — Python Speed](https://pythonspeed.com/articles/docker-build-secrets/)
+- [Dockerfile Secrets: Why Layers Keep Your Data Forever — Xygeni](https://xygeni.io/blog/dockerfile-secrets-why-layers-keep-your-sensitive-data-forever/)
+- [Docker Build Args: Hidden Vector for Leaks in Images — Xygeni](https://xygeni.io/blog/docker-build-args-the-hidden-vector-for-secret-leaks-in-images/)
+- [Over 10 Thousand Docker Hub Images Leak Credentials and API Keys](https://jeffbruchado.com.br/en/blog/docker-hub-credentials-leak-10-thousand-images-security)
+
+### Alembic Migration + Docker Startup Timing
+- [Solving the FastAPI, Alembic, Docker Problem — HackerNoon](https://hackernoon.com/solving-the-fastapi-alembic-docker-problem)
+- [Setup FastAPI Project with Async SQLAlchemy 2, Alembic, PostgreSQL and Docker](https://berkkaraal.com/blog/2024/09/19/setup-fastapi-project-with-async-sqlalchemy-2-alembic-postgresql-and-docker/)
+- [A Scalable Approach to FastAPI Projects with PostgreSQL, Alembic, Pytest, and Docker Using uv](https://blog.devops.dev/a-scalable-approach-to-fastapi-projects-with-postgresql-alembic-pytest-and-docker-using-uv-78ebf6f7fb9a)
+
+### Docker Volume Persistence
+- [Docker Volumes and Data Persistence](https://www.owais.io/blog/2025-09-12_docker-volumes-data-persistence-part1/)
+- [FastAPI in Containers - Docker — FastAPI Official Docs](https://fastapi.tiangolo.com/deployment/docker/)
+- [Mounting volumes docker-compose fastApi — Docker Community Forums](https://forums.docker.com/t/mounting-volumes-docker-compose-fastapi/123637)
+
+### Docker Monorepo Build Context
+- [Build context — Docker Official Docs](https://docs.docker.com/build/concepts/context/)
+- [Solving Cross-Container Communication Issues Between Next.js and FastAPI in a Docker Environment](https://medium.com/@szz185/solving-cross-container-communication-issues-between-next-js-and-fastapi-in-a-docker-environment-7b218a270236)
+- [Next.js outputFileTracingRoot for monorepo setups](https://nextjs.org/docs/pages/api-reference/config/next-config-js/output)
+
+### Dokploy-Specific
+- [Dokploy Build Type Documentation](https://docs.dokploy.com/docs/core/applications/build-type)
+- [Dokploy Environment Variables Documentation](https://docs.dokploy.com/docs/core/variables)
+- [Deploying Next.js Projects with Dokploy](https://medium.com/@weijunext/deploying-next-js-projects-with-dokploy-a0ecc386da3c)
+- [Next.js Dokploy VPS Deploy Failed? 5 Proven Fixes for 2025](https://junkangworld.com/blog/nextjs-dokploy-vps-deploy-failed-5-proven-fixes-for-2025)
+- [Warn users about needing dokploy-network for domain configuration · Discussion #1067](https://github.com/Dokploy/dokploy/discussions/1067)
 
 ---
 
-*Pitfalls research for: Spectra v0.3 Multi-File Conversation Support*
-*Researched: 2026-02-11*
-*Confidence: HIGH -- All critical pitfalls verified against actual codebase with line-number references and corroborated by technical documentation*
+*Pitfalls research for: Spectra Docker + Dokploy Deployment (v0.6 milestone)*
+*Researched: 2026-02-18*
+*Confidence: HIGH (based on official Next.js documentation, Docker official documentation, verified GitHub issues, and Dokploy documentation)*

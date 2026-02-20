@@ -90,7 +90,7 @@ async def upload_file(
     return FileUploadResponse.model_validate(file_record)
 
 
-@router.get("/", response_model=list[FileListItem])
+@router.get("", response_model=list[FileListItem])
 async def list_files(
     current_user: CurrentUser,
     db: DbSession

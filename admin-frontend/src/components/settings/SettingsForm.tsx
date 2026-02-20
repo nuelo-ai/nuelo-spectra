@@ -35,6 +35,7 @@ import { toast } from "sonner";
 import type { PlatformSettings } from "@/types/settings";
 import { useUpdateSettings } from "@/hooks/useSettings";
 import { useTiers } from "@/hooks/useTiers";
+import { useAppVersion } from "@/hooks/useAppVersion";
 
 interface SettingsFormProps {
   settings: PlatformSettings | undefined;
@@ -44,6 +45,7 @@ interface SettingsFormProps {
 export function SettingsForm({ settings, isLoading }: SettingsFormProps) {
   const updateSettings = useUpdateSettings();
   const { data: tiers } = useTiers();
+  const { data: versionData } = useAppVersion();
 
   const [allowPublicSignup, setAllowPublicSignup] = useState(false);
   const [defaultUserClass, setDefaultUserClass] = useState("free");
@@ -266,6 +268,30 @@ export function SettingsForm({ settings, isLoading }: SettingsFormProps) {
             />
             <p className="text-sm text-muted-foreground">
               Number of credits deducted per agent message
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* App Version */}
+      <Card>
+        <CardHeader>
+          <CardTitle>App Version</CardTitle>
+          <CardDescription>
+            Current deployment version and environment
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Version</Label>
+            <p className="text-sm text-muted-foreground font-mono">
+              {versionData?.version ?? "\u2014"}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label>Environment</Label>
+            <p className="text-sm text-muted-foreground font-mono">
+              {versionData?.environment ?? "\u2014"}
             </p>
           </div>
         </CardContent>

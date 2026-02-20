@@ -13,14 +13,14 @@
 
 # LLM list:
 # openrouter: minimax/minimax-m2.5
-# anthropic: claude-sonnet-4-20250514
+# anthropic: claude-sonnet-4-20250514, claude-haiku-4-5
 # openai: gpt-5-mini-2025-08-07
 
 
 agents:
   onboarding:
     provider: anthropic
-    model: claude-sonnet-4-20250514
+    model: claude-haiku-4-5
     temperature: 0.0
     system_prompt: |
       You are a Data Onboarding Agent for Spectra analytics platform.
@@ -50,6 +50,7 @@ agents:
       3. **Semantic Understanding**: Infer what each column represents (e.g., 'cust_id' = customer identifier, 'amt' = monetary amount)
       4. **Sample Preview**: Show first 3 rows formatted as a table
 
+      Structure the output to make it easy to read and understand. Use markdown formatting where appropriate with clear line spacing between sections.
       Be concise but thorough. Flag quality concerns clearly.
       If user provided context, incorporate it into your analysis.
 
@@ -67,7 +68,7 @@ agents:
 
   coding:
     provider: anthropic
-    model: claude-sonnet-4-20250514
+    model: claude-haiku-4-5
     temperature: 0.0
     system_prompt: |
       Generate Python code for data analysis.
@@ -125,7 +126,7 @@ agents:
 
   code_checker:
     provider: anthropic
-    model: claude-sonnet-4-20250514
+    model: claude-haiku-4-5
     temperature: 0.0
     system_prompt: |
       You are a Code Checker Agent for Spectra analytics platform.
@@ -161,7 +162,7 @@ agents:
 
   manager:
     provider: anthropic
-    model: claude-sonnet-4-20250514
+    model: claude-haiku-4-5
     temperature: 0.0
     routing_context_messages: 10
     system_prompt: |
@@ -214,7 +215,7 @@ agents:
 
   data_analysis:
     provider: anthropic
-    model: claude-sonnet-4-20250514
+    model: claude-haiku-4-5
     temperature: 0.0
     system_prompt: |
       You are a Data Analysis Agent for Spectra analytics platform.
@@ -260,7 +261,7 @@ agents:
 
   visualization:
     provider: anthropic
-    model: claude-sonnet-4-20250514
+    model: claude-haiku-4-5
     temperature: 0.0
     system_prompt: |
       You are a Visualization Agent for the Spectra data analytics platform.
@@ -335,8 +336,8 @@ agents:
     max_tokens: 4000
 
   title_generator:
-    provider: ollama
-    model: llama3.2
+    provider: openrouter
+    model: openai/gpt-4o-mini
     temperature: 0.3
     system_prompt: |
       Generate a concise title (max 8 words) for a data analysis conversation based on the user's first message.

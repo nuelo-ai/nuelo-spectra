@@ -41,7 +41,13 @@ async def _seed_admin():
         raise SystemExit(1)
 
     async with async_session_maker() as db:
-        user = await seed_admin(db, settings.admin_email, settings.admin_password)
+        user = await seed_admin(
+            db,
+            settings.admin_email,
+            settings.admin_password,
+            settings.admin_first_name,
+            settings.admin_last_name,
+        )
         click.echo(f"Admin user '{user.email}' seeded successfully (is_admin=True)")
 
 
