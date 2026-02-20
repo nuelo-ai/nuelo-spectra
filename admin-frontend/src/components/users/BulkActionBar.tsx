@@ -29,6 +29,7 @@ import {
   useBulkDelete,
   useBulkDeleteChallenge,
 } from "@/hooks/useUsers";
+import { useTiers } from "@/hooks/useTiers";
 import { toast } from "sonner";
 
 interface BulkActionBarProps {
@@ -46,10 +47,11 @@ export function BulkActionBar({
   const [showTierDialog, setShowTierDialog] = useState(false);
   const [showCreditDialog, setShowCreditDialog] = useState(false);
   const [showDeleteChallenge, setShowDeleteChallenge] = useState(false);
-  const [selectedTier, setSelectedTier] = useState("standard");
+  const [selectedTier, setSelectedTier] = useState("free");
   const [creditDelta, setCreditDelta] = useState("");
   const [creditReason, setCreditReason] = useState("");
 
+  const { data: tiers } = useTiers();
   const bulkActivate = useBulkActivate();
   const bulkDeactivate = useBulkDeactivate();
   const bulkChangeTier = useBulkChangeTier();
@@ -222,9 +224,11 @@ export function BulkActionBar({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="free">Free</SelectItem>
-                <SelectItem value="standard">Standard</SelectItem>
-                <SelectItem value="premium">Premium</SelectItem>
+                {tiers?.map((tier) => (
+                  <SelectItem key={tier.name} value={tier.name}>
+                    {tier.display_name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
