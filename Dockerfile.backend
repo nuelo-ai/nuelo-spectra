@@ -57,6 +57,9 @@ RUN chmod +x /app/docker-entrypoint.sh
 # Create uploads directory with correct ownership before switching user
 RUN mkdir -p /app/uploads && chown appuser:appuser /app/uploads
 
+# Declare persistent uploads volume (documents the mount point; compose/Dokploy provide explicit named mount)
+VOLUME ["/app/uploads"]
+
 # Switch to non-root user
 USER appuser
 

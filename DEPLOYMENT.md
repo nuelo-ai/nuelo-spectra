@@ -108,7 +108,7 @@ General tab:
 |-------|-------|
 | Name | `spectra-public-backend` |
 | Source | Git |
-| Branch | `main` |
+| Branch | `master` |
 | Build Type | Dockerfile |
 | Dockerfile Path | `Dockerfile.backend` |
 | Docker Context Path | `.` |
@@ -183,7 +183,7 @@ General tab:
 |-------|-------|
 | Name | `spectra-admin-backend` |
 | Source | Git (same repo) |
-| Branch | `main` |
+| Branch | `master` |
 | Build Type | Dockerfile |
 | Dockerfile Path | `Dockerfile.backend` |
 | Docker Context Path | `.` |
@@ -241,7 +241,7 @@ General tab:
 |-------|-------|
 | Name | `spectra-public-frontend` |
 | Source | Git (same repo) |
-| Branch | `main` |
+| Branch | `master` |
 | Build Type | Dockerfile |
 | Dockerfile Path | `Dockerfile.frontend` |
 | Docker Context Path | `.` |
@@ -264,7 +264,7 @@ General tab:
 |-------|-------|
 | Name | `spectra-admin-frontend` |
 | Source | Git (same repo) |
-| Branch | `main` |
+| Branch | `master` |
 | Build Type | Dockerfile |
 | Dockerfile Path | `Dockerfile.admin` |
 | Docker Context Path | `.` |
@@ -363,7 +363,7 @@ Uses `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_FIRST_NAME`, and `ADMIN_LAST_NAME` 
 ## Redeployment
 
 To redeploy any service with updated code:
-1. Push changes to the `main` branch
+1. Push changes to the `master` branch
 2. In Dokploy UI → click the service → click Deploy
 
 The backend runs `alembic upgrade head` on every startup. New migrations are applied; already-applied migrations are skipped automatically.
