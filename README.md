@@ -166,6 +166,27 @@ cd backend
 uv run python -m app.cli seed-admin
 ```
 
+### Upgrading from v0.5 to v0.6
+
+```bash
+# 1. Pull latest code
+git pull origin master
+
+# 2. No new backend dependencies — run migrations (no schema changes in v0.6)
+cd backend
+uv run alembic upgrade head
+
+# 3. Add new env vars to backend/.env
+#    APP_VERSION=v0.6.0       (optional — displayed on settings page)
+#    SPECTRA_MODE=dev          (unchanged from v0.5)
+
+# 4. Rebuild frontend apps (standalone output enabled)
+cd ../frontend && npm install
+cd ../admin-frontend && npm install
+```
+
+For Docker/production deployment, see `DEPLOYMENT.md`.
+
 ### Upgrading from v0.4 to v0.5
 
 ```bash
@@ -272,7 +293,19 @@ allowed_libraries:
 
 Changes to YAML configs require server restart.
 
-## Current Status (v0.5)
+## Current Status (v0.6)
+
+### v0.6 Docker and Dokploy Support (February 2026)
+- Production Dockerfiles for all 3 services (backend, public frontend, admin frontend)
+- `docker-entrypoint.sh` with PostgreSQL readiness wait, Alembic migrations on startup, uvicorn as PID 1
+- `compose.yaml` for local full-stack development with a single `docker compose up`
+- 4 Dokploy Application services deployed with split-horizon architecture:
+  - Public frontend at `https://spectra.nuelo.ai` (HTTPS via Traefik/Let's Encrypt)
+  - Public backend internal-only (no public domain — frontend proxies via Swarm DNS)
+  - Admin backend and admin frontend accessible via Tailscale VPN only
+- `GET /api/health` endpoints on both frontends for health monitoring
+- `GET /version` endpoint — live version and environment display on settings pages
+- `DEPLOYMENT.md` — step-by-step guide for Dokploy + Tailscale split-horizon deployment
 
 ### v0.5 Admin Portal (February 2026)
 - Internal admin portal for platform management (separate Next.js app)
@@ -328,4 +361,4 @@ MIT License - See LICENSE file for details.
 
 - **GitHub**: [github.com/marwazihs/nuelo-spectra](https://github.com/marwazihs/nuelo-spectra)
 - **Issues**: Report bugs or request features via GitHub Issues
-- **Version**: v0.5 (February 2026)
+- **Version**: v0.6 (February 2026)
