@@ -67,6 +67,7 @@ Recent decisions affecting v0.6:
 - [ ] Query safety filter in Manager Agent (security)
 - [ ] Show suggestions in Data Summary sidebar panel (ui)
 - [ ] Use Pydantic structured output for agent JSON responses (consistency)
+- [ ] Plan production environment variable cleanup and validation (deployment)
 
 ### Blockers/Concerns
 
