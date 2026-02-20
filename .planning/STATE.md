@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-18)
 ## Current Position
 
 Phase: 36 of 36 (Dokploy Deployment and DEPLOYMENT.md)
-Plan: 2 of 3 in current phase (plan 36-01 complete)
-Status: Phase 36 in progress — public backend deployed to Dokploy
-Last activity: 2026-02-19 — Completed plan 36-01 (Prerequisites + public backend deployment)
+Plan: 3 of 3 in current phase (plans 36-01, 36-02 complete)
+Status: Phase 36 in progress — all 4 services deployed, split-horizon verified
+Last activity: 2026-02-19 — Completed plan 36-02 (Admin backend + both frontends + split-horizon)
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 🚧
 
@@ -57,6 +57,9 @@ Recent decisions affecting v0.6:
 - [Phase 36-01]: iptables DOCKER-USER chain instead of VPS cloud firewall — Hostinger VPS, Docker bypasses UFW
 - [Phase 36-01]: Tailscale subnet routing not needed — dokploy-network is Swarm overlay (VXLAN), published host ports sufficient
 - [Phase 36-01]: Dokploy branch set to develop for testing deployment before final merge to master
+- [Phase 36-02]: BACKEND_URL uses Docker Swarm service names (not overlay IPs) — IPs change on every redeploy, service names are stable
+- [Phase 36-02]: Healthcheck uses 127.0.0.1 not localhost — Alpine wget resolves localhost to IPv6 [::1] but Next.js listens IPv4 only
+- [Phase 36-02]: seed-admin populates first_name/last_name with defaults — prevents null crash in admin header initials
 
 ### Pending Todos
 
@@ -75,5 +78,5 @@ Recent decisions affecting v0.6:
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 36-01-PLAN.md (Prerequisites + public backend deployment)
-Resume with: Continue Phase 36, Plan 36-02 (Admin backend + both frontends deployment)
+Stopped at: Completed 36-02-PLAN.md (Admin backend + both frontends + split-horizon)
+Resume with: Continue Phase 36, Plan 36-03 (HTTPS domains, smoke test, DEPLOYMENT.md)
