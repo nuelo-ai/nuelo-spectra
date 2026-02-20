@@ -188,4 +188,4 @@ Plans:
 | 33. Pre-Work and Version API | v0.6 | 2/2 | Complete | 2026-02-19 |
 | 34. Dockerfiles and Entrypoint | v0.6 | 3/3 | Complete | 2026-02-19 |
 | 35. Docker Compose and Local Validation | v0.6 | 1/1 | Complete | 2026-02-19 |
-| 36. Dokploy Deployment and DEPLOYMENT.md | 3/3 | Complete   | 2026-02-20 | - |
+| 36. Dokploy Deployment and DEPLOYMENT.md | 3/3 | Complete    | 2026-02-20 | - |
