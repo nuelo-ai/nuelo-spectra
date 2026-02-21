@@ -58,13 +58,63 @@ All agents use YAML-configured prompts and support per-agent LLM provider/model 
 ## Getting Started
 
 ### Prerequisites
-- Python 3.12+
-- Node.js 18+
-- PostgreSQL 16+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (recommended) — or Python 3.12+, Node.js 18+, PostgreSQL 16+ for manual setup
 - [E2B](https://e2b.dev) API key
 - LLM API key (Anthropic recommended, or OpenAI/Google/Ollama/OpenRouter)
 
-### Installation
+### Option 1: Docker Compose (Recommended)
+
+Runs the full stack — PostgreSQL, backend, public frontend, and admin frontend — in a single command. No local Python, Node.js, or PostgreSQL required.
+
+```bash
+# Clone
+git clone https://github.com/marwazihs/nuelo-spectra.git
+cd nuelo-spectra
+
+# Set up environment
+cp .env.docker.example .env.docker
+# Edit .env.docker — fill in API keys, ADMIN_EMAIL, and ADMIN_PASSWORD
+```
+
+**Required entries in `.env.docker`:**
+```env
+ADMIN_EMAIL=admin@yourdomain.com      # Required — backend refuses to start without this
+ADMIN_PASSWORD=your-secure-password   # Required — backend refuses to start without this
+ANTHROPIC_API_KEY=sk-ant-...
+E2B_API_KEY=e2b_...
+SECRET_KEY=your-secret-key            # Generate: openssl rand -hex 32
+```
+
+```bash
+# Build and start all services
+docker compose up --build
+```
+
+On first start, the backend automatically runs migrations and seeds the admin user before accepting requests. No manual steps needed.
+
+| Service | URL |
+|---------|-----|
+| Public app | http://localhost:3000 |
+| Admin portal | http://localhost:3001 |
+| API / docs | http://localhost:8000 / http://localhost:8000/docs |
+
+**Subsequent starts** (no rebuild needed unless code changed):
+```bash
+docker compose up
+```
+
+**Full reset** (wipes database volume):
+```bash
+docker compose down -v && docker compose up --build
+```
+
+---
+
+### Option 2: Manual Setup
+
+Use this if you need hot-reload during active development or prefer to run services individually.
+
+**Prerequisites:** Python 3.12+, Node.js 18+, PostgreSQL 16+
 
 ```bash
 # Clone
@@ -83,29 +133,17 @@ sudo -u postgres createdb spectra
 
 # Windows (using Chocolatey)
 choco install postgresql16
-# Or download installer from https://www.postgresql.org/download/windows/
 # After installation, create database via pgAdmin or psql
 ```
 
 **Backend:**
 ```bash
-# macOS/Linux
 cd backend
 pip install uv && uv sync
 cp .env.example .env
 # Edit .env with your configuration (see Environment Variables below)
 uv run alembic upgrade head
 uv run uvicorn app.main:app --reload
-
-# Windows (PowerShell)
-cd backend
-pip install uv
-uv sync
-copy .env.example .env
-# Edit .env with your configuration
-uv run alembic upgrade head
-uv run uvicorn app.main:app --reload
-
 # API at http://localhost:8000, docs at http://localhost:8000/docs
 ```
 
@@ -122,6 +160,13 @@ cd admin-frontend
 npm install && npm run dev
 # Admin portal at http://localhost:3001
 # Requires backend running in dev mode (SPECTRA_MODE=dev)
+```
+
+**Seed Admin Account:**
+```bash
+# Set ADMIN_EMAIL and ADMIN_PASSWORD in backend/.env, then:
+cd backend
+uv run python -m app.cli seed-admin
 ```
 
 ### Environment Variables
@@ -141,6 +186,8 @@ Copy `backend/.env.example` to `backend/.env` and fill in:
 | `E2B_API_KEY` | E2B sandbox API key from [e2b.dev](https://e2b.dev/dashboard) |
 | `ANTHROPIC_API_KEY` | Anthropic API key (default LLM provider) |
 | `SPECTRA_MODE` | Router mode: `dev` (all routes), `public` (user-facing only), `admin` (admin-only). Default: `dev` |
+| `ADMIN_EMAIL` | Admin account email — **required when `SPECTRA_MODE=dev` or `admin`** |
+| `ADMIN_PASSWORD` | Admin account password — **required when `SPECTRA_MODE=dev` or `admin`** |
 
 **Optional:**
 | Variable | Description |
@@ -153,18 +200,7 @@ Copy `backend/.env.example` to `backend/.env` and fill in:
 | `SMTP_HOST` | SMTP server (leave empty for dev mode console logging) |
 | `SMTP_PORT` | SMTP port |
 | `SMTP_USER` / `SMTP_PASS` | SMTP credentials |
-| `ADMIN_EMAIL` | Admin account email (for `seed-admin` CLI command) |
-| `ADMIN_PASSWORD` | Admin account password (for `seed-admin` CLI command) |
 | `LANGSMITH_API_KEY` | LangSmith tracing key |
-
-### Seed Admin Account (Optional)
-
-Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `backend/.env`, then:
-
-```bash
-cd backend
-uv run python -m app.cli seed-admin
-```
 
 ### Upgrading from v0.5 to v0.6
 
@@ -299,6 +335,8 @@ Changes to YAML configs require server restart.
 - Production Dockerfiles for all 3 services (backend, public frontend, admin frontend)
 - `docker-entrypoint.sh` with PostgreSQL readiness wait, Alembic migrations on startup, uvicorn as PID 1
 - `compose.yaml` for local full-stack development with a single `docker compose up`
+- Fail-fast startup validation: backend refuses to start when `SPECTRA_MODE=dev/admin` and `ADMIN_EMAIL`/`ADMIN_PASSWORD` are missing
+- Automatic admin user seeding on container startup — no manual `seed-admin` step needed
 - 4 Dokploy Application services deployed with split-horizon architecture:
   - Public frontend at `https://spectra.nuelo.ai` (HTTPS via Traefik/Let's Encrypt)
   - Public backend internal-only (no public domain — frontend proxies via Swarm DNS)
