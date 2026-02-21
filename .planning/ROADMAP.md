@@ -149,6 +149,15 @@ Plans:
 - [ ] 36-02-PLAN.md — Admin backend + both frontends deployment, split-horizon routing verification (DPLY-02, DPLY-03, DPLY-04, DPLY-05)
 - [ ] 36-03-PLAN.md — Public HTTPS domains/SSL, full smoke test, write DEPLOYMENT.md (DPLY-07, DPLY-08)
 
+### Phase 37: admin-seed-on-startup-and-mandatory-credentials
+**Goal**: Deploying SPECTRA_MODE=dev or SPECTRA_MODE=admin without ADMIN_EMAIL and ADMIN_PASSWORD set causes an immediate fail-fast startup error — uvicorn never starts; Docker/Dokploy deployments automatically seed the admin user after migrations; .env.docker.example accurately documents credentials as required for dev/admin modes
+**Depends on**: Phase 36
+**Requirements**: SEED-01, SEED-02, SEED-03
+**Plans**: 1 plan
+
+Plans:
+- [ ] 37-01-PLAN.md — Add model_validator to Settings, conditional seed in entrypoint, update .env.docker.example (SEED-01, SEED-02, SEED-03)
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -189,3 +198,4 @@ Plans:
 | 34. Dockerfiles and Entrypoint | v0.6 | 3/3 | Complete | 2026-02-19 |
 | 35. Docker Compose and Local Validation | v0.6 | 1/1 | Complete | 2026-02-19 |
 | 36. Dokploy Deployment and DEPLOYMENT.md | 3/3 | Complete    | 2026-02-20 | - |
+| 37. Admin Seed on Startup | v0.6 | 0/1 | In Progress | - |
