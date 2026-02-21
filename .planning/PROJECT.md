@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Spectra is an AI-powered data analytics platform that transforms how users interact with their data. Users upload datasets (Excel/CSV), create chat sessions, link multiple files, and ask questions in natural language — receiving instant insights as interactive Data Cards with AI-generated Plotly charts. A ChatGPT-style session-centric UX with sidebar navigation enables multi-file conversations and cross-file analysis. A 6-agent AI system with intelligent query routing generates validated Python code in a secure sandbox, automatically creating visualizations when analysis benefits from charts. Multi-turn conversation memory, web search integration, smart query suggestions, 7 chart types with PNG/SVG export, and theme-aware Nord palette across 5 LLM providers.
+Spectra is an AI-powered data analytics platform that transforms how users interact with their data. Users upload datasets (Excel/CSV), create chat sessions, link multiple files, and ask questions in natural language — receiving instant insights as interactive Data Cards with AI-generated Plotly charts. A ChatGPT-style session-centric UX with sidebar navigation enables multi-file conversations and cross-file analysis. A 6-agent AI system with intelligent query routing generates validated Python code in a secure sandbox, automatically creating visualizations when analysis benefits from charts. Multi-turn conversation memory, web search integration, smart query suggestions, 7 chart types with PNG/SVG export, and theme-aware Nord palette across 5 LLM providers. Now fully deployable via Docker Compose (local) or Dokploy (production) with automatic admin seeding and fail-fast startup validation.
 
 ## Core Value
 
@@ -13,31 +13,18 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 **GitHub:** https://github.com/marwazihs/nuelo-spectra.git (private)
 **Remote:** origin
 **Branch:** master
-**Latest Tag:** v0.5 (2026-02-18)
+**Latest Tag:** v0.6 (2026-02-21)
 
-## Latest Milestone: v0.5 Admin Portal (Shipped 2026-02-18)
+## Latest Milestone: v0.6 Docker and Dokploy Support (Shipped 2026-02-21)
 
-**Delivered:** Internal admin portal for platform management — user management, credit system, invitation flow, signup control, platform settings, and dashboard metrics — with split-horizon architecture and separate admin frontend.
-
-## Current Milestone: v0.6 Docker and Dokploy Support
-
-**Goal:** Package Spectra for production deployment — Dockerfiles for all 3 services, Docker Compose for local dev, 3 separate Dokploy service configurations with production hardening, version display in both frontends, and DEPLOYMENT.md guide.
-
-**Target features:**
-- Dockerfiles for backend (FastAPI), public frontend (Next.js), and admin frontend (Next.js)
-- Docker Compose for local development (all services + PostgreSQL)
-- 3 separate Dokploy service configurations (not a single Compose stack)
-- Production hardening (health checks, non-root users, restart policies, secrets)
-- Dokploy managed PostgreSQL (not containerized by us)
-- App version display on settings/profile page in both frontends (from backend /version API)
-- DEPLOYMENT.md step-by-step deployment guide
+**Delivered:** Full production deployment package — Docker Compose for local dev, Dockerfiles for all 3 services, 4 Dokploy services with Tailscale split-horizon architecture, fail-fast startup validation requiring admin credentials in dev/admin modes, automatic admin seeding on container startup, and DEPLOYMENT.md guide.
 
 ## Current State
 
-**Shipped:** v0.5 Admin Portal (2026-02-18)
-**Status:** v0.6 started — defining requirements
-**Codebase:** ~44,000 LOC (Python app + Python tests + TypeScript/TSX across public frontend + admin frontend)
-**Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily + Plotly + APScheduler (backend), Next.js 16 + React 19 + TanStack + Zustand + shadcn/ui + next-themes + Plotly.js + Recharts (frontend + admin frontend)
+**Shipped:** v0.6 Docker and Dokploy Support (2026-02-21)
+**Status:** Milestone complete — planning v0.7
+**Codebase:** ~53,000 LOC (Python app + TypeScript/TSX across public frontend + admin frontend + Docker/shell infra)
+**Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily + Plotly + APScheduler (backend), Next.js 16 + React 19 + TanStack + Zustand + shadcn/ui + next-themes + Plotly.js + Recharts (frontend + admin frontend), Docker + Dokploy + Tailscale (deployment)
 
 **What works:**
 - ✅ Complete authentication system with JWT, refresh tokens, and SMTP password reset
@@ -69,13 +56,18 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 - ✅ Platform settings with runtime configuration (signup toggle, default tier, invite expiry, credit cost)
 - ✅ Admin dashboard with metrics, Recharts trend charts, credit distribution, and audit log
 - ✅ Separate admin Next.js frontend (admin-frontend/) with shadcn/ui + Recharts
+- ✅ Production Dockerfiles for all 3 services (backend multi-stage uv, frontend/admin standalone Next.js)
+- ✅ Docker Compose for local full-stack dev (single `docker compose up --build`)
+- ✅ 4 Dokploy services with Tailscale split-horizon (public HTTPS, admin VPN-only)
+- ✅ Fail-fast startup validation: backend refuses to boot in dev/admin mode without ADMIN_EMAIL/ADMIN_PASSWORD
+- ✅ Automatic admin seeding on container startup (after migrations, before uvicorn)
+- ✅ DEPLOYMENT.md — step-by-step Dokploy + Tailscale deployment guide
 
 **Known limitations:**
 - E2B sandboxes created per-execution (no warm pools - ~150ms cold start per query)
 - Basic mobile responsiveness (functional but not optimized)
 - No query safety filter in Manager Agent (PII extraction, prompt injection not blocked)
 - Agent JSON responses not using Pydantic structured output (inconsistent across providers)
-- No Docker deployment package yet (local development only)
 - In-memory admin login lockout (upgrade to Redis for multi-instance)
 - In-memory token revocation set (same single-instance caveat)
 - Bulk credit adjustment by user class not yet implemented (CREDIT-11)
@@ -374,20 +366,53 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **v0.5 Total: 82/86 requirements satisfied (95%, 3 consciously deferred)**
 
+**✅ v0.6 Docker and Dokploy Support — Shipped 2026-02-21**
+
+**Pre-Work (5/5):**
+- ✓ No hardcoded localhost URLs in frontend source — v0.6
+- ✓ Both Next.js apps build with `output: standalone` for Docker multi-stage builds — v0.6
+- ✓ BACKEND_URL is a runtime env var (not baked at build time) — v0.6
+- ✓ `/api/health` route handler on both frontends for Dokploy health monitoring — v0.6
+- ✓ Route handler proxies replace next.config.ts rewrites (SSE streaming, runtime BACKEND_URL, trailing slash fix) — v0.6
+
+**Version API (3/3):**
+- ✓ `GET /version` returns version and environment on backend — v0.6
+- ✓ Version displayed live on public frontend settings page — v0.6
+- ✓ Version displayed live on admin frontend settings page — v0.6
+
+**Docker (5/5):**
+- ✓ .dockerignore files for all 3 services (no secrets, no node_modules) — v0.6
+- ✓ `docker-entrypoint.sh` with pg_isready wait, alembic migrations, exec uvicorn as PID 1 — v0.6
+- ✓ Dockerfile.backend (multi-stage uv build, non-root appuser) — v0.6
+- ✓ Dockerfile.frontend (3-stage standalone Next.js build) — v0.6
+- ✓ Dockerfile.admin (3-stage standalone Next.js build) — v0.6
+
+**Docker Compose (4/4):**
+- ✓ `compose.yaml` runs full stack with single `docker compose up --build` — v0.6
+- ✓ Health-ordered startup: db healthy → backend → frontends — v0.6
+- ✓ Named volumes for PostgreSQL data and file uploads persistence — v0.6
+- ✓ `.env.docker.example` documents all required config vars — v0.6
+
+**Dokploy (8/8):**
+- ✓ Public backend deployed (SPECTRA_MODE=public, migrations applied, health 200) — v0.6
+- ✓ Public frontend at HTTPS domain with valid Let's Encrypt cert — v0.6
+- ✓ Admin backend reachable only via Tailscale (SPECTRA_MODE=admin) — v0.6
+- ✓ Admin frontend reachable only via Tailscale — v0.6
+- ✓ File uploads persist across Dokploy redeployments (named volume) — v0.6
+- ✓ Tailscale installed, iptables DOCKER-USER rules blocking ports 8001/3001 from public — v0.6
+- ✓ Full smoke test passed (8 points: public HTTPS, admin VPN, isolation, file persistence) — v0.6
+- ✓ DEPLOYMENT.md (401 lines) — step-by-step guide — v0.6
+
+**Admin Seed (3/3):**
+- ✓ Backend refuses to start in dev/admin mode without ADMIN_EMAIL/ADMIN_PASSWORD (Pydantic model_validator) — v0.6
+- ✓ Admin user automatically seeded on container startup after migrations — v0.6
+- ✓ `.env.docker.example` accurately documents credentials as required for dev/admin modes — v0.6
+
+**v0.6 Total: 28/28 requirements satisfied (100%)**
+
 ### Active
 
-<!-- v0.5.1 Docker and Dokploy Support — see REQUIREMENTS.md for full REQ-IDs -->
-
-- [ ] Dockerfile for FastAPI backend service
-- [ ] Dockerfile for public Next.js frontend service
-- [ ] Dockerfile for admin Next.js frontend service
-- [ ] Docker Compose for local development (all services + PostgreSQL)
-- [ ] Dokploy service configuration for backend
-- [ ] Dokploy service configuration for public frontend
-- [ ] Dokploy service configuration for admin frontend
-- [ ] Production hardening (health checks, non-root users, restart policies, env secrets)
-- [ ] App version display on settings/profile page in both frontends (fetched from backend /version endpoint)
-- [ ] DEPLOYMENT.md step-by-step deployment guide
+<!-- Next milestone requirements will be defined via /gsd:new-milestone -->
 
 ### Out of Scope
 
@@ -414,25 +439,27 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **User experience priority:** The platform's success depends on making data analysis feel natural and accessible. Interactive UI, especially streaming responses and polished Data Cards, is critical. Users should see the AI "thinking" (generating code in real-time) and interact fluidly with results (sort, filter, explore).
 
-**AI Agent architecture:** 5 specialized agents work together via LangGraph:
+**AI Agent architecture:** 6 specialized agents work together via LangGraph:
 - **Manager Agent:** Routes queries to optimal path (memory-only, code modification, or new analysis)
 - **Onboarding Agent:** Analyzes uploaded data structure, generates metadata, suggests initial queries
 - **Coding Agent:** Generates Python code from natural language queries (or modifies existing code)
 - **Code Checker Agent:** Validates code for security and correctness
 - **Data Analysis Agent:** Interprets execution results, generates explanations, optionally searches web for context
+- **Visualization Agent:** Generates Plotly chart code when analysis benefits from visualization
 
 **Security considerations:**
 - Sandbox must prevent risky operations (file deletion, table drops, network access)
 - Code execution must be deterministic (no infinite loops, time limits)
 - User data must be isolated (segregated by user in file storage)
 - Agent execution must be traceable (structured JSON logging for LLM calls)
+- Admin routes protected by network isolation (Tailscale) + JWT + role enforcement + audit logging
 
 **Technical ecosystem:**
 - Backend: Python (FastAPI, LangGraph, LangChain, pandas, tiktoken, aiosmtplib, tavily-python)
 - Frontend: Next.js 16 (React 19, TanStack Query, Zustand, shadcn/ui, next-themes)
 - Agent framework: LangGraph with PostgreSQL checkpointing (AsyncPostgresSaver)
 - LLM providers: Anthropic (default), OpenAI, Google, Ollama, OpenRouter
-- Deployment: Docker-based (package not yet created)
+- Deployment: Docker + Dokploy + Tailscale (production), Docker Compose (local dev)
 
 ## Constraints
 
@@ -446,7 +473,7 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Next.js for frontend | Supports streaming AI responses natively, modern DX | ✓ Good — SSE streaming works excellently |
-| 4 AI agents for v0.1 (skip Visualization) | Timeline constraint. Core agents are critical to accuracy. | ✓ Good — expanded to 5 agents in v0.2 with Manager Agent |
+| 4 AI agents for v0.1 (skip Visualization) | Timeline constraint. Core agents are critical to accuracy. | ✓ Good — expanded to 6 agents by v0.4 |
 | Email auth only (defer Google OAuth) | Reduces complexity, faster to ship | ✓ Good — no user demand for OAuth yet |
 | Skip email verification for v1 | Let users in immediately | ✓ Good — reduces signup friction |
 | Tabbed file interface with per-file chat history | More intuitive than shared history | ✓ Replaced — session-centric UX shipped in v0.3 |
@@ -457,7 +484,7 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | PostgreSQL checkpointing for memory | Native LangGraph integration, reliable persistence | ✓ Good — AsyncPostgresSaver works with proper lifecycle |
 | DB-backed password reset tokens (not JWT) | Single-use, revocable, auditable | ✓ Good — more secure than JWT-based resets |
 | LLM-generated query suggestions | Dataset-specific, not hardcoded templates | ✓ Good — suggestions reflect actual data structure |
-| Local file storage (defer S3) | Simpler deployment, fewer dependencies | — Pending |
+| Local file storage (defer S3) | Simpler deployment, fewer dependencies | ✓ Good — named volumes work for current scale |
 | Skip billing for v1 | Need product validation first | — Pending |
 | Chat-session-centric UX (v0.3) | Enable multi-file analysis, ChatGPT-style conversations | ✓ Good — ChatGPT-style sidebar + sessions shipped, UAT passed |
 | Cross-file analysis support | AI can reference all linked files in a single query | ✓ Good — ContextAssembler with named DataFrames and join hints works well |
@@ -485,6 +512,12 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | Deferred CREDIT-11, SETTINGS-06, TIER-02 | Bulk credit adjust + per-tier overrides | — Pending for future milestone |
 | Route handler proxy over next.config.ts rewrites | Rewrites buffer SSE, bake BACKEND_URL at build time, strip trailing slashes causing auth loss | ✓ Good — SSE streams correctly, BACKEND_URL is runtime, no trailing slash issues |
 | APP_VERSION in Pydantic Settings (not os.getenv) | Pydantic extra=forbid rejects unknown .env vars; consistent with other config | ✓ Good — validates at startup, single source of truth |
+| model_validator(mode='after') for credential enforcement | Fires at lru_cache construction — process exits before uvicorn starts | ✓ Good — fail-fast at import time, clear error naming missing vars |
+| Empty string defaults for admin_email/admin_password | Making them required= fields would break public mode | ✓ Good — validator provides explicit error; public mode passes silently |
+| Conditional seed in docker-entrypoint.sh | `[ -n "${ADMIN_EMAIL:-}" ]` gates seed between migrations and uvicorn | ✓ Good — no manual seed-admin step needed for Docker deployments |
+| Tailscale for admin service isolation | VPN-only access without reverse proxy complexity | ✓ Good — iptables DOCKER-USER rules block admin ports from public internet |
+| 4 Dokploy Application services (not 1 Compose stack) | Independent deploy, scale, and restart per service | ✓ Good — cleaner than managing a remote compose stack |
+| Backend has no public domain | Reduced attack surface; frontend proxies via Swarm DNS | ✓ Good — simpler than exposing backend directly |
 
 ---
-*Last updated: 2026-02-19 after Phase 33 proxy fixes*
+*Last updated: 2026-02-21 after v0.6 milestone*
