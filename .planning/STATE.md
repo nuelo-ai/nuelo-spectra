@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-18)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** Phase 36 — Dokploy Deployment and DEPLOYMENT.md
+**Current focus:** Phase 37 — Admin Seed on Startup and Mandatory Credentials
 
 ## Current Position
 
-Phase: 36 of 36 (Dokploy Deployment and DEPLOYMENT.md)
-Plan: 3 of 3 in current phase (plans 36-01, 36-02 complete)
-Status: Phase 36 in progress — all 4 services deployed, split-horizon verified
-Last activity: 2026-02-19 — Completed plan 36-02 (Admin backend + both frontends + split-horizon)
+Phase: 37 of 37 (Admin Seed on Startup and Mandatory Credentials)
+Plan: 1 of 1 in current phase (plan 37-01 complete)
+Status: Phase 37 complete — model_validator + entrypoint seed block + env docs updated
+Last activity: 2026-02-21 — Completed plan 37-01 (fail-fast admin credential validation + docker seed)
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 🚧
 
@@ -60,6 +60,14 @@ Recent decisions affecting v0.6:
 - [Phase 36-02]: BACKEND_URL uses Docker Swarm service names (not overlay IPs) — IPs change on every redeploy, service names are stable
 - [Phase 36-02]: Healthcheck uses 127.0.0.1 not localhost — Alpine wget resolves localhost to IPv6 [::1] but Next.js listens IPv4 only
 - [Phase 36-02]: seed-admin populates first_name/last_name with defaults — prevents null crash in admin header initials
+- [Phase 37-01]: Raise ValueError (not SystemExit) in model_validator — Pydantic v2 wraps it in ValidationError at lru_cache construction
+- [Phase 37-01]: Keep admin_email/admin_password defaults as empty string — making them required= would break public mode; validator provides explicit error
+- [Phase 37-01]: Use [ -n "${ADMIN_EMAIL:-}" ] with dash-empty fallback — handles both unset and empty string under set -euo pipefail
+- [Phase 37-01]: Seed block after alembic, before exec uvicorn — schema must exist before seed; admin must exist before first request
+
+### Roadmap Evolution
+
+- Phase 37 added: admin-seed-on-startup-and-mandatory-credentials
 
 ### Pending Todos
 
@@ -78,6 +86,6 @@ Recent decisions affecting v0.6:
 
 ## Session Continuity
 
-Last session: 2026-02-19
-Stopped at: Completed 36-02-PLAN.md (Admin backend + both frontends + split-horizon)
-Resume with: Continue Phase 36, Plan 36-03 (HTTPS domains, smoke test, DEPLOYMENT.md)
+Last session: 2026-02-21
+Stopped at: Completed 37-01-PLAN.md (fail-fast admin credential validation + docker entrypoint seed block)
+Resume with: Phase 37 complete — all plans done

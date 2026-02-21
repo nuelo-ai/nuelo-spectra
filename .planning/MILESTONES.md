@@ -212,3 +212,13 @@
 
 ---
 
+
+## v0.6 Docker and Dokploy Support (Shipped: 2026-02-21)
+
+**Phases completed:** 5 phases, 10 plans, 0 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
+

@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Any
 import json
@@ -81,6 +82,28 @@ class Settings(BaseSettings):
     admin_password: str = ""       # For seed-admin CLI
     admin_first_name: str = "Admin"  # For seed-admin CLI
     admin_last_name: str = "User"    # For seed-admin CLI
+
+    @model_validator(mode="after")
+    def validate_admin_credentials_for_admin_modes(self) -> "Settings":
+        """Require ADMIN_EMAIL and ADMIN_PASSWORD when SPECTRA_MODE is dev or admin.
+
+        This validator fires at Settings() construction (once, via lru_cache) so
+        the process fails immediately at startup rather than at first admin request.
+        """
+        if self.spectra_mode in ("dev", "admin"):
+            missing = []
+            if not self.admin_email:
+                missing.append("ADMIN_EMAIL")
+            if not self.admin_password:
+                missing.append("ADMIN_PASSWORD")
+            if missing:
+                raise ValueError(
+                    f"{', '.join(missing)} must be set when SPECTRA_MODE is "
+                    f"'{self.spectra_mode}'. Add "
+                    f"{'them' if len(missing) > 1 else 'it'} to your .env file and restart."
+                )
+        return self
+
     admin_session_timeout_minutes: int = 30
     admin_cors_origin: str = "http://localhost:3001"  # Admin frontend origin
 

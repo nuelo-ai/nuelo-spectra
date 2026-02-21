@@ -36,6 +36,15 @@ echo "[entrypoint] Running database migrations..."
 /app/.venv/bin/python -m alembic upgrade head
 echo "[entrypoint] Migrations complete."
 
+# --- Seed admin user (if ADMIN_EMAIL is set) ---
+if [ -n "${ADMIN_EMAIL:-}" ]; then
+    echo "[entrypoint] Seeding admin user (${ADMIN_EMAIL})..."
+    /app/.venv/bin/python -m app.cli seed-admin
+    echo "[entrypoint] Admin seed complete."
+else
+    echo "[entrypoint] ADMIN_EMAIL not set — skipping admin seed (public mode)."
+fi
+
 # --- Start uvicorn via exec (replaces bash as PID 1) ---
 echo "[entrypoint] Starting uvicorn on port 8000 with ${UVICORN_WORKERS:-1} worker(s)..."
 exec /app/.venv/bin/uvicorn app.main:app \
