@@ -88,6 +88,11 @@ async function proxyRequest(request: NextRequest) {
     });
   }
 
+  // 204 No Content must not have a body — Response constructor rejects it
+  if (backendResponse.status === 204) {
+    return new Response(null, { status: 204, headers: responseHeaders });
+  }
+
   // For non-streaming: read full body and return it to avoid Content-Length mismatches
   const responseBody = await backendResponse.arrayBuffer();
   return new Response(responseBody, {
