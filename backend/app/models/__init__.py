@@ -10,9 +10,10 @@ from app.models.user_credit import UserCredit
 from app.models.credit_transaction import CreditTransaction
 from app.models.invitation import Invitation
 from app.models.platform_setting import PlatformSetting
+from app.models.api_usage_log import ApiUsageLog
 
 __all__ = [
     "Base", "User", "File", "ChatMessage", "ChatSession", "session_files",
     "SearchQuota", "PasswordResetToken", "AdminAuditLog", "UserCredit",
-    "CreditTransaction", "Invitation", "PlatformSetting",
+    "CreditTransaction", "Invitation", "PlatformSetting", "ApiUsageLog",
 ]
