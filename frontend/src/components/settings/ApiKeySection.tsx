@@ -32,7 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Copy, Check, Plus, Key, Trash2 } from "lucide-react";
+import { Copy, Check, Plus, Key, Trash2, Shield } from "lucide-react";
 
 export function ApiKeySection() {
   const { data: keys, isLoading, error } = useApiKeys();
@@ -169,14 +169,18 @@ export function ApiKeySection() {
                           Revoked
                         </Badge>
                       )}
+                      {key.created_by_admin_id && (
+                        <Badge variant="outline" className="gap-1">
+                          <Shield className="size-3" />
+                          Admin
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span className="font-mono">{key.key_prefix}...</span>
                       <span>Created {new Date(key.created_at).toLocaleDateString()}</span>
-                      {key.last_used_at && (
-                        <span>Last used {new Date(key.last_used_at).toLocaleDateString()}</span>
-                      )}
-                      <span>Credits: {key.total_credits_used.toFixed(1)}</span>
+                      <span>Last used {key.last_used_at ? new Date(key.last_used_at).toLocaleDateString() : "Never"}</span>
+                      <span>Credit Usage: {key.total_credits_used.toFixed(1)}</span>
                     </div>
                   </div>
                   {key.is_active && (
