@@ -334,6 +334,11 @@ if mode in ("admin", "dev"):
     app.include_router(admin_router, prefix="/api/admin")
     app.add_middleware(AdminTokenReissueMiddleware)
 
+# API v1 routes (api and dev modes) — external API access and API key management
+if mode in ("api", "dev"):
+    from app.routers.api_v1 import api_v1_router
+    app.include_router(api_v1_router)
+
 # In public mode, catch-all for /api/admin/* to log warnings and return 404
 if mode == "public":
     from fastapi import HTTPException
