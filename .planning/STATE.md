@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 38 of 41 (v0.7) — API Key Infrastructure
-Plan: 2 of 4 complete
+Plan: 3 of 4 complete
 Status: Executing
-Last activity: 2026-02-24 — Completed 38-02 (ApiKeyService + schemas, TDD verified)
+Last activity: 2026-02-24 — Completed 38-03 (Router + dependency wiring)
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 🚧 Phase 38 of 41
 
@@ -30,6 +30,7 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7
 | v0.6 (33-37) | 10 | ~3 days | ~7 hrs |
 | 38-01 | 3 tasks | 3 min | 1 min |
 | 38-02 | 2 tasks | 2 min | 1 min |
+| 38-03 | 3 tasks | 3 min | 1 min |
 
 **Recent Trend:**
 - Last milestone: v0.6 shipped cleanly — 5 phases, 10 plans, zero deferred items
@@ -46,6 +47,9 @@ Recent decisions (v0.7 execution):
 - field_validator on spectra_mode rejects unknown modes at Settings construction (earlier than main.py)
 - ApiKeyService authenticate() filters is_active==True in SQL WHERE clause (not post-fetch Python check)
 - Service uses db.flush() not db.commit() -- FastAPI request lifecycle controls transaction boundary
+- API key CRUD endpoints use CurrentUser (JWT-only), not get_authenticated_user -- users manage keys via frontend session
+- get_authenticated_user uses spe_ prefix check for fast-path API key routing, skipping JWT decode
+- oauth2_scheme_optional with auto_error=False for unified auth dependency manual error handling
 
 Research decisions (v0.7 planning):
 - API keys use SHA-256 hashing (not Argon2) — high-entropy random token; SHA-256 is industry standard (GitHub, Stripe), no performance penalty
@@ -73,5 +77,5 @@ Research decisions (v0.7 planning):
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 38-02-PLAN.md (ApiKeyService + schemas)
-Resume with: `/gsd:execute-phase 38` (continues with plan 03)
+Stopped at: Completed 38-03-PLAN.md (Router + dependency wiring)
+Resume with: `/gsd:execute-phase 38` (continues with plan 04)

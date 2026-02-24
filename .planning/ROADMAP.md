@@ -191,7 +191,7 @@ Plans:
 | 35. Docker Compose and Local Validation | v0.6 | 1/1 | Complete | 2026-02-19 |
 | 36. Dokploy Deployment and DEPLOYMENT.md | v0.6 | 3/3 | Complete | 2026-02-20 |
 | 37. Admin Seed on Startup | v0.6 | 1/1 | Complete | 2026-02-21 |
-| 38. API Key Infrastructure (incl. dev mode) | 2/4 | In Progress|  | - |
+| 38. API Key Infrastructure (incl. dev mode) | 3/4 | In Progress|  | - |
 | 39. API Key Management UI + Deployment Mode | v0.7 | 0/TBD | Not started | - |
 | 40. REST API v1 Endpoints | v0.7 | 0/TBD | Not started | - |
 | 41. MCP Server | v0.7 | 0/TBD | Not started | - |
