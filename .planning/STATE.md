@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** Phase 40 — REST API v1 Endpoints
+**Current focus:** Phase 41 — MCP Server Integration
 
 ## Current Position
 
-Phase: 40 of 41 (v0.7) — REST API v1 Endpoints
-Plan: 4 of 4 complete
-Status: Phase 40 Complete
-Last activity: 2026-02-24 — Completed 40-04 (Gap Closure for UAT Issues)
+Phase: 41 of 41 (v0.7) — MCP Server Integration
+Plan: 1 of 2 complete
+Status: In Progress
+Last activity: 2026-02-24 — Completed 41-01 (MCP Server Core)
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 🚧 Phase 40 of 41
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 🚧 Phase 41 of 41
 
 ## Performance Metrics
 
@@ -45,6 +45,7 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7
 | Phase 40 P02 | 2min | 2 tasks | 3 files |
 | 40-03 | 2 tasks | 3 min | 1.5 min |
 | 40-04 | 2 tasks | 1 min | 30s |
+| 41-01 | 2 tasks | 4 min | 2 min |
 
 ## Accumulated Context
 
@@ -91,6 +92,10 @@ Research decisions (v0.7 planning):
 - [Phase 40]: Messages in initial_state directly (not aupdate_state) since no checkpointer exists
 - [Phase 40]: db.commit() in context endpoint (not flush) because endpoint directly mutates ORM without service layer
 - [Phase 40]: Custom exception_handler wraps HTTPException in ApiErrorResponse envelope only for /v1/ routes, preserving default format for other routes
+- [Phase 41]: stateless_http moved from FastMCP constructor to http_app() in v3.0.2 -- pass to create_mcp_app() factory
+- [Phase 41]: on_list_tools middleware hook exists in fastmcp 3.0.2 -- auth enforced on tools/list per CONTEXT.md
+- [Phase 41]: mcp_api_base_url added to Settings (defaults http://localhost:8000) for configurable httpx loopback
+- [Phase 41]: API response fields: generated_code (not code), chart_specs (not chart_spec) -- matched actual REST API
 
 ### Pending Todos
 
@@ -103,11 +108,11 @@ Research decisions (v0.7 planning):
 ### Blockers/Concerns
 
 - Phase 39: `slowapi>=0.1.9` compatibility with FastAPI 0.115+ and custom `key_func` — verify before writing rate limiting middleware (MEDIUM confidence)
-- Phase 41: Verify `combine_lifespans` import path in FastMCP 3.x at implementation time — API may have shifted around v3.0 release (2026-01-19)
+- Phase 41: ~~Verify `combine_lifespans` import path~~ RESOLVED: `from fastmcp.utilities.lifespan import combine_lifespans` confirmed in fastmcp 3.0.2
 - Phase 41: Confirm `spectra-api` and `spectra-public` share same Dokploy host before deploying — `spectra_uploads` volume sharing is automatic only on single host; different host requires S3/NFS
 
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 40-04-PLAN.md (Gap Closure for UAT Issues) — Phase 40 fully complete
-Resume with: Continue with Phase 41 (MCP Integration)
+Stopped at: Completed 41-01-PLAN.md (MCP Server Core)
+Resume with: Continue with 41-02-PLAN.md (Mount & Lifecycle)

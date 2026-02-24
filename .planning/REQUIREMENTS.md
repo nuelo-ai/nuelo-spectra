@@ -50,11 +50,11 @@
 
 ### MCP Server (MCP)
 
-- [ ] **MCP-01**: MCP server exposes a tool to upload a file and trigger onboarding
-- [ ] **MCP-02**: MCP server exposes a tool to query a file (ask a question, get analysis result)
-- [ ] **MCP-03**: MCP server exposes tools to list, delete, and download files
-- [ ] **MCP-04**: MCP server exposes a tool to get file context, data brief, and query suggestions
-- [ ] **MCP-05**: MCP server authenticates using a user's API key
+- [x] **MCP-01**: MCP server exposes a tool to upload a file and trigger onboarding
+- [x] **MCP-02**: MCP server exposes a tool to query a file (ask a question, get analysis result)
+- [x] **MCP-03**: MCP server exposes tools to list, delete, and download files
+- [x] **MCP-04**: MCP server exposes a tool to get file context, data brief, and query suggestions
+- [x] **MCP-05**: MCP server authenticates using a user's API key
 
 ## Future Requirements
 
@@ -112,11 +112,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | APIINFRA-03 | Phase 39 | Complete |
 | APIINFRA-04 | Phase 40 | Complete |
 | APIINFRA-05 | Phase 38 | Complete |
-| MCP-01 | Phase 41 | Pending |
-| MCP-02 | Phase 41 | Pending |
-| MCP-03 | Phase 41 | Pending |
-| MCP-04 | Phase 41 | Pending |
-| MCP-05 | Phase 41 | Pending |
+| MCP-01 | Phase 41 | Complete |
+| MCP-02 | Phase 41 | Complete |
+| MCP-03 | Phase 41 | Complete |
+| MCP-04 | Phase 41 | Complete |
+| MCP-05 | Phase 41 | Complete |
 
 **Coverage:**
 - v0.7 requirements: 30 total
