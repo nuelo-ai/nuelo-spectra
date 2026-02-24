@@ -98,18 +98,30 @@ export function useRevokeUserApiKey(userId: string) {
         `/api/admin/users/${userId}/api-keys/${keyId}`
       );
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.detail || "Failed to revoke API key");
+        // 204 has no body; guard against empty-body JSON parse failure
+        let detail = "Failed to revoke API key";
+        try {
+          const error = await res.json();
+          detail = error.detail || detail;
+        } catch {
+          // Response body empty or not JSON — use default message
+        }
+        throw new Error(detail);
       }
+      // Success (200, 204, etc.) — do not call res.json() since 204 has no body
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["admin", "users", userId, "api-keys"],
-      });
       toast.success("API key revoked");
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to revoke API key");
+    },
+    onSettled: () => {
+      // Invalidate cache on both success and error — server may have processed
+      // the revocation even if the client-side handling encountered an issue
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "users", userId, "api-keys"],
+      });
     },
   });
 }
