@@ -161,7 +161,11 @@ Plans:
   3. An MCP host can list, delete, and download files through dedicated tools
   4. An MCP host can retrieve file context and query suggestions through a dedicated tool
   5. All MCP tools authenticate using a Spectra API key; tool calls are billed and logged identically to direct REST API calls
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 41-01-PLAN.md — FastMCP dependency, MCP server module with auth middleware and 6 curated tools
+- [ ] 41-02-PLAN.md — Mount MCP server at /mcp/ on FastAPI, lifespan coordination, config settings
 
 ## Progress
 
@@ -207,4 +211,4 @@ Plans:
 | 38. API Key Infrastructure (incl. dev mode) | v0.7 | Complete    | 2026-02-24 | 2026-02-23 |
 | 39. API Key Management UI + Deployment Mode | 5/5 | Complete    | 2026-02-24 | - |
 | 40. REST API v1 Endpoints | 4/4 | Complete    | 2026-02-24 | - |
-| 41. MCP Server | v0.7 | 0/TBD | Not started | - |
+| 41. MCP Server | v0.7 | 0/2 | Not started | - |
