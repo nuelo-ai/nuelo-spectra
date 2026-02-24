@@ -90,7 +90,7 @@
 **Milestone Goal:** Expose Spectra's data analysis capabilities as a public REST API and MCP server, enabling programmatic access and AI agent integrations.
 
 - [x] **Phase 38: API Key Infrastructure** - Data model, ApiKeyService, Alembic migration, auth middleware, and frontend management UI — completed 2026-02-23
-- [ ] **Phase 39: API Key Management UI + Deployment Mode** - User Settings page, admin User Management extension, and SPECTRA_MODE=api as 5th Dokploy service
+- [x] **Phase 39: API Key Management UI + Deployment Mode** - User Settings page, admin User Management extension, and SPECTRA_MODE=api as 5th Dokploy service (completed 2026-02-24)
 - [ ] **Phase 40: REST API v1 Endpoints** - File management, file context, and synchronous query endpoints with credit deduction and usage logging
 - [ ] **Phase 41: MCP Server** - Manually curated MCP tools wrapping Phase 40 endpoints, ASGI mounting, and Streamable HTTP transport
 
@@ -197,6 +197,6 @@ Plans:
 | 36. Dokploy Deployment and DEPLOYMENT.md | v0.6 | 3/3 | Complete | 2026-02-20 |
 | 37. Admin Seed on Startup | v0.6 | 1/1 | Complete | 2026-02-21 |
 | 38. API Key Infrastructure (incl. dev mode) | v0.7 | Complete    | 2026-02-24 | 2026-02-23 |
-| 39. API Key Management UI + Deployment Mode | 2/3 | In Progress|  | - |
+| 39. API Key Management UI + Deployment Mode | 3/3 | Complete   | 2026-02-24 | - |
 | 40. REST API v1 Endpoints | v0.7 | 0/TBD | Not started | - |
 | 41. MCP Server | v0.7 | 0/TBD | Not started | - |
