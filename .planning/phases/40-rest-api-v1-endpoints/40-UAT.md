@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 phase: 40-rest-api-v1-endpoints
-source: [40-01-SUMMARY.md, 40-02-SUMMARY.md, 40-03-SUMMARY.md]
+source: [40-01-SUMMARY.md, 40-02-SUMMARY.md, 40-03-SUMMARY.md, 40-04-SUMMARY.md]
 started: 2026-02-24T17:00:00Z
-updated: 2026-02-24T17:55:00Z
+updated: 2026-02-24T19:30:00Z
 ---
 
 ## Current Test
@@ -30,9 +30,7 @@ result: pass
 
 ### 5. Update File Context
 expected: PUT /v1/files/{id}/context with JSON body containing user_context updates the file's context. Returns success envelope. Changes persist on subsequent GET.
-result: issue
-reported: "PUT returns success but changes not persisted — GET context afterwards shows old values. Also data_summary should not be user-editable (it's AI-generated), only user_context should be updatable."
-severity: major
+result: pass (re-tested after 40-04 gap closure)
 
 ### 6. Get File Suggestions
 expected: GET /v1/files/{id}/suggestions with a valid API key returns JSON envelope with analysis suggestions for the file.
@@ -48,9 +46,7 @@ result: pass
 
 ### 9. API Error Envelope Format
 expected: Invalid requests (e.g., missing auth header) return ApiErrorResponse envelope with success: false, error object containing code (machine-readable), message, and appropriate HTTP status code.
-result: issue
-reported: "401 Unauthorized returns raw FastAPI default {\"detail\": \"Not authenticated\"} instead of ApiErrorResponse envelope {\"success\": false, \"error\": {\"code\": \"UNAUTHORIZED\", \"message\": \"...\"}}."
-severity: major
+result: pass (re-tested after 40-04 gap closure — confirmed {"success": false, "error": {"code": "UNAUTHORIZED", "message": "Not authenticated"}})
 
 ### 10. Delete File via API
 expected: DELETE /v1/files/{id} with a valid API key removes the file. Returns success envelope. Subsequent GET /v1/files no longer includes deleted file.
@@ -63,15 +59,15 @@ result: pass
 ## Summary
 
 total: 11
-passed: 9
-issues: 2
+passed: 11
+issues: 0
 pending: 0
 skipped: 0
 
 ## Gaps
 
 - truth: "PUT /v1/files/{id}/context persists user_context updates and data_summary is not user-editable"
-  status: failed
+  status: resolved
   reason: "User reported: PUT returns success but changes not persisted — GET context afterwards shows old values. Also data_summary should not be user-editable (it's AI-generated), only user_context should be updatable."
   severity: major
   test: 5
@@ -83,10 +79,10 @@ skipped: 0
     - "Change db.flush() to db.commit() on line 64"
     - "Remove data_summary from UpdateContextRequest model"
     - "Remove data_summary update conditional block (lines 59-60)"
-  debug_session: ""
+  fix: "40-04 Task 1 (commit 8256b4b)"
 
 - truth: "Auth errors return ApiErrorResponse envelope format"
-  status: failed
+  status: resolved
   reason: "User reported: 401 Unauthorized returns raw FastAPI default {\"detail\": \"Not authenticated\"} instead of ApiErrorResponse envelope."
   severity: major
   test: 9
@@ -98,4 +94,4 @@ skipped: 0
       issue: "oauth2_scheme with auto_error=True raises raw HTTPException"
   missing:
     - "Add custom exception handler in main.py for HTTPException that wraps 401/403 in ApiErrorResponse envelope"
-  debug_session: ""
+  fix: "40-04 Task 2 (commit fb0b601)"
