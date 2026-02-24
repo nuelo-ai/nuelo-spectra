@@ -6,10 +6,11 @@ Direct backend access (e.g. SPECTRA_MODE=api) uses /v1/* directly.
 
 from fastapi import APIRouter
 
-from app.routers.api_v1 import api_keys, context, files, health
+from app.routers.api_v1 import api_keys, context, files, health, query
 
 api_v1_router = APIRouter(prefix="/v1", tags=["API v1"])
 api_v1_router.include_router(api_keys.router)
 api_v1_router.include_router(health.router)
 api_v1_router.include_router(files.router)
 api_v1_router.include_router(context.router)
+api_v1_router.include_router(query.router)
