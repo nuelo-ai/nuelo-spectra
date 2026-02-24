@@ -17,7 +17,9 @@ MultiPartParser.max_file_size = 1024 * 1024 * 50
 MultiPartParser.max_part_size = 1024 * 1024 * 50
 
 from fastapi import FastAPI
+from fastapi.exceptions import HTTPException as FastAPIHTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.config import get_settings
 from app.database import engine
@@ -274,6 +276,45 @@ app = FastAPI(
     lifespan=lifespan,
     redirect_slashes=False,
 )
+
+
+@app.exception_handler(FastAPIHTTPException)
+async def api_error_envelope_handler(request: Request, exc: FastAPIHTTPException):
+    """Wrap HTTPException in ApiErrorResponse envelope for /v1/ API routes.
+
+    Non-API routes (public frontend, admin) keep FastAPI's default format
+    to avoid breaking existing clients.
+    """
+    path = request.url.path
+    if path.startswith("/v1/") or path.startswith("/api/v1/"):
+        from app.routers.api_v1.schemas import ApiErrorResponse, ApiErrorDetail, ERROR_CODES
+
+        # Map HTTP status codes to machine-readable error codes
+        code_map = {
+            401: "UNAUTHORIZED",
+            403: "FORBIDDEN",
+            404: "FILE_NOT_FOUND",
+            400: "INVALID_REQUEST",
+            429: "RATE_LIMITED",
+        }
+        error_code = code_map.get(exc.status_code, f"HTTP_{exc.status_code}")
+        message = str(exc.detail) if exc.detail else ERROR_CODES.get(error_code, "An error occurred")
+
+        body = ApiErrorResponse(
+            error=ApiErrorDetail(code=error_code, message=message),
+        )
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=body.model_dump(),
+            headers=getattr(exc, "headers", None),
+        )
+
+    # Non-API routes: return default FastAPI error format
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=getattr(exc, "headers", None),
+    )
 
 
 @app.middleware("http")
