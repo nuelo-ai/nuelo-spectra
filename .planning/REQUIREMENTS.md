@@ -46,6 +46,7 @@
 - [ ] **APIINFRA-02**: API routes are versioned under `/api/v1/`
 - [ ] **APIINFRA-03**: API service is deployable as a 5th Dokploy service with its own public HTTPS domain
 - [ ] **APIINFRA-04**: API requests and errors are logged (structured, per-request)
+- [ ] **APIINFRA-05**: In `SPECTRA_MODE=dev` (Docker Compose local), all `/api/v1/` routes are active alongside existing backend routes — no separate service needed for local development
 
 ### MCP Server (MCP)
 
@@ -110,6 +111,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | APIINFRA-02 | Phase 38 | Pending |
 | APIINFRA-03 | Phase 39 | Pending |
 | APIINFRA-04 | Phase 40 | Pending |
+| APIINFRA-05 | Phase 38 | Pending |
 | MCP-01 | Phase 41 | Pending |
 | MCP-02 | Phase 41 | Pending |
 | MCP-03 | Phase 41 | Pending |
@@ -117,10 +119,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MCP-05 | Phase 41 | Pending |
 
 **Coverage:**
-- v0.7 requirements: 29 total
-- Mapped to phases: 29 (Phase 38: 9, Phase 39: 4, Phase 40: 11, Phase 41: 5)
+- v0.7 requirements: 30 total
+- Mapped to phases: 30 (Phase 38: 10, Phase 39: 4, Phase 40: 11, Phase 41: 5)
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-23*
-*Last updated: 2026-02-23 — traceability updated after roadmap creation*
+*Last updated: 2026-02-23 — APIINFRA-05 added (Docker Compose dev mode includes api/v1 routes)*

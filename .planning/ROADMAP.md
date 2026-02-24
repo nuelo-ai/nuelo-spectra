@@ -99,13 +99,14 @@
 ### Phase 38: API Key Infrastructure
 **Goal**: Users can create, view, and revoke API keys, and the backend can authenticate API requests using those keys
 **Depends on**: Phase 37 (v0.6 complete)
-**Requirements**: APIKEY-01, APIKEY-02, APIKEY-03, APIKEY-04, APIKEY-05, APISEC-01, APISEC-02, APIINFRA-01, APIINFRA-02
+**Requirements**: APIKEY-01, APIKEY-02, APIKEY-03, APIKEY-04, APIKEY-05, APISEC-01, APISEC-02, APIINFRA-01, APIINFRA-02, APIINFRA-05
 **Success Criteria** (what must be TRUE):
   1. User can create an API key with a name; the full key is displayed once and cannot be retrieved again
   2. User can view their existing API keys showing name, prefix (first 8-12 chars), and creation date
   3. User can revoke an API key; revoked keys immediately return 401 on any API request
   4. An API request with a valid Bearer token is authenticated as the key's owner; an invalid or revoked token returns 401
   5. API routes are served under `/api/v1/` versioned prefix when `SPECTRA_MODE=api` is set
+  6. In `SPECTRA_MODE=dev` (Docker Compose), all `/api/v1/` routes are active alongside existing backend routes — no separate service needed locally
 **Plans**: TBD
 
 ### Phase 39: API Key Management UI + Deployment Mode
@@ -184,7 +185,7 @@
 | 35. Docker Compose and Local Validation | v0.6 | 1/1 | Complete | 2026-02-19 |
 | 36. Dokploy Deployment and DEPLOYMENT.md | v0.6 | 3/3 | Complete | 2026-02-20 |
 | 37. Admin Seed on Startup | v0.6 | 1/1 | Complete | 2026-02-21 |
-| 38. API Key Infrastructure | v0.7 | 0/TBD | Not started | - |
+| 38. API Key Infrastructure (incl. dev mode) | v0.7 | 0/TBD | Not started | - |
 | 39. API Key Management UI + Deployment Mode | v0.7 | 0/TBD | Not started | - |
 | 40. REST API v1 Endpoints | v0.7 | 0/TBD | Not started | - |
 | 41. MCP Server | v0.7 | 0/TBD | Not started | - |
