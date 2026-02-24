@@ -1,7 +1,8 @@
 # Spectra Production Deployment Guide
 
-Spectra deploys as four Dokploy Application services with a split-horizon architecture:
+Spectra deploys as five Dokploy Application services with a split-horizon architecture:
 - **Public services** (API + frontend): frontend accessible via HTTPS, backend internal only
+- **API service** (standalone REST API): accessible via HTTPS at `api.yourdomain.com`
 - **Admin services** (admin API + admin frontend): accessible only via Tailscale VPN
 
 ## Architecture Overview
@@ -11,13 +12,17 @@ Internet → Traefik (Dokploy) → spectra-public-frontend (port 3000)
                                     ↓ route handler proxy (Swarm DNS)
                                 spectra-public-backend (port 8000, no public domain)
 
+                              → spectra-api (port 8000, api.yourdomain.com)
+                                    ↓ API-only: /api/v1/* routes
+
 Tailscale VPN → host:8001 → spectra-admin-backend
              → host:3001 → spectra-admin-frontend
                                 ↓ route handler proxy (Swarm DNS)
                             spectra-admin-backend (port 8000)
 
-Both backends  → Dokploy-managed PostgreSQL (shared DB, same SECRET_KEY)
+All backends   → Dokploy-managed PostgreSQL (shared DB, same SECRET_KEY)
 Public backend → spectra-uploads named volume at /app/uploads
+API service    → spectra-uploads named volume at /app/uploads (shared)
 ```
 
 **Key design:** The public backend has no public domain. All API calls go through the public frontend's Next.js route handler proxy, which routes to the backend via Docker Swarm service DNS over the internal overlay network. This reduces the attack surface — only the frontend is publicly exposed.
@@ -285,14 +290,81 @@ Advanced → Ports:
 
 Click Deploy.
 
-## Step 9: Configure Public HTTPS Domain
+## Step 9: Deploy API Service (spectra-api)
+
+The API service serves the public REST API at `api.yourdomain.com`. It uses the same Docker image as the backends but runs in API mode — only `/api/v1/*` routes and health checks are mounted, with no auth, files, chat, admin, or frontend routes.
+
+### Step 9a -- Create Application in Dokploy
+
+General tab:
+| Field | Value |
+|-------|-------|
+| Name | `spectra-api` |
+| Source | Git (same repository) |
+| Branch | `master` |
+| Build Type | Dockerfile |
+| Dockerfile Path | `Dockerfile.backend` |
+| Docker Context Path | `.` |
+
+### Step 9b -- Environment Variables
+
+| Variable | Value | Notes |
+|----------|-------|-------|
+| `SPECTRA_MODE` | `api` | API-only mode -- no frontend routes, no admin routes |
+| `DATABASE_URL` | `postgresql+asyncpg://...` | Same as other backends |
+| `SECRET_KEY` | *(same as other backends)* | Shared JWT signing key |
+| `ANTHROPIC_API_KEY` | *(your key)* | Required for analysis queries |
+| `E2B_API_KEY` | *(your key)* | Required for code execution |
+| `GOOGLE_API_KEY` | *(your key)* | If using Google LLM provider |
+| `ENABLE_SCHEDULER` | `false` | API service does not run scheduled tasks |
+| `TAVILY_API_KEY` | *(your key)* | If web search is configured |
+
+### Step 9c -- Domain Configuration
+
+In Dokploy Application -> Domains:
+| Field | Value |
+|-------|-------|
+| Host | `api.yourdomain.com` |
+| Container Port | `8000` |
+| HTTPS | Enabled |
+| Certificate | `letsencrypt` |
+
+### Step 9d -- Volume Mount (configure BEFORE deploying)
+
+Advanced tab -> Mounts -> Add Mount:
+| Field | Value |
+|-------|-------|
+| Type | Volume |
+| Volume Name | `spectra-uploads` |
+| Mount Path | `/app/uploads` |
+
+**Important:** The API service needs access to the same uploads volume as the public backend so it can serve file-related API endpoints.
+
+### Step 9e -- Deploy and Verify
+
+Click Deploy. After deployment:
+```bash
+# Basic health
+curl https://api.yourdomain.com/health
+
+# API health with DB check
+curl https://api.yourdomain.com/api/v1/health
+
+# API key authentication (requires a valid key)
+curl -H "Authorization: Bearer spe_YOUR_KEY" https://api.yourdomain.com/api/v1/keys
+```
+
+The standard `/health` endpoint is fast (no DB query) — use it for Dokploy HEALTHCHECK. Use `/api/v1/health` for external monitoring with DB connectivity checks.
+
+## Step 10: Configure Public HTTPS Domain
 
 **DNS must propagate before adding the domain in Dokploy.** Adding the domain before DNS resolves causes Let's Encrypt to fail silently.
 
-### Step 9a — Add DNS A record
+### Step 10a — Add DNS A record
 
 In your DNS provider, add:
 - `app.yourdomain.com` → `<SERVER_PUBLIC_IP>`
+- `api.yourdomain.com` → `<SERVER_PUBLIC_IP>`
 
 If using Cloudflare: set to "DNS only" (grey cloud icon), not Proxied. Traefik's Let's Encrypt HTTP challenge requires direct access to the server.
 
@@ -301,7 +373,7 @@ Verify propagation:
 dig +short app.yourdomain.com   # Must return SERVER_PUBLIC_IP
 ```
 
-### Step 9b — Add domain to public frontend
+### Step 10b — Add domain to public frontend
 
 Dokploy → spectra-public-frontend → Domains tab → Add Domain:
 | Field | Value |
@@ -317,7 +389,7 @@ curl -s https://app.yourdomain.com/api/health
 # Expected: {"status":"ok"}
 ```
 
-### Step 9c — Update public backend CORS
+### Step 10c — Update public backend CORS
 
 In spectra-public-backend → Environment tab, update:
 ```
@@ -327,7 +399,7 @@ CORS_ORIGINS=["https://app.yourdomain.com"]
 
 Redeploy public backend after updating.
 
-## Step 10: Seed Admin User (First Time Only)
+## Step 11: Seed Admin User (First Time Only)
 
 ```bash
 docker exec $(docker ps --filter "name=admin-backend" --format "{{.ID}}" | head -1) \
@@ -347,6 +419,12 @@ Uses `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_FIRST_NAME`, and `ADMIN_LAST_NAME` 
 - [ ] Upload a file — appears in file list
 - [ ] Redeploy spectra-public-backend → uploaded file still accessible (volume persistence)
 - [ ] Version displayed on Settings page
+
+### API Service
+- [ ] `curl -s https://api.yourdomain.com/health` → `{"status":"ok"}`
+- [ ] `curl -s https://api.yourdomain.com/api/v1/health` → `{"status":"healthy",...}`
+- [ ] `curl -H "Authorization: Bearer spe_VALID_KEY" https://api.yourdomain.com/api/v1/keys` → key list JSON
+- [ ] `curl -s https://api.yourdomain.com/api/admin/users` → 404 (admin routes not mounted)
 
 ### Admin Services (from Tailscale client)
 - [ ] `curl -s http://<TAILSCALE_IP>:8001/health` → `{"status":"ok"}`

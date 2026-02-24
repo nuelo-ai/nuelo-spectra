@@ -301,14 +301,24 @@ if mode in ("admin", "dev") and settings.admin_cors_origin:
     if settings.admin_cors_origin not in cors_origins:
         cors_origins.append(settings.admin_cors_origin)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["X-Admin-Token"],  # For sliding window token reissue
-)
+if mode == "api":
+    # API mode: Bearer token auth, no cookies needed, allow all origins
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["X-Admin-Token"],  # For sliding window token reissue
+    )
 
 # Health is always available (all modes)
 app.include_router(health.router)
