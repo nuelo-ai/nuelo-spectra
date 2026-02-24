@@ -38,7 +38,7 @@
 
 ### API Use Cases — Chat (APIQ)
 
-- [ ] **APIQ-01**: API caller can send a query against a file and receive the full analysis result (code, chart spec, analysis summary) synchronously
+- [x] **APIQ-01**: API caller can send a query against a file and receive the full analysis result (code, chart spec, analysis summary) synchronously
 
 ### API Infrastructure (APIINFRA)
 
@@ -106,7 +106,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | APIC-01 | Phase 40 | Complete |
 | APIC-02 | Phase 40 | Complete |
 | APIC-03 | Phase 40 | Complete |
-| APIQ-01 | Phase 40 | Pending |
+| APIQ-01 | Phase 40 | Complete |
 | APIINFRA-01 | Phase 38 | Complete |
 | APIINFRA-02 | Phase 38 | Complete |
 | APIINFRA-03 | Phase 39 | Complete |
