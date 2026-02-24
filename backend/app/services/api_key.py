@@ -37,8 +37,16 @@ class ApiKeyService:
         user_id: UUID,
         name: str,
         description: str | None = None,
+        created_by_admin_id: UUID | None = None,
     ) -> tuple[ApiKey, str]:
         """Create a new API key for a user.
+
+        Args:
+            db: Database session
+            user_id: Owner of the API key
+            name: Human-readable key name
+            description: Optional description
+            created_by_admin_id: If set, the admin who created this key on behalf of user
 
         Returns:
             Tuple of (ApiKey record, full_raw_key). The full_raw_key is only
@@ -52,6 +60,7 @@ class ApiKeyService:
             description=description,
             key_prefix=key_prefix,
             token_hash=token_hash,
+            created_by_admin_id=created_by_admin_id,
         )
         db.add(api_key)
         await db.flush()
@@ -86,6 +95,26 @@ class ApiKeyService:
             return False
 
         api_key.is_active = False
+        api_key.revoked_at = datetime.now(timezone.utc)
+        await db.flush()
+        return True
+
+    @staticmethod
+    async def admin_revoke(db: AsyncSession, key_id: UUID) -> bool:
+        """Admin revoke: deactivate any API key without user_id ownership check.
+
+        Returns True if revoked, False if not found.
+        """
+        result = await db.execute(
+            select(ApiKey).where(ApiKey.id == key_id)
+        )
+        api_key = result.scalar_one_or_none()
+
+        if api_key is None:
+            return False
+
+        api_key.is_active = False
+        api_key.revoked_at = datetime.now(timezone.utc)
         await db.flush()
         return True
 

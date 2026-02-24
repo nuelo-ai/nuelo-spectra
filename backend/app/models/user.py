@@ -58,5 +58,6 @@ class User(Base):
     api_keys: Mapped[list["ApiKey"]] = relationship(
         "ApiKey",
         back_populates="user",
+        foreign_keys="[ApiKey.user_id]",
         cascade="all, delete-orphan"
     )

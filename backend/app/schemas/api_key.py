@@ -27,5 +27,13 @@ class ApiKeyListItem(BaseModel):
     is_active: bool
     created_at: datetime
     last_used_at: datetime | None
+    total_credits_used: float
 
     model_config = {"from_attributes": True}
+
+
+class AdminApiKeyListItem(ApiKeyListItem):
+    """Extended schema for admin API key listing with admin tracking fields."""
+
+    revoked_at: datetime | None
+    created_by_admin_id: UUID | None
