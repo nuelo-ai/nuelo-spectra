@@ -3,7 +3,7 @@ status: complete
 phase: 39-api-key-management-ui-deployment-mode
 source: 39-01-SUMMARY.md, 39-02-SUMMARY.md, 39-03-SUMMARY.md, 39-04-SUMMARY.md, 39-05-SUMMARY.md
 started: 2026-02-24T15:00:00Z
-updated: 2026-02-24T15:20:00Z
+updated: 2026-02-24T16:10:00Z
 ---
 
 ## Current Test
@@ -19,14 +19,11 @@ result: pass
 
 ### 2. Public Frontend API Key List Display
 expected: On the public frontend Settings page, each API key shows: key name, key prefix, "Last used: Never" (or date if used), and "Credit Usage: 0.0" label. Never-used keys show "Never" instead of hiding the field.
-result: issue
-reported: "Not loaded. Backend log shows GET /v1/keys 404 Not Found. Router prefix change from /v1 to /api/v1 broke the keys endpoint — frontend still calls /v1/keys."
-severity: blocker
+result: pass (fixed inline: reverted router prefix to /v1, dual-mounted at /v1 and /api/v1)
 
 ### 3. Public Frontend Admin Badge
 expected: API keys created by an admin show an "Admin" badge with Shield icon on the public frontend Settings page, distinguishing them from user-created keys.
-result: skipped
-reason: Blocked by test 2 — key list doesn't load due to /v1/keys 404
+result: pass
 
 ### 4. Admin API Keys Tab Visible
 expected: In the admin portal, opening a user's detail view shows 5 tabs including "API Keys" as the 5th tab.
@@ -54,10 +51,10 @@ reason: Will test at milestone level
 ## Summary
 
 total: 8
-passed: 4
-issues: 2
+passed: 6
+issues: 1
 pending: 0
-skipped: 2
+skipped: 1
 
 ## Gaps
 
