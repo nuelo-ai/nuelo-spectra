@@ -85,12 +85,12 @@
 
 </details>
 
-### 🚧 v0.7 API Services & MCP (In Progress)
+### v0.7 API Services & MCP (In Progress)
 
 **Milestone Goal:** Expose Spectra's data analysis capabilities as a public REST API and MCP server, enabling programmatic access and AI agent integrations.
 
 - [x] **Phase 38: API Key Infrastructure** - Data model, ApiKeyService, Alembic migration, auth middleware, and frontend management UI — completed 2026-02-23
-- [x] **Phase 39: API Key Management UI + Deployment Mode** - User Settings page, admin User Management extension, and SPECTRA_MODE=api as 5th Dokploy service (completed 2026-02-24)
+- [ ] **Phase 39: API Key Management UI + Deployment Mode** - User Settings page, admin User Management extension, and SPECTRA_MODE=api as 5th Dokploy service (UAT gap closure in progress)
 - [ ] **Phase 40: REST API v1 Endpoints** - File management, file context, and synchronous query endpoints with credit deduction and usage logging
 - [ ] **Phase 41: MCP Server** - Manually curated MCP tools wrapping Phase 40 endpoints, ASGI mounting, and Streamable HTTP transport
 
@@ -124,12 +124,14 @@ Plans:
   2. Admin can view all API keys for any user from the User Management screen
   3. Admin can create and revoke API keys on behalf of any user
   4. A `SPECTRA_MODE=api` backend service is deployable as a 5th Dokploy Application with its own public HTTPS domain
-**Plans**: 3 plans
+**Plans**: 5 plans
 
 Plans:
-- [ ] 39-01-PLAN.md — Backend: ApiKey model migration, admin service methods, admin API key router, /api/v1/health endpoint
-- [ ] 39-02-PLAN.md — Public frontend ApiKeySection enhancement (credit usage column) + DEPLOYMENT.md 5th service docs + API mode CORS
-- [ ] 39-03-PLAN.md — Admin frontend: UserApiKeysTab component + hooks + UserDetailTabs 5th tab integration
+- [x] 39-01-PLAN.md — Backend: ApiKey model migration, admin service methods, admin API key router, /api/v1/health endpoint
+- [x] 39-02-PLAN.md — Public frontend ApiKeySection enhancement (credit usage column) + DEPLOYMENT.md 5th service docs + API mode CORS
+- [x] 39-03-PLAN.md — Admin frontend: UserApiKeysTab component + hooks + UserDetailTabs 5th tab integration
+- [ ] 39-04-PLAN.md — Gap closure: Fix /api/v1 router prefix, admin revoke 204 handling, admin key list table layout
+- [ ] 39-05-PLAN.md — Gap closure: Public frontend credit usage label, last used display, admin badge for admin-created keys
 
 ### Phase 40: REST API v1 Endpoints
 **Goal**: External callers can programmatically manage files, retrieve file context, and run synchronous analysis queries — all authenticated by API key with credit deduction and usage logging
@@ -197,6 +199,6 @@ Plans:
 | 36. Dokploy Deployment and DEPLOYMENT.md | v0.6 | 3/3 | Complete | 2026-02-20 |
 | 37. Admin Seed on Startup | v0.6 | 1/1 | Complete | 2026-02-21 |
 | 38. API Key Infrastructure (incl. dev mode) | v0.7 | Complete    | 2026-02-24 | 2026-02-23 |
-| 39. API Key Management UI + Deployment Mode | 3/3 | Complete    | 2026-02-24 | - |
+| 39. API Key Management UI + Deployment Mode | v0.7 | 3/5 | Gap closure    | - |
 | 40. REST API v1 Endpoints | v0.7 | 0/TBD | Not started | - |
 | 41. MCP Server | v0.7 | 0/TBD | Not started | - |
