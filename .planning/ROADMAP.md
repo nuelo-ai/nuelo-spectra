@@ -124,7 +124,12 @@ Plans:
   2. Admin can view all API keys for any user from the User Management screen
   3. Admin can create and revoke API keys on behalf of any user
   4. A `SPECTRA_MODE=api` backend service is deployable as a 5th Dokploy Application with its own public HTTPS domain
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 39-01-PLAN.md — Backend: ApiKey model migration, admin service methods, admin API key router, /api/v1/health endpoint
+- [ ] 39-02-PLAN.md — Public frontend ApiKeySection enhancement (credit usage column) + DEPLOYMENT.md 5th service docs + API mode CORS
+- [ ] 39-03-PLAN.md — Admin frontend: UserApiKeysTab component + hooks + UserDetailTabs 5th tab integration
 
 ### Phase 40: REST API v1 Endpoints
 **Goal**: External callers can programmatically manage files, retrieve file context, and run synchronous analysis queries — all authenticated by API key with credit deduction and usage logging
