@@ -86,41 +86,41 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| APIKEY-01 | TBD | Pending |
-| APIKEY-02 | TBD | Pending |
-| APIKEY-03 | TBD | Pending |
-| APIKEY-04 | TBD | Pending |
-| APIKEY-05 | TBD | Pending |
-| APIKEY-06 | TBD | Pending |
-| APIKEY-07 | TBD | Pending |
-| APIKEY-08 | TBD | Pending |
-| APISEC-01 | TBD | Pending |
-| APISEC-02 | TBD | Pending |
-| APISEC-03 | TBD | Pending |
-| APISEC-04 | TBD | Pending |
-| APIF-01 | TBD | Pending |
-| APIF-02 | TBD | Pending |
-| APIF-03 | TBD | Pending |
-| APIF-04 | TBD | Pending |
-| APIC-01 | TBD | Pending |
-| APIC-02 | TBD | Pending |
-| APIC-03 | TBD | Pending |
-| APIQ-01 | TBD | Pending |
-| APIINFRA-01 | TBD | Pending |
-| APIINFRA-02 | TBD | Pending |
-| APIINFRA-03 | TBD | Pending |
-| APIINFRA-04 | TBD | Pending |
-| MCP-01 | TBD | Pending |
-| MCP-02 | TBD | Pending |
-| MCP-03 | TBD | Pending |
-| MCP-04 | TBD | Pending |
-| MCP-05 | TBD | Pending |
+| APIKEY-01 | Phase 38 | Pending |
+| APIKEY-02 | Phase 38 | Pending |
+| APIKEY-03 | Phase 38 | Pending |
+| APIKEY-04 | Phase 38 | Pending |
+| APIKEY-05 | Phase 38 | Pending |
+| APIKEY-06 | Phase 39 | Pending |
+| APIKEY-07 | Phase 39 | Pending |
+| APIKEY-08 | Phase 39 | Pending |
+| APISEC-01 | Phase 38 | Pending |
+| APISEC-02 | Phase 38 | Pending |
+| APISEC-03 | Phase 40 | Pending |
+| APISEC-04 | Phase 40 | Pending |
+| APIF-01 | Phase 40 | Pending |
+| APIF-02 | Phase 40 | Pending |
+| APIF-03 | Phase 40 | Pending |
+| APIF-04 | Phase 40 | Pending |
+| APIC-01 | Phase 40 | Pending |
+| APIC-02 | Phase 40 | Pending |
+| APIC-03 | Phase 40 | Pending |
+| APIQ-01 | Phase 40 | Pending |
+| APIINFRA-01 | Phase 38 | Pending |
+| APIINFRA-02 | Phase 38 | Pending |
+| APIINFRA-03 | Phase 39 | Pending |
+| APIINFRA-04 | Phase 40 | Pending |
+| MCP-01 | Phase 41 | Pending |
+| MCP-02 | Phase 41 | Pending |
+| MCP-03 | Phase 41 | Pending |
+| MCP-04 | Phase 41 | Pending |
+| MCP-05 | Phase 41 | Pending |
 
 **Coverage:**
 - v0.7 requirements: 29 total
-- Mapped to phases: 0 (TBD — roadmap pending)
-- Unmapped: 29 ⚠️
+- Mapped to phases: 29 (Phase 38: 9, Phase 39: 4, Phase 40: 11, Phase 41: 5)
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-23*
-*Last updated: 2026-02-23 after initial definition*
+*Last updated: 2026-02-23 — traceability updated after roadmap creation*
