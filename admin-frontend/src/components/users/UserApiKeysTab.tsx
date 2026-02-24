@@ -200,7 +200,7 @@ export function ApiKeysTab({ user }: ApiKeysTabProps) {
                   <TableHead>Key Prefix</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead>Last Used</TableHead>
-                  <TableHead>Credits</TableHead>
+                  <TableHead>Credit Usage</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
