@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 38 of 41 (v0.7) — API Key Infrastructure
-Plan: 1 of 4 complete
+Plan: 2 of 4 complete
 Status: Executing
-Last activity: 2026-02-24 — Completed 38-01 (data foundation: ApiKey model, migration, config)
+Last activity: 2026-02-24 — Completed 38-02 (ApiKeyService + schemas, TDD verified)
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 🚧 Phase 38 of 41
 
@@ -29,6 +29,7 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7
 |-------|-------|-------|----------|
 | v0.6 (33-37) | 10 | ~3 days | ~7 hrs |
 | 38-01 | 3 tasks | 3 min | 1 min |
+| 38-02 | 2 tasks | 2 min | 1 min |
 
 **Recent Trend:**
 - Last milestone: v0.6 shipped cleanly — 5 phases, 10 plans, zero deferred items
@@ -43,6 +44,8 @@ See PROJECT.md Key Decisions table for full decision log.
 Recent decisions (v0.7 execution):
 - Manual Alembic migration when no local DB available — verified via script loading and HEAD detection
 - field_validator on spectra_mode rejects unknown modes at Settings construction (earlier than main.py)
+- ApiKeyService authenticate() filters is_active==True in SQL WHERE clause (not post-fetch Python check)
+- Service uses db.flush() not db.commit() -- FastAPI request lifecycle controls transaction boundary
 
 Research decisions (v0.7 planning):
 - API keys use SHA-256 hashing (not Argon2) — high-entropy random token; SHA-256 is industry standard (GitHub, Stripe), no performance penalty
@@ -70,5 +73,5 @@ Research decisions (v0.7 planning):
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 38-01-PLAN.md (data foundation)
-Resume with: `/gsd:execute-phase 38` (continues with plan 02)
+Stopped at: Completed 38-02-PLAN.md (ApiKeyService + schemas)
+Resume with: `/gsd:execute-phase 38` (continues with plan 03)

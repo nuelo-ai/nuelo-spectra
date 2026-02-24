@@ -7,9 +7,9 @@
 
 ### API Key Management (APIKEY)
 
-- [ ] **APIKEY-01**: User can view their API keys on the Settings/API Keys page
-- [ ] **APIKEY-02**: User can create an API key with a name and description
-- [ ] **APIKEY-03**: User can revoke their own API keys
+- [x] **APIKEY-01**: User can view their API keys on the Settings/API Keys page
+- [x] **APIKEY-02**: User can create an API key with a name and description
+- [x] **APIKEY-03**: User can revoke their own API keys
 - [x] **APIKEY-04**: Revoked API keys cannot be used for authentication
 - [x] **APIKEY-05**: API keys are stored securely (hashed, full key shown only once at creation)
 - [ ] **APIKEY-06**: Admin can view API keys for all users from User Management
@@ -18,8 +18,8 @@
 
 ### API Authentication & Security (APISEC)
 
-- [ ] **APISEC-01**: API requests authenticate via API key in `Authorization: Bearer` header
-- [ ] **APISEC-02**: Invalid or revoked API keys return 401 Unauthorized
+- [x] **APISEC-01**: API requests authenticate via API key in `Authorization: Bearer` header
+- [x] **APISEC-02**: Invalid or revoked API keys return 401 Unauthorized
 - [ ] **APISEC-03**: API calls deduct credits from the user's balance (same cost as chat)
 - [ ] **APISEC-04**: API usage is logged per user and per API key (timestamp, endpoint, credits used)
 
@@ -87,16 +87,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| APIKEY-01 | Phase 38 | Pending |
-| APIKEY-02 | Phase 38 | Pending |
-| APIKEY-03 | Phase 38 | Pending |
+| APIKEY-01 | Phase 38 | Complete |
+| APIKEY-02 | Phase 38 | Complete |
+| APIKEY-03 | Phase 38 | Complete |
 | APIKEY-04 | Phase 38 | Complete |
 | APIKEY-05 | Phase 38 | Complete |
 | APIKEY-06 | Phase 39 | Pending |
 | APIKEY-07 | Phase 39 | Pending |
 | APIKEY-08 | Phase 39 | Pending |
-| APISEC-01 | Phase 38 | Pending |
-| APISEC-02 | Phase 38 | Pending |
+| APISEC-01 | Phase 38 | Complete |
+| APISEC-02 | Phase 38 | Complete |
 | APISEC-03 | Phase 40 | Pending |
 | APISEC-04 | Phase 40 | Pending |
 | APIF-01 | Phase 40 | Pending |
