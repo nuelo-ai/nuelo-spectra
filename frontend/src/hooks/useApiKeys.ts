@@ -15,6 +15,7 @@ export interface ApiKeyListItem {
   is_active: boolean;
   created_at: string;
   last_used_at: string | null;
+  total_credits_used: number;
 }
 
 export interface ApiKeyCreateResponse {

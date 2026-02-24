@@ -176,6 +176,7 @@ export function ApiKeySection() {
                       {key.last_used_at && (
                         <span>Last used {new Date(key.last_used_at).toLocaleDateString()}</span>
                       )}
+                      <span>Credits: {key.total_credits_used.toFixed(1)}</span>
                     </div>
                   </div>
                   {key.is_active && (
