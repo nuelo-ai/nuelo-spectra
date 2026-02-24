@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 40 of 41 (v0.7) — REST API v1 Endpoints
-Plan: 3 of 3 complete
+Plan: 4 of 4 complete
 Status: Phase 40 Complete
-Last activity: 2026-02-24 — Completed 40-03 (Query Endpoint & Usage Logging)
+Last activity: 2026-02-24 — Completed 40-04 (Gap Closure for UAT Issues)
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 🚧 Phase 40 of 41
 
@@ -44,6 +44,7 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7
 | 40-01 | 3 tasks | 3 min | 1 min |
 | Phase 40 P02 | 2min | 2 tasks | 3 files |
 | 40-03 | 2 tasks | 3 min | 1.5 min |
+| 40-04 | 2 tasks | 1 min | 30s |
 
 ## Accumulated Context
 
@@ -88,6 +89,8 @@ Research decisions (v0.7 planning):
 - [Phase 40]: Hybrid logging: middleware for structured Python logs, explicit DB logging in credit-consuming endpoints
 - [Phase 40]: build_chat_graph(checkpointer=None) for stateless API queries instead of get_or_create_graph()
 - [Phase 40]: Messages in initial_state directly (not aupdate_state) since no checkpointer exists
+- [Phase 40]: db.commit() in context endpoint (not flush) because endpoint directly mutates ORM without service layer
+- [Phase 40]: Custom exception_handler wraps HTTPException in ApiErrorResponse envelope only for /v1/ routes, preserving default format for other routes
 
 ### Pending Todos
 
@@ -106,5 +109,5 @@ Research decisions (v0.7 planning):
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 40-03-PLAN.md (Query Endpoint & Usage Logging) — Phase 40 complete
+Stopped at: Completed 40-04-PLAN.md (Gap Closure for UAT Issues) — Phase 40 fully complete
 Resume with: Continue with Phase 41 (MCP Integration)

@@ -206,5 +206,5 @@ Plans:
 | 37. Admin Seed on Startup | v0.6 | 1/1 | Complete | 2026-02-21 |
 | 38. API Key Infrastructure (incl. dev mode) | v0.7 | Complete    | 2026-02-24 | 2026-02-23 |
 | 39. API Key Management UI + Deployment Mode | 5/5 | Complete    | 2026-02-24 | - |
-| 40. REST API v1 Endpoints | 4/4 | UAT gap closure    | 2026-02-24 | - |
+| 40. REST API v1 Endpoints | 4/4 | Complete   | 2026-02-24 | - |
 | 41. MCP Server | v0.7 | 0/TBD | Not started | - |
