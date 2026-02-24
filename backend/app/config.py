@@ -118,6 +118,9 @@ class Settings(BaseSettings):
     admin_session_timeout_minutes: int = 30
     admin_cors_origin: str = "http://localhost:3001"  # Admin frontend origin
 
+    # MCP Server
+    mcp_api_base_url: str = "http://localhost:8000"  # Internal REST API URL for MCP tool calls
+
     # Scheduler
     enable_scheduler: bool = False  # Set ENABLE_SCHEDULER=true for credit reset job
 
