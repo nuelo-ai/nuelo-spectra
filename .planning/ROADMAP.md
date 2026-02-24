@@ -143,7 +143,12 @@ Plans:
   3. API caller can retrieve a file's full context (data brief, summary, suggestions) and update the summary/context fields
   4. API caller can send a natural language query against a file and receive the complete analysis result (code, chart spec, explanation) synchronously
   5. Each analysis query deducts credits from the caller's balance; each API request is logged (endpoint, credits used, status code) and structured request/error logs are written
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 40-01-PLAN.md — Foundation: API envelope schemas, ApiUsageLog model + migration, usage service, credit refund, auth api_key_id tracking
+- [ ] 40-02-PLAN.md — File + context endpoints: upload, list, delete, download, get context, update context, get suggestions
+- [ ] 40-03-PLAN.md — Query endpoint + usage logging: stateless analysis with credit deduction/refund, API usage middleware
 
 ### Phase 41: MCP Server
 **Goal**: Claude Desktop, Claude Code, or any MCP host can use Spectra's analysis capabilities as first-class tools via a production-ready MCP server
@@ -200,5 +205,5 @@ Plans:
 | 37. Admin Seed on Startup | v0.6 | 1/1 | Complete | 2026-02-21 |
 | 38. API Key Infrastructure (incl. dev mode) | v0.7 | Complete    | 2026-02-24 | 2026-02-23 |
 | 39. API Key Management UI + Deployment Mode | 5/5 | Complete    | 2026-02-24 | - |
-| 40. REST API v1 Endpoints | v0.7 | 0/TBD | Not started | - |
+| 40. REST API v1 Endpoints | v0.7 | 0/3 | Planned | - |
 | 41. MCP Server | v0.7 | 0/TBD | Not started | - |
