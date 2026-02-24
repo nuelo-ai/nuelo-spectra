@@ -1,396 +1,386 @@
-# Feature Research: Docker and Dokploy Deployment (v0.5.1)
+# Feature Research
 
-**Domain:** Docker containerization and Dokploy deployment for FastAPI + Next.js multi-service app
-**Researched:** 2026-02-18
-**Confidence:** HIGH (official Next.js docs verified, Dokploy docs verified, codebase inspected)
-**Supersedes:** Previous FEATURES.md (v0.5 Admin Portal features, 2026-02-16)
-
----
-
-## Executive Summary
-
-Spectra v0.5.1 packages an existing, fully functional production app into Docker containers for Dokploy deployment. This is a "wrap the existing app" milestone, not a "build new features" milestone. The risk is not capability -- Docker + Dokploy is well-understood -- the risk is configuration correctness: wrong environment variable strategy, broken SSE streaming through proxies, missed volume mounts, or misconfigured inter-service networking.
-
-Three services need Dockerfiles: FastAPI backend, Next.js public frontend, Next.js admin frontend. The backend uses uv for dependency management, so multi-stage builds leverage uv's venv copy pattern. Both Next.js apps use Next.js standalone output mode to reduce image size dramatically (from ~7GB to ~300MB typical). A Docker Compose file covers local development with all services + PostgreSQL.
-
-**Critical discovery from codebase inspection:** Both frontends currently use Next.js rewrites (`/api/*` -> backend) for almost all API calls, meaning they do NOT use `NEXT_PUBLIC_API_URL`. However, there are two hardcoded `localhost:8000` direct fetch calls in the public frontend (`useSSEStream.ts` line 112 and `register/page.tsx` line 26) that bypass the rewrite proxy. These must be fixed as part of this milestone -- they will fail in Docker where the backend is not at `localhost:8000`.
-
-**NEXT_PUBLIC_ variable strategy for Spectra:** Because both frontends already use relative `/api/` paths (proxied via Next.js rewrites), the `NEXT_PUBLIC_API_URL` approach is NOT needed for the rewrite-based API calls. The rewrite destination URL in `next.config.ts` IS the only thing that needs updating for Docker -- it is a server-side Next.js config value read at build time, but the destination hostname is the Docker service name (e.g., `http://backend:8000`). For Dokploy production, because services communicate over the dokploy-network, the rewrite destination changes to the backend's internal Dokploy hostname.
+**Domain:** API Key Management, Public REST API v1, and MCP Server — Spectra v0.7
+**Researched:** 2026-02-23
+**Confidence:** HIGH (API key UX and REST patterns verified against multiple sources and industry standards; MCP verified against official modelcontextprotocol.io docs and Python SDK)
+**Supersedes:** Previous FEATURES.md (v0.6 Docker/Dokploy features, 2026-02-18)
 
 ---
 
-## Service Architecture Reference
+## Context: Subsequent Milestone Scope
 
-```
-3 Dokploy services + 1 Dokploy-managed PostgreSQL:
+This research covers only the NEW features being added in v0.7. The following already exist and must NOT be re-planned:
 
-  [public-frontend]     [admin-frontend]
-     port 3000            port 3000 (container)
-        |                      |
-        | Next.js rewrite      | Next.js rewrite
-        v                      v
-     [backend]              [backend]
-     port 8000
-        |
-     [PostgreSQL]  -- Dokploy-managed database
-     [/app/uploads] -- Docker volume (file uploads persistence)
-```
+- JWT authentication with refresh tokens
+- File upload and management (Excel/CSV, up to 50MB)
+- 6-agent LangGraph analysis system (sessions, multi-file, cross-file, streaming)
+- Credit system with atomic deduction and tier-based allocations
+- Admin portal with user management (SPECTRA_MODE split-horizon)
+- Docker/Dokploy deployment infrastructure
 
-All three services connect to `dokploy-network`. Services reference each other by their Dokploy application service name as DNS hostname.
+v0.7 adds three surfaces on top of the existing backend:
+1. **API key management** — new DB table + CRUD endpoints + user-facing UI screen + admin portal extension
+2. **Public REST API v1** — programmatic access to file management and analysis capabilities
+3. **MCP server** — wraps REST API as tools callable by Claude Desktop, Claude Code, or any MCP host
 
 ---
 
-## Table Stakes
+## Feature Landscape
 
-Features every production Docker deployment must have. Missing any of these means the deployment is not production-ready.
+### Table Stakes (Users Expect These)
 
-### Backend (FastAPI)
+Features that developers and API consumers assume exist. Missing any of these makes the product feel incomplete or untrustworthy to developers evaluating integration.
 
-| Feature | Why Required | Complexity | Dependencies on Existing Code |
-|---------|-------------|------------|-------------------------------|
-| **Multi-stage Dockerfile (uv-based)** | Single-stage images are 3-5x larger, include build tools in production, and are slow to rebuild. uv-based builds are the established Python production pattern as of 2025. | LOW | Backend uses uv (uv.lock exists). Builder stage: install uv, sync deps. Runtime stage: copy .venv only. Run as non-root `app` user. |
-| **Non-root user in container** | Running as root inside Docker is a security anti-pattern. If the container is compromised, attacker gets root access. Industry standard is a non-root `app` or `appuser`. | LOW | No existing dependency. Add `RUN adduser --system --uid 1001 app` and `USER app` before CMD. |
-| **HEALTHCHECK instruction in Dockerfile** | Dokploy uses HEALTHCHECK to determine if a container is healthy before routing traffic and for auto-restart decisions. The backend already has `GET /health` endpoint. | LOW | Backend already has `GET /health` at `app/routers/health.py`. Uses `curl -f http://localhost:8000/health`. |
-| **Volume mount for uploads** | File uploads stored at `/app/uploads` (configured via `UPLOAD_DIR` env var) must persist across container restarts and redeploys. Without a volume, all user-uploaded files are lost on every deploy. | LOW | Backend `config.py` has `upload_dir: str = "uploads"`. In Docker, mount `/app/uploads` as a named volume or bind mount. Set `UPLOAD_DIR=/app/uploads`. |
-| **Environment variable injection (all secrets)** | `DATABASE_URL`, `SECRET_KEY`, `E2B_API_KEY`, `ANTHROPIC_API_KEY`, `SMTP_*`, `TAVILY_API_KEY` etc. must be injected via Dokploy environment variable UI, not baked into the image. | LOW | All config already in `app/config.py` via pydantic-settings. No code changes needed -- just populate Dokploy env vars. |
-| **SPECTRA_MODE=public for backend** | Backend routes are conditionally mounted based on `SPECTRA_MODE`. For production, the backend serving both public and admin frontends should use `SPECTRA_MODE=dev` or separate backend instances per mode. For simplest single-backend deployment, use `SPECTRA_MODE=dev`. | LOW | `SPECTRA_MODE` already in `app/config.py`. Set to `dev` for single backend instance, or `public` for a public-only backend. |
-| **ENABLE_SCHEDULER=true for backend** | APScheduler runs inside the backend process. Must be explicitly enabled in production via env var. APScheduler is already integrated in `app/scheduler.py` but defaults to `False`. | LOW | `enable_scheduler: bool = False` in `app/config.py`. Set `ENABLE_SCHEDULER=true` in Dokploy. |
-| **CORS origins configured** | Backend `CORS_ORIGINS` env var must include the actual deployed frontend URLs. Without correct CORS, browser requests from production frontend to backend will fail with CORS error. | LOW | `cors_origins` in `app/config.py` accepts JSON array string. Set `CORS_ORIGINS=["https://app.example.com","https://admin.example.com"]`. |
-| **Graceful shutdown (SIGTERM handling)** | FastAPI + uvicorn handle SIGTERM natively. The lifespan context manager in `main.py` already shuts down APScheduler and disposes the database engine on shutdown. No additional code needed, but the CMD must use uvicorn correctly so SIGTERM propagates (not shell form). | LOW | `main.py` already has lifespan context manager. Use `CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]` (exec form, not shell form). |
-| **Database connection via DATABASE_URL** | In Dokploy, PostgreSQL is a managed database with an internal hostname. `DATABASE_URL` must point to the internal Dokploy database hostname (not `localhost`). | LOW | `database_url: str` in `app/config.py`. Inject Dokploy's internal DB connection string. |
+#### API Key Management — User Self-Service
 
-### Public Frontend (Next.js)
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Create named API key | Every API portal lets users name keys descriptively. Name is the only identifier after creation since the full key is hashed. | LOW | Name is required; e.g., "CI pipeline prod" or "Claude Desktop". Enforce non-empty, max 100 chars. |
+| Display full key exactly once on creation | Industry-standard security invariant — key is hashed at rest, never stored in plaintext, therefore never retrievable after creation | LOW | Show full key in a modal/dialog with an explicit "Copy now. You will not be able to view this key again." warning and a copy-to-clipboard button. Modal closes on user confirmation. |
+| Show key prefix in list view | Users cannot identify keys without seeing something. Full hash is never stored, so a prefix (first 8-12 chars of raw key) is stored plaintext and displayed in the list. | LOW | Display format: `sk-spectra-abc12345...` — the prefix disambiguates keys without exposing anything useful to an attacker |
+| Revoke (delete) a key | Users must be able to decommission compromised or stale keys. Revocation must be immediate. | LOW | Confirmation dialog required. Set `revoked_at` timestamp; do not hard-delete (audit trail). Key immediately fails auth after revocation. |
+| List keys with metadata | Developers need to audit what keys exist and when they were last used to identify stale keys or suspicious access | LOW | Columns: Name, Prefix, Created, Last Used (or "Never"), Status (Active / Revoked) |
+| Key status indicator | Instant visual feedback on usability. Active keys are the operational default; revoked keys are dead. | LOW | Active (green) / Revoked (red/muted). No other statuses at v1. |
+| Cannot view key again after creation | Security invariant enforced in UI — no "reveal key" button anywhere. Only prefix is ever shown post-creation. | LOW | Any "view key" UI is an anti-pattern. The list shows prefix only; full key is permanently gone after the creation modal closes. |
 
-| Feature | Why Required | Complexity | Dependencies on Existing Code |
-|---------|-------------|------------|-------------------------------|
-| **Multi-stage Dockerfile (standalone mode)** | Next.js standalone output (`output: 'standalone'` in next.config.ts) reduces image from ~7GB to ~300MB by tracing only required dependencies. Official Next.js Docker pattern. | LOW | Must add `output: 'standalone'` to `frontend/next.config.ts`. Three-stage build: deps -> builder -> runner. |
-| **Non-root user in container** | Same security rationale as backend. Next.js official Dockerfile example uses `nextjs:nodejs` non-root user with uid 1001. | LOW | Add `RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs` and `USER nextjs`. |
-| **HEALTHCHECK instruction** | Dokploy needs to verify the Next.js app is serving before routing traffic. Next.js has no built-in `/health` endpoint -- must add one as an API route. | LOW | Need to create `frontend/src/app/api/health/route.ts` that returns `{status: "ok"}`. Uses Next.js App Router route handler pattern. |
-| **Backend URL in Next.js rewrite (server-side)** | Both frontends proxy `/api/*` to the backend via `next.config.ts` rewrites. The destination URL (`http://localhost:8000`) must be changed to the backend's Docker service hostname. This is a server-side config value -- NOT a NEXT_PUBLIC_ variable. | MEDIUM | Change `frontend/next.config.ts` rewrite destination from `http://localhost:8000` to env-var-driven value: `process.env.BACKEND_URL ?? 'http://localhost:8000'`. Then set `BACKEND_URL=http://backend:8000` in Docker. |
-| **SSE stream URL fix (hardcoded localhost bug)** | `frontend/src/hooks/useSSEStream.ts` line 112 has `fetch('http://localhost:8000/chat/...')` hardcoded. This bypasses the Next.js rewrite. In Docker, this call fails. Must fix to use relative `/api/chat/sessions/${sessionId}/stream` path OR use a `NEXT_PUBLIC_BACKEND_URL` env var. | MEDIUM | Direct code fix in `useSSEStream.ts`. SSE via Next.js rewrite works -- the rewrite is a server-side proxy, not a client-side redirect. Change to `fetch('/api/chat/sessions/${sessionId}/stream', ...)`. |
-| **Signup status URL fix (hardcoded localhost bug)** | `frontend/src/app/(auth)/register/page.tsx` line 26 has `fetch('http://localhost:8000/auth/signup-status')` hardcoded. Same issue. Must fix. | LOW | Change to `fetch('/api/auth/signup-status')`. Same relative-path pattern as all other API calls. |
-| **NODE_ENV=production** | Next.js enables production optimizations only when `NODE_ENV=production`. In standalone mode, set at runtime (not build time). | LOW | Set `ENV NODE_ENV=production` in runner stage of Dockerfile. |
-| **PORT and HOSTNAME env vars** | Next.js standalone `server.js` reads `PORT` and `HOSTNAME` env vars. Must set `HOSTNAME=0.0.0.0` so server binds to all interfaces (not just localhost), making it reachable inside Docker. | LOW | Set `ENV PORT=3000` and `ENV HOSTNAME=0.0.0.0` in Dockerfile runner stage. |
+#### API Key Management — Admin Portal Extension
 
-### Admin Frontend (Next.js)
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| View all users' API keys | Admins must audit key usage across the platform for security compliance and support | LOW | Read-only list view per user within existing admin user management screen. Same metadata columns as user view. |
+| Revoke any user's key | Security incident response: admin must be able to kill any key without user cooperation | LOW | Add revoke action to admin key list. Extends existing admin user management patterns. |
+| Last-used timestamp per key visible to admin | Identifies stale keys, dormant API integrations, or anomalous usage patterns | LOW | Populated on every successful API key auth request. Visible in admin view. |
 
-| Feature | Why Required | Complexity | Dependencies on Existing Code |
-|---------|-------------|------------|-------------------------------|
-| **Multi-stage Dockerfile (standalone mode)** | Same rationale as public frontend. Admin frontend in `admin-frontend/` is a separate Next.js app. | LOW | Must add `output: 'standalone'` to `admin-frontend/next.config.ts`. Same 3-stage pattern. |
-| **Non-root user in container** | Same as public frontend. | LOW | Same pattern: nextjs:nodejs non-root user. |
-| **HEALTHCHECK instruction** | Same need as public frontend. Admin frontend needs its own health endpoint. | LOW | Create `admin-frontend/src/app/api/health/route.ts`. |
-| **Backend URL in Next.js rewrite** | `admin-frontend/next.config.ts` rewrites `/api/*` to `http://localhost:8000/api/*`. Must be updated for Docker service name. | MEDIUM | Change rewrite destination to `${process.env.BACKEND_URL ?? 'http://localhost:8000'}/api/*`. Set `BACKEND_URL=http://backend:8000` in Docker. |
-| **SPECTRA_MODE context** | Backend must be in `admin` or `dev` mode to serve admin routes. The admin frontend connects to the same backend as the public frontend (single backend in `dev` mode), or a separate backend in `admin` mode. For simplest deployment: single backend in `dev` mode serves both. | LOW | No frontend code change. Backend env var `SPECTRA_MODE=dev`. |
-| **Admin CORS origin** | Backend `ADMIN_CORS_ORIGIN` must be set to the admin frontend's production URL. | LOW | Set `ADMIN_CORS_ORIGIN=https://admin.example.com` in backend Dokploy env vars. |
+#### Public REST API v1
 
-### Shared / Cross-Service
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Bearer token auth via API key | Standard HTTP auth pattern for REST APIs. Developers expect `Authorization: Bearer {key}` | LOW | New auth dependency in FastAPI that validates API key, looks up user, checks revoked status, updates `last_used_at` |
+| `/api/v1/` URL prefix | Signals versioning intent. Developers assume any production API is versioned. Absence feels like a red flag. | LOW | All API v1 routes under `/api/v1/`. Internal JWT routes remain at `/api/`. No naming conflict. |
+| Consistent JSON response envelope | Predictable structure enables client code that doesn't inspect every endpoint's shape | LOW | Success: `{"data": {...}, "meta": {"request_id": "..."}}`. Error: `{"error": {"code": "...", "message": "..."}}` |
+| Structured error responses | Machine-readable `code` + human-readable `message`. Required for client error handling and debugging. | LOW | Error codes should be screaming-snake: `FILE_NOT_FOUND`, `INSUFFICIENT_CREDITS`, `ANALYSIS_TIMEOUT`. Include `request_id` for support correlation. |
+| `GET /api/v1/files` — list user files | Core discovery endpoint. Developers need to know what files are available before querying. | LOW | Reuse existing file listing service. New auth adapter. Returns: `id`, `name`, `size`, `upload_date`, `row_count` |
+| `GET /api/v1/files/{id}/context` — get file profile | The AI-generated data profile is Spectra's highest-value zero-cost (pre-computed) response. Agents need this to form good queries. | LOW | Returns profiling summary, column names and types, row count, AI-generated natural language description. All computed at upload time. |
+| `POST /api/v1/analysis` — submit query | The core product capability. Primary reason to use the API. | MEDIUM | Synchronous blocking; accepts `file_ids[]`, `query` string; invokes LangGraph pipeline; returns answer, optional table, optional chart spec. Credit deduction required. |
+| Credit deduction on API queries | API access must respect the existing credit model. Developers should not be able to bypass billing by using the API instead of the web UI. | LOW | Reuse existing `SELECT FOR UPDATE` atomic deduction. Same credit cost as interactive queries. Return `INSUFFICIENT_CREDITS` error when balance is zero. |
+| `GET /api/v1/me` — current user info | Developers need to verify auth is working and check their remaining credits | LOW | Returns: `user_id`, `email`, `tier`, `credits_remaining`. Simple read-only endpoint. |
+| 429 Too Many Requests on credit exhaustion | Standard API error for resource exhaustion. Developers expect HTTP semantics. | LOW | Return 429 with `Retry-After` header when credits hit zero. Communicates "temporary" exhaustion vs. 403 "permanently forbidden". |
+| OpenAPI docs at `/api/v1/docs` | Developers expect interactive documentation. FastAPI generates this automatically. | LOW | Zero marginal implementation cost. Set `docs_url="/api/v1/docs"` on the v1 APIRouter. Essential for developer adoption. |
 
-| Feature | Why Required | Complexity | Dependencies on Existing Code |
-|---------|-------------|------------|-------------------------------|
-| **Docker Compose for local dev** | Single-command local development with all services + PostgreSQL. Developers must be able to run the full stack locally via `docker compose up`. | MEDIUM | New `docker-compose.yml` at repo root. Services: `backend`, `frontend`, `admin-frontend`, `postgres`. Backend depends on postgres. Both frontends depend on backend. |
-| **DEPLOYMENT.md guide** | Deployment of a multi-service app to Dokploy is not self-evident. Step-by-step guide covering Dokploy project creation, 3 service configurations, environment variables, volume setup, domain assignment, and SSL. | LOW | New document. No code dependencies. |
-| **Port assignments** | Standardized ports prevent conflicts. Backend: 8000. Public frontend: 3000. Admin frontend: 3001 (host-mapped, container port is 3000). | LOW | In Docker Compose, map `3001:3000` for admin-frontend. In Dokploy, each service gets its own container and domain -- port conflicts don't apply at container level. |
-| **Restart policy** | Containers should auto-restart on crash. Dokploy supports restart policies (`always`, `on-failure`, etc.). Set `unless-stopped` for all services. | LOW | Dokploy UI restart policy setting. In Docker Compose, `restart: unless-stopped`. |
+#### MCP Server
 
----
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| `tools/list` discovery | Core MCP protocol requirement. Any MCP host (Claude Desktop, Claude Code) issues `tools/list` on connect to enumerate capabilities. | LOW | Handled automatically by MCP SDK. Tool metadata is declared once in tool definitions. |
+| `tools/call` execution | Core MCP execution primitive. How the LLM invokes a tool and receives results. | LOW | SDK handles JSON-RPC routing. Developer writes handler functions. |
+| JSON Schema input definitions per tool | LLMs use the schema to generate valid tool arguments. Missing or vague schema causes bad argument generation. | LOW | Defined via Python type hints in `@mcp.tool()` decorators. SDK auto-generates JSON Schema from types. |
+| Natural language tool descriptions | The LLM uses the `description` field to decide when and whether to call a tool. Vague descriptions cause wrong tool selection. | LOW | Critical quality gate: descriptions must be precise about what the tool does, when to use it, and what inputs mean. |
+| Streamable HTTP transport | Required for remote MCP servers serving multiple clients. stdio transport is local-process only. | LOW | Official MCP Python SDK (`mcp` package, 1.8+) supports `streamable-http` transport natively. |
+| API key auth passed from MCP client config | MCP server calls the REST API on behalf of a user. It needs the user's Spectra API key to authenticate. | LOW | User configures their API key in Claude Desktop's MCP server settings (env var or config param). MCP server reads it at startup and passes as `Authorization: Bearer` on all REST API calls. |
 
-## Differentiators
+### Differentiators (Competitive Advantage)
 
-Production hardening extras beyond the minimum. Each is independently valuable for a single-developer project.
+Features beyond table stakes that create differentiated value for Spectra's AI-agent integration use case.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| **Build cache optimization (Docker layer ordering)** | Dependency installation in a separate layer means code changes don't trigger dep reinstalls. Reduces build time from 3-5 min to 30-60 sec after first build. | LOW | In backend Dockerfile: COPY pyproject.toml uv.lock FIRST, RUN uv sync, THEN COPY app/. In frontend Dockerfile: COPY package.json package-lock.json FIRST, RUN npm ci, THEN COPY src/. Official best practice. |
-| **Alembic migration in Docker entrypoint** | Running `alembic upgrade head` before starting uvicorn ensures database schema is always up to date on deployment. Prevents "table doesn't exist" errors on first deploy. | LOW | Backend Dockerfile CMD or entrypoint.sh: `alembic upgrade head && uvicorn app.main:app ...`. Alternatively, run migration as a separate Dokploy job before deploying. |
-| **libc6-compat in Alpine Next.js image** | Alpine Linux with Node.js sometimes requires `libc6-compat` for native modules. Without it, certain npm packages fail at startup. Official Next.js Dockerfile includes it. | LOW | `RUN apk add --no-cache libc6-compat` in deps stage. One line. |
-| **NEXT_TELEMETRY_DISABLED=1** | Next.js collects anonymous usage telemetry. In production Docker containers, this creates unnecessary outbound network calls at build time and startup. | LOW | `ENV NEXT_TELEMETRY_DISABLED=1` in Dockerfile builder and runner stages. |
-| **curl installed for health checks** | The backend Docker image (Python slim) does not include curl by default. HEALTHCHECK instruction using `curl` requires it to be installed. | LOW | `RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*` in runtime stage. Alternatively, use Python urllib for health check (no extra dep needed). |
-| **.dockerignore files** | Without .dockerignore, the Docker build context includes `node_modules/`, `.next/`, `__pycache__/`, `.env` files, and `venv/`. This slows build and can leak secrets. | LOW | New `.dockerignore` for each service directory. Key exclusions: `node_modules`, `.next`, `__pycache__`, `*.pyc`, `.env`, `venv`, `uploads`. |
-| **UV_COMPILE_BYTECODE=1** | Compiles Python to .pyc at build time for faster container startup. Production-only optimization. | LOW | `ENV UV_COMPILE_BYTECODE=1` in builder stage. |
-| **ReadOnly root filesystem (partial)** | Limit writable areas to explicit volume mounts and `/tmp`. Reduces attack surface. Only applies to backend (needs `/app/uploads` writable). Frontend containers can be fully read-only with `/tmp` tmpfs. | MEDIUM | Requires carefully mounting all writable paths. Skip for v0.5.1 -- too complex for marginal single-instance benefit. |
-| **Structured JSON logging** | Container logs go to stdout/stderr and are captured by Dokploy's log viewer. JSON-structured logs are more parseable but require additional config. | MEDIUM | Backend currently uses Python `logging.basicConfig`. Skip for v0.5.1 -- existing logs are readable and the product has 1 user (the developer). Add when log volume increases. |
+| `spectra_list_files` MCP tool | Exposes file inventory to agents so they can discover what data is available before querying. Without this, agents must know file IDs out of band. | LOW | Maps directly to `GET /api/v1/files`. Returns rich metadata so the agent can select the right file. |
+| `spectra_get_file_context` MCP tool | Exposes AI-generated data profile to agents. Agent reads column names, types, and data summary before forming queries — results in far more accurate analysis requests. | LOW | Maps to `GET /api/v1/files/{id}/context`. This is unique to Spectra: no other API would pre-compute and expose structured data profiles. |
+| `spectra_run_analysis` MCP tool | Core capability: agent asks a natural language question about data and gets structured results back in the conversation. | MEDIUM | Maps to `POST /api/v1/analysis`. Returns answer text + table data + optional chart spec. The chart spec can be rendered by the agent or ignored. |
+| `SPECTRA_MODE=api` deployment mode | Clean, dedicated API-serving backend with no web session overhead, no cookie routes, no WebSocket/SSE routes. Leaner process, easier to reason about. | LOW | Extends existing SPECTRA_MODE pattern (public / admin / dev). Disable interactive session endpoints. Enable API key auth as the only auth mechanism. |
+| Key naming with descriptive labels | Developers give each key a name so they can tell keys apart ("Mobile app", "Zapier integration"). Without names, a list of prefixes is meaningless. | LOW | Already included in table stakes — called out here because the UX quality of the creation modal (descriptive placeholder text, validation) is where products differentiate. |
+| `X-Credits-Remaining` response header | API consumers can track credit consumption per-request without polling `/api/v1/me`. Useful for automation pipelines that need to stay within budget. | LOW | Append remaining balance after deduction as a response header. One line of middleware. High UX value for zero implementation cost. |
+| Scoped API keys (read vs. analysis) | Limits blast radius of a leaked key. Read-only keys can access files and context but cannot trigger analysis (credit consumption). Enterprise users expect least-privilege. | MEDIUM | v1: Start with no scopes (full access is the default). Add two scopes — `files:read` and `analysis:run` — in v1.x when first enterprise user requests it. Schema should accommodate `scopes` column from day one to avoid migration pain. |
+| Key expiration / TTL | Enables short-lived keys for automation pipelines. Reduces stale key risk. Limits exposure window if a key is leaked. | LOW | Add `expires_at TIMESTAMPTZ NULL` column. NULL = no expiry. Check `expires_at < now()` in auth middleware. Expose in creation UI as optional field. |
 
----
+### Anti-Features (Commonly Requested, Often Problematic)
 
-## Anti-Features
-
-Features to explicitly NOT build. These seem helpful but add complexity for no real benefit at single-developer scale.
-
-| Anti-Feature | Why Requested | Why It's Wrong Here | Alternative |
-|--------------|---------------|---------------------|-------------|
-| **Runtime NEXT_PUBLIC_ injection via entrypoint script** | "One Docker image deployable to multiple environments without rebuilding" -- the classic argument for runtime env injection. | Spectra's frontends already use relative `/api/` paths via Next.js rewrites. They do NOT use `NEXT_PUBLIC_API_URL`. The only environment-specific config is the backend URL in `next.config.ts`, which is a server-side value read at startup (not baked at build time in standalone mode's `server.js`). A sed-based entrypoint to replace bundle strings is fragile, hard to debug, and unnecessary. | Set `BACKEND_URL` as a server-side env var (not NEXT_PUBLIC_). Next.js rewrites destination reads `process.env.BACKEND_URL` at startup. No rebuild needed between environments -- just set different env vars. |
-| **Gunicorn + uvicorn workers** | "Production needs multiple workers for performance." | Spectra has one production instance. APScheduler runs inside the process. Multiple uvicorn workers with APScheduler would cause duplicate scheduled jobs. E2B sandbox calls are the bottleneck, not Python workers. Multi-worker adds scheduler complexity for zero throughput benefit at current scale. | Single uvicorn worker: `uvicorn app.main:app --workers 1`. If horizontal scaling becomes needed, move APScheduler to Redis-backed Celery Beat instead of in-process. |
-| **Separate Docker image registry with CI/CD push** | "Build images in GitHub Actions, push to GHCR, Dokploy pulls from registry." | Valid for teams. Unnecessary for single-developer project. Dokploy can build directly from the Git repository on the Dokploy server. Eliminates GitHub Actions setup, registry authentication, and additional moving parts. | Dokploy builds from Git repo directly using the Dockerfile. No external registry needed. |
-| **Redis for session state and token revocation** | "Move in-memory token revocation and admin lockout to Redis for multi-instance safety." | PROJECT.md documents in-memory token revocation and admin lockout as known limitations. Adding Redis for a single-instance deployment is over-engineering. The "limitation" only matters at 2+ instances. | Keep in-memory. Accept the single-instance limitation. Document it in DEPLOYMENT.md. Add Redis if/when horizontal scaling is needed. |
-| **Kubernetes / Docker Swarm** | "Container orchestration for high availability." | Dokploy is the deployment target. Dokploy runs Docker Swarm under the hood, but it manages that. Using raw Swarm configs or Kubernetes configs would bypass Dokploy and add massive complexity. | Use Dokploy's built-in service management. Dokploy handles swarm details internally. |
-| **Separate nginx reverse proxy container** | "Put nginx in front of each service for static file serving and caching." | Next.js standalone mode includes its own Node.js HTTP server that serves static files correctly. Adding nginx adds a service, config, and potential SSE streaming issues (nginx requires `proxy_buffering off` for SSE). Dokploy's Traefik already handles TLS termination and routing. | Let Dokploy Traefik handle routing. Next.js serves its own static files. No additional nginx needed. |
-| **Multi-architecture Docker builds (arm64/amd64)** | "Build for both Mac M1 and Linux x86 servers." | The Dokploy server runs Linux x86. Development on M1 Mac can use the docker build with `--platform linux/amd64` flag. Multi-arch builds via buildx require additional CI setup. | Use `--platform linux/amd64` flag for local Mac builds targeting production. Or just build on the Dokploy server directly. |
-| **Docker secrets / secret management** | "Use Docker secrets instead of environment variables for sensitive values." | Docker secrets (Swarm secrets) require Swarm mode and additional secret creation steps. Dokploy's environment variable injection is encrypted at rest and sufficient for a single-developer project. | Use Dokploy's environment variable UI. All env vars are stored encrypted. This is appropriate for the scale. |
-
----
-
-## NEXT_PUBLIC_ Variable Strategy (Critical Decision)
-
-This deserves its own section because it is the most commonly misunderstood Docker + Next.js topic.
-
-### The Problem
-
-`NEXT_PUBLIC_` variables are inlined as string literals into the JavaScript bundle at `next build` time. After building, they cannot be changed without rebuilding. This means if you bake `NEXT_PUBLIC_API_URL=http://localhost:8000` into the image, that URL is frozen forever in the built bundle.
-
-### Spectra's Actual Situation
-
-**Spectra does NOT need `NEXT_PUBLIC_API_URL`.** Here is why:
-
-1. Both frontends use relative paths: `fetch('/api/...')` goes to the Next.js server, not directly to the backend
-2. The Next.js server then proxies `/api/*` to the backend via the `rewrites()` in `next.config.ts`
-3. The rewrite destination URL (`http://localhost:8000` in development) is read by `next.config.ts` on server startup -- this is NOT baked into the client bundle
-4. In Docker, simply set `BACKEND_URL=http://backend:8000` as a server-side environment variable, and update `next.config.ts` to read `process.env.BACKEND_URL`
-
-This means:
-- Build the Docker image once (no environment-specific builds)
-- Set `BACKEND_URL` at deploy time in Dokploy's env vars UI
-- No `NEXT_PUBLIC_` variables needed at all
-
-### The Two Hardcoded Bugs
-
-Two places in the public frontend bypass the rewrite proxy and directly fetch `localhost:8000`:
-
-1. `frontend/src/hooks/useSSEStream.ts` line 112: SSE stream endpoint
-2. `frontend/src/app/(auth)/register/page.tsx` line 26: Signup status check
-
-**Fix:** Change both to relative paths (`/api/...`). The Next.js rewrite proxy correctly handles SSE streams -- it streams the response through. No `NEXT_PUBLIC_` variable needed.
-
-### When NEXT_PUBLIC_ IS Actually Needed
-
-Only use `NEXT_PUBLIC_` if the frontend code runs entirely on the client side (pure SPA) with no server-side proxy. Since Spectra uses Next.js server-side rewrites, this does not apply.
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| SSE streaming on REST API | Developers used to interactive chat want streaming in the API too | Synchronous API design is far simpler to integrate, test, and document. SSE over HTTP adds client SDK complexity, server infrastructure complexity, and unclear benefit for the MCP use case where the tool call must complete before the LLM continues. | Synchronous blocking response. 30-60 second timeout is acceptable for data analysis. If individual queries regularly exceed 60s, the real fix is optimizing the pipeline, not adding streaming. |
+| Per-key rate limiting independent of credits | "Proper API management" | Credits already serve as the consumption gate. Adding a separate rate limit layer doubles state to manage. At Spectra's current scale, credits are more meaningful than req/min limits. | Use credits as the primary consumption gate. Add a hard abuse-prevention limit (e.g., 120 req/min per key) only as an anti-abuse floor. |
+| GraphQL API | Developers familiar with GraphQL ask for it | Spectra's operations (list files, run query, get context) are simple resource-oriented operations. GraphQL adds schema definition overhead, resolver complexity, and is harder for MCP to wrap than REST endpoints. | REST with a consistent JSON envelope covers all use cases at v1. |
+| OAuth 2.0 for API access | "OAuth is the proper auth standard" | OAuth adds an authorization server, redirect flows, token exchange endpoints, scope consent screens, and refresh token management. API keys are sufficient and standard for programmatic/agent access. | API keys with optional scopes. Add OAuth when third-party app integrations (where delegated user consent is required) justify the infrastructure. |
+| Webhook delivery | Useful for async notification patterns | Async delivery requires retry infrastructure, exponential backoff, signature verification (`X-Spectra-Signature`), dead-letter queues, and endpoint health monitoring. Not justified when a synchronous API covers the use case. | Synchronous API. If async becomes necessary, expose a job ID endpoint with polling — not webhooks. |
+| File upload via API | Logical extension: if files can be listed, they should be uploadable | File upload adds multipart form handling, size limit enforcement, storage quota checks across API + web, onboarding agent async invocation, and response design (synchronous vs. async profiling). Significantly expands scope. v1 agents reference existing files by ID. | v1 API is read-only for files + analysis. Files uploaded via web UI. Agents are expected to work with pre-existing datasets. |
+| SDK libraries (Python, JS, etc.) | Developers want convenience wrappers | SDKs require ongoing maintenance across API versions. The MCP server already provides the primary AI-agent integration point. OpenAPI spec enables auto-generation if needed. | Document curl examples and OpenAPI spec. Publish auto-generated SDKs (Speakeasy, OpenAPI Generator) only after stable API surface. |
+| Multiple keys per key (key namespaces/groups) | Useful for org-level access management | Premature hierarchy. At current user scale, a flat list per user with descriptive names is sufficient. Namespaces add UI complexity for no user-visible benefit. | Flat list with descriptive names. Add grouping only when org-level billing and team access management are built. |
 
 ---
 
 ## Feature Dependencies
 
 ```
-next.config.ts BACKEND_URL support (both frontends)
-    |
-    +---> Docker Compose: sets BACKEND_URL=http://backend:8000
-    |
-    +---> Dokploy: sets BACKEND_URL=http://<backend-service-name>:8000
+[API Key DB Table + CRUD Endpoints]
+    └──required by──> [User Self-Service Key Management UI]
+    └──required by──> [Admin Portal Key View + Revoke]
+    └──required by──> [REST API v1 Auth Middleware]
+                          └──required by──> [All REST API v1 Endpoints]
+                                                └──required by──> [MCP Server Tools]
 
-Hardcoded localhost:8000 fixes (useSSEStream.ts, register/page.tsx)
-    |
-    +---> Must be done BEFORE building Docker images
-    |     (otherwise SSE streaming and signup status fail in Docker)
+[Existing Credit System]
+    └──must integrate with──> [POST /api/v1/analysis (credit deduction)]
 
-Backend Dockerfile
-    |
-    +---> needs: HEALTHCHECK (GET /health already exists)
-    |
-    +---> needs: Volume for /app/uploads
-    |
-    +---> needs: Alembic migration before uvicorn start
+[Existing File Management Service]
+    └──re-exposed by──> [GET /api/v1/files]
+    └──re-exposed by──> [GET /api/v1/files/{id}/context]
 
-Next.js Health Endpoints (new API routes)
-    |
-    +---> Must be created BEFORE building Docker images
-    |
-    +---> frontend/src/app/api/health/route.ts  (new file)
-    +---> admin-frontend/src/app/api/health/route.ts  (new file)
+[Existing LangGraph Analysis Pipeline]
+    └──re-exposed by──> [POST /api/v1/analysis]
+                            └──wrapped by──> [spectra_run_analysis MCP tool]
 
-next.config.ts output: 'standalone' (both frontends)
-    |
-    +---> Required for Dockerfile to use .next/standalone
-    |     Without this, standalone build output doesn't exist
+[SPECTRA_MODE pattern (existing)]
+    └──extended by──> [SPECTRA_MODE=api]
 
-Docker Compose (local dev)
-    |
-    +---> Depends on all three Dockerfiles working
-    |
-    +---> Uses postgres:16-alpine as managed DB substitute
+[Admin Portal User Management (existing)]
+    └──extended by──> [Admin API Key View + Revoke UI]
 ```
 
-### Build Order
+### Dependency Notes
 
-1. Fix `useSSEStream.ts` and `register/page.tsx` hardcoded URLs
-2. Add `output: 'standalone'` to both `next.config.ts` files
-3. Update rewrite destination to use `process.env.BACKEND_URL` in both `next.config.ts` files
-4. Create health check API routes in both frontends
-5. Write Dockerfiles (backend, public frontend, admin frontend)
-6. Write `docker-compose.yml` for local dev
-7. Write `DEPLOYMENT.md`
-
-Steps 1-4 are code changes. Steps 5-7 are new files.
+- **API keys must be built before REST API v1.** The REST API has no authentication without API key infrastructure. Build `api_keys` table, key generation, hashing, and auth middleware first.
+- **REST API v1 must be built before MCP server.** The MCP server is a thin client that calls the REST API. It cannot exist without the API.
+- **Credit system integration is mandatory on the analysis endpoint.** The LangGraph pipeline is the most expensive operation. Do not ship `POST /api/v1/analysis` without credit deduction using the existing atomic `SELECT FOR UPDATE` pattern.
+- **`SPECTRA_MODE=api` is a deployment optimization, not a blocker.** The MCP server can call the existing public-mode backend. Deploy `api` mode after the rest is working.
+- **Admin key management is a UI extension, not new infrastructure.** Add to the existing user management screen. No new tables, no new backend patterns needed.
 
 ---
 
-## Port Assignments
+## MVP Definition (v0.7)
 
-| Service | Container Port | Local Dev Host Port | Dokploy |
-|---------|---------------|--------------------|---------|
-| Backend (FastAPI) | 8000 | 8000 | Assigned via Dokploy domain config |
-| Public Frontend (Next.js) | 3000 | 3000 | Assigned via Dokploy domain config |
-| Admin Frontend (Next.js) | 3000 | 3001 | Assigned via Dokploy domain config |
-| PostgreSQL (local dev only) | 5432 | 5432 | Dokploy-managed, no host port needed |
+### Launch With
 
-In Dokploy, each service gets its own container and its own domain. Port conflicts are irrelevant -- each container's port 3000 is independent. The public frontend gets `app.example.com:443`, admin gets `admin.example.com:443`. Traefik handles TLS termination and routing.
+- [ ] **`api_keys` table migration + CRUD endpoints** — Foundation for everything else; without this nothing works
+- [ ] **User self-service key management UI screen** — Create (display-once modal), list (prefix + metadata), revoke
+- [ ] **REST API v1 auth middleware** — Validate Bearer key, look up user, check revocation, update `last_used_at`
+- [ ] **`GET /api/v1/files`** — List user's files; simplest endpoint; validates auth plumbing end-to-end
+- [ ] **`GET /api/v1/files/{id}/context`** — Returns AI-generated profile; high value, zero new computation
+- [ ] **`POST /api/v1/analysis`** — Synchronous query; core capability; must include credit deduction
+- [ ] **`GET /api/v1/me`** — Current user info + credits; developer validation endpoint
+- [ ] **Consistent JSON error format across all v1 routes** — Developers cannot use the API without predictable error responses
+- [ ] **OpenAPI docs at `/api/v1/docs`** — Auto-generated by FastAPI; zero marginal cost; essential for developer adoption
+- [ ] **MCP server with 3 core tools**: `spectra_list_files`, `spectra_get_file_context`, `spectra_run_analysis`
+- [ ] **Admin portal key view + revoke** — Security requirement; extends existing user management screen
+- [ ] **`SPECTRA_MODE=api` deployment mode** — 5th Dokploy service; clean API-only backend
 
----
+### Add After Validation (v1.x)
 
-## Health Check Requirements
+- [ ] **API key scopes** (`files:read` and `analysis:run`) — Add when an enterprise user or paying customer requests least-privilege. Accommodate `scopes` column in DB schema from day one.
+- [ ] **Key expiration / TTL** — Add when automation pipeline users request short-lived keys
+- [ ] **`X-Credits-Remaining` response header** — Add when API users report difficulty tracking consumption. One line of middleware.
+- [ ] **Per-key usage statistics** — Add when admin needs detailed API consumption analytics by user
+- [ ] **MCP Resources primitive** — Expose uploaded files as MCP resources (not just tools) for richer agent context passing
 
-### Backend Health Check (already exists)
+### Future Consideration (v2+)
 
-```
-GET /health
-Returns: {"status": "healthy", "version": "0.1.0"}
-HTTP 200
-
-Dockerfile HEALTHCHECK:
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD curl -f http://localhost:8000/health || exit 1
-```
-
-`--start-period=30s` is important: the backend performs LLM provider validation at startup (can take 5-15 seconds). Without a start period, Docker marks the container unhealthy before it finishes starting.
-
-### Public Frontend Health Check (needs to be created)
-
-```
-GET /api/health
-Returns: {"status": "ok"}
-HTTP 200
-
-New file: frontend/src/app/api/health/route.ts
-
-Dockerfile HEALTHCHECK:
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD curl -f http://localhost:3000/api/health || exit 1
-```
-
-### Admin Frontend Health Check (needs to be created)
-
-```
-GET /api/health
-Returns: {"status": "ok"}
-HTTP 200
-
-New file: admin-frontend/src/app/api/health/route.ts
-
-Dockerfile HEALTHCHECK:
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD curl -f http://localhost:3000/api/health || exit 1
-```
-
----
-
-## Dokploy-Specific Configuration
-
-### Service Networking
-
-All three services are deployed as separate Dokploy "Application" services within the same Dokploy project. They communicate via the `dokploy-network` Docker overlay network using service names as DNS hostnames.
-
-Dokploy assigns each application a container name based on the service name. When the public frontend needs to reach the backend, it uses `http://backend:8000` (where `backend` is the Dokploy service name, not `localhost`).
-
-**Key implication:** The `BACKEND_URL` environment variable set in each frontend Dokploy service must use the backend's Dokploy internal service name, not `localhost` and not the public domain.
-
-### Managed PostgreSQL
-
-Dokploy provides a managed PostgreSQL service with an internal connection URL. The backend's `DATABASE_URL` should use the internal Dokploy database hostname (displayed in Dokploy's database connection settings as "Internal Host"). This keeps database traffic inside the Docker network.
-
-### Volumes for File Uploads
-
-The backend needs a persistent volume mounted at `/app/uploads`. Configure in Dokploy's advanced settings > Volumes. Use a Docker-managed volume (not a bind mount) for reliability across server moves.
-
-### Environment Variable Scoping (Dokploy)
-
-Dokploy supports three variable scopes:
-- **Project-level**: Shared across all services (e.g., database connection string)
-- **Service-level**: Specific to one service (e.g., `SPECTRA_MODE`, `E2B_API_KEY`)
-
-For Spectra, use project-level variables for shared config and service-level variables for service-specific secrets.
-
----
-
-## MVP Definition (This Milestone)
-
-### Must Have for Functioning Docker Deployment
-
-1. **Fix hardcoded `localhost:8000` in public frontend** (useSSEStream.ts, register/page.tsx) -- without this, SSE chat streaming fails in Docker
-2. **Add `output: 'standalone'` to both next.config.ts files** -- required for Next.js Docker images
-3. **Update rewrite destinations to use `BACKEND_URL` env var** -- required for Docker service communication
-4. **Create health check route in both frontend apps** -- required for Dokploy health checks
-5. **Backend Dockerfile** (multi-stage, uv-based, non-root user, healthcheck, volume at /app/uploads)
-6. **Public Frontend Dockerfile** (3-stage standalone, non-root user, healthcheck)
-7. **Admin Frontend Dockerfile** (3-stage standalone, non-root user, healthcheck)
-8. **docker-compose.yml for local dev** (all 3 services + postgres, with correct env vars and volumes)
-9. **DEPLOYMENT.md** (step-by-step Dokploy deployment guide)
-
-### Add During Development (v0.5.1)
-
-- **Alembic migration in backend CMD** (run `alembic upgrade head` before uvicorn)
-- **.dockerignore for each service**
-- **Build cache layer optimization** (copy dependency files before app code)
-- **NEXT_TELEMETRY_DISABLED=1** (minor but good practice)
-
-### Defer (Not This Milestone)
-
-- **Redis for in-memory state** -- documented limitation, not urgent
-- **CI/CD image registry push** -- Dokploy direct-from-git is sufficient
-- **Structured JSON logging** -- current logging is readable
-- **Read-only root filesystem** -- security enhancement, complex to configure
+- [ ] **File upload via API** — Significantly expands scope; build when fully headless workflow demand is validated
+- [ ] **Async analysis with job ID + polling** — Build when 30-60s synchronous timeout regularly hits users; requires a job queue
+- [ ] **OAuth 2.0** — Build when third-party apps require user-consented delegated access
+- [ ] **SDK libraries** — Auto-generate (Speakeasy, OpenAPI Generator) after stable API surface; maintain only if adoption justifies it
+- [ ] **Webhooks** — Build when async event notification patterns are validated over polling
 
 ---
 
 ## Feature Prioritization Matrix
 
-| Feature | Deployment Value | Implementation Cost | Priority |
-|---------|-----------------|---------------------|----------|
-| Fix hardcoded localhost:8000 (2 files) | CRITICAL | LOW | P1 |
-| Backend Dockerfile | HIGH | LOW | P1 |
-| Public frontend Dockerfile | HIGH | LOW | P1 |
-| Admin frontend Dockerfile | HIGH | LOW | P1 |
-| output: 'standalone' in next.config.ts | HIGH | LOW | P1 |
-| BACKEND_URL in next.config.ts rewrites | HIGH | LOW | P1 |
-| Health check API routes (both frontends) | HIGH | LOW | P1 |
-| Docker Compose for local dev | HIGH | MEDIUM | P1 |
-| DEPLOYMENT.md guide | HIGH | LOW | P1 |
-| .dockerignore files | MEDIUM | LOW | P2 |
-| Alembic migration before uvicorn start | MEDIUM | LOW | P2 |
-| Build cache layer optimization | MEDIUM | LOW | P2 |
-| NEXT_TELEMETRY_DISABLED | LOW | LOW | P2 |
-| UV_COMPILE_BYTECODE=1 | LOW | LOW | P2 |
-| Structured JSON logging | LOW | MEDIUM | P3 |
-| Redis for in-memory state | LOW | HIGH | P3 |
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| `api_keys` table + CRUD endpoints | HIGH | LOW | P1 |
+| User self-service key management UI | HIGH | LOW | P1 |
+| REST API v1 auth middleware | HIGH | LOW | P1 |
+| `GET /api/v1/files` | HIGH | LOW | P1 |
+| `GET /api/v1/files/{id}/context` | HIGH | LOW | P1 |
+| `POST /api/v1/analysis` + credit integration | HIGH | MEDIUM | P1 |
+| `GET /api/v1/me` | MEDIUM | LOW | P1 |
+| Consistent error format for v1 | HIGH | LOW | P1 |
+| OpenAPI docs at `/api/v1/docs` | HIGH | LOW | P1 — auto-generated |
+| MCP server: 3 core tools | HIGH | LOW | P1 |
+| Admin key view + revoke | MEDIUM | LOW | P1 |
+| `SPECTRA_MODE=api` | MEDIUM | LOW | P1 |
+| `X-Credits-Remaining` header | MEDIUM | LOW | P2 |
+| API key scopes | MEDIUM | MEDIUM | P2 |
+| Key expiration / TTL | LOW | LOW | P2 |
+| Per-key usage stats | LOW | MEDIUM | P3 |
+| File upload via API | MEDIUM | HIGH | P3 |
+| OAuth 2.0 | LOW | HIGH | P3 |
 
 **Priority key:**
-- P1: Required for any working Docker/Dokploy deployment
-- P2: Production hardening, include in v0.5.1 with minimal effort
-- P3: Nice to have, defer to future milestone
+- P1: Must have for v0.7 launch
+- P2: Add after v0.7 ships, when first user requests it
+- P3: Future milestone, defer until demand is validated
+
+---
+
+## Implementation Notes by Feature
+
+### API Key Security Model
+
+**Key generation and storage pattern** (HIGH confidence — verified against freeCodeCamp best practices, AppMaster UX guide, and multiple authoritative sources):
+
+- **Format:** `sk-spectra-{url_safe_base64_random_32_bytes}` — recognizable namespace prefix, hard to guess
+- **Storage:** Store only `prefix` (first 16 chars, plaintext for display) + `key_hash` (SHA-256 of full key, hex). Never store the raw key.
+- **Auth lookup:** Hash incoming Bearer token, query `WHERE key_hash = $1 AND revoked_at IS NULL`. O(1), index on `key_hash`.
+- **Display:** Return full key in API creation response only. Never again. Frontend shows modal with copy button.
+
+**Minimum DB schema:**
+```sql
+CREATE TABLE api_keys (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name        TEXT NOT NULL,              -- "CI pipeline prod"
+    prefix      TEXT NOT NULL,              -- "sk-spectra-abc12" (16 chars)
+    key_hash    TEXT NOT NULL UNIQUE,       -- SHA-256 hex of full key
+    scopes      TEXT[] DEFAULT '{}',        -- empty = full access; future: ["files:read", "analysis:run"]
+    expires_at  TIMESTAMPTZ,               -- NULL = no expiry
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_used_at TIMESTAMPTZ,              -- updated on every successful auth
+    revoked_at  TIMESTAMPTZ                -- NULL = active; set = revoked (soft delete for audit)
+);
+CREATE INDEX ON api_keys (key_hash);
+CREATE INDEX ON api_keys (user_id);
+```
+
+### REST API v1 Endpoint Design
+
+**URL conventions:**
+```
+GET  /api/v1/me                          — current user + credits
+GET  /api/v1/files                       — list files (paginated)
+GET  /api/v1/files/{file_id}             — file metadata
+GET  /api/v1/files/{file_id}/context     — AI-generated data profile
+POST /api/v1/analysis                    — submit synchronous query
+```
+
+**Auth header:** `Authorization: Bearer sk-spectra-{key}`
+
+**Error envelope (machine-readable):**
+```json
+{
+  "error": {
+    "code": "FILE_NOT_FOUND",
+    "message": "No file found with ID abc123 for this user",
+    "request_id": "req_01HABCXYZ"
+  }
+}
+```
+
+**Success envelope:**
+```json
+{
+  "data": { ... },
+  "meta": { "request_id": "req_01HABCXYZ" }
+}
+```
+
+**Analysis request:**
+```json
+{
+  "file_ids": ["uuid-1", "uuid-2"],
+  "query": "What is the average revenue by region?"
+}
+```
+
+**Analysis response** (synchronous blocking; 60s timeout):
+```json
+{
+  "data": {
+    "answer": "Average revenue by region: North $1.2M, South $890K...",
+    "table": {
+      "columns": ["region", "avg_revenue"],
+      "rows": [["North", 1200000], ["South", 890000]]
+    },
+    "chart": {
+      "type": "bar",
+      "plotly_spec": { "data": [...], "layout": {...} }
+    },
+    "code": "import pandas as pd\n..."
+  },
+  "meta": { "request_id": "req_01HABCXYZ", "credits_used": 1.0 }
+}
+```
+
+### MCP Server Tool Definitions
+
+**Transport:** Streamable HTTP (not stdio) — required for multi-user remote deployment
+
+**Authentication:** User configures their Spectra API key as an environment variable in Claude Desktop's MCP server configuration. MCP server reads it at startup and passes as `Authorization: Bearer {key}` on all outbound calls to the REST API.
+
+**Implementation approach:** Use the official `mcp` Python SDK (`pip install mcp`) with `@mcp.tool()` decorators wrapping `httpx.AsyncClient` calls to the REST API. The `fastapi-mcp` library is an alternative that auto-converts FastAPI OpenAPI routes to tools via ASGI, but the explicit `httpx` approach is preferred for `SPECTRA_MODE=api` where MCP server is a separate process.
+
+**Three tools for v0.7:**
+
+```python
+@mcp.tool()
+async def spectra_list_files() -> list[dict]:
+    """
+    List all data files the user has uploaded to Spectra.
+    Returns file IDs, names, sizes, upload dates, and row counts.
+    Use this first to discover what data is available before running analysis.
+    If you already know the file ID, you can skip this step.
+    """
+    # calls GET /api/v1/files
+
+@mcp.tool()
+async def spectra_get_file_context(file_id: str) -> dict:
+    """
+    Get the AI-generated data profile for a specific Spectra file.
+    Returns column names, data types, row count, and a natural language
+    summary of the dataset's structure and content.
+    Use this before running analysis to understand what questions are
+    answerable and how to phrase them accurately.
+    """
+    # calls GET /api/v1/files/{file_id}/context
+
+@mcp.tool()
+async def spectra_run_analysis(
+    file_ids: list[str],
+    query: str
+) -> dict:
+    """
+    Run a natural language data analysis query against one or more Spectra files.
+    Returns a text answer, optional structured data table, and optional Plotly
+    chart specification. Deducts credits per query.
+
+    file_ids: One or more file IDs from spectra_list_files to analyze.
+    query: A natural language question about the data (e.g., "What is the
+           average revenue by region?" or "Show me the top 10 customers by spend").
+    """
+    # calls POST /api/v1/analysis
+```
+
+**Tool naming rationale:** `spectra_{resource}_{action}` matches MCP best-practice `namespace_verb` convention. Avoids generic names like `query` or `search` that conflict with other MCP tools in the same client.
+
+---
+
+## Competitor Feature Analysis
+
+| Feature | Stripe API | OpenAI API | Perplexity API | Spectra v0.7 Approach |
+|---------|------------|------------|----------------|------------------------|
+| Key creation UX | Name + type (test/live), display once, copy button | Name only, display once, copy button | Simple create, display once | Name required, display once, copy button with warning, prefix shown in list |
+| Key list metadata | Name, type, created, last used, prefix | Name, created, last used | Name, created | Name, prefix, created, last used, status |
+| Key revocation | Immediate, confirmation required | Immediate | Immediate | Immediate, soft delete (revoked_at timestamp) for audit |
+| Key scopes | Restricted keys with fine-grained resource permissions | Full access only at key level | Full access | v1: full access; v1.x: `files:read` + `analysis:run` scopes |
+| Admin key visibility | Yes, organization dashboard | Yes, organization settings | N/A | Yes, in existing admin portal user detail view |
+| API versioning | Header (`Stripe-Version`) | URL (`/v1/`) | URL (`/v1/`) | URL (`/api/v1/`) — FastAPI router prefix |
+| Error format | `{"error": {"type": ..., "code": ..., "message": ...}}` | `{"error": {"message": ..., "type": ..., "code": ...}}` | `{"detail": ...}` | `{"error": {"code": ..., "message": ..., "request_id": ...}}` |
+| Interactive API docs | No (handwritten) | No (handwritten) | No | Yes — FastAPI Swagger UI auto-generated at `/api/v1/docs` |
+| MCP server | Yes (Stripe MCP, official) | Yes (OpenAI tools for agents) | No | Yes — 3 core tools wrapping REST API |
 
 ---
 
 ## Sources
 
-### High Confidence (Official Documentation)
-
-- [Next.js Self-Hosting Official Guide](https://nextjs.org/docs/app/guides/self-hosting) -- Authoritative source on standalone mode, environment variable handling, SIGTERM graceful shutdown
-- [Next.js Docker Official Deployment Docs](https://nextjs.org/docs/app/building-your-application/deploying) -- Confirms Docker is fully supported, links to official templates
-- [Official Next.js Docker Example Dockerfile](https://raw.githubusercontent.com/vercel/next.js/canary/examples/with-docker/Dockerfile) -- Authoritative 3-stage Dockerfile with standalone mode, non-root user
-- [Uvicorn Production Settings](https://www.uvicorn.org/) -- SIGTERM handling, --timeout-graceful-shutdown option
-- [Dokploy Environment Variables Docs](https://docs.dokploy.com/docs/core/variables) -- Project/environment/service variable scopes, templating syntax
-- [Dokploy Applications Docs](https://docs.dokploy.com/docs/core/applications) -- Volume mounts, port config, restart policies
-- [Dokploy Going Production](https://docs.dokploy.com/docs/core/applications/going-production) -- Health check JSON config, update/rollback policy
-
-### Medium Confidence (Verified Against Multiple Sources)
-
-- [Runtime Next.js Environment Variables in Docker](https://nemanjamitic.com/blog/2025-12-13-nextjs-runtime-environment-variables/) -- Explains NEXT_PUBLIC_ build-time baking; runtime injection strategy; confirms server-side env vars work at container startup without rebuild
-- [Dokploy Network Discussion](https://github.com/Dokploy/dokploy/discussions/1067) -- dokploy-network behavior, inter-service communication via service name DNS
-- [Dokploy Database Connection Docs](https://docs.dokploy.com/docs/core/databases/connection) -- Internal host for managed databases; internal vs external connection strings
-- [uv Docker Multi-Stage Builds](https://digon.io/en/blog/2025_07_28_python_docker_images_with_uv) -- UV_LINK_MODE=copy, UV_COMPILE_BYTECODE=1, .venv copy pattern for runtime stage
-
-### Low Confidence (Single Source / Verify During Implementation)
-
-- Dokploy service-name DNS resolution for inter-service communication -- confirmed by Dokploy community (AnswerOverflow thread) but should be verified with actual deployment. Claimed: `http://backend:8000` where `backend` is the Dokploy application service name.
-- Next.js rewrite proxy correctly streams SSE -- claimed by Next.js docs (rewrites proxy all request types), but should be verified. If SSE doesn't stream through the Next.js rewrite, the `useSSEStream.ts` fix must use a different approach (NEXT_PUBLIC_BACKEND_URL for the SSE endpoint specifically).
+- [MCP Architecture Overview — modelcontextprotocol.io](https://modelcontextprotocol.io/docs/learn/architecture) — HIGH confidence; official Anthropic documentation, verified June 2025 spec
+- [API Key Rotation UX: Scopes, Self-Serve Keys, and Logs — AppMaster](https://appmaster.io/blog/api-key-rotation-scoping-ux) — MEDIUM confidence; aligns with industry patterns observed across Stripe, OpenAI, and other major APIs
+- [Best Practices for Building Secure API Keys — freeCodeCamp](https://www.freecodecamp.org/news/best-practices-for-building-api-keys-97c26eabfea9/) — HIGH confidence; widely cited, consistent with multiple authoritative sources
+- [API Keys: The Complete 2025 Guide — DEV Community](https://dev.to/hamd_writer_8c77d9c88c188/api-keys-the-complete-2025-guide-to-security-management-and-best-practices-3980) — MEDIUM confidence
+- [REST API Best Practices — Postman Blog](https://blog.postman.com/rest-api-best-practices/) — HIGH confidence; authoritative source, current
+- [Rate Limiting Best Practices in REST API Design — Speakeasy](https://www.speakeasy.com/api-design/rate-limiting) — MEDIUM confidence
+- [fastapi-mcp — GitHub (tadata-org)](https://github.com/tadata-org/fastapi_mcp) — HIGH confidence; active maintained library
+- [fastmcp / MCP Python SDK — PyPI](https://pypi.org/project/fastmcp/2.2.6/) — HIGH confidence; official SDK
+- [RESTful API Best Practices 2025 — Hevo](https://hevodata.com/learn/rest-api-best-practices/) — MEDIUM confidence
 
 ---
 
-*Feature research for: Docker and Dokploy deployment (v0.5.1)*
-*Researched: 2026-02-18*
+*Feature research for: Spectra v0.7 API Services and MCP*
+*Researched: 2026-02-23*

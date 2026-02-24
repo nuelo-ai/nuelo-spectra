@@ -1,17 +1,17 @@
 # Project Research Summary
 
-**Project:** Spectra — Docker + Dokploy Deployment (v0.6)
-**Domain:** Containerizing a FastAPI + 2x Next.js monorepo for self-hosted Dokploy PaaS
-**Researched:** 2026-02-18
+**Project:** Spectra v0.7 — API Services and MCP Server
+**Domain:** Programmatic API access layer and AI agent integration (MCP) for an existing AI-powered data analytics platform
+**Researched:** 2026-02-23
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Spectra v0.6 is a "wrap the existing app" milestone, not a new feature build. The app is already production-functional; the goal is to containerize three services (FastAPI backend, Next.js public frontend, Next.js admin frontend) and deploy them to a self-hosted Dokploy instance. All three services get their own multi-stage Dockerfile. Dokploy is configured as three independent Application services — one per Dockerfile — sharing a common Docker overlay network (`dokploy-network`) and a Dokploy-managed PostgreSQL database. The recommended deployment model uses individual Dokploy Applications rather than a single Docker Compose deployment, enabling independent rollback and update cadences per service.
+Spectra v0.7 adds three tightly layered capabilities on top of an already-complete FastAPI monolith: API key management (new DB table, hashed storage, user self-service UI, admin visibility), a versioned public REST API (v1 endpoints for file listing, data context, and synchronous analysis), and an MCP server that wraps those REST endpoints as tools callable by Claude Desktop, Claude Code, or any MCP host. All three surfaces follow a strict dependency chain — keys must exist before the API can authenticate, the API must exist before the MCP server has anything to call. The recommended build order mirrors this: data model and service layer first, auth layer second, REST endpoints third, MCP last.
 
-The most important finding from codebase inspection is that two pre-work changes must happen before any Dockerfile is valid: (1) two hardcoded `http://localhost:8000` direct fetch calls in `useSSEStream.ts` and `register/page.tsx` must be changed to relative `/api/...` paths, and (2) both `next.config.ts` files must get `output: 'standalone'` added and have their rewrite destinations updated to read `process.env.BACKEND_URL` instead of the hardcoded localhost URL. Without these two pre-work items, Docker images will build successfully but fail silently at runtime — the hardest class of bug to diagnose.
+The stack change is deliberately minimal: only two new Python packages are needed — `fastmcp>=3.0.2` (the de facto Python MCP server framework, released 2026-01-19, with native FastAPI integration) and `slowapi>=0.1.9` (per-key rate limiting). Everything else — FastAPI, SQLAlchemy, Alembic, LangGraph, E2B, Pydantic settings — carries forward unchanged. API key generation and hashing use Python stdlib (`secrets`, `hashlib`, `hmac`). The MCP server mounts as an ASGI sub-application on a new `SPECTRA_MODE=api` deployment, keeping it isolated from the public web frontend without requiring any new infrastructure. No Redis, no Celery, no message broker, no frontend changes.
 
-The principal risks are all configuration-correctness problems, not capability gaps. Docker and Dokploy are mature, well-documented technologies. The risks are: secrets baked into image layers from missing `.dockerignore` files (critical security), file uploads lost on redeploy from missing volume mounts (data loss), backend starting before PostgreSQL is ready from missing `pg_isready` wait logic (intermittent deployment failure), and wrong `SPECTRA_MODE` per service silently breaking routing or exposing admin routes publicly (security and feature breakage). Every one of these risks has a clear, low-effort prevention pattern documented in PITFALLS.md.
+The primary risk area is MCP server quality, not correctness. FastMCP's `from_fastapi()` auto-generation is a tempting shortcut but produces tool descriptions that LLMs use poorly — FastMCP's own documentation warns about this explicitly. The recommendation is to bootstrap with auto-generation as scaffolding, then hand-curate each of the 3-5 tool descriptions for AI agent clarity. A secondary risk is the synchronous query endpoint timeout: LangGraph analysis runs take 10-45 seconds, so the `api` mode service needs an explicit 120-second uvicorn request timeout — the default 30 seconds will silently cut off legitimate queries. The v0.7 infrastructure also inherits the Docker/Dokploy deployment patterns from v0.6, so all volume, secret, and SPECTRA_MODE pitfalls documented in PITFALLS.md remain relevant for the new `spectra-api` Dokploy service.
 
 ---
 
@@ -19,210 +19,143 @@ The principal risks are all configuration-correctness problems, not capability g
 
 ### Recommended Stack
 
-See full details in `.planning/research/STACK-docker-dokploy.md`.
+The existing stack handles v0.7 completely with two additions. `fastmcp>=3.0.2` is the de facto Python MCP server framework — it provides `FastMCP.from_fastapi()` for OpenAPI-based auto-generation, `DebugTokenVerifier` for database-backed token validation, and native Streamable HTTP transport. `slowapi>=0.1.9` provides FastAPI-native rate limiting via a single middleware line and `@limiter.limit()` decorator, with a custom `key_func` that extracts the API key from the Authorization header rather than rate-limiting by IP.
 
-The technology choices are narrow and well-established. `python:3.12-slim` (Debian bookworm-slim, not Alpine) is the only viable base image for the backend: asyncpg and psycopg-binary ship manylinux binary wheels that require glibc; Alpine's musl libc is incompatible and would force compiling from source. `node:22-alpine` is the correct base for both Next.js frontends — Next.js has no native modules requiring glibc, so Alpine is safe and saves ~100MB per image. The `uv` binary is copied from `ghcr.io/astral-sh/uv:latest` into the backend builder stage; `uv sync --locked --no-dev` provides reproducible, fast dependency installation from the existing `uv.lock` file. All three Dockerfiles use multi-stage builds: a builder stage installs dependencies and compiles assets, a leaner runner stage copies only what is needed for runtime.
-
-Dokploy v0.26.x is the deployment platform. The Dockerfile build type (not Nixpacks) is required because uv lock files are not understood by Nixpacks v1.x and multi-stage builds are not supported by Nixpacks. There is no `dokploy.yml` config file — all Dokploy configuration lives in the web UI. Traefik (bundled with Dokploy) handles TLS termination and domain routing automatically; no manual Traefik configuration is needed.
+API key hashing deliberately uses `hashlib.sha256()` rather than Argon2 — this is correct practice, not a shortcut. API keys are 32 bytes of cryptographic randomness, making brute force computationally infeasible regardless of hash speed. Argon2 would add ~250ms to every API request. SHA-256 is the industry standard for high-entropy random keys (GitHub, Stripe, Twilio all use this pattern). API keys use the prefix format `spe_<secrets.token_urlsafe(32)>`, stored as `sha256(full_key).hexdigest()` with only the first 8-12 characters stored as plaintext for display.
 
 **Core technologies:**
-- `python:3.12-slim`: Backend base image — glibc required for asyncpg/psycopg binary wheels; `-slim` reduces image size ~200MB vs full image
-- `node:22-alpine`: Frontend base image (both apps) — Node 22 is active LTS; Alpine safe for Next.js; saves ~100MB per image
-- `uv` (via `ghcr.io/astral-sh/uv:latest`): Python dep management in Docker — project already uses uv.lock; `uv sync --locked` is reproducible and fast
-- `output: 'standalone'` (Next.js built-in): Reduces Next.js image from ~7GB to ~300MB by tracing and copying only required files
-- Dokploy v0.26.x: Self-hosted PaaS — manages 3 services as independent Applications with Traefik-based routing; Dockerfile build type required
-- Docker Compose v2 (no `version:` field): Local dev orchestration — `version:` field is officially obsolete in Compose v2 and triggers warnings in Docker 25+
+- `fastmcp>=3.0.2`: MCP server framework — only Python library with native `from_fastapi()` auto-generation, built-in auth providers, and Streamable HTTP transport; v3.0 stable and widely adopted
+- `slowapi>=0.1.9`: Per-key rate limiting — thin `limits` wrapper, FastAPI middleware integration, no Redis dependency for single-instance deployment
+- `secrets` + `hashlib` + `hmac` (stdlib): API key generation and hashing — no additional packages; SHA-256 appropriate for high-entropy random keys
+- `fastapi[standard]>=0.115` (existing): Extended with new v1 router prefix and `api` mode gate — zero changes to existing router registrations
+- `sqlalchemy[asyncio]` + `alembic` (existing): New `api_keys` table follows identical ORM and migration patterns as all existing models
+
+**What NOT to add:** `fastapi-mcp` (tadata/last release July 2025), base `mcp` SDK directly, `bcrypt` for key hashing, Redis for rate limiting, `fastapi-versioning`, OAuth2, Celery.
 
 ### Expected Features
 
-See full details in `.planning/research/FEATURES.md`.
+All v0.7 features are P1 (launch-blocking) except three P2 items deferred until the first user requests them. The feature dependency graph is strictly linear: API key infrastructure → auth middleware → REST v1 endpoints → MCP tools.
 
-This milestone is primarily infrastructure work. There are no new user-facing capabilities. The feature set is defined entirely by what is required for a working, production-safe Docker deployment.
+**Must have (table stakes):**
+- `api_keys` table + CRUD endpoints — foundation; nothing else works without this
+- User self-service key management UI — create (display-once modal with copy button), list (prefix + metadata), revoke (immediate, soft-delete for audit trail)
+- REST API v1 auth middleware — validate Bearer key, lookup by SHA-256 hash, check revocation, update `last_used_at`
+- `GET /api/v1/files` — list user's files; simplest endpoint; validates auth plumbing end-to-end
+- `GET /api/v1/files/{id}/context` — AI-generated data profile; high value, zero new computation (pre-computed at upload)
+- `POST /api/v1/analysis` — synchronous query; core product capability; credit deduction mandatory (same atomic `SELECT FOR UPDATE` as web UI)
+- `GET /api/v1/me` — current user info + credits; developer validation endpoint
+- Consistent JSON error envelope (`{"error": {"code": "...", "message": "...", "request_id": "..."}}`) across all v1 routes
+- OpenAPI docs at `/api/v1/docs` — auto-generated by FastAPI; zero implementation cost; essential for developer adoption
+- MCP server with 3 core tools: `spectra_list_files`, `spectra_get_file_context`, `spectra_run_analysis`
+- Admin portal key view and revoke — security requirement; extends existing user management screen
+- `SPECTRA_MODE=api` — 5th Dokploy service; clean API-only backend with its own domain
 
-**Must have (table stakes — P1, all blocking):**
-- Fix hardcoded `localhost:8000` in `useSSEStream.ts` (line 112) and `register/page.tsx` (line 26) — without this, SSE chat streaming and signup status check fail in Docker
-- `output: 'standalone'` in both `next.config.ts` files — required for Next.js Docker images to exist at all
-- `process.env.BACKEND_URL` in both `next.config.ts` rewrite destinations — required for inter-service routing in Docker
-- Health check API routes in both frontends (`/api/health` returning `{status: "ok"}`) — required for Dokploy health monitoring
-- Backend Dockerfile (multi-stage, uv-based, non-root user, HEALTHCHECK, volume declaration at `/app/uploads`)
-- Public frontend Dockerfile (3-stage standalone, non-root user, HEALTHCHECK)
-- Admin frontend Dockerfile (3-stage standalone, non-root user, HEALTHCHECK)
-- `docker-compose.yml` for local dev (all 3 services + postgres with health check, uploads named volume)
-- `DEPLOYMENT.md` step-by-step Dokploy guide
+**Should have (add after first user request):**
+- `X-Credits-Remaining` response header — track consumption per-request without polling `/api/v1/me`; one line of middleware
+- API key scopes (`files:read`, `analysis:run`) — least-privilege access; accommodate `scopes TEXT[]` column in DB schema from day one even if unused at launch
+- Key expiration / TTL (`expires_at TIMESTAMPTZ NULL` column) — short-lived keys for automation pipelines
 
-**Should have (P2 — production hardening, low effort):**
-- `.dockerignore` for each service — prevents secrets leakage and bloated build contexts; non-negotiable security item
-- Alembic migration in backend entrypoint before uvicorn starts — prevents broken schema on first deploy
-- `pg_isready` wait loop in backend entrypoint — prevents race condition startup failures on cold deploys
-- Build cache layer optimization (copy dependency files before app source)
-- `NEXT_TELEMETRY_DISABLED=1` and `UV_COMPILE_BYTECODE=1` — minor production polish
+**Defer (v1.x / v2+):**
+- File upload via REST API — significantly expands scope; requires async profiling pipeline decisions
+- Async analysis with job ID polling — only if 60-second synchronous timeout regularly triggers
+- OAuth 2.0 — only justified when third-party delegated access is required
+- SDK libraries (Python, JS) — auto-generate with Speakeasy or OpenAPI Generator after stable API surface
+- SSE streaming on REST API — adds client SDK complexity with no benefit for the MCP use case
 
-**Defer (not this milestone):**
-- Redis for in-memory state (token revocation, admin lockout) — single-instance limitation documented in PROJECT.md; only matters at 2+ replicas
-- CI/CD image registry pipeline — Dokploy direct-from-git is sufficient at single-developer scale
-- Structured JSON logging — current logging is readable; not needed at 1-user scale
-- Read-only root filesystem — security enhancement; complex to configure for marginal single-instance benefit
+**Anti-features to explicitly avoid building:**
+- SSE streaming on v1 API — AI agent tool calls need a single return value; synchronous JSON is correct
+- GraphQL — REST with a consistent envelope covers all v0.7 use cases without schema definition overhead
+- Per-key rate limiting as primary consumption gate — credits already serve this role; add hard abuse-prevention floor (e.g., 120 req/min) only as a secondary floor, not as the primary mechanism
 
 ### Architecture Approach
 
-See full details in `.planning/research/ARCHITECTURE.md`.
-
-All three Dockerfiles sit at the monorepo root and use the repo root as the Docker build context. This is the correct configuration for Dokploy: "Docker Context Path" is set to `.` (repo root) for all three services, and "Dockerfile Path" differs per service (`Dockerfile.backend`, `Dockerfile.frontend`, `Dockerfile.admin`). Each Dockerfile COPYs only from its own subdirectory. All three Dokploy Application services join `dokploy-network` automatically, enabling inter-service communication via Docker service names as DNS hostnames (e.g., `http://spectra-backend:8000`). The key architectural insight is that Next.js `rewrites()` in `next.config.ts` are evaluated at Node.js server startup — not at build time — meaning `process.env.BACKEND_URL` is a runtime environment variable, not a build-time ARG. This eliminates the `NEXT_PUBLIC_` bake-in problem for the backend URL entirely.
-
-The backend entrypoint script is the critical sequencing mechanism: `pg_isready` wait loop then `alembic upgrade head` then `exec uvicorn`. The `exec` prefix replaces the shell with uvicorn as PID 1 so Docker SIGTERM signals reach uvicorn directly for graceful shutdown. File uploads use a named Docker volume (`spectra_uploads`) mounted at `/app/uploads` — named volumes persist independently of container lifecycle and Dokploy redeployments.
+The v0.7 architecture extends the existing SPECTRA_MODE split-horizon pattern with a 5th mode (`api`) that mounts the v1 router and MCP server, while keeping all existing public/admin/dev modes unchanged. The unified auth dependency (`get_authenticated_user()`) tries JWT decode first (fast, in-memory, no DB hit), then falls back to SHA-256 key lookup if JWT decode fails — a single dependency serves all v1 routes without modifying the existing `get_current_user` JWT-only path. MCP tool handlers call v1 endpoints via httpx loopback rather than importing service functions directly — this preserves the full auth, credit deduction, and usage logging middleware chain and ensures MCP calls are indistinguishable from REST API calls in terms of billing and audit.
 
 **Major components:**
-1. `Dockerfile.backend` — multi-stage Python image; entrypoint handles DB readiness + Alembic migrations before uvicorn starts
-2. `Dockerfile.frontend` — 3-stage Next.js standalone image; `BACKEND_URL` env var controls rewrite destination at runtime
-3. `Dockerfile.admin` — identical pattern to frontend; connects to same backend via `BACKEND_URL`; `SPECTRA_MODE=admin` on the backend it targets
-4. `backend/docker-entrypoint.sh` — `pg_isready` wait + `alembic upgrade head` + `exec uvicorn`; ensures deployment never starts a broken backend
-5. `docker-compose.yml` — local dev orchestration; postgres with health check; named volume `uploads_data`; `depends_on: condition: service_healthy`
-6. `DEPLOYMENT.md` — step-by-step Dokploy configuration guide covering all 3 services, env vars, volumes, and domain assignment
+1. `ApiKey` ORM model + `ApiKeyService` — create, validate (SHA-256 hash lookup), list, revoke; the shared service boundary used by auth dependency, user CRUD routes, and admin routes
+2. `get_authenticated_user()` dependency — unified JWT-or-API-key auth; additive change to `dependencies.py`; used exclusively on v1 routes; existing `get_current_user` is unchanged
+3. `routers/api/v1/` directory — files, context, query endpoints; calls service layer directly (not existing routers); independent public API contract versioned from day one
+4. `mcp_server.py` — FastMCP instance with 3 manually curated tools; mounted on FastAPI app via ASGI in `api`/`dev` modes; uses `combine_lifespans` for clean lifecycle coordination
+5. `SPECTRA_MODE=api` gate in `main.py` — registers v1 router and MCP mount; separate Dokploy service (`spectra-api`) at its own domain
+6. `api_usage_log` table — append-only per-request log (key ID, endpoint, credits used, status code); admin visibility without v0.7 reporting UI
+
+**Key patterns to enforce across all phases:**
+- v1 routers call service layer functions, never import existing routers (avoids coupling public API contract to internal router implementation details)
+- MCP tools call REST API via httpx loopback, never import service functions directly (preserves credit deduction and usage logging middleware chain)
+- `api` mode intentionally excludes SSE streaming routes, password reset flows, and cookie-based session routes — minimal attack surface
+- `scopes TEXT[]` and `expires_at TIMESTAMPTZ` columns in `api_keys` table from day one even if unused — avoids migration pain when P2 features ship
 
 ### Critical Pitfalls
 
-See full details in `.planning/research/PITFALLS.md`.
+The PITFALLS.md file covers v0.6 Docker/Dokploy deployment infrastructure. The pitfalls most relevant to v0.7 planning:
 
-1. **No `.dockerignore` in the repo — secrets baked into image layers** — The repo currently has no `.dockerignore` file anywhere. Without one, `COPY . .` in any Dockerfile pulls in `.env` files containing `ANTHROPIC_API_KEY`, `E2B_API_KEY`, `TAVILY_API_KEY`, `SECRET_KEY` (JWT), `SMTP_PASS`, and `ADMIN_PASSWORD`. These are permanently stored in Docker layer history, recoverable with `docker history --no-trunc`. Prevention: write `.dockerignore` for each service before writing any `COPY` instruction. Exclude `.env`, `.env.*`, `.venv`, `node_modules`, `__pycache__`, `.next`, `uploads/`.
+1. **MCP lifespan coordination** — FastMCP's `http_app()` carries its own ASGI lifespan. The existing FastAPI app also has a lifespan. Use `combine_lifespans(existing_lifespan, mcp_app.lifespan)` from `fastmcp.utilities.asgi` when constructing the FastAPI app in `api` mode. Failing to merge lifespans causes the MCP server to never initialize its connection pool or to abort silently during shutdown.
 
-2. **Hardcoded `localhost:8000` in `useSSEStream.ts` and `register/page.tsx`** — These two files bypass the Next.js rewrite proxy and directly fetch `http://localhost:8000`. In Docker, `localhost` resolves to the frontend container itself. SSE streaming fails; signup status check fails with `ECONNREFUSED`. Both failures produce no obvious error at the UI layer. Fix: change both to relative `/api/...` paths. This must happen before any Docker image is built.
+2. **Synchronous query timeout misconfiguration** — LangGraph analysis runs take 10-45 seconds. Default uvicorn timeout (30 seconds) will silently abort legitimate queries. Set `api_query_timeout_seconds: int = 120` in Settings and pass it as a uvicorn startup argument specifically for the `spectra-api` service. This is separate from the existing `stream_timeout_seconds` field which controls SSE.
 
-3. **Alembic migration + `pg_isready` must be in entrypoint before uvicorn** — FastAPI's `lifespan()` in `main.py` creates an `AsyncConnectionPool` and runs `checkpointer.setup()` at startup. If PostgreSQL is not ready, the entire lifespan throws, uvicorn never starts, and Dokploy marks the deployment failed. The backend entrypoint script must: (1) loop `pg_isready` until PostgreSQL accepts connections, (2) run `alembic upgrade head`, then (3) `exec uvicorn`. Running Alembic inside FastAPI lifespan creates async/sync event loop conflicts and is the wrong approach.
+3. **MCP tool descriptions: auto-generation is not enough** — `FastMCP.from_fastapi()` produces tool descriptions that LLMs use poorly. FastMCP's own documentation warns: "LLMs achieve significantly better performance with well-designed and curated MCP servers than with auto-converted OpenAPI servers." Use auto-generation as scaffolding only; manually curate all tool descriptions before shipping.
 
-4. **`SPECTRA_MODE` set incorrectly per service causes silent failure or security breach** — `SPECTRA_MODE=public` on the admin backend means all admin API calls return 404 (admin router not mounted). `SPECTRA_MODE=dev` on the public-facing backend exposes `/api/admin/*` endpoints to the public internet. Neither failure produces an obvious error at startup — the backend starts normally and appears healthy. Prevention: explicitly set and verify `SPECTRA_MODE` for each Dokploy service as a named deployment checklist item.
+4. **API keys as long-lived JWTs (anti-pattern)** — JWTs are self-contained and cannot be instantly revoked. API keys must be instantly revocable (set `is_active=false` in one DB row). Never generate a "long-lived JWT" and call it an API key. Use opaque random tokens stored as SHA-256 hashes.
 
-5. **File uploads volume mount is non-negotiable** — The backend writes user uploads to `/app/uploads`. Without a named Docker volume (`spectra_uploads` mounted at `/app/uploads`), all user files are lost on every Dokploy redeploy. This creates a broken state: PostgreSQL retains file records but the files are gone from disk. File download endpoints return 404 for files that appear in the list. Prevention: configure the named volume in Dokploy Advanced → Mounts before the first production deployment.
+5. **Secrets baked into Docker image layers** (from PITFALLS.md) — directly relevant to the new `spectra-api` Dokploy service. `SECRET_KEY` (needed for JWT validation even in API mode), `ANTHROPIC_API_KEY`, and `E2B_API_KEY` must never appear in Dockerfile `ARG` or `ENV` instructions. Pass at runtime via Dokploy environment variables panel only.
+
+6. **SPECTRA_MODE=api on the wrong service** (from PITFALLS.md pattern) — `api` mode must never be set on the public or admin backend services. The existing `logger.info(f"Starting Spectra in {mode.upper()} mode")` startup log is a useful smoke test signal; verify mode in post-deploy health check.
 
 ---
 
 ## Implications for Roadmap
 
-The research strongly suggests a 4-phase delivery structure with strict sequencing driven by dependencies. Phases 1 and 2 are the core of the milestone; Phase 3 validates end-to-end; Phase 4 produces the documentation artifact and the live production deployment.
+The dependency chain dictates a strict 4-phase build order. No phase should begin before the prior phase is validated end-to-end with tests.
 
-### Phase 33: Pre-Work and Version API
+### Phase 1: API Key Infrastructure
+**Rationale:** Everything in v0.7 depends on the ability to create, store, and validate API keys. This phase has zero dependencies on anything new — it follows identical patterns to existing models (`CreditService`, `FileService`, existing Alembic migrations). Build first, validate independently before writing any other v0.7 code.
+**Delivers:** `api_keys` table migration, `ApiKey` ORM model, `api_usage_log` table migration, `ApiKeyService` (create/validate/list/revoke), Alembic migration, user-facing CRUD endpoints at `/api/keys`, admin key management extension in the admin portal, user self-service UI screen in the public frontend
+**Addresses:** All APIKEY-* and APIKEY-ADMIN-* features; `scopes TEXT[]` and `expires_at TIMESTAMPTZ NULL` columns included in schema even if unused at launch
+**Avoids:** Argon2 for key hashing (use SHA-256); hard-deleting revoked keys (use `revoked_at` soft-delete for audit trail); calling this a "long-lived JWT"
+**Research flag:** No additional research needed — follows exact existing patterns
 
-**Rationale:** Two source code changes must exist in the repository before any Dockerfile is written — they are blocking for Docker correctness. Version display is grouped here because it requires a new backend endpoint (`GET /version`) and frontend UI additions that are independent of Docker and can ship in the same phase. These are the easiest items in the milestone (simple string replacements, a `next.config.ts` update, a small API endpoint, and UI additions) and must be first because everything downstream depends on the pre-work.
+### Phase 2: Unified Auth Layer and SPECTRA_MODE Extension
+**Rationale:** The auth dependency must be solid and independently testable before any v1 endpoint is written. A broken auth layer makes every endpoint test ambiguous — is the bug in the endpoint or the auth? Resolving auth first makes Phase 3 deterministic.
+**Delivers:** `get_authenticated_user()` dependency in `dependencies.py`, `ApiUser` type alias, `config.py` extended with `api` mode and rate limit settings, `main.py` updated with `api`/`dev` mode routing block, `slowapi` middleware registered with per-key `key_func`
+**Uses:** `fastapi[standard]` (existing), `slowapi>=0.1.9` (new), `HTTPBearer(auto_error=False)` pattern from FastAPI official docs
+**Implements:** Unified auth dependency (JWT fast path, API key fallback); SPECTRA_MODE=api gate
+**Avoids:** Using `OAuth2PasswordBearer` for the combined dependency (generates wrong Swagger UI behavior for API key flows); mounting MCP or v1 routes in `public` mode
+**Research flag:** Verify `slowapi>=0.1.9` compatibility with FastAPI 0.115+ and custom `key_func` behavior before writing middleware (rated MEDIUM confidence in STACK.md)
 
-**Delivers:** A codebase where no hardcoded localhost URLs exist, both Next.js apps are configured for standalone output, both rewrite destinations read `process.env.BACKEND_URL`, both frontends have a `/api/health` route for Dokploy health checks, the backend exposes `GET /version`, and users can see the app version on the settings/profile page in both frontends.
+### Phase 3: REST API v1 Endpoints
+**Rationale:** v1 endpoints are the substantive implementation. Each endpoint is independently testable with a valid API key from Phase 1. Build the three endpoints in increasing complexity: file listing (read-only, no credits), file context (read-only, no credits), analysis query (LangGraph invocation, credit deduction, synchronous await with 120s timeout).
+**Delivers:** `GET /api/v1/me`, `GET /api/v1/files`, `GET /api/v1/files/{id}/context`, `POST /api/v1/analysis` (synchronous, 120s timeout), consistent JSON error envelope, OpenAPI docs at `/api/v1/docs`, `api_usage_log` inserts on every request
+**Uses:** Existing `FileService`, `CreditService`, LangGraph graph (`await graph.ainvoke()`); `fastapi[standard]` (existing)
+**Implements:** `routers/api/v1/` directory; `schemas/api_v1.py`; synchronous LangGraph wrapper
+**Avoids:** Missing credit deduction on analysis endpoint; importing existing routers into v1 routers; SSE streaming on v1 endpoints; timeout shorter than 120 seconds
+**Research flag:** No additional research needed — synchronous `await graph.ainvoke()` is existing LangGraph usage; REST patterns are standard FastAPI
 
-**Addresses (from FEATURES.md):**
-- Fix `frontend/src/hooks/useSSEStream.ts` line 112: `http://localhost:8000/chat/...` → `/api/chat/...`
-- Fix `frontend/src/app/(auth)/register/page.tsx` line 26: `http://localhost:8000/auth/signup-status` → `/api/auth/signup-status`
-- Add `output: 'standalone'` to `frontend/next.config.ts` and `admin-frontend/next.config.ts`
-- Update rewrite destinations to `process.env.BACKEND_URL || 'http://localhost:8000'` in both `next.config.ts` files
-- Create `frontend/src/app/api/health/route.ts` returning `{status: "ok"}`
-- Create `admin-frontend/src/app/api/health/route.ts` returning `{status: "ok"}`
-- Add `GET /version` endpoint to FastAPI backend (reads `APP_VERSION` env var, returns `{"version": "...", "environment": "..."}`)
-- Display app version on public frontend settings/profile page (fetched from `/api/version`)
-- Display app version on admin frontend settings page (fetched from `/api/version`)
-
-**Avoids (from PITFALLS.md):**
-- Pitfall 1 (NEXT_PUBLIC_ baked as `undefined`): rewrite destination now reads from env var
-- SSE streaming failure in Docker: localhost hardcode removed
-- Missing standalone output: would make the multi-stage Dockerfile pattern non-functional
-
-**Research flag:** None needed. These are direct, unambiguous code changes.
-
----
-
-### Phase 34: Dockerfiles and .dockerignore
-
-**Rationale:** Writing the three Dockerfiles is the core infrastructure work of the milestone. The backend Dockerfile is built first because both frontends depend on the backend being deployed (needed to confirm `BACKEND_URL`). The entrypoint script (`docker-entrypoint.sh`) is written alongside the backend Dockerfile as an inseparable deliverable. `.dockerignore` files must be written before or simultaneously with the Dockerfiles — never after, because any `docker build` run without `.dockerignore` risks baking secrets into layers permanently.
-
-**Delivers:** Three production-ready Docker images that build and run locally. The backend image starts cleanly against a local PostgreSQL (waits for readiness, runs migrations, then starts uvicorn). Both frontend images serve the Next.js app correctly with `BACKEND_URL` controlling the rewrite destination at runtime.
-
-**Build order within this phase:**
-1. `.dockerignore` files (all three service directories, before any `docker build` is run)
-2. `backend/docker-entrypoint.sh` (`pg_isready` wait + `alembic upgrade head` + `exec uvicorn`)
-3. `Dockerfile.backend` (`python:3.12-slim`, multi-stage, uv-based, non-root `appuser`, HEALTHCHECK at `/health`, `/app/uploads` volume)
-4. `Dockerfile.frontend` (`node:22-alpine`, 3-stage standalone, non-root `nextjs:nodejs`, HEALTHCHECK at `/api/health`, PORT=3000)
-5. `Dockerfile.admin` (identical pattern to frontend, PORT=3000 in container / 3001 on host in Compose)
-
-**Uses (from STACK.md):**
-- `python:3.12-slim` for backend (glibc required for asyncpg and psycopg binary wheels; Alpine would break both)
-- `ghcr.io/astral-sh/uv:latest` binary copy pattern for fast, reproducible Python deps
-- `node:22-alpine` for both frontends (Node 22 active LTS; Alpine safe for Next.js; no glibc-dependent native modules)
-- Multi-stage build pattern for all three services (builder stage + lean runtime stage)
-- `uv sync --locked --no-dev --compile-bytecode` for production backend dep install
-
-**Implements (from ARCHITECTURE.md):**
-- Monorepo build context strategy: all Dockerfiles at repo root, Docker context = `.`, explicit subdirectory COPYs
-- Entrypoint script with `exec` for SIGTERM signal forwarding to uvicorn (PID 1)
-- Named volume declaration for `/app/uploads` in Dockerfile.backend
-- Non-root users in all images (security baseline)
-
-**Avoids (from PITFALLS.md):**
-- Pitfall 4: Secrets in image layers — `.dockerignore` written first, `.env` excluded before any `COPY`
-- Pitfall 3: Migration race condition — `pg_isready` loop in entrypoint before `alembic upgrade head`
-- Pitfall 6: Wrong monorepo build context — Dockerfiles at root with explicit `COPY backend/` scoping
-- Pitfall 2: File upload loss — volume declared in Dockerfile.backend and verified with smoke test
-
-**Research flag:** None needed. All three Dockerfile patterns are from official documentation (uv Docker integration guide, Next.js official Docker example, official Python Docker Hub). HIGH confidence.
-
----
-
-### Phase 35: Docker Compose and Local Validation
-
-**Rationale:** The `docker-compose.yml` is the integration test for the three Dockerfiles. It proves all services start correctly together, that inter-service networking works, that the uploads volume persists across `docker-compose down && up`, and that the local dev workflow is viable. Writing Compose after the Dockerfiles (not simultaneously) ensures each Dockerfile is independently validated before adding the orchestration layer. The smoke test checklist in this phase serves as the acceptance criteria for the entire milestone.
-
-**Delivers:** A working `docker-compose.yml` at the repo root that brings up all 3 services plus local PostgreSQL with `docker compose up`. Validated smoke tests: login works, SSE chat streaming works through the Next.js rewrite proxy, file upload persists after `docker-compose down && up`, admin frontend reaches admin API routes.
-
-**Addresses (from FEATURES.md):**
-- `docker-compose.yml` with all 3 services plus `postgres:16-alpine` with healthcheck
-- Named volume `uploads_data` at `/app/uploads` for upload persistence
-- `depends_on: condition: service_healthy` on backend (waits for postgres healthcheck to pass)
-- Standardized port mapping: backend 8000, public frontend 3000, admin frontend 3001:3000
-- `restart: unless-stopped` for all services
-
-**Avoids (from PITFALLS.md):**
-- Pitfall 2: File upload loss — verified by uploading a file, running `docker-compose down && up`, confirming file still accessible
-- Pitfall 3: Migration race condition — postgres healthcheck + `depends_on: condition: service_healthy` handles startup ordering
-- Pitfall 5: Wrong SPECTRA_MODE — `SPECTRA_MODE` explicitly set per service in Compose env vars and verified against expected behavior
-
-**Research flag:** None needed. Docker Compose v2 patterns are thoroughly documented. The `depends_on: condition: service_healthy` pattern is standard.
-
----
-
-### Phase 36: Dokploy Deployment and DEPLOYMENT.md
-
-**Rationale:** DEPLOYMENT.md comes last because it documents a process that cannot be written accurately until Dockerfiles and Compose are fully validated. Dokploy deployment configuration lives entirely in the UI (no config files exist), so the DEPLOYMENT.md is the only artifact from this phase beyond the live production deployment itself. Writing documentation before the implementation is known leads to inaccurate guides.
-
-**Delivers:** A production deployment on Dokploy with all three services running behind HTTPS domains. `DEPLOYMENT.md` captures every manual step: Dokploy project creation, 3 Application service configurations (Dockerfile path, context path, port), environment variable tables per service, volume mount configuration (`spectra_uploads` → `/app/uploads`), domain assignment, SSL, and a post-deploy verification checklist.
-
-**Addresses (from FEATURES.md):**
-- `DEPLOYMENT.md` step-by-step Dokploy guide
-- `SPECTRA_MODE` explicitly set per service in Dokploy env vars UI (deployment checklist item)
-- `ENABLE_SCHEDULER=true` on backend
-- `CORS_ORIGINS` configured with actual production frontend domains
-- Named volume `spectra_uploads` at `/app/uploads` configured in Dokploy Advanced → Mounts
-- `SECRET_KEY` generated once (`python -c "import secrets; print(secrets.token_hex(32))"`) and documented
-
-**Avoids (from PITFALLS.md):**
-- Pitfall 5: Wrong SPECTRA_MODE — deployment checklist includes per-service mode verification and smoke test
-- Pitfall 7: JWT secret changes on restart — `SECRET_KEY` generated once and stored only in Dokploy env vars UI
-- Pitfall 4: Secrets not in Dockerfiles or committed files — all secrets injected via Dokploy env vars panel
-
-**Research flag:** LOW — one targeted verification needed at deployment time. The exact internal Docker hostname Dokploy assigns to each service on `dokploy-network` is MEDIUM confidence (community-confirmed but not officially documented by Dokploy). Resolution: inspect the Dokploy UI → service → Network settings for the actual internal hostname after first backend deployment, then update `BACKEND_URL` in the frontend services accordingly. Fallback: use the backend's public domain URL for `BACKEND_URL` (goes through Traefik instead of internal network, slightly higher latency but fully functional).
-
----
+### Phase 4: MCP Server and api Mode Deployment
+**Rationale:** MCP tools are thin wrappers over Phase 3 endpoints. Building last, when endpoints are stable, means tool descriptions can be accurate and integration tests can run end-to-end through the full stack. Building earlier couples MCP development to unstable endpoint contracts.
+**Delivers:** `mcp_server.py` with 3 manually curated tools (`spectra_list_files`, `spectra_get_file_context`, `spectra_run_analysis`), lifespan coordination via `combine_lifespans`, MCP mount in `main.py` `api`/`dev` block, 5th Dokploy `spectra-api` service configuration with its own domain (`api.spectra.io`), 120-second uvicorn timeout for the api-mode service
+**Uses:** `fastmcp>=3.0.2` (new); `httpx` (existing, already installed); Streamable HTTP transport
+**Implements:** FastMCP instance mounted as ASGI sub-application; tools call REST API via httpx loopback; `SPECTRA_MODE=api` Dokploy service
+**Avoids:** Auto-generated tool descriptions only — manually curate all tool descriptions; MCP tools importing service functions directly (bypasses credits and logging); mounting MCP in `public` mode; sharing the `spectra_uploads` volume without confirming Dokploy host topology
+**Research flag:** Verify `combine_lifespans` import path and behavior in FastMCP 3.x at implementation time — the library moved quickly around the v3.0 release and the API may have changed from earlier community examples
 
 ### Phase Ordering Rationale
 
-- **Pre-work first, non-negotiable:** The two localhost hardcodes and `output: 'standalone'` must be in the repo before any Docker image is built. There is no Dockerfile-level workaround for these application-layer issues.
-- **`.dockerignore` before `docker build`, absolute:** Any `docker build` run without `.dockerignore` risks writing API keys and JWT secrets permanently into image layer history. This cannot be undone without deleting and rebuilding the image. Treat `.dockerignore` authoring as a prerequisite gating step, not a follow-up.
-- **Backend Dockerfile before frontend Dockerfiles:** Both frontend images need `BACKEND_URL` to be a known value for validation. The backend Dockerfile is also simpler (no 3-stage pattern) and builds confidence before the more complex frontend multi-stage builds.
-- **Docker Compose before Dokploy:** Local validation catches configuration errors cheaply (no VPS required, fast iteration). Finding that the entrypoint script fails or the volume mount is misconfigured during local testing is far cheaper than debugging on a remote Dokploy instance.
-- **DEPLOYMENT.md last:** Documentation written before the implementation is validated is speculation. Write it last, against a working deployment.
+- **Infrastructure before API surface:** API key infrastructure (Phase 1) and auth layer (Phase 2) produce no user-visible output on their own but gate everything else. Completing them first means Phases 3 and 4 can move fast with high confidence.
+- **REST before MCP:** The MCP server is architecturally a client of the REST API. Until `/api/v1/analysis` returns stable JSON, tool descriptions cannot be accurate and integration tests cannot be trusted end-to-end.
+- **Services over routers as the shared boundary:** Both v1 routers and MCP tool handlers use service layer functions — not each other's router handlers. This is the single most important architectural discipline to enforce across all four phases.
+- **Schema accommodates future from day one:** `scopes TEXT[]` and `expires_at TIMESTAMPTZ NULL` go into the `api_keys` table in Phase 1 even though the P2 features using them are deferred. Adding them later requires a migration and potential downtime.
+- **Docker pitfalls are live for the new service:** The `spectra-api` service introduced in Phase 4 is a new Dokploy Application. All v0.6 deployment disciplines apply: correct context path, no secrets in image layers, explicit `SPECTRA_MODE=api` verification, and a plan for the `spectra_uploads` volume sharing strategy before deploying to production.
 
 ### Research Flags
 
-Phases with standard patterns (no research-phase needed — research is complete):
-- **Phase 1 (Pre-Work):** Direct code changes with no ambiguity
-- **Phase 2 (Dockerfiles):** All patterns from official documentation; HIGH confidence
-- **Phase 3 (Docker Compose):** Standard Compose v2 patterns; HIGH confidence
+Phases needing verification or attention during implementation:
+- **Phase 2:** Verify `slowapi>=0.1.9` compatibility with FastAPI 0.115+ and test that the custom `key_func` correctly extracts API keys from `Authorization: Bearer <key>` headers in the project's specific Depends() chain before writing the rate limiting middleware.
+- **Phase 4:** Verify the `combine_lifespans` import path (`fastmcp.utilities.asgi`) and API behavior in FastMCP 3.x at implementation time. If the API has changed, use a manual lifespan merge pattern as the fallback.
+- **Phase 4:** Confirm `spectra-api` and `spectra-public` Dokploy host topology before deploying. If both run on the same host, the `spectra_uploads` named volume is shared automatically. If they run on different hosts, a shared storage strategy (S3 or NFS) is required before the `api` mode service can access files uploaded via the web UI.
 
-Phases needing one targeted verification during implementation:
-- **Phase 4 (Dokploy):** Verify the exact internal service hostname format on `dokploy-network` after first deployment before setting `BACKEND_URL` in frontend services. MEDIUM confidence on the specific naming convention.
+Phases with well-documented patterns (no additional research needed):
+- **Phase 1:** Exact same ORM + Alembic + service patterns as existing `CreditService`, `FileService`. SHA-256 key hashing is thoroughly documented. HIGH confidence.
+- **Phase 3:** Standard FastAPI router patterns. `await graph.ainvoke()` is existing LangGraph usage. Credit deduction is existing `CreditService`. No novel patterns.
 
 ---
 
@@ -230,54 +163,51 @@ Phases needing one targeted verification during implementation:
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All technology choices verified against official docs (Next.js upgrade guide, uv Docker guide, Python Speed, Dokploy docs, Docker Hub). Versions confirmed as of 2026-02-18. |
-| Features | HIGH | Code inspection of actual files confirmed both hardcoded localhost bugs (line numbers verified). All other features are additive (new Dockerfiles, new config files). No feature ambiguity. |
-| Architecture | MEDIUM-HIGH | Docker and Next.js standalone patterns are HIGH confidence from official docs. Dokploy inter-service networking via `dokploy-network` DNS is MEDIUM confidence — community-confirmed but not officially documented by Dokploy. |
-| Pitfalls | HIGH | All 7 critical pitfalls verified against official Docker docs, official Next.js docs, and official Dokploy docs. Two pitfalls (no `.dockerignore`, hardcoded localhost) confirmed by direct codebase inspection. |
+| Stack | HIGH | `fastmcp>=3.0.2` verified on PyPI (released 2026-02-22), official FastMCP docs consulted for all key patterns; `slowapi` rated MEDIUM (community consensus, multiple sources, not Context7-verified) |
+| Features | HIGH | Industry patterns verified against Stripe, OpenAI, and official MCP documentation; feature dependency graph is unambiguous and directly derived from the codebase |
+| Architecture | HIGH | Core FastAPI patterns from official docs and official FastAPI repo discussions; MCP mounting pattern from official FastMCP docs; direct codebase analysis of existing `main.py`, `dependencies.py`, `config.py` |
+| Pitfalls | HIGH (v0.6 Docker) / MEDIUM (v0.7-specific) | v0.6 Docker/Dokploy pitfalls from official docs and verified GitHub issues; v0.7-specific pitfalls (MCP lifespan, query timeout) derived from architecture research and FastMCP documentation |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Dokploy internal service hostname format:** Not officially documented. Community sources confirm services communicate by service name on `dokploy-network`. Verify in the Dokploy UI (Network/Container settings tab of each deployed service) before configuring `BACKEND_URL` in the frontend services. Fallback if internal hostname doesn't resolve: use the backend's public HTTPS domain for `BACKEND_URL` — this routes through Traefik and is fully functional, just slightly higher latency than the internal network path.
+- **`slowapi` version pinning:** Rated MEDIUM confidence in STACK.md. Before writing rate limiting middleware in Phase 2, confirm `slowapi>=0.1.9` works with FastAPI 0.115+ and that the `key_func` correctly extracts API keys from `Authorization: Bearer` headers in the project's specific dependency injection pattern.
 
-- **SSE streaming through Next.js rewrite proxy:** Next.js docs state rewrites proxy all request types including streaming responses. This is marked LOW confidence in FEATURES.md because it was not verified for POST-based SSE specifically in a Docker proxy chain. Verify during Phase 3 smoke testing by running a chat session end-to-end through the Docker Compose stack. If the Next.js rewrite does not stream SSE correctly, the `useSSEStream.ts` fix must use a `NEXT_PUBLIC_BACKEND_URL` env var for that one endpoint specifically (a larger change that requires understanding the build-time vs runtime distinction for `NEXT_PUBLIC_` vars).
+- **`combine_lifespans` API stability:** FastMCP's `combine_lifespans` utility for merging ASGI lifespans is referenced in ARCHITECTURE.md but its exact import path and behavior in FastMCP 3.x should be verified before Phase 4 begins. The library released v3.0 on 2026-01-19 and may have reorganized internal utilities. Fallback: manual lifespan merge using `asynccontextmanager` composition.
 
-- **`pg_isready` availability in `python:3.12-slim`:** The entrypoint script uses `pg_isready` for the DB readiness check. `python:3.12-slim` does not include PostgreSQL client tools by default. Two options: (1) install `postgresql-client` via `apt-get` in the runtime stage (adds a layer, small image size increase, cleanest solution), or (2) use a pure-Python TCP connection loop instead of `pg_isready` (no extra dependency). Decide during Phase 2 when writing `docker-entrypoint.sh`.
+- **Shared volume strategy for `spectra-api`:** ARCHITECTURE.md notes that file volume sharing between `spectra-public` and `spectra-api` is only automatic on a single Dokploy host. If the `api` service runs on a different host, an S3 or NFS strategy is needed — and the existing file storage pattern (local disk) would need to change. Clarify deployment topology before configuring the Phase 4 Dokploy service.
+
+- **User key management UI placement:** FEATURES.md implies the user self-service key management screen lives in the existing public frontend (served by `spectra-public`). ARCHITECTURE.md shows the `/api-keys` CRUD endpoints registered in `public`/`dev` modes. The frontend routing for this new screen should be confirmed before Phase 1 backend CRUD endpoints are finalized, to ensure the API shape matches what the UI will need.
 
 ---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Next.js official self-hosting guide — standalone mode, runtime env vars, Docker pattern — https://nextjs.org/docs/app/guides/self-hosting
-- Next.js official upgrade guide (v16) — Node.js 20.9+ minimum requirement confirmed — https://nextjs.org/docs/app/guides/upgrading/version-16
-- Next.js official Docker example Dockerfile — authoritative 3-stage standalone pattern — https://github.com/vercel/next.js/tree/canary/examples/with-docker
-- uv official Docker integration guide — multi-stage build pattern, `uv sync --locked` — https://docs.astral.sh/uv/guides/integration/docker/
-- Dokploy official docs — build types, env var scopes, volumes, Application model — https://docs.dokploy.com/docs/core/applications/build-type
-- Docker official docs — `version:` field obsolete, build context, secrets in layers — https://docs.docker.com/reference/compose-file/version-and-name/
-- psycopg official docs — binary package bundles its own libpq, no system libpq-dev needed — https://www.psycopg.org/psycopg3/docs/basic/install.html
-- pythonspeed.com — `python:3.12-slim` recommendation for production Docker images — https://pythonspeed.com/articles/base-image-python-docker-images/
-- Docker official build secrets docs — ARG/ENV secrets baked into layers — https://docs.docker.com/reference/build-checks/secrets-used-in-arg-or-env/
+- FastMCP official docs (gofastmcp.com) — `from_fastapi()`, HTTP transport, lifespan coordination (`combine_lifespans`), auth providers, `DebugTokenVerifier`, tool description quality warning
+- FastMCP PyPI — version 3.0.2, release date 2026-02-22, Python >=3.10 requirement verified
+- MCP Python SDK (github.com/modelcontextprotocol/python-sdk) — protocol transport, `tools/list`, `tools/call` primitives
+- modelcontextprotocol.io official docs — MCP architecture, JSON Schema tool definitions, Streamable HTTP transport recommendation
+- FastAPI official docs — `HTTPBearer(auto_error=False)`, `APIKeyHeader`, router prefix, combined auth dependencies
+- FastAPI official repo (GitHub Discussion #9601) — JWT + API key combined dependency patterns
+- Python stdlib docs — `secrets.token_urlsafe()`, `hashlib.sha256()`, `hmac.compare_digest()` usage
+- Next.js official docs — `NEXT_PUBLIC_*` build-time variable behavior (relevant for v0.6 infrastructure carrying into v0.7)
+- Docker official docs — layer secrets, `.dockerignore`, health check patterns
+- Direct codebase analysis — `backend/app/main.py`, `backend/app/config.py`, `backend/app/dependencies.py`, `backend/app/utils/security.py`, `backend/app/models/user.py`
 
 ### Secondary (MEDIUM confidence)
-- Dokploy `dokploy-network` inter-service communication — community source confirming service name DNS resolution — https://torchtree.com/en/post/dokploy-container-network-issue/
-- Dokploy discussion on `dokploy-network` and domain configuration — https://github.com/Dokploy/dokploy/discussions/1067
-- Runtime Next.js env vars in Docker — confirms server-side vars work at startup without image rebuild — https://nemanjamitic.com/blog/2025-12-13-nextjs-runtime-environment-variables/
-- FastAPI + Alembic + Docker entrypoint pattern (uv-based, consistent with all other sources) — https://blog.devops.dev/a-scalable-approach-to-fastapi-projects-with-postgresql-alembic-pytest-and-docker-using-uv-78ebf6f7fb9a
-- uv Docker multi-stage builds — `UV_COMPILE_BYTECODE=1`, `.venv` copy pattern — https://digon.io/en/blog/2025_07_28_python_docker_images_with_uv
-
-### Tertiary (LOW confidence — verify during implementation)
-- Dokploy service-name DNS resolution for `BACKEND_URL` — community thread, not official docs
-- Next.js rewrite proxy correctly streams POST-based SSE responses — stated in Next.js docs but not explicitly verified in a Docker proxy chain scenario
-
-### Codebase inspection (direct, HIGH confidence)
-- `frontend/src/hooks/useSSEStream.ts` line 112 — confirmed hardcoded `http://localhost:8000/chat/...`
-- `frontend/src/app/(auth)/register/page.tsx` line 26 — confirmed hardcoded `http://localhost:8000/auth/signup-status`
-- `frontend/next.config.ts` and `admin-frontend/next.config.ts` — confirmed missing `output: 'standalone'` and hardcoded rewrite destinations
-- `backend/app/config.py` — confirmed `upload_dir: str = "uploads"` default and `secret_key: str` with no default (correct: Pydantic raises ValidationError if not set)
-- Repo root — confirmed no `.dockerignore` exists anywhere in the repository
+- freeCodeCamp — API key best practices (prefix format, SHA-256 hashing, display-once UX)
+- Stripe, OpenAI, Perplexity API documentation — competitor key management UX feature comparison
+- AppMaster blog — API key rotation, scoping, UX patterns
+- oneuptime.com (2026-02-20) — API key management best practices; SHA-256 vs Argon2 for random keys
+- slowapi GitHub (laurentS/slowapi) — FastAPI rate limiting, custom `key_func` documentation
+- Medium (MCP Streamable HTTP production transport) — production deployment patterns, 2025
+- greeden.me (2025-12-30) — practical FastAPI JWT + API key combined security guide
+- Dokploy official docs — build types, env vars, volumes, Application model (carried from v0.6 research)
+- Docker community forums and HackerNoon — volume persistence and startup race condition patterns
 
 ---
-*Research completed: 2026-02-18*
+
+*Research completed: 2026-02-23*
 *Ready for roadmap: yes*
