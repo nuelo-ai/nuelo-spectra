@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** Phase 39 — API Key Management UI + Deployment Mode
+**Current focus:** Phase 40 — REST API v1 Endpoints
 
 ## Current Position
 
-Phase: 39 of 41 (v0.7) — API Key Management UI + Deployment Mode
-Plan: 5 of 5 complete
-Status: Phase 39 Complete (including gap closure plans)
-Last activity: 2026-02-24 — Completed 39-05 (Public Frontend UAT Gap Closure)
+Phase: 40 of 41 (v0.7) — REST API v1 Endpoints
+Plan: 1 of 3 complete
+Status: Executing Phase 40
+Last activity: 2026-02-24 — Completed 40-01 (Shared Foundation)
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 🚧 Phase 39 of 41
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 🚧 Phase 40 of 41
 
 ## Performance Metrics
 
@@ -41,6 +41,7 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7
 **Recent Trend:**
 - Last milestone: v0.6 shipped cleanly — 5 phases, 10 plans, zero deferred items
 - Trend: Stable
+| 40-01 | 3 tasks | 3 min | 1 min |
 
 ## Accumulated Context
 
@@ -77,6 +78,9 @@ Research decisions (v0.7 planning):
 - Unified `get_authenticated_user()` dependency — JWT fast path first, SHA-256 key fallback; existing `get_current_user` unchanged
 - MCP tool descriptions manually curated — FastMCP auto-generation produces poor LLM tool descriptions (confirmed in FastMCP docs)
 - 120s uvicorn timeout for `spectra-api` service — LangGraph analysis runs 10-45s; default 30s timeout silently cuts legitimate queries
+- [Phase 40]: CreditService.refund() uses SELECT FOR UPDATE pattern matching deduct_credit for atomicity
+- [Phase 40]: ApiKeyService.authenticate() returns tuple (User, api_key_id) instead of just User — enables downstream api_key_id tracking
+- [Phase 40]: Cleaned Alembic migration of unrelated schema drift — only api_usage_logs changes kept
 
 ### Pending Todos
 
@@ -95,5 +99,5 @@ Research decisions (v0.7 planning):
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 39-05-PLAN.md (Public Frontend UAT Gap Closure) — Phase 39 fully complete
-Resume with: Continue with Phase 40
+Stopped at: Completed 40-01-PLAN.md (Shared Foundation)
+Resume with: Continue with 40-02-PLAN.md
