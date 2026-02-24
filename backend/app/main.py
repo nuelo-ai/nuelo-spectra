@@ -268,12 +268,26 @@ async def lifespan(app: FastAPI):
     await engine.dispose()
 
 
+# Determine operational mode early — needed for lifespan coordination
+mode = settings.spectra_mode
+if mode not in ("public", "admin", "dev", "api"):
+    raise ValueError(f"Invalid SPECTRA_MODE: '{mode}'. Must be 'public', 'admin', 'dev', or 'api'")
+
+# Build the app lifespan — conditionally combine with MCP lifespan
+app_lifespan = lifespan
+_mcp_app = None
+if mode in ("api", "dev"):
+    from fastmcp.utilities.lifespan import combine_lifespans
+    from app.mcp_server import create_mcp_app
+    _mcp_app = create_mcp_app()
+    app_lifespan = combine_lifespans(lifespan, _mcp_app.lifespan)
+
 # Create FastAPI application
 app = FastAPI(
     title="Spectra API",
     version="0.1.0",
     description="AI-powered data analytics platform backend",
-    lifespan=lifespan,
+    lifespan=app_lifespan,
     redirect_slashes=False,
 )
 
@@ -321,16 +335,15 @@ async def api_error_envelope_handler(request: Request, exc: FastAPIHTTPException
 async def strip_trailing_slash(request: Request, call_next):
     """Normalize paths by stripping trailing slashes so the API works
     regardless of whether the caller includes one. Required because
-    the Next.js route-handler proxy may or may not preserve them."""
-    if request.url.path != "/" and request.url.path.endswith("/"):
-        request.scope["path"] = request.url.path.rstrip("/")
+    the Next.js route-handler proxy may or may not preserve them.
+    Excludes /mcp paths — MCP Streamable HTTP transport needs trailing slashes."""
+    path = request.url.path
+    if path != "/" and path.endswith("/") and not path.startswith("/mcp"):
+        request.scope["path"] = path.rstrip("/")
     return await call_next(request)
 
 
-# Determine operational mode
-mode = settings.spectra_mode
-if mode not in ("public", "admin", "dev", "api"):
-    raise ValueError(f"Invalid SPECTRA_MODE: '{mode}'. Must be 'public', 'admin', 'dev', or 'api'")
+# Mode already determined above (before app creation for lifespan coordination)
 
 logger = logging.getLogger("spectra.mode")
 logger.info(f"Starting Spectra in {mode.upper()} mode")
@@ -344,12 +357,14 @@ if mode in ("admin", "dev") and settings.admin_cors_origin:
 
 if mode == "api":
     # API mode: Bearer token auth, no cookies needed, allow all origins
+    # MCP headers: mcp-protocol-version (request), mcp-session-id (response)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
         allow_credentials=False,
         allow_methods=["GET", "POST", "PUT", "DELETE"],
-        allow_headers=["Authorization", "Content-Type"],
+        allow_headers=["Authorization", "Content-Type", "mcp-protocol-version"],
+        expose_headers=["mcp-session-id"],
     )
 else:
     app.add_middleware(
@@ -393,6 +408,10 @@ if mode in ("api", "dev"):
     app.include_router(api_v1_router)                    # /v1/* — public frontend proxy strips /api
     app.include_router(api_v1_router, prefix="/api")     # /api/v1/* — direct access and admin frontend
     app.add_middleware(ApiUsageMiddleware)                # Structured logging for all /v1/ requests
+
+    # MCP server (Streamable HTTP at /mcp/)
+    if _mcp_app is not None:
+        app.mount("/mcp", _mcp_app)
 
 # In public mode, catch-all for /api/admin/* to log warnings and return 404
 if mode == "public":
