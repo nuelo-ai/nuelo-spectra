@@ -27,6 +27,7 @@ async def create_api_key(
     api_key, full_key = await ApiKeyService.create(
         db, current_user.id, body.name, body.description
     )
+    await db.commit()
     return ApiKeyCreateResponse(
         id=api_key.id,
         name=api_key.name,
@@ -42,3 +43,4 @@ async def revoke_api_key(key_id: UUID, current_user: CurrentUser, db: DbSession)
     revoked = await ApiKeyService.revoke(db, key_id, current_user.id)
     if not revoked:
         raise HTTPException(status_code=404, detail="API key not found")
+    await db.commit()

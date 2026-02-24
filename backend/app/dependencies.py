@@ -145,6 +145,7 @@ async def get_authenticated_user(
                 detail="Invalid or revoked API key",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+        await db.commit()
         return user
 
     # JWT path: try to verify as JWT
