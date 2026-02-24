@@ -21,6 +21,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -183,78 +191,93 @@ export function ApiKeysTab({ user }: ApiKeysTabProps) {
             </div>
           )}
 
-          {/* Key list */}
+          {/* Key list as table */}
           {keys && keys.length > 0 && (
-            <div className="space-y-3">
-              {keys.map((key) => (
-                <div
-                  key={key.id}
-                  className={`flex items-center justify-between rounded-lg border p-3 ${
-                    !key.is_active ? "opacity-50" : ""
-                  }`}
-                >
-                  <div className="space-y-1 min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`text-sm font-medium truncate ${
-                          !key.is_active ? "line-through" : ""
-                        }`}
-                      >
-                        {key.name}
-                      </span>
-                      {key.is_active ? (
-                        <Badge
-                          variant="secondary"
-                          className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Key Prefix</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Last Used</TableHead>
+                  <TableHead>Credits</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {keys.map((key) => (
+                  <TableRow
+                    key={key.id}
+                    className={!key.is_active ? "opacity-50" : ""}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-sm font-medium ${
+                            !key.is_active ? "line-through" : ""
+                          }`}
                         >
-                          Active
-                        </Badge>
-                      ) : (
-                        <Badge
-                          variant="secondary"
-                          className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                        >
-                          Revoked
-                        </Badge>
-                      )}
-                      {key.created_by_admin_id && (
-                        <Badge variant="outline" className="gap-1">
-                          <Shield className="size-3" />
-                          Admin
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span className="font-mono">{key.key_prefix}...</span>
-                      <span>Created {formatDate(key.created_at)}</span>
-                      {key.last_used_at ? (
-                        <span>
-                          Last used {formatDate(key.last_used_at)}
+                          {key.name}
                         </span>
-                      ) : (
-                        <span>Never used</span>
-                      )}
-                      <span>Credits: {key.total_credits_used.toFixed(1)}</span>
-                      {key.revoked_at && (
-                        <span>Revoked {formatDate(key.revoked_at)}</span>
-                      )}
-                    </div>
-                  </div>
-                  {key.is_active && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10 ml-2"
-                      onClick={() =>
-                        setRevokeTarget({ id: key.id, name: key.name })
-                      }
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
+                        {key.is_active ? (
+                          <Badge
+                            variant="secondary"
+                            className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                          >
+                            Active
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="secondary"
+                            className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                          >
+                            Revoked
+                          </Badge>
+                        )}
+                        {key.created_by_admin_id && (
+                          <Badge variant="outline" className="gap-1">
+                            <Shield className="size-3" />
+                            Admin
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-mono text-xs">{key.key_prefix}...</span>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {formatDate(key.created_at)}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {key.last_used_at
+                        ? formatDate(key.last_used_at)
+                        : "Never"}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {key.total_credits_used.toFixed(1)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {key.is_active ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() =>
+                            setRevokeTarget({ id: key.id, name: key.name })
+                          }
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      ) : key.revoked_at ? (
+                        <span className="text-xs text-muted-foreground">
+                          Revoked {formatDate(key.revoked_at)}
+                        </span>
+                      ) : null}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
