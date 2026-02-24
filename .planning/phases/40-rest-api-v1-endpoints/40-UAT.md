@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 40-rest-api-v1-endpoints
 source: [40-01-SUMMARY.md, 40-02-SUMMARY.md, 40-03-SUMMARY.md]
 started: 2026-02-24T17:00:00Z
@@ -75,9 +75,14 @@ skipped: 0
   reason: "User reported: PUT returns success but changes not persisted — GET context afterwards shows old values. Also data_summary should not be user-editable (it's AI-generated), only user_context should be updatable."
   severity: major
   test: 5
-  root_cause: ""
-  artifacts: []
-  missing: []
+  root_cause: "context.py uses db.flush() instead of db.commit() — changes staged but never committed, rolled back on session close. Also data_summary field exposed in UpdateContextRequest when it should be AI-only."
+  artifacts:
+    - path: "backend/app/routers/api_v1/context.py"
+      issue: "Line 64: flush() instead of commit(); Lines 18,59-60: data_summary in UpdateContextRequest"
+  missing:
+    - "Change db.flush() to db.commit() on line 64"
+    - "Remove data_summary from UpdateContextRequest model"
+    - "Remove data_summary update conditional block (lines 59-60)"
   debug_session: ""
 
 - truth: "Auth errors return ApiErrorResponse envelope format"
@@ -85,7 +90,12 @@ skipped: 0
   reason: "User reported: 401 Unauthorized returns raw FastAPI default {\"detail\": \"Not authenticated\"} instead of ApiErrorResponse envelope."
   severity: major
   test: 9
-  root_cause: ""
-  artifacts: []
-  missing: []
+  root_cause: "No custom exception handler in main.py to intercept HTTPException and wrap in ApiErrorResponse. FastAPI default handler returns raw {\"detail\": \"...\"} format. OAuth2PasswordBearer auto_error=True raises HTTPException directly."
+  artifacts:
+    - path: "backend/app/main.py"
+      issue: "No custom HTTPException handler registered"
+    - path: "backend/app/dependencies.py"
+      issue: "oauth2_scheme with auto_error=True raises raw HTTPException"
+  missing:
+    - "Add custom exception handler in main.py for HTTPException that wraps 401/403 in ApiErrorResponse envelope"
   debug_session: ""
