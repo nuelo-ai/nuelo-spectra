@@ -1,5 +1,5 @@
 from functools import lru_cache
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Any
 import json
@@ -77,11 +77,22 @@ class Settings(BaseSettings):
     search_timeout: float = 10.0
 
     # Admin / Split-Horizon
-    spectra_mode: str = "dev"  # "public", "admin", or "dev"
+    spectra_mode: str = "dev"  # "public", "admin", "dev", or "api"
     admin_email: str = ""          # For seed-admin CLI
     admin_password: str = ""       # For seed-admin CLI
     admin_first_name: str = "Admin"  # For seed-admin CLI
     admin_last_name: str = "User"    # For seed-admin CLI
+
+    @field_validator("spectra_mode")
+    @classmethod
+    def validate_spectra_mode(cls, v: str) -> str:
+        """Reject unknown SPECTRA_MODE values at Settings construction."""
+        allowed = ("public", "admin", "dev", "api")
+        if v not in allowed:
+            raise ValueError(
+                f"SPECTRA_MODE must be one of {allowed}, got '{v}'"
+            )
+        return v
 
     @model_validator(mode="after")
     def validate_admin_credentials_for_admin_modes(self) -> "Settings":

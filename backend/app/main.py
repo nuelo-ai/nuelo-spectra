@@ -288,8 +288,8 @@ async def strip_trailing_slash(request: Request, call_next):
 
 # Determine operational mode
 mode = settings.spectra_mode
-if mode not in ("public", "admin", "dev"):
-    raise ValueError(f"Invalid SPECTRA_MODE: '{mode}'. Must be 'public', 'admin', or 'dev'")
+if mode not in ("public", "admin", "dev", "api"):
+    raise ValueError(f"Invalid SPECTRA_MODE: '{mode}'. Must be 'public', 'admin', 'dev', or 'api'")
 
 logger = logging.getLogger("spectra.mode")
 logger.info(f"Starting Spectra in {mode.upper()} mode")
