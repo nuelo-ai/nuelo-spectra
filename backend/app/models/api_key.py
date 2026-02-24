@@ -1,4 +1,4 @@
-from sqlalchemy import String, Text, DateTime, Boolean, ForeignKey
+from sqlalchemy import String, Text, DateTime, Boolean, Float, ForeignKey
 from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime, timezone
@@ -42,8 +42,31 @@ class ApiKey(Base):
         default=lambda: datetime.now(timezone.utc)
     )
 
+    # Admin tracking fields (Phase 39)
+    created_by_admin_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        comment="Admin who created this key on behalf of user (NULL = self-created)",
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Timestamp when key was revoked (is_active set to False)",
+    )
+    total_credits_used: Mapped[float] = mapped_column(
+        Float,
+        default=0.0,
+        server_default="0",
+        comment="Denormalized credit usage counter (populated by Phase 40)",
+    )
+
     # Relationships
     user: Mapped["User"] = relationship(
         "User",
-        back_populates="api_keys"
+        back_populates="api_keys",
+        foreign_keys=[user_id],
+    )
+    created_by_admin: Mapped["User | None"] = relationship(
+        "User",
+        foreign_keys=[created_by_admin_id],
     )
