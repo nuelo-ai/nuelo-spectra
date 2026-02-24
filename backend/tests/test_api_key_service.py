@@ -47,7 +47,10 @@ class TestApiKeyServiceAuthenticate:
         with patch("app.services.api_key.get_user_by_id", return_value=mock_user):
             result = await ApiKeyService.authenticate(mock_db, "spe_validkey")
 
-        assert result is mock_user
+        assert result is not None
+        user, api_key_id = result
+        assert user is mock_user
+        assert api_key_id == mock_api_key.id
 
     @pytest.mark.asyncio
     async def test_authenticate_invalid_key_returns_none(self):

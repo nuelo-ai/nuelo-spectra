@@ -119,14 +119,14 @@ class ApiKeyService:
         return True
 
     @staticmethod
-    async def authenticate(db: AsyncSession, raw_key: str):
+    async def authenticate(db: AsyncSession, raw_key: str) -> tuple | None:
         """Authenticate a request using an API key.
 
         Hashes the raw key, looks up by token_hash with is_active=True filter.
         Updates last_used_at on successful authentication.
 
         Returns:
-            User object if key is valid and active, None otherwise.
+            Tuple of (User, api_key_id) if key is valid and active, None otherwise.
         """
         token_hash = hashlib.sha256(raw_key.encode()).hexdigest()
 
@@ -145,5 +145,8 @@ class ApiKeyService:
         api_key.last_used_at = datetime.now(timezone.utc)
         await db.flush()
 
-        # Return the user
-        return await get_user_by_id(db, api_key.user_id)
+        # Return the user and api_key_id
+        user = await get_user_by_id(db, api_key.user_id)
+        if user is None:
+            return None
+        return (user, api_key.id)

@@ -7,7 +7,7 @@ from typing import Annotated
 from uuid import UUID
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -112,6 +112,7 @@ async def get_current_user(
 
 
 async def get_authenticated_user(
+    request: Request,
     token: Annotated[str | None, Depends(oauth2_scheme_optional)],
     db: Annotated[AsyncSession, Depends(get_db)],
     settings: Annotated[Settings, Depends(get_settings)],
@@ -122,10 +123,12 @@ async def get_authenticated_user(
       - Try verify_token() -> get user from DB
       - If expired JWT: raise 401 "Token has expired" (do NOT fall through to key lookup)
       - If invalid JWT format: raise 401 "Invalid token"
+      - Sets request.state.api_key_id = None
 
     API key path (token starts with 'spe_'):
       - Call ApiKeyService.authenticate()
       - None -> raise 401 "Invalid or revoked API key"
+      - Sets request.state.api_key_id to the authenticated key's UUID
 
     Used by Phase 40 external API endpoints only. Not used by APIKEY CRUD endpoints.
     """
@@ -138,13 +141,15 @@ async def get_authenticated_user(
 
     # Fast path: if token looks like an API key, skip JWT entirely
     if token.startswith("spe_"):
-        user = await ApiKeyService.authenticate(db, token)
-        if user is None:
+        result = await ApiKeyService.authenticate(db, token)
+        if result is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid or revoked API key",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+        user, api_key_id = result
+        request.state.api_key_id = api_key_id
         await db.commit()
         return user
 
@@ -158,6 +163,7 @@ async def get_authenticated_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not found or inactive",
             )
+        request.state.api_key_id = None
         return user
     except HTTPException:
         # Re-raise JWT-specific errors (expired token, invalid token, etc.) as-is
