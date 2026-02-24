@@ -15,6 +15,16 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 **Branch:** master
 **Latest Tag:** v0.6 (2026-02-21)
 
+## Current Milestone: v0.7 API Services & MCP
+
+**Goal:** Expose Spectra's data analysis capabilities as a public REST API and MCP server, enabling programmatic access and AI agent integrations.
+
+**Target features:**
+- API key management (user self-service + admin management)
+- Public REST API v1: file management, file context, synchronous chat/query
+- SPECTRA_MODE=api deployment as 5th Dokploy service (same backend codebase)
+- MCP server wrapping the API endpoints as tools for Claude/AI agents
+
 ## Latest Milestone: v0.6 Docker and Dokploy Support (Shipped 2026-02-21)
 
 **Delivered:** Full production deployment package — Docker Compose for local dev, Dockerfiles for all 3 services, 4 Dokploy services with Tailscale split-horizon architecture, fail-fast startup validation requiring admin credentials in dev/admin modes, automatic admin seeding on container startup, and DEPLOYMENT.md guide.
@@ -412,7 +422,12 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 ### Active
 
-<!-- Next milestone requirements will be defined via /gsd:new-milestone -->
+<!-- v0.7 requirements — see .planning/REQUIREMENTS.md -->
+
+- [ ] API key management (user + admin)
+- [ ] Public REST API v1: file management, file context, synchronous chat
+- [ ] SPECTRA_MODE=api deployment mode
+- [ ] MCP server exposing API as tools for AI agents
 
 ### Out of Scope
 
@@ -520,4 +535,4 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | Backend has no public domain | Reduced attack surface; frontend proxies via Swarm DNS | ✓ Good — simpler than exposing backend directly |
 
 ---
-*Last updated: 2026-02-21 after v0.6 milestone*
+*Last updated: 2026-02-23 after v0.7 milestone start*
