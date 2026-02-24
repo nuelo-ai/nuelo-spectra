@@ -12,9 +12,9 @@
 - [x] **APIKEY-03**: User can revoke their own API keys
 - [x] **APIKEY-04**: Revoked API keys cannot be used for authentication
 - [x] **APIKEY-05**: API keys are stored securely (hashed, full key shown only once at creation)
-- [ ] **APIKEY-06**: Admin can view API keys for all users from User Management
-- [ ] **APIKEY-07**: Admin can create API keys on behalf of any user
-- [ ] **APIKEY-08**: Admin can revoke any user's API keys
+- [x] **APIKEY-06**: Admin can view API keys for all users from User Management
+- [x] **APIKEY-07**: Admin can create API keys on behalf of any user
+- [x] **APIKEY-08**: Admin can revoke any user's API keys
 
 ### API Authentication & Security (APISEC)
 
@@ -92,9 +92,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | APIKEY-03 | Phase 38 | Complete |
 | APIKEY-04 | Phase 38 | Complete |
 | APIKEY-05 | Phase 38 | Complete |
-| APIKEY-06 | Phase 39 | Pending |
-| APIKEY-07 | Phase 39 | Pending |
-| APIKEY-08 | Phase 39 | Pending |
+| APIKEY-06 | Phase 39 | Complete |
+| APIKEY-07 | Phase 39 | Complete |
+| APIKEY-08 | Phase 39 | Complete |
 | APISEC-01 | Phase 38 | Complete |
 | APISEC-02 | Phase 38 | Complete |
 | APISEC-03 | Phase 40 | Pending |

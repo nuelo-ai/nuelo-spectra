@@ -32,6 +32,7 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7
 | 38-02 | 2 tasks | 2 min | 1 min |
 | 38-03 | 3 tasks | 3 min | 1 min |
 | 38-04 | 3 tasks | 5 min | ~2 min |
+| 39-01 | 2 tasks | 3 min | ~2 min |
 | 39-02 | 2 tasks | 2 min | 1 min |
 
 **Recent Trend:**
@@ -56,6 +57,9 @@ Recent decisions (v0.7 execution):
 - One-time key display Dialog with explicit "I have copied my key" dismissal — prevents accidental key loss (research pitfall #6)
 - API mode CORS uses allow_origins=["*"] with allow_credentials=False — Bearer token auth, not cookies; wildcard+credentials is CORS-spec violation
 - Credit usage always visible (even 0.0) in API key list — users see the field exists before Phase 40 populates data
+- Cleaned Alembic autogenerate migration to only include api_keys changes — excluded unrelated checkpoint/chat_messages schema drift
+- Named FK constraint fk_api_keys_created_by_admin for explicit downgrade support
+- Added foreign_keys=[ApiKey.user_id] to User.api_keys relationship to resolve ambiguous FK from dual api_keys->users FKs
 
 Research decisions (v0.7 planning):
 - API keys use SHA-256 hashing (not Argon2) — high-entropy random token; SHA-256 is industry standard (GitHub, Stripe), no performance penalty
@@ -83,5 +87,5 @@ Research decisions (v0.7 planning):
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 39-02-PLAN.md (API Key UI Enhancement & API Deployment Mode)
+Stopped at: Completed 39-01-PLAN.md (Backend Admin API Key Endpoints) and 39-02-PLAN.md (API Key UI Enhancement & API Deployment Mode)
 Resume with: Continue with 39-03-PLAN.md
