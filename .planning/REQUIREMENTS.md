@@ -25,16 +25,16 @@
 
 ### API Use Cases — Files (APIF)
 
-- [ ] **APIF-01**: API caller can upload a CSV or Excel file, triggering onboarding (data brief + suggestions)
-- [ ] **APIF-02**: API caller can list all files for the authenticated user
-- [ ] **APIF-03**: API caller can delete a file by ID
-- [ ] **APIF-04**: API caller can download a file by ID
+- [x] **APIF-01**: API caller can upload a CSV or Excel file, triggering onboarding (data brief + suggestions)
+- [x] **APIF-02**: API caller can list all files for the authenticated user
+- [x] **APIF-03**: API caller can delete a file by ID
+- [x] **APIF-04**: API caller can download a file by ID
 
 ### API Use Cases — File Context (APIC)
 
-- [ ] **APIC-01**: API caller can get file detail including data brief, summary, and context
-- [ ] **APIC-02**: API caller can update file data summary or context
-- [ ] **APIC-03**: API caller can get query suggestions for a file
+- [x] **APIC-01**: API caller can get file detail including data brief, summary, and context
+- [x] **APIC-02**: API caller can update file data summary or context
+- [x] **APIC-03**: API caller can get query suggestions for a file
 
 ### API Use Cases — Chat (APIQ)
 
@@ -99,13 +99,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | APISEC-02 | Phase 38 | Complete |
 | APISEC-03 | Phase 40 | Complete |
 | APISEC-04 | Phase 40 | Complete |
-| APIF-01 | Phase 40 | Pending |
-| APIF-02 | Phase 40 | Pending |
-| APIF-03 | Phase 40 | Pending |
-| APIF-04 | Phase 40 | Pending |
-| APIC-01 | Phase 40 | Pending |
-| APIC-02 | Phase 40 | Pending |
-| APIC-03 | Phase 40 | Pending |
+| APIF-01 | Phase 40 | Complete |
+| APIF-02 | Phase 40 | Complete |
+| APIF-03 | Phase 40 | Complete |
+| APIF-04 | Phase 40 | Complete |
+| APIC-01 | Phase 40 | Complete |
+| APIC-02 | Phase 40 | Complete |
+| APIC-03 | Phase 40 | Complete |
 | APIQ-01 | Phase 40 | Pending |
 | APIINFRA-01 | Phase 38 | Complete |
 | APIINFRA-02 | Phase 38 | Complete |

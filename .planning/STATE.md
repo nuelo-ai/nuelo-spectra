@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 40 of 41 (v0.7) — REST API v1 Endpoints
-Plan: 1 of 3 complete
+Plan: 2 of 3 complete
 Status: Executing Phase 40
-Last activity: 2026-02-24 — Completed 40-01 (Shared Foundation)
+Last activity: 2026-02-24 — Completed 40-02 (File & Context Endpoints)
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 🚧 Phase 40 of 41
 
@@ -42,6 +42,7 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7
 - Last milestone: v0.6 shipped cleanly — 5 phases, 10 plans, zero deferred items
 - Trend: Stable
 | 40-01 | 3 tasks | 3 min | 1 min |
+| Phase 40 P02 | 2min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,8 @@ Research decisions (v0.7 planning):
 - [Phase 40]: CreditService.refund() uses SELECT FOR UPDATE pattern matching deduct_credit for atomicity
 - [Phase 40]: ApiKeyService.authenticate() returns tuple (User, api_key_id) instead of just User — enables downstream api_key_id tracking
 - [Phase 40]: Cleaned Alembic migration of unrelated schema drift — only api_usage_logs changes kept
+- [Phase 40]: Synchronous onboarding on upload (await, not create_task) per user decision
+- [Phase 40]: Download endpoint returns FileResponse (binary stream), not JSON envelope
 
 ### Pending Todos
 
@@ -99,5 +102,5 @@ Research decisions (v0.7 planning):
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 40-01-PLAN.md (Shared Foundation)
-Resume with: Continue with 40-02-PLAN.md
+Stopped at: Completed 40-02-PLAN.md (File & Context Endpoints)
+Resume with: Continue with 40-03-PLAN.md
