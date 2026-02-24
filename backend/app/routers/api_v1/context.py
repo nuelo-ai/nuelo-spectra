@@ -15,7 +15,6 @@ router = APIRouter(prefix="/files", tags=["API v1 - File Context"])
 class UpdateContextRequest(BaseModel):
     """Request body for updating file context."""
 
-    data_summary: str | None = None
     user_context: str | None = None
 
 
@@ -50,23 +49,20 @@ async def update_file_context(
     user: ApiAuthUser,
     db: DbSession,
 ):
-    """Update file summary and/or user context. Only provided fields are updated."""
+    """Update user context for a file. Only provided fields are updated."""
     f = await FileService.get_user_file(db, file_id, user.id)
     if f is None:
         return api_error(404, "FILE_NOT_FOUND")
 
     # Update only the fields that are provided (not None)
-    if body.data_summary is not None:
-        f.data_summary = body.data_summary
     if body.user_context is not None:
         f.user_context = body.user_context
 
-    await db.flush()
+    await db.commit()
 
     return ApiResponse(
         data={
             "id": str(f.id),
-            "data_summary": f.data_summary,
             "user_context": f.user_context,
         }
     )
