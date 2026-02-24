@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 39 of 41 (v0.7) — API Key Management UI + Deployment Mode
-Plan: 3 of 3 complete
-Status: Phase 39 Complete
-Last activity: 2026-02-24 — Completed 39-03 (Admin API Key Management UI)
+Plan: 5 of 5 complete
+Status: Phase 39 Complete (including gap closure plans)
+Last activity: 2026-02-24 — Completed 39-05 (Public Frontend UAT Gap Closure)
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 🚧 Phase 39 of 41
 
@@ -35,6 +35,7 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7
 | 39-01 | 2 tasks | 3 min | ~2 min |
 | 39-02 | 2 tasks | 2 min | 1 min |
 | 39-03 | 2 tasks | 2 min | 1 min |
+| 39-05 | 2 tasks | 1 min | ~30s |
 
 **Recent Trend:**
 - Last milestone: v0.6 shipped cleanly — 5 phases, 10 plans, zero deferred items
@@ -63,6 +64,7 @@ Recent decisions (v0.7 execution):
 - Added foreign_keys=[ApiKey.user_id] to User.api_keys relationship to resolve ambiguous FK from dual api_keys->users FKs
 - AlertDialog UI component added to admin-frontend (copied from frontend) for revoke confirmation pattern
 - Revoked keys shown inline with opacity-50 and line-through, not filtered out — admin sees full key history
+- created_by_admin_id added to base ApiKeyListItem (not just AdminApiKeyListItem) so public frontend receives it via GET /v1/keys
 
 Research decisions (v0.7 planning):
 - API keys use SHA-256 hashing (not Argon2) — high-entropy random token; SHA-256 is industry standard (GitHub, Stripe), no performance penalty
@@ -90,5 +92,5 @@ Research decisions (v0.7 planning):
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 39-03-PLAN.md (Admin API Key Management UI) — Phase 39 complete
+Stopped at: Completed 39-05-PLAN.md (Public Frontend UAT Gap Closure) — Phase 39 fully complete
 Resume with: Continue with Phase 40
