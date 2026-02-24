@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from app.models.file import File
     from app.models.chat_message import ChatMessage
     from app.models.chat_session import ChatSession
+    from app.models.api_key import ApiKey
 
 
 class User(Base):
@@ -51,6 +52,11 @@ class User(Base):
     )
     chat_sessions: Mapped[list["ChatSession"]] = relationship(
         "ChatSession",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    api_keys: Mapped[list["ApiKey"]] = relationship(
+        "ApiKey",
         back_populates="user",
         cascade="all, delete-orphan"
     )
