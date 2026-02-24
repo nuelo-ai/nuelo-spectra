@@ -92,7 +92,7 @@
 - [x] **Phase 38: API Key Infrastructure** - Data model, ApiKeyService, Alembic migration, auth middleware, and frontend management UI — completed 2026-02-23
 - [x] **Phase 39: API Key Management UI + Deployment Mode** - User Settings page, admin User Management extension, and SPECTRA_MODE=api as 5th Dokploy service (UAT gap closure in progress) (completed 2026-02-24)
 - [x] **Phase 40: REST API v1 Endpoints** - File management, file context, and synchronous query endpoints with credit deduction and usage logging (completed 2026-02-24)
-- [ ] **Phase 41: MCP Server** - Manually curated MCP tools wrapping Phase 40 endpoints, ASGI mounting, and Streamable HTTP transport
+- [x] **Phase 41: MCP Server** - Manually curated MCP tools wrapping Phase 40 endpoints, ASGI mounting, and Streamable HTTP transport (completed 2026-02-24)
 
 ## Phase Details
 
@@ -205,5 +205,5 @@ Plans:
 | 37. Admin Seed on Startup | v0.6 | 1/1 | Complete | 2026-02-21 |
 | 38. API Key Infrastructure (incl. dev mode) | v0.7 | Complete    | 2026-02-24 | 2026-02-23 |
 | 39. API Key Management UI + Deployment Mode | 5/5 | Complete    | 2026-02-24 | - |
-| 40. REST API v1 Endpoints | 3/3 | Complete   | 2026-02-24 | - |
+| 40. REST API v1 Endpoints | 3/3 | Complete    | 2026-02-24 | - |
 | 41. MCP Server | v0.7 | 0/TBD | Not started | - |
