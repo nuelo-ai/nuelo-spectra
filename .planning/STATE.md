@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 38 of 41 (v0.7) — API Key Infrastructure
-Plan: — (ready to plan)
-Status: Ready to plan
-Last activity: 2026-02-23 — v0.7 roadmap created (Phases 38-41)
+Plan: 1 of 4 complete
+Status: Executing
+Last activity: 2026-02-24 — Completed 38-01 (data foundation: ApiKey model, migration, config)
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 🚧 Phase 38 of 41
 
@@ -28,6 +28,7 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | v0.6 (33-37) | 10 | ~3 days | ~7 hrs |
+| 38-01 | 3 tasks | 3 min | 1 min |
 
 **Recent Trend:**
 - Last milestone: v0.6 shipped cleanly — 5 phases, 10 plans, zero deferred items
@@ -39,7 +40,11 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7
 
 See PROJECT.md Key Decisions table for full decision log.
 
-Recent decisions relevant to v0.7:
+Recent decisions (v0.7 execution):
+- Manual Alembic migration when no local DB available — verified via script loading and HEAD detection
+- field_validator on spectra_mode rejects unknown modes at Settings construction (earlier than main.py)
+
+Research decisions (v0.7 planning):
 - API keys use SHA-256 hashing (not Argon2) — high-entropy random token; SHA-256 is industry standard (GitHub, Stripe), no performance penalty
 - `spe_<secrets.token_urlsafe(32)>` prefix format — recognizable in logs and configs
 - MCP tools call REST API via httpx loopback — preserves credit deduction and usage logging middleware chain
@@ -64,6 +69,6 @@ Recent decisions relevant to v0.7:
 
 ## Session Continuity
 
-Last session: 2026-02-23
-Stopped at: v0.7 roadmap created — Phases 38-41 defined, ROADMAP.md and STATE.md written
-Resume with: `/gsd:plan-phase 38`
+Last session: 2026-02-24
+Stopped at: Completed 38-01-PLAN.md (data foundation)
+Resume with: `/gsd:execute-phase 38` (continues with plan 02)

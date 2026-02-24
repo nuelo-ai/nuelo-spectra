@@ -10,8 +10,8 @@
 - [ ] **APIKEY-01**: User can view their API keys on the Settings/API Keys page
 - [ ] **APIKEY-02**: User can create an API key with a name and description
 - [ ] **APIKEY-03**: User can revoke their own API keys
-- [ ] **APIKEY-04**: Revoked API keys cannot be used for authentication
-- [ ] **APIKEY-05**: API keys are stored securely (hashed, full key shown only once at creation)
+- [x] **APIKEY-04**: Revoked API keys cannot be used for authentication
+- [x] **APIKEY-05**: API keys are stored securely (hashed, full key shown only once at creation)
 - [ ] **APIKEY-06**: Admin can view API keys for all users from User Management
 - [ ] **APIKEY-07**: Admin can create API keys on behalf of any user
 - [ ] **APIKEY-08**: Admin can revoke any user's API keys
@@ -42,11 +42,11 @@
 
 ### API Infrastructure (APIINFRA)
 
-- [ ] **APIINFRA-01**: `SPECTRA_MODE=api` enables API routes on the existing backend — no separate codebase
-- [ ] **APIINFRA-02**: API routes are versioned under `/api/v1/`
+- [x] **APIINFRA-01**: `SPECTRA_MODE=api` enables API routes on the existing backend — no separate codebase
+- [x] **APIINFRA-02**: API routes are versioned under `/api/v1/`
 - [ ] **APIINFRA-03**: API service is deployable as a 5th Dokploy service with its own public HTTPS domain
 - [ ] **APIINFRA-04**: API requests and errors are logged (structured, per-request)
-- [ ] **APIINFRA-05**: In `SPECTRA_MODE=dev` (Docker Compose local), all `/api/v1/` routes are active alongside existing backend routes — no separate service needed for local development
+- [x] **APIINFRA-05**: In `SPECTRA_MODE=dev` (Docker Compose local), all `/api/v1/` routes are active alongside existing backend routes — no separate service needed for local development
 
 ### MCP Server (MCP)
 
@@ -90,8 +90,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | APIKEY-01 | Phase 38 | Pending |
 | APIKEY-02 | Phase 38 | Pending |
 | APIKEY-03 | Phase 38 | Pending |
-| APIKEY-04 | Phase 38 | Pending |
-| APIKEY-05 | Phase 38 | Pending |
+| APIKEY-04 | Phase 38 | Complete |
+| APIKEY-05 | Phase 38 | Complete |
 | APIKEY-06 | Phase 39 | Pending |
 | APIKEY-07 | Phase 39 | Pending |
 | APIKEY-08 | Phase 39 | Pending |
@@ -107,11 +107,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | APIC-02 | Phase 40 | Pending |
 | APIC-03 | Phase 40 | Pending |
 | APIQ-01 | Phase 40 | Pending |
-| APIINFRA-01 | Phase 38 | Pending |
-| APIINFRA-02 | Phase 38 | Pending |
+| APIINFRA-01 | Phase 38 | Complete |
+| APIINFRA-02 | Phase 38 | Complete |
 | APIINFRA-03 | Phase 39 | Pending |
 | APIINFRA-04 | Phase 40 | Pending |
-| APIINFRA-05 | Phase 38 | Pending |
+| APIINFRA-05 | Phase 38 | Complete |
 | MCP-01 | Phase 41 | Pending |
 | MCP-02 | Phase 41 | Pending |
 | MCP-03 | Phase 41 | Pending |
