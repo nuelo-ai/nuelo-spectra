@@ -28,6 +28,7 @@ class ApiKeyListItem(BaseModel):
     created_at: datetime
     last_used_at: datetime | None
     total_credits_used: float
+    created_by_admin_id: UUID | None = None
 
     model_config = {"from_attributes": True}
 

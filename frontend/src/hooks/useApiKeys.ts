@@ -16,6 +16,7 @@ export interface ApiKeyListItem {
   created_at: string;
   last_used_at: string | null;
   total_credits_used: number;
+  created_by_admin_id: string | null;
 }
 
 export interface ApiKeyCreateResponse {
