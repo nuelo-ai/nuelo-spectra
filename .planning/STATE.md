@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 41 of 41 (v0.7) — MCP Server Integration
-Plan: 1 of 2 complete
-Status: In Progress
-Last activity: 2026-02-24 — Completed 41-01 (MCP Server Core)
+Plan: 2 of 2 complete
+Status: Phase Complete
+Last activity: 2026-02-24 — Completed 41-02 (Mount & Lifecycle)
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 🚧 Phase 41 of 41
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ Phase 41 of 41
 
 ## Performance Metrics
 
@@ -46,6 +46,7 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7
 | 40-03 | 2 tasks | 3 min | 1.5 min |
 | 40-04 | 2 tasks | 1 min | 30s |
 | 41-01 | 2 tasks | 4 min | 2 min |
+| 41-02 | 2 tasks | 2 min | 1 min |
 
 ## Accumulated Context
 
@@ -96,6 +97,9 @@ Research decisions (v0.7 planning):
 - [Phase 41]: on_list_tools middleware hook exists in fastmcp 3.0.2 -- auth enforced on tools/list per CONTEXT.md
 - [Phase 41]: mcp_api_base_url added to Settings (defaults http://localhost:8000) for configurable httpx loopback
 - [Phase 41]: API response fields: generated_code (not code), chart_specs (not chart_spec) -- matched actual REST API
+- [Phase 41]: Mode determination moved before FastAPI() creation to enable combine_lifespans lifespan coordination
+- [Phase 41]: _mcp_app created at module level (in mode block) for both lifespan merging and mounting
+- [Phase 41]: CORS expose_headers includes mcp-session-id for API mode; allow_headers includes mcp-protocol-version
 
 ### Pending Todos
 
@@ -114,5 +118,5 @@ Research decisions (v0.7 planning):
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 41-01-PLAN.md (MCP Server Core)
-Resume with: Continue with 41-02-PLAN.md (Mount & Lifecycle)
+Stopped at: Completed 41-02-PLAN.md (Mount & Lifecycle)
+Resume with: Phase 41 complete. All v0.7 plans executed.
