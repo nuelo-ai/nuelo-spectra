@@ -5,6 +5,26 @@ and a factory function to create the ASGI application for mounting.
 
 All tools call the REST API v1 via httpx loopback to preserve the auth,
 credit deduction, and usage logging middleware chain. No direct service imports.
+
+Claude Desktop configuration:
+  {
+    "mcpServers": {
+      "spectra": {
+        "url": "http://localhost:3000/mcp/",
+        "headers": {
+          "Authorization": "Bearer spe_your_api_key_here"
+        }
+      }
+    }
+  }
+
+Security:
+  - Enable "Ask before running tools" in your MCP host settings.
+  - In multi-server environments, be aware of prompt injection risks --
+    a malicious tool in another server could craft prompts that invoke
+    Spectra tools without user awareness.
+  - API keys grant full access to the authenticated user's data.
+    Use scoped keys when available (future feature).
 """
 
 from __future__ import annotations
