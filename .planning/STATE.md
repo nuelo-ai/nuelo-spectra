@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** Phase 38 — API Key Infrastructure
+**Current focus:** Phase 39 — API Key Management UI + Deployment Mode
 
 ## Current Position
 
-Phase: 38 of 41 (v0.7) — API Key Infrastructure
-Plan: 4 of 4 complete
-Status: Phase 38 Complete
-Last activity: 2026-02-23 — Completed 38-04 (Frontend API key management UI)
+Phase: 39 of 41 (v0.7) — API Key Management UI + Deployment Mode
+Plan: 2 of 3 complete
+Status: In Progress
+Last activity: 2026-02-24 — Completed 39-02 (API Key UI Enhancement & API Deployment Mode)
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 🚧 Phase 38 of 41
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 🚧 Phase 39 of 41
 
 ## Performance Metrics
 
@@ -32,6 +32,7 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7
 | 38-02 | 2 tasks | 2 min | 1 min |
 | 38-03 | 3 tasks | 3 min | 1 min |
 | 38-04 | 3 tasks | 5 min | ~2 min |
+| 39-02 | 2 tasks | 2 min | 1 min |
 
 **Recent Trend:**
 - Last milestone: v0.6 shipped cleanly — 5 phases, 10 plans, zero deferred items
@@ -53,6 +54,8 @@ Recent decisions (v0.7 execution):
 - oauth2_scheme_optional with auto_error=False for unified auth dependency manual error handling
 - window.confirm() for API key revoke confirmation — matches existing settings component simplicity
 - One-time key display Dialog with explicit "I have copied my key" dismissal — prevents accidental key loss (research pitfall #6)
+- API mode CORS uses allow_origins=["*"] with allow_credentials=False — Bearer token auth, not cookies; wildcard+credentials is CORS-spec violation
+- Credit usage always visible (even 0.0) in API key list — users see the field exists before Phase 40 populates data
 
 Research decisions (v0.7 planning):
 - API keys use SHA-256 hashing (not Argon2) — high-entropy random token; SHA-256 is industry standard (GitHub, Stripe), no performance penalty
@@ -79,6 +82,6 @@ Research decisions (v0.7 planning):
 
 ## Session Continuity
 
-Last session: 2026-02-23
-Stopped at: Completed 38-04-PLAN.md (Frontend API key management UI) — Phase 38 complete
-Resume with: `/gsd:execute-phase 39` (next phase: API Key Management UI + Deployment Mode)
+Last session: 2026-02-24
+Stopped at: Completed 39-02-PLAN.md (API Key UI Enhancement & API Deployment Mode)
+Resume with: Continue with 39-03-PLAN.md

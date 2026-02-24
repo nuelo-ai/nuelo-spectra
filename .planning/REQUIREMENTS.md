@@ -44,7 +44,7 @@
 
 - [x] **APIINFRA-01**: `SPECTRA_MODE=api` enables API routes on the existing backend — no separate codebase
 - [x] **APIINFRA-02**: API routes are versioned under `/api/v1/`
-- [ ] **APIINFRA-03**: API service is deployable as a 5th Dokploy service with its own public HTTPS domain
+- [x] **APIINFRA-03**: API service is deployable as a 5th Dokploy service with its own public HTTPS domain
 - [ ] **APIINFRA-04**: API requests and errors are logged (structured, per-request)
 - [x] **APIINFRA-05**: In `SPECTRA_MODE=dev` (Docker Compose local), all `/api/v1/` routes are active alongside existing backend routes — no separate service needed for local development
 
@@ -109,7 +109,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | APIQ-01 | Phase 40 | Pending |
 | APIINFRA-01 | Phase 38 | Complete |
 | APIINFRA-02 | Phase 38 | Complete |
-| APIINFRA-03 | Phase 39 | Pending |
+| APIINFRA-03 | Phase 39 | Complete |
 | APIINFRA-04 | Phase 40 | Pending |
 | APIINFRA-05 | Phase 38 | Complete |
 | MCP-01 | Phase 41 | Pending |
