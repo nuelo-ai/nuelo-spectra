@@ -35,6 +35,7 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7
 | 39-01 | 2 tasks | 3 min | ~2 min |
 | 39-02 | 2 tasks | 2 min | 1 min |
 | 39-03 | 2 tasks | 2 min | 1 min |
+| 39-04 | 2 tasks | 2 min | 1 min |
 | 39-05 | 2 tasks | 1 min | ~30s |
 
 **Recent Trend:**
@@ -65,6 +66,8 @@ Recent decisions (v0.7 execution):
 - AlertDialog UI component added to admin-frontend (copied from frontend) for revoke confirmation pattern
 - Revoked keys shown inline with opacity-50 and line-through, not filtered out — admin sees full key history
 - created_by_admin_id added to base ApiKeyListItem (not just AdminApiKeyListItem) so public frontend receives it via GET /v1/keys
+- Only set Content-Type: application/json when request body is present — avoids issues with 204 No Content responses on DELETE
+- Use onSettled instead of onSuccess for revoke query invalidation — ensures cache refresh even if client-side error occurs after server processes
 
 Research decisions (v0.7 planning):
 - API keys use SHA-256 hashing (not Argon2) — high-entropy random token; SHA-256 is industry standard (GitHub, Stripe), no performance penalty
