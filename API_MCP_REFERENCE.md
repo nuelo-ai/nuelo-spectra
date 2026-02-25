@@ -1,4 +1,4 @@
-# Spectra API Reference
+# Spectra API & MCP Reference
 
 Spectra exposes a REST API and an MCP server for programmatic data analysis. Both are served by the `spectra-api` service at `https://api.yourdomain.com`.
 
@@ -45,8 +45,6 @@ All API endpoints (except `/health` and `/api/v1/health`) require an API key pas
 ```
 Authorization: Bearer spe_YOUR_KEY
 ```
-
-**Key management endpoints** (`GET/POST/DELETE /api/v1/keys`) use your Spectra account JWT instead of an API key. These are called by the web application on your behalf when you manage keys in Settings.
 
 **Security notes:**
 - Store API keys in environment variables, never in source code
@@ -145,7 +143,7 @@ curl https://api.yourdomain.com/api/v1/health
 {
   "status": "healthy",
   "service": "spectra-api",
-  "version": "v0.7",
+  "version": "v0.7.8",
   "database": "connected"
 }
 ```
@@ -362,6 +360,7 @@ curl -X POST https://api.yourdomain.com/api/v1/chat/query \
   "data": {
     "analysis": "The total revenue for Q1 breaks down as follows: APAC $4.2M (38%), EMEA $3.8M (34%), Americas $3.1M (28%)...",
     "generated_code": "import pandas as pd\n\ndf = pd.read_csv('sales_data.csv')\nresult = df[df['quarter'] == 'Q1'].groupby('region')['revenue'].sum()\nprint(result)",
+    "execution_result": "[{\"region\": \"APAC\", \"revenue\": 4200000}, {\"region\": \"EMEA\", \"revenue\": 3800000}]",
     "chart_specs": "{\"data\":[{\"type\":\"bar\",\"x\":[\"APAC\",\"EMEA\",\"Americas\"],\"y\":[4200000,3800000,3100000],\"name\":\"Revenue\"}],\"layout\":{\"title\":\"Q1 Revenue by Region\",\"xaxis\":{\"title\":\"Region\"},\"yaxis\":{\"title\":\"Revenue (USD)\"},\"height\":400}}"
   }
 }
@@ -373,6 +372,7 @@ curl -X POST https://api.yourdomain.com/api/v1/chat/query \
 |-------|------|-------------|
 | `analysis` | string | Narrative analysis answering your question |
 | `generated_code` | string | The Python code generated and executed to produce the analysis |
+| `execution_result` | string \| null | JSON string containing the raw computed result rows (array of objects). `null` when the query produces no tabular output |
 | `chart_specs` | string \| null | JSON string containing a Plotly figure spec. `null` when the query does not produce a visualisation (e.g. a single-number answer) |
 
 ---
@@ -614,50 +614,48 @@ function SpectraRecharts({ chartSpecs }: { chartSpecs: string }) {
 
 ---
 
-### API Key Management
-
-These endpoints are used by the Spectra web application. They require a valid **JWT** (not an API key) — authenticated via the standard web login session.
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/keys` | List all your API keys (active and revoked) |
-| `POST` | `/api/v1/keys` | Create a new API key |
-| `DELETE` | `/api/v1/keys/{key_id}` | Revoke an API key immediately |
-
-**Create key request body:**
-
-```json
-{
-  "name": "My Integration",
-  "description": "Used by my data pipeline"
-}
-```
-
-**Create key response** — the `full_key` field is returned **once only**:
-
-```json
-{
-  "id": "uuid",
-  "name": "My Integration",
-  "key_prefix": "spe_abc1",
-  "full_key": "spe_abc1xxxxxxxxxxxxxxxxxxxxxxxx",
-  "created_at": "2026-02-25T10:00:00.000Z"
-}
-```
-
----
-
 ## MCP Server
 
-The Spectra MCP server lets AI assistants (Claude Desktop, Cursor, and any MCP-compatible client) interact with your data directly using natural language.
+The Spectra MCP server lets AI assistants (Claude Desktop, Claude Code, Cursor, and any MCP-compatible client) interact with your data directly using natural language.
 
 **Endpoint:** `https://api.yourdomain.com/mcp/`
 
 **Transport:** Streamable HTTP (MCP spec 2025-03-26)
 
+---
+
 ### Connecting to Claude Desktop
 
+#### Option A — Via `mcp-remote` (Recommended)
+
+This approach works reliably across all Claude Desktop versions and uses an environment variable for the API key so it is never stored in plain text in the config file.
+
 Add this to your Claude Desktop configuration file (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+
+```json
+{
+  "mcpServers": {
+    "spectra": {
+      "command": "npx",
+      "args": [
+        "mcp-remote@latest",
+        "https://api.yourdomain.com/mcp/",
+        "--header",
+        "Authorization: Bearer ${SPECTRA_API_KEY}"
+      ],
+      "env": {
+        "SPECTRA_API_KEY": "spe_YOUR_KEY"
+      }
+    }
+  }
+}
+```
+
+Replace `spe_YOUR_KEY` with your actual Spectra API key. Restart Claude Desktop after saving.
+
+#### Option B — Direct HTTP (newer Claude Desktop versions)
+
+For Claude Desktop versions that support streamable HTTP transport natively:
 
 ```json
 {
@@ -672,13 +670,15 @@ Add this to your Claude Desktop configuration file (`~/Library/Application Suppo
 }
 ```
 
-Restart Claude Desktop after saving.
+---
 
 ### Connecting to Cursor
 
 In Cursor settings, add an MCP server with:
 - **URL:** `https://api.yourdomain.com/mcp/`
 - **Header:** `Authorization: Bearer spe_YOUR_KEY`
+
+---
 
 ### Available MCP Tools
 
@@ -711,7 +711,47 @@ Ask a natural language question about an uploaded file. Consumes one credit per 
 | `file_id` | string | The UUID of the uploaded file |
 | `question` | string | Natural language question about the data |
 
-Returns the analysis narrative, the Python code that was executed, and any chart specification.
+**Response format**
+
+The tool returns multiple content blocks in a fixed order. Every block is plain text or markdown — no binary data.
+
+| Block | Always present | Description |
+|-------|---------------|-------------|
+| **Data Table** | When query produces tabular output | The raw computed result rendered as a markdown table (max 50 rows). Shown first so the AI can reason over the data before reading the interpretation. Truncated with a row count note when the result exceeds 50 rows. |
+| **Analysis** | Yes | Narrative explanation answering your question — trends, key findings, comparisons. |
+| **Generated Code** | Yes | The Python code that was generated and executed to produce the result, shown in a fenced code block. |
+| **Chart Specification** | When query produces a visualisation | A Plotly figure spec as a JSON code block. All numeric arrays are plain JSON numbers — no binary encoding. See [Rendering chart specs from MCP](#rendering-chart-specs-from-mcp) below. |
+| **Credits used** | Yes | The number of credits deducted for this query. |
+
+**Example output structure:**
+
+```
+## Data Table
+
+| Product_Category | Total_Revenue | Transaction_Count |
+| --- | --- | --- |
+| Serum | 39897.57 | 233 |
+| Setting Spray | 38664.84 | 213 |
+...
+
+## Analysis
+
+Serum leads with $39,897.57 in total revenue across 233 transactions...
+
+## Generated Code
+
+\```python
+result = df.groupby('Product_Category').agg(...)
+\```
+
+## Chart Specification
+
+\```json
+{"data": [{"type": "bar", "x": [...], "y": [...]}], "layout": {...}}
+\```
+
+*Credits used: 1.0*
+```
 
 **Example prompt to Claude:**
 > "Using Spectra, analyse the sales file and tell me which region had the highest revenue growth."
@@ -779,6 +819,66 @@ Or, to start fresh with new data:
 1. spectra_upload_file         → upload and onboard a new file
 2. spectra_run_analysis        → ask your question immediately
 ```
+
+---
+
+### Rendering Chart Specs from MCP
+
+When Claude receives a chart specification from `spectra_run_analysis`, it can render it directly in the conversation as an HTML file using the Plotly CDN. This is the recommended approach for MCP contexts — it requires no build tools, no npm install, and works in any browser.
+
+**Ask Claude to render a chart:**
+> "Run an analysis on the sales file for revenue by region, then render the chart as an HTML file I can open in my browser."
+
+Claude will produce a self-contained HTML file like this:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Spectra Chart</title>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    body { margin: 0; background: #fff; font-family: sans-serif; }
+    #chart { width: 100%; height: 500px; }
+  </style>
+</head>
+<body>
+  <div id="chart"></div>
+  <script>
+    const figure = {
+      "data": [
+        {
+          "type": "bar",
+          "x": ["APAC", "EMEA", "Americas"],
+          "y": [4200000, 3800000, 3100000],
+          "name": "Revenue"
+        }
+      ],
+      "layout": {
+        "title": "Q1 Revenue by Region",
+        "xaxis": { "title": "Region" },
+        "yaxis": { "title": "Revenue (USD)" },
+        "height": 500,
+        "paper_bgcolor": "rgba(0,0,0,0)",
+        "plot_bgcolor": "rgba(0,0,0,0)"
+      }
+    };
+
+    Plotly.newPlot('chart', figure.data, figure.layout, {
+      responsive: true,
+      displayModeBar: false
+    });
+  </script>
+</body>
+</html>
+```
+
+Save the file (e.g. `chart.html`) and open it in any browser. No server required.
+
+> **Note:** The chart spec returned by the MCP tool uses plain JSON numbers for all data arrays. Plotly's internal binary format (`dtype`/`bdata`) is decoded server-side before the tool returns, so the HTML approach above works without any additional data conversion.
+
+---
 
 ### Security Notes
 
