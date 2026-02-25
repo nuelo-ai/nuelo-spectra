@@ -11,10 +11,10 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 
 Phase: 41 of 41 (v0.7) — Complete
 Plan: All complete
-Status: Milestone v0.7 shipped
-Last activity: 2026-02-25 — Milestone v0.7 archived
+Status: Patch v0.7.1 applied
+Last activity: 2026-02-25 — Hotfix v0.7.1: removed duplicate API v1 router mount
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.1 ✅
 
 ## Performance Metrics
 
@@ -36,6 +36,10 @@ See PROJECT.md Key Decisions table for full decision log.
 - [ ] Show suggestions in Data Summary sidebar panel (ui)
 - [ ] Use Pydantic structured output for agent JSON responses (consistency)
 - [ ] Plan production environment variable cleanup and validation (deployment)
+
+### Completed (v0.7.1)
+
+- [x] Remove duplicate API v1 router mount (api) — hotfix applied 2026-02-25
 
 ### Blockers/Concerns
 
