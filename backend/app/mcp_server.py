@@ -58,6 +58,16 @@ def _get_base_url() -> str:
     return settings.mcp_api_base_url
 
 
+def _api_v1(path: str) -> str:
+    """Build a full /api/v1/{path} URL.
+
+    MCP only runs in SPECTRA_MODE=api and dev. In both modes the api_v1_router
+    is mounted under /api (giving /api/v1/*). Bare /v1/* only exists in dev
+    as a secondary mount — using /api/v1/ is correct in all MCP-enabled modes.
+    """
+    return f"{_get_base_url()}/api/v1/{path.lstrip('/')}"
+
+
 def _api_headers(ctx: Context) -> dict[str, str]:
     """Build Authorization header from the API key stored in tool context."""
     return {"Authorization": f"Bearer {ctx.get_state('api_key')}"}
@@ -160,7 +170,6 @@ async def spectra_upload_file(
     ctx: Context,
 ) -> str:
     """Upload a file and trigger AI onboarding analysis."""
-    base_url = _get_base_url()
     headers = _api_headers(ctx)
 
     try:
@@ -174,7 +183,7 @@ async def spectra_upload_file(
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
-                f"{base_url}/v1/files/upload",
+                _api_v1("files/upload"),
                 headers=headers,
                 files={"file": (filename, file_bytes)},
             )
@@ -222,13 +231,12 @@ async def spectra_run_analysis(
     ctx: Context,
 ) -> ToolResult:
     """Run an analysis query against an uploaded file."""
-    base_url = _get_base_url()
     headers = _api_headers(ctx)
 
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
-                f"{base_url}/v1/chat/query",
+                _api_v1("chat/query"),
                 headers={**headers, "Content-Type": "application/json"},
                 json={"query": question, "file_ids": [file_id]},
             )
@@ -301,13 +309,12 @@ async def spectra_run_analysis(
 @mcp.tool(description="List all files uploaded to your Spectra account.")
 async def spectra_list_files(ctx: Context) -> str:
     """List all files for the authenticated user."""
-    base_url = _get_base_url()
     headers = _api_headers(ctx)
 
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(
-                f"{base_url}/v1/files",
+                _api_v1("files"),
                 headers=headers,
             )
     except httpx.HTTPError as e:
@@ -333,13 +340,12 @@ async def spectra_list_files(ctx: Context) -> str:
 @mcp.tool(description="Delete a file from your Spectra account by its file ID.")
 async def spectra_delete_file(file_id: str, ctx: Context) -> str:
     """Delete a file by its ID."""
-    base_url = _get_base_url()
     headers = _api_headers(ctx)
 
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.delete(
-                f"{base_url}/v1/files/{file_id}",
+                _api_v1(f"files/{file_id}"),
                 headers=headers,
             )
     except httpx.HTTPError as e:
@@ -358,13 +364,12 @@ async def spectra_delete_file(file_id: str, ctx: Context) -> str:
 @mcp.tool(description="Download a file's raw content by its file ID.")
 async def spectra_download_file(file_id: str, ctx: Context) -> str:
     """Download file content. Text/CSV is returned directly; binary files show metadata."""
-    base_url = _get_base_url()
     headers = _api_headers(ctx)
 
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.get(
-                f"{base_url}/v1/files/{file_id}/download",
+                _api_v1(f"files/{file_id}/download"),
                 headers=headers,
             )
     except httpx.HTTPError as e:
@@ -406,13 +411,12 @@ async def spectra_download_file(file_id: str, ctx: Context) -> str:
 )
 async def spectra_get_context(file_id: str, ctx: Context) -> str:
     """Get file context: data brief, user context, and suggested questions."""
-    base_url = _get_base_url()
     headers = _api_headers(ctx)
 
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(
-                f"{base_url}/v1/files/{file_id}/context",
+                _api_v1(f"files/{file_id}/context"),
                 headers=headers,
             )
     except httpx.HTTPError as e:
