@@ -6,7 +6,7 @@ const BACKEND_URL = () =>
   process.env.BACKEND_URL ?? "http://localhost:8000";
 
 /**
- * Catch-all API proxy. Forwards /api/* requests to the backend, preserving the /api/ prefix.
+ * Catch-all API proxy. Forwards /api/* requests to the backend.
  * Route handlers like /api/health take priority over this catch-all.
  *
  * Why a route handler instead of next.config.ts rewrites:
@@ -16,9 +16,9 @@ const BACKEND_URL = () =>
 async function proxyRequest(request: NextRequest) {
   // Use raw URL to preserve trailing slashes. nextUrl.pathname normalizes them away,
   // which causes FastAPI 307 redirects that lose auth headers and POST bodies.
-  // Preserve /api/ prefix so backend receives /api/v1/* (single router mount).
   const rawPathname = new URL(request.url).pathname;
-  const backendUrl = `${BACKEND_URL()}${rawPathname}${request.nextUrl.search}`;
+  const backendPath = rawPathname.replace(/^\/api/, "");
+  const backendUrl = `${BACKEND_URL()}${backendPath}${request.nextUrl.search}`;
 
   const headers: Record<string, string> = {};
   const authorization = request.headers.get("authorization");
