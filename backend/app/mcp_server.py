@@ -31,7 +31,11 @@ from __future__ import annotations
 
 import base64
 import json
-from typing import Sequence
+import logging
+import struct
+from typing import Any, Sequence
+
+logger = logging.getLogger(__name__)
 
 import httpx
 from fastmcp import Context, FastMCP
@@ -120,6 +124,54 @@ def _render_execution_result_table(raw) -> str | None:
         table = "| Value |\n| --- |\n" + "\n".join(f"| {v} |" for v in rows)
 
     return f"## Data Table\n\n{table}{truncation_note}"
+
+
+# Plotly dtype → (struct format char, byte size)
+_PLOTLY_DTYPE_MAP: dict[str, tuple[str, int]] = {
+    "f8": ("d", 8),  # float64
+    "f4": ("f", 4),  # float32
+    "i8": ("q", 8),  # int64
+    "i4": ("i", 4),  # int32
+    "u4": ("I", 4),  # uint32
+}
+
+
+def _decode_plotly_binary(obj: Any) -> Any:
+    """Recursively decode Plotly binary typed arrays to plain Python lists.
+
+    Plotly serializes numpy numeric arrays as {"dtype": "f8", "bdata": "<base64>"}
+    for space efficiency. Plotly.js decodes this natively, but the format is
+    opaque to AI agents. This helper converts every such node to a plain list
+    of numbers so the chart spec is fully readable in MCP output.
+
+    Handles:
+      - 1-D arrays  → flat list
+      - 2-D arrays  → list of lists (uses "shape" field when present)
+      - Unknown dtype → left as-is with a warning log
+    """
+    if isinstance(obj, dict):
+        if "bdata" in obj and "dtype" in obj:
+            dtype = obj["dtype"]
+            if dtype not in _PLOTLY_DTYPE_MAP:
+                logger.warning("_decode_plotly_binary: unknown Plotly dtype %r — leaving as-is", dtype)
+                return obj
+            fmt_char, item_size = _PLOTLY_DTYPE_MAP[dtype]
+            raw = base64.b64decode(obj["bdata"])
+            n = len(raw) // item_size
+            values: list = list(struct.unpack(f"<{n}{fmt_char}", raw))
+            if "shape" in obj:
+                try:
+                    dims = [int(s.strip()) for s in obj["shape"].split(",")]
+                    if len(dims) == 2:
+                        rows, cols = dims
+                        return [values[i * cols: (i + 1) * cols] for i in range(rows)]
+                except (ValueError, AttributeError):
+                    pass
+            return values
+        return {k: _decode_plotly_binary(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_decode_plotly_binary(item) for item in obj]
+    return obj
 
 
 # ---------------------------------------------------------------------------
@@ -315,9 +367,16 @@ async def spectra_run_analysis(
             )
         )
 
-    # Chart specification
+    # Chart specification — decode any Plotly binary typed arrays before returning
     chart_specs = data.get("chart_specs")
     if chart_specs:
+        if isinstance(chart_specs, str):
+            try:
+                chart_specs = _decode_plotly_binary(json.loads(chart_specs))
+            except (json.JSONDecodeError, ValueError):
+                pass  # malformed JSON — surface as-is
+        if isinstance(chart_specs, (dict, list)):
+            chart_specs = _decode_plotly_binary(chart_specs)
         if isinstance(chart_specs, str):
             chart_text = chart_specs
         else:
