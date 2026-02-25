@@ -68,9 +68,9 @@ def _api_v1(path: str) -> str:
     return f"{_get_base_url()}/api/v1/{path.lstrip('/')}"
 
 
-def _api_headers(ctx: Context) -> dict[str, str]:
+async def _api_headers(ctx: Context) -> dict[str, str]:
     """Build Authorization header from the API key stored in tool context."""
-    return {"Authorization": f"Bearer {ctx.get_state('api_key')}"}
+    return {"Authorization": f"Bearer {await ctx.get_state('api_key')}"}
 
 
 def _extract_error_message(response: httpx.Response) -> str:
@@ -127,7 +127,8 @@ class ApiKeyAuthMiddleware(Middleware):
 
     async def on_call_tool(self, context: MiddlewareContext, call_next):
         token = await self._extract_and_validate_token()
-        context.fastmcp_context.set_state("api_key", token)
+        # serializable=False → request-scoped dict, no session store needed (stateless_http=True)
+        await context.fastmcp_context.set_state("api_key", token, serializable=False)
         return await call_next(context)
 
     async def on_list_tools(self, context: MiddlewareContext, call_next) -> Sequence:
@@ -170,7 +171,7 @@ async def spectra_upload_file(
     ctx: Context,
 ) -> str:
     """Upload a file and trigger AI onboarding analysis."""
-    headers = _api_headers(ctx)
+    headers = await _api_headers(ctx)
 
     try:
         file_bytes = base64.b64decode(file_content_base64)
@@ -231,7 +232,7 @@ async def spectra_run_analysis(
     ctx: Context,
 ) -> ToolResult:
     """Run an analysis query against an uploaded file."""
-    headers = _api_headers(ctx)
+    headers = await _api_headers(ctx)
 
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
@@ -309,7 +310,7 @@ async def spectra_run_analysis(
 @mcp.tool(description="List all files uploaded to your Spectra account.")
 async def spectra_list_files(ctx: Context) -> str:
     """List all files for the authenticated user."""
-    headers = _api_headers(ctx)
+    headers = await _api_headers(ctx)
 
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -340,7 +341,7 @@ async def spectra_list_files(ctx: Context) -> str:
 @mcp.tool(description="Delete a file from your Spectra account by its file ID.")
 async def spectra_delete_file(file_id: str, ctx: Context) -> str:
     """Delete a file by its ID."""
-    headers = _api_headers(ctx)
+    headers = await _api_headers(ctx)
 
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -364,7 +365,7 @@ async def spectra_delete_file(file_id: str, ctx: Context) -> str:
 @mcp.tool(description="Download a file's raw content by its file ID.")
 async def spectra_download_file(file_id: str, ctx: Context) -> str:
     """Download file content. Text/CSV is returned directly; binary files show metadata."""
-    headers = _api_headers(ctx)
+    headers = await _api_headers(ctx)
 
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
@@ -411,7 +412,7 @@ async def spectra_download_file(file_id: str, ctx: Context) -> str:
 )
 async def spectra_get_context(file_id: str, ctx: Context) -> str:
     """Get file context: data brief, user context, and suggested questions."""
-    headers = _api_headers(ctx)
+    headers = await _api_headers(ctx)
 
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
