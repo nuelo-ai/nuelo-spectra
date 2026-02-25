@@ -36,6 +36,7 @@ See PROJECT.md Key Decisions table for full decision log.
 - [ ] Show suggestions in Data Summary sidebar panel (ui)
 - [ ] Use Pydantic structured output for agent JSON responses (consistency)
 - [ ] Plan production environment variable cleanup and validation (deployment)
+- [ ] Add execution result data table to MCP spectra_run_analysis output (api)
 
 ### Blockers/Concerns
 
