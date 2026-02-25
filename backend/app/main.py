@@ -405,9 +405,8 @@ if mode in ("api", "dev"):
     from app.routers.api_v1 import api_v1_router
     from app.middleware.api_usage import ApiUsageMiddleware
 
-    app.include_router(api_v1_router)                    # /v1/* — public frontend proxy strips /api
-    app.include_router(api_v1_router, prefix="/api")     # /api/v1/* — direct access and admin frontend
-    app.add_middleware(ApiUsageMiddleware)                # Structured logging for all /v1/ requests
+    app.include_router(api_v1_router, prefix="/api")     # /api/v1/* — all frontends and direct access
+    app.add_middleware(ApiUsageMiddleware)                # Structured logging for all /api/v1/ requests
 
     # MCP server (Streamable HTTP at /mcp/)
     if _mcp_app is not None:
