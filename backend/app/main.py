@@ -400,7 +400,7 @@ if mode in ("admin", "dev"):
     app.include_router(admin_router, prefix="/api/admin")
     app.add_middleware(AdminTokenReissueMiddleware)
 
-# API v1 routes — external API access and API key management
+# API v1 routes — external API access
 if mode in ("api", "dev", "public"):
     from app.routers.api_v1 import api_v1_router
     from app.middleware.api_usage import ApiUsageMiddleware
@@ -414,6 +414,14 @@ if mode in ("api", "dev", "public"):
         app.include_router(api_v1_router, prefix="/api")   # /api/v1/* — also for direct dev access
 
     app.add_middleware(ApiUsageMiddleware)                  # Structured logging for all v1 requests
+
+    # API key self-service (/v1/keys) — consumed by public/admin frontends, not the external API
+    # Not included in SPECTRA_MODE=api: external callers use keys issued by admins, not self-service
+    if mode in ("public", "dev"):
+        from app.routers.api_v1 import api_keys as api_v1_keys
+        app.include_router(api_v1_keys.router, prefix="/v1")
+        if mode == "dev":
+            app.include_router(api_v1_keys.router, prefix="/api/v1")
 
     # MCP server (Streamable HTTP at /mcp/)
     if _mcp_app is not None:
