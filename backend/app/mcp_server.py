@@ -82,6 +82,46 @@ def _extract_error_message(response: httpx.Response) -> str:
         return f"HTTP {response.status_code}"
 
 
+def _render_execution_result_table(raw) -> str | None:
+    """Render execution_result as a markdown table (max 50 rows).
+
+    Returns None if the data is absent or cannot be rendered as a table.
+    """
+    if not raw:
+        return None
+
+    data = raw
+    if isinstance(raw, str):
+        try:
+            data = json.loads(raw)
+        except (json.JSONDecodeError, ValueError):
+            return None
+
+    if not isinstance(data, list) or not data:
+        return None
+
+    MAX_ROWS = 50
+    total = len(data)
+    rows = data[:MAX_ROWS]
+    truncation_note = f"\n\n*Showing {MAX_ROWS} of {total} rows.*" if total > MAX_ROWS else ""
+
+    # List of dicts → full table
+    if isinstance(rows[0], dict):
+        headers = list(rows[0].keys())
+        header_row = "| " + " | ".join(str(h) for h in headers) + " |"
+        sep_row = "| " + " | ".join("---" for _ in headers) + " |"
+        data_rows = [
+            "| " + " | ".join(str(row.get(h, "")) for h in headers) + " |"
+            for row in rows
+        ]
+        table = "\n".join([header_row, sep_row, *data_rows])
+    else:
+        # Scalars — single-column table
+        table = "| Value |\n| --- |\n" + "\n".join(f"| {v} |" for v in rows)
+
+    return f"## Data Table\n\n{table}{truncation_note}"
+
+
 # ---------------------------------------------------------------------------
 # Auth Middleware
 # ---------------------------------------------------------------------------
@@ -254,6 +294,11 @@ async def spectra_run_analysis(
     result = response.json()
     data = result.get("data", {})
     content_blocks: list[TextContent] = []
+
+    # Data table (execution_result) — first, so agents see raw data before interpretation
+    table_md = _render_execution_result_table(data.get("execution_result"))
+    if table_md:
+        content_blocks.append(TextContent(type="text", text=table_md))
 
     # Narrative analysis
     if data.get("analysis"):

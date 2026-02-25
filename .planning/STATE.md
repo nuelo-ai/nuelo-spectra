@@ -11,10 +11,10 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 
 Phase: 41 of 41 (v0.7) — Complete
 Plan: All complete
-Status: Patch v0.7.6 applied
-Last activity: 2026-02-25 — v0.7.6: MCP auth fix (await set_state/get_state) + MCP loopback URL fix
+Status: Patch v0.7.7 applied
+Last activity: 2026-02-25 — v0.7.7: MCP spectra_run_analysis now includes execution_result data table
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.4 ✅ | v0.7.5 ✅ | v0.7.6 ✅
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.4 ✅ | v0.7.5 ✅ | v0.7.6 ✅ | v0.7.7 ✅
 
 ## Performance Metrics
 
@@ -36,7 +36,6 @@ See PROJECT.md Key Decisions table for full decision log.
 - [ ] Show suggestions in Data Summary sidebar panel (ui)
 - [ ] Use Pydantic structured output for agent JSON responses (consistency)
 - [ ] Plan production environment variable cleanup and validation (deployment)
-- [ ] Add execution result data table to MCP spectra_run_analysis output (api)
 
 ### Blockers/Concerns
 
@@ -46,5 +45,5 @@ See PROJECT.md Key Decisions table for full decision log.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: v0.7.6 patch shipped — MCP fully functional in SPECTRA_MODE=api
+Stopped at: v0.7.7 patch shipped — MCP spectra_run_analysis now returns data table
 Resume with: `/gsd:new-milestone` to define v0.8
