@@ -400,14 +400,20 @@ if mode in ("admin", "dev"):
     app.include_router(admin_router, prefix="/api/admin")
     app.add_middleware(AdminTokenReissueMiddleware)
 
-# API v1 routes (api and dev modes) — external API access and API key management
-if mode in ("api", "dev"):
+# API v1 routes — external API access and API key management
+if mode in ("api", "dev", "public"):
     from app.routers.api_v1 import api_v1_router
     from app.middleware.api_usage import ApiUsageMiddleware
 
-    app.include_router(api_v1_router)                    # /v1/* — public frontend proxy strips /api
-    app.include_router(api_v1_router, prefix="/api")     # /api/v1/* — direct access and admin frontend
-    app.add_middleware(ApiUsageMiddleware)                # Structured logging for all /v1/ requests
+    if mode == "api":
+        app.include_router(api_v1_router, prefix="/api")  # /api/v1/* only — clean external API, no duplicates
+    elif mode == "public":
+        app.include_router(api_v1_router)                  # /v1/* only — public frontend proxy strips /api
+    else:  # dev
+        app.include_router(api_v1_router)                  # /v1/* — proxy strips /api locally
+        app.include_router(api_v1_router, prefix="/api")   # /api/v1/* — also for direct dev access
+
+    app.add_middleware(ApiUsageMiddleware)                  # Structured logging for all v1 requests
 
     # MCP server (Streamable HTTP at /mcp/)
     if _mcp_app is not None:
