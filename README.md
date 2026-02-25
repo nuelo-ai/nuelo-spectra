@@ -362,7 +362,12 @@ allowed_libraries:
 
 Changes to YAML configs require server restart.
 
-## Current Status (v0.7.5)
+## Current Status (v0.7.6)
+
+### v0.7.6 MCP Bug Fixes (February 2026)
+- Fixed MCP tools returning "Invalid token" — `set_state`/`get_state` are async but were called without `await`, causing the API key to never be stored or read from context state; header became `Bearer <coroutine ...>` which failed JWT validation
+- Fixed MCP loopback calls hitting `/v1/*` instead of `/api/v1/*`, causing HTTP 404 on all tool calls in `SPECTRA_MODE=api`
+- All 6 MCP tools (`spectra_list_files`, `spectra_upload_file`, `spectra_run_analysis`, `spectra_delete_file`, `spectra_download_file`, `spectra_get_context`) now fully functional against production API
 
 ### v0.7.5 API Surface Cleanup (February 2026)
 - Removed duplicate "API v1" catch-all group from Swagger — endpoints now appear only under their own tagged groups
@@ -446,4 +451,4 @@ MIT License - See LICENSE file for details.
 
 - **GitHub**: [github.com/marwazihs/nuelo-spectra](https://github.com/marwazihs/nuelo-spectra)
 - **Issues**: Report bugs or request features via GitHub Issues
-- **Version**: v0.7.5 (February 2026)
+- **Version**: v0.7.6 (February 2026)
