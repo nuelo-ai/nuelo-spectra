@@ -11,10 +11,10 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 
 Phase: 41 of 41 (v0.7) — Complete
 Plan: All complete
-Status: Patch v0.7.5 applied
-Last activity: 2026-02-25 — v0.7.5: API surface cleanup (Swagger groups, /v1/keys exposure, /health/llm gating)
+Status: Patch v0.7.6 applied
+Last activity: 2026-02-25 — v0.7.6: MCP auth fix (await set_state/get_state) + MCP loopback URL fix
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.4 ✅ | v0.7.5 ✅
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.4 ✅ | v0.7.5 ✅ | v0.7.6 ✅
 
 ## Performance Metrics
 
@@ -45,5 +45,5 @@ See PROJECT.md Key Decisions table for full decision log.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: v0.7.5 patch shipped — API surface cleanup complete
+Stopped at: v0.7.6 patch shipped — MCP fully functional in SPECTRA_MODE=api
 Resume with: `/gsd:new-milestone` to define v0.8
