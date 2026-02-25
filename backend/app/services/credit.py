@@ -206,6 +206,36 @@ class CreditService:
         return await CreditService.get_balance(db, user_id, user_class)
 
     @staticmethod
+    async def refund(
+        db: AsyncSession,
+        user_id: UUID,
+        amount: Decimal,
+        reason: str = "API query refund",
+    ) -> None:
+        """Refund credits to a user (e.g., after failed API analysis).
+
+        Uses SELECT FOR UPDATE for atomicity, same pattern as deduct_credit.
+        Creates a CreditTransaction with transaction_type='api_refund'.
+        """
+        result = await db.execute(
+            select(UserCredit).where(UserCredit.user_id == user_id).with_for_update()
+        )
+        user_credit = result.scalar_one_or_none()
+        if user_credit is None:
+            return  # No credit record = unlimited user, nothing to refund
+
+        user_credit.balance += amount
+
+        txn = CreditTransaction(
+            user_id=user_id,
+            amount=amount,
+            transaction_type="api_refund",
+            reason=reason,
+        )
+        db.add(txn)
+        await db.flush()
+
+    @staticmethod
     async def execute_reset(
         db: AsyncSession,
         credit: UserCredit,

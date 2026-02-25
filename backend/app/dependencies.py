@@ -7,18 +7,22 @@ from typing import Annotated
 from uuid import UUID
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
 from app.database import get_db
 from app.models.user import User
+from app.services.api_key import ApiKeyService
 from app.services.auth import get_user_by_id
 from app.utils.security import verify_token
 
 # OAuth2 scheme for token extraction (tokenUrl points to login endpoint)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+
+# Scheme for unified auth (API keys + JWT) — auto_error=False lets us handle auth manually
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="auth/login", auto_error=False)
 
 # In-memory set of recently deactivated user IDs for immediate token invalidation.
 # TTL matches access token expiry. After TTL, the DB is_active=False check suffices.
@@ -107,6 +111,72 @@ async def get_current_user(
     return user
 
 
+async def get_authenticated_user(
+    request: Request,
+    token: Annotated[str | None, Depends(oauth2_scheme_optional)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> User:
+    """Unified auth dependency accepting either JWT or API key as Bearer token.
+
+    JWT fast path (token does NOT start with 'spe_'):
+      - Try verify_token() -> get user from DB
+      - If expired JWT: raise 401 "Token has expired" (do NOT fall through to key lookup)
+      - If invalid JWT format: raise 401 "Invalid token"
+      - Sets request.state.api_key_id = None
+
+    API key path (token starts with 'spe_'):
+      - Call ApiKeyService.authenticate()
+      - None -> raise 401 "Invalid or revoked API key"
+      - Sets request.state.api_key_id to the authenticated key's UUID
+
+    Used by Phase 40 external API endpoints only. Not used by APIKEY CRUD endpoints.
+    """
+    if token is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Fast path: if token looks like an API key, skip JWT entirely
+    if token.startswith("spe_"):
+        result = await ApiKeyService.authenticate(db, token)
+        if result is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or revoked API key",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        user, api_key_id = result
+        request.state.api_key_id = api_key_id
+        await db.commit()
+        return user
+
+    # JWT path: try to verify as JWT
+    try:
+        user_id_str = verify_token(token, "access", settings)
+        user_id = UUID(user_id_str)
+        user = await get_user_by_id(db, user_id)
+        if user is None or not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found or inactive",
+            )
+        request.state.api_key_id = None
+        return user
+    except HTTPException:
+        # Re-raise JWT-specific errors (expired token, invalid token, etc.) as-is
+        raise
+    except Exception:
+        # Non-HTTP exception means something unexpected; treat as invalid credentials
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
 async def get_current_admin_user(
     token: Annotated[str, Depends(oauth2_scheme)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -177,4 +247,5 @@ async def get_current_admin_user(
 # Typed dependencies for cleaner endpoint signatures
 CurrentUser = Annotated[User, Depends(get_current_user)]
 CurrentAdmin = Annotated[User, Depends(get_current_admin_user)]
+ApiAuthUser = Annotated[User, Depends(get_authenticated_user)]
 DbSession = Annotated[AsyncSession, Depends(get_db)]

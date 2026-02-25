@@ -31,6 +31,7 @@ async def _seed_admin():
     """
     from app.config import get_settings
     from app.database import async_session_maker
+    from app.models.api_key import ApiKey  # noqa: F401 — register model for User.api_keys relationship
     from app.services.admin.auth import seed_admin
 
     settings = get_settings()

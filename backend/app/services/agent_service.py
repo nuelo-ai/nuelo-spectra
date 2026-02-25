@@ -717,3 +717,160 @@ async def _track_search_quota(db: AsyncSession, user_id: UUID) -> None:
         logger.warning(f"Failed to track search quota for user {user_id}: {e}")
         # Don't fail the request if quota tracking fails
         await db.rollback()
+
+
+async def run_api_query(
+    db: AsyncSession,
+    file_ids: list[UUID],
+    user_id: UUID,
+    user_query: str,
+    web_search_enabled: bool = False,
+    api_key_id: UUID | None = None,
+    credit_cost: "Decimal" = None,
+) -> dict:
+    """Stateless agent invocation for API endpoint.
+
+    Unlike run_chat_query(), this:
+    - Compiles graph with checkpointer=None (no persistence)
+    - Does NOT save chat messages
+    - Does NOT create/use sessions
+    - Uses a random thread_id (required by LangGraph but discarded)
+
+    Args:
+        db: Database session
+        file_ids: List of file UUIDs to query against
+        user_id: User UUID (for access control)
+        user_query: Natural language query
+        web_search_enabled: Whether web search is enabled
+        api_key_id: Optional API key UUID for usage tracking
+        credit_cost: Credit cost for this query (for api_key tracking)
+
+    Returns:
+        dict: Query result matching the API response shape
+    """
+    from decimal import Decimal as _Decimal
+    from uuid import uuid4
+    from langchain_core.messages import HumanMessage
+    from sqlalchemy import select
+
+    from app.agents.graph import build_chat_graph
+    from app.agents.onboarding import OnboardingAgent
+    from app.services.context_assembler import ContextAssembler
+
+    if credit_cost is None:
+        credit_cost = _Decimal("0")
+
+    # Load and validate all files
+    file_records = []
+    for fid in file_ids:
+        file_record = await FileService.get_user_file(db, fid, user_id)
+        if file_record is None:
+            raise ValueError(f"File {fid} not found or does not belong to user.")
+        if file_record.data_summary is None:
+            raise ValueError(
+                f"File '{file_record.original_filename}' has not been analyzed yet."
+            )
+        file_records.append(file_record)
+
+    # Build context based on single vs multi-file
+    if len(file_ids) == 1:
+        file_record = file_records[0]
+        multi_file_context = ""
+        file_metadata = []
+        session_files = []
+    else:
+        # Multi-file: use ContextAssembler
+        assembler = ContextAssembler()
+        context_result = await assembler.assemble(db, file_ids, user_id)
+        file_record = file_records[0]  # Primary file for legacy fields
+        multi_file_context = context_result["context_string"]
+        file_metadata = [
+            {
+                "id": f["id"],
+                "name": f["name"],
+                "var_name": f["var_name"],
+                "file_path": next(
+                    fr.file_path for fr in file_records if str(fr.id) == f["id"]
+                ),
+                "file_type": next(
+                    fr.file_type for fr in file_records if str(fr.id) == f["id"]
+                ),
+            }
+            for f in context_result["files"]
+        ]
+        session_files = [fr.original_filename for fr in file_records]
+
+    # Generate data profile for single-file mode
+    onboarding_agent = OnboardingAgent()
+    try:
+        data_profile = await onboarding_agent.profile_data(
+            file_path=file_record.file_path,
+            file_type=file_record.file_type,
+        )
+        import json as _json
+        data_profile_json = _json.dumps(data_profile, indent=2)
+    except Exception:
+        data_profile_json = "{}"
+
+    # Compile a fresh graph with NO checkpointer (stateless)
+    graph = build_chat_graph(checkpointer=None)
+
+    # Build initial state (same structure as run_chat_query)
+    initial_state = {
+        "file_id": str(file_record.id),
+        "user_id": str(user_id),
+        "user_query": user_query,
+        "data_summary": file_record.data_summary,
+        "data_profile": data_profile_json,
+        "user_context": file_record.user_context or "",
+        "file_path": file_record.file_path,
+        "validation_result": "",
+        "validation_errors": [],
+        "error_count": 0,
+        "max_steps": settings.agent_max_retries,
+        "final_response": "",
+        "error": "",
+        "routing_decision": None,
+        "previous_code": "",
+        "web_search_enabled": web_search_enabled,
+        "search_sources": [],
+        "session_id": None,
+        # Multi-file fields
+        "multi_file_context": multi_file_context,
+        "file_metadata": file_metadata,
+        "session_files": session_files,
+        # Visualization
+        "visualization_requested": False,
+        "chart_hint": "",
+        "chart_code": "",
+        "chart_specs": "",
+        "chart_error": "",
+        # Include messages directly (no aupdate_state since no checkpointer)
+        "messages": [HumanMessage(content=user_query)],
+    }
+
+    # Invoke with random thread_id (required by LangGraph but not persisted)
+    config = {"configurable": {"thread_id": str(uuid4())}}
+    result = await graph.ainvoke(initial_state, config)
+
+    # Increment total_credits_used on the ApiKey record
+    if api_key_id:
+        from app.models.api_key import ApiKey
+        result_key = await db.execute(
+            select(ApiKey).where(ApiKey.id == api_key_id)
+        )
+        api_key = result_key.scalar_one_or_none()
+        if api_key:
+            api_key.total_credits_used = (api_key.total_credits_used or 0) + float(credit_cost)
+            await db.flush()
+
+    return {
+        "user_query": user_query,
+        "generated_code": result.get("generated_code"),
+        "execution_result": result.get("execution_result"),
+        "analysis": result.get("final_response") or result.get("analysis", ""),
+        "chart_specs": result.get("chart_specs", ""),
+        "chart_error": result.get("chart_error", ""),
+        "follow_up_suggestions": result.get("follow_up_suggestions", []),
+        "search_sources": result.get("search_sources", []),
+    }

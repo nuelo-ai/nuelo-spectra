@@ -61,6 +61,14 @@ async function proxyRequest(request: NextRequest) {
   if (contentDisposition)
     responseHeaders.set("Content-Disposition", contentDisposition);
 
+  // 204 No Content must have null body per HTTP spec
+  if (backendResponse.status === 204) {
+    return new Response(null, {
+      status: 204,
+      headers: responseHeaders,
+    });
+  }
+
   // Read full body to avoid Content-Length mismatches from redirects
   const responseBody = await backendResponse.arrayBuffer();
   return new Response(responseBody, {

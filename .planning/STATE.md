@@ -2,26 +2,26 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-18)
+See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** Phase 37 — Admin Seed on Startup and Mandatory Credentials
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 37 of 37 (Admin Seed on Startup and Mandatory Credentials)
-Plan: 1 of 1 in current phase (plan 37-01 complete)
-Status: Phase 37 complete — model_validator + entrypoint seed block + env docs updated
-Last activity: 2026-02-21 — Completed plan 37-01 (fail-fast admin credential validation + docker seed)
+Phase: 41 of 41 (v0.7) — Complete
+Plan: All complete
+Status: Milestone v0.7 shipped
+Last activity: 2026-02-25 — Milestone v0.7 archived
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 🚧
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅
 
 ## Performance Metrics
 
-**Velocity (v0.5):**
-- Total plans completed: 24 (Phases 26-32 complete)
-- Total execution time: ~2 days (Feb 16-17, 2026)
-- Plans per day: ~12 plans/day
+**Velocity (v0.7):**
+- Total plans completed: 15 (Phases 38-41)
+- Total execution time: 4 days (Feb 21-24, 2026)
+- 88 commits, 129 files changed (+14,703 / -3,002 lines)
 
 ## Accumulated Context
 
@@ -29,49 +29,9 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 🚧
 
 See PROJECT.md Key Decisions table for full decision log.
 
-Recent decisions affecting v0.6:
-- 3 separate Dokploy Application services (not single Compose stack) — independent rollback per service
-- `python:3.12-slim` for backend base image — glibc required for asyncpg/psycopg binary wheels; Alpine incompatible
-- `node:22-alpine` for both frontend base images — Alpine safe for Next.js; saves ~100MB per image
-- `output: 'standalone'` in both Next.js configs — required for multi-stage Docker images
-- Dokploy-managed PostgreSQL — simpler, managed backups, no containerization needed
-- `.dockerignore` before any `docker build` — non-negotiable security gate
-- [Phase 33]: BACKEND_URL uses nullish coalescing fallback to localhost:8000 for local dev compatibility
-- [Phase 33]: Dual-mount version router at / and /api prefix for proxy compatibility with both frontends
-- [Phase 33]: APP_VERSION in Pydantic Settings (moved from os.getenv) — validates at startup, consistent with other config
-- [Phase 33 post-test]: Replaced next.config.ts rewrites with catch-all route handler proxies — rewrites buffer SSE, bake BACKEND_URL at build time, strip trailing slashes
-- [Phase 33 post-test]: Backend middleware strips trailing slashes + redirect_slashes=False — consistent routing regardless of caller
-- [Phase 33 post-test]: BACKEND_URL is now runtime env var (read by route handler at request time) — no build-arg needed for Docker, better than original rewrite approach
-- [Phase 34-01]: BuildKit per-Dockerfile .dockerignore naming — each service excludes other service dirs to minimize build context
-- [Phase 34-01]: Entrypoint uses /app/.venv/bin/python explicitly (uv installs to .venv)
-- [Phase 34-01]: 30 retries x 2s = 60s max PostgreSQL wait in entrypoint
-- [Phase 34-02]: uv binary from ghcr.io/astral-sh/uv:latest, UV_COMPILE_BYTECODE=1 for faster startup
-- [Phase 34-02]: No CMD in backend Dockerfile — entrypoint handles everything
-- [Phase 34-02]: postgresql-client installed via apt-get for pg_isready (resolved blocker)
-- [Phase 34-03]: BACKEND_URL as runtime ENV not build ARG in frontend Dockerfiles — route handler proxies read at request time
-- [Phase 34-03]: admin-frontend Dockerfile skips public/ COPY (no public assets exist)
-- [Phase 35-01]: Modern compose.yaml naming (no version field, not docker-compose.yml)
-- [Phase 35-01]: env_file for secrets with inline environment overrides for non-secret config
-- [Phase 35-01]: Admin frontend maps host 3001 to container 3000 (no PORT env var override)
-- [Phase 35-01]: Backend healthcheck via depends_on service_healthy for startup ordering
-- [Phase 36-01]: iptables DOCKER-USER chain instead of VPS cloud firewall — Hostinger VPS, Docker bypasses UFW
-- [Phase 36-01]: Tailscale subnet routing not needed — dokploy-network is Swarm overlay (VXLAN), published host ports sufficient
-- [Phase 36-01]: Dokploy branch set to develop for testing deployment before final merge to master
-- [Phase 36-02]: BACKEND_URL uses Docker Swarm service names (not overlay IPs) — IPs change on every redeploy, service names are stable
-- [Phase 36-02]: Healthcheck uses 127.0.0.1 not localhost — Alpine wget resolves localhost to IPv6 [::1] but Next.js listens IPv4 only
-- [Phase 36-02]: seed-admin populates first_name/last_name with defaults — prevents null crash in admin header initials
-- [Phase 37-01]: Raise ValueError (not SystemExit) in model_validator — Pydantic v2 wraps it in ValidationError at lru_cache construction
-- [Phase 37-01]: Keep admin_email/admin_password defaults as empty string — making them required= would break public mode; validator provides explicit error
-- [Phase 37-01]: Use [ -n "${ADMIN_EMAIL:-}" ] with dash-empty fallback — handles both unset and empty string under set -euo pipefail
-- [Phase 37-01]: Seed block after alembic, before exec uvicorn — schema must exist before seed; admin must exist before first request
-
-### Roadmap Evolution
-
-- Phase 37 added: admin-seed-on-startup-and-mandatory-credentials
-
 ### Pending Todos
 
-- [ ] Create Dokploy Docker deployment package (deployment) — this milestone
+- [ ] Create Dokploy Docker deployment package for spectra-api service (deployment)
 - [ ] Query safety filter in Manager Agent (security)
 - [ ] Show suggestions in Data Summary sidebar panel (ui)
 - [ ] Use Pydantic structured output for agent JSON responses (consistency)
@@ -79,13 +39,11 @@ Recent decisions affecting v0.6:
 
 ### Blockers/Concerns
 
-- ~~Dokploy internal service hostname format: MEDIUM confidence~~ RESOLVED — verified after public backend deploy; Dokploy uses Docker Swarm overlay network, published host ports accessible via Tailscale IP
-- ~~SSE streaming through Next.js rewrite proxy in Docker~~ RESOLVED — route handler proxy streams SSE correctly, verified with curl
-- ~~`pg_isready` availability in `python:3.12-slim`: not included by default~~ RESOLVED — `postgresql-client` installed via apt-get in Dockerfile.backend runtime stage
-- ~~Phase 34 plans reference BACKEND_URL as Docker build-arg for rewrites~~ RESOLVED — 34-03 used ENV not ARG, adjusted during execution
+- slowapi>=0.1.9 compatibility with FastAPI 0.115+ and custom key_func — verify before writing rate limiting middleware
+- Confirm spectra-api and spectra-public share same Dokploy host — spectra_uploads volume sharing is automatic only on single host
 
 ## Session Continuity
 
-Last session: 2026-02-21
-Stopped at: Completed 37-01-PLAN.md (fail-fast admin credential validation + docker entrypoint seed block)
-Resume with: Phase 37 complete — all plans done
+Last session: 2026-02-25
+Stopped at: Milestone v0.7 archived
+Resume with: `/gsd:new-milestone` to define v0.8

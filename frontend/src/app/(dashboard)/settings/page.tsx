@@ -9,6 +9,7 @@ import Link from "next/link";
 import { ProfileForm } from "@/components/settings/ProfileForm";
 import { PasswordForm } from "@/components/settings/PasswordForm";
 import { AccountInfo } from "@/components/settings/AccountInfo";
+import { ApiKeySection } from "@/components/settings/ApiKeySection";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
@@ -37,6 +38,7 @@ export default function SettingsPage() {
           <ProfileForm />
           <PasswordForm />
           <AccountInfo />
+          <ApiKeySection />
         </div>
       </div>
     </div>

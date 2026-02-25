@@ -8,6 +8,7 @@
 - ✅ **v0.4 Data Visualization** — Phases 20-25 (shipped 2026-02-15)
 - ✅ **v0.5 Admin Portal** — Phases 26-32 (shipped 2026-02-18)
 - ✅ **v0.6 Docker and Dokploy Support** — Phases 33-37 (shipped 2026-02-21)
+- ✅ **v0.7 API Services & MCP** — Phases 38-41 (shipped 2026-02-25)
 
 ## Phases
 
@@ -84,6 +85,16 @@
 
 </details>
 
+<details>
+<summary>✅ v0.7 API Services & MCP (Phases 38-41) — SHIPPED 2026-02-25</summary>
+
+- [x] Phase 38: API Key Infrastructure (4/4 plans) — completed 2026-02-23
+- [x] Phase 39: API Key Management UI + Deployment Mode (5/5 plans) — completed 2026-02-24
+- [x] Phase 40: REST API v1 Endpoints (4/4 plans) — completed 2026-02-24
+- [x] Phase 41: MCP Server (2/2 plans) — completed 2026-02-24
+
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -125,3 +136,7 @@
 | 35. Docker Compose and Local Validation | v0.6 | 1/1 | Complete | 2026-02-19 |
 | 36. Dokploy Deployment and DEPLOYMENT.md | v0.6 | 3/3 | Complete | 2026-02-20 |
 | 37. Admin Seed on Startup | v0.6 | 1/1 | Complete | 2026-02-21 |
+| 38. API Key Infrastructure | v0.7 | 4/4 | Complete | 2026-02-23 |
+| 39. API Key Management UI + Deployment Mode | v0.7 | 5/5 | Complete | 2026-02-24 |
+| 40. REST API v1 Endpoints | v0.7 | 4/4 | Complete | 2026-02-24 |
+| 41. MCP Server | v0.7 | 2/2 | Complete | 2026-02-24 |

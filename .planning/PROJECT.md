@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Spectra is an AI-powered data analytics platform that transforms how users interact with their data. Users upload datasets (Excel/CSV), create chat sessions, link multiple files, and ask questions in natural language — receiving instant insights as interactive Data Cards with AI-generated Plotly charts. A ChatGPT-style session-centric UX with sidebar navigation enables multi-file conversations and cross-file analysis. A 6-agent AI system with intelligent query routing generates validated Python code in a secure sandbox, automatically creating visualizations when analysis benefits from charts. Multi-turn conversation memory, web search integration, smart query suggestions, 7 chart types with PNG/SVG export, and theme-aware Nord palette across 5 LLM providers. Now fully deployable via Docker Compose (local) or Dokploy (production) with automatic admin seeding and fail-fast startup validation.
+Spectra is an AI-powered data analytics platform that transforms how users interact with their data. Users upload datasets (Excel/CSV), create chat sessions, link multiple files, and ask questions in natural language — receiving instant insights as interactive Data Cards with AI-generated Plotly charts. A ChatGPT-style session-centric UX with sidebar navigation enables multi-file conversations and cross-file analysis. A 6-agent AI system with intelligent query routing generates validated Python code in a secure sandbox, automatically creating visualizations when analysis benefits from charts. Multi-turn conversation memory, web search integration, smart query suggestions, 7 chart types with PNG/SVG export, and theme-aware Nord palette across 5 LLM providers. Fully deployable via Docker Compose (local) or Dokploy (production) with automatic admin seeding and fail-fast startup validation. Now exposes a public REST API and MCP server for programmatic access and AI agent integrations, with API key management, credit deduction, and usage logging.
 
 ## Core Value
 
@@ -13,17 +13,17 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 **GitHub:** https://github.com/marwazihs/nuelo-spectra.git (private)
 **Remote:** origin
 **Branch:** master
-**Latest Tag:** v0.6 (2026-02-21)
+**Latest Tag:** v0.7 (2026-02-25)
 
-## Latest Milestone: v0.6 Docker and Dokploy Support (Shipped 2026-02-21)
+## Latest Milestone: v0.7 API Services & MCP (Shipped 2026-02-25)
 
-**Delivered:** Full production deployment package — Docker Compose for local dev, Dockerfiles for all 3 services, 4 Dokploy services with Tailscale split-horizon architecture, fail-fast startup validation requiring admin credentials in dev/admin modes, automatic admin seeding on container startup, and DEPLOYMENT.md guide.
+**Delivered:** Public REST API and MCP server exposing Spectra's data analysis capabilities for programmatic access and AI agent integrations, with API key management, credit deduction, and usage logging.
 
 ## Current State
 
-**Shipped:** v0.6 Docker and Dokploy Support (2026-02-21)
-**Status:** Milestone complete — planning v0.7
-**Codebase:** ~53,000 LOC (Python app + TypeScript/TSX across public frontend + admin frontend + Docker/shell infra)
+**Shipped:** v0.7 API Services & MCP (2026-02-25)
+**Status:** Milestone complete — planning next milestone
+**Codebase:** ~65,000 LOC (Python app + TypeScript/TSX across public frontend + admin frontend + Docker/shell infra)
 **Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily + Plotly + APScheduler (backend), Next.js 16 + React 19 + TanStack + Zustand + shadcn/ui + next-themes + Plotly.js + Recharts (frontend + admin frontend), Docker + Dokploy + Tailscale (deployment)
 
 **What works:**
@@ -62,6 +62,12 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 - ✅ Fail-fast startup validation: backend refuses to boot in dev/admin mode without ADMIN_EMAIL/ADMIN_PASSWORD
 - ✅ Automatic admin seeding on container startup (after migrations, before uvicorn)
 - ✅ DEPLOYMENT.md — step-by-step Dokploy + Tailscale deployment guide
+- ✅ API key management with SHA-256 hashing, `spe_` prefix, user self-service + admin management
+- ✅ Public REST API v1: file upload/list/download/delete, file context get/update, synchronous query with credit deduction
+- ✅ API usage logging per user and per API key (endpoint, credits used, status code)
+- ✅ `SPECTRA_MODE=api` as 5th deployment mode with Bearer token auth and wildcard CORS
+- ✅ MCP server with 6 curated `spectra_` tools via FastMCP 3.0.2, mounted at `/mcp/`
+- ✅ MCP Bearer token auth middleware with per-request validation on tool calls and tool listing
 
 **Known limitations:**
 - E2B sandboxes created per-execution (no warm pools - ~150ms cold start per query)
@@ -410,9 +416,38 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **v0.6 Total: 28/28 requirements satisfied (100%)**
 
+**✅ v0.7 API Services & MCP — Shipped 2026-02-25**
+
+**API Key Management (8/8):**
+- ✓ User can view, create, and revoke API keys from Settings page — v0.7
+- ✓ Admin can view, create, and revoke API keys for any user — v0.7
+- ✓ API keys stored securely with SHA-256 hashing, full key shown only once — v0.7
+
+**API Authentication & Security (4/4):**
+- ✓ API requests authenticate via Bearer token, invalid/revoked keys return 401 — v0.7
+- ✓ API calls deduct credits, usage logged per user and per API key — v0.7
+
+**REST API v1 (8/8):**
+- ✓ File management: upload, list, download, delete — v0.7
+- ✓ File context: get detail, update summary/context, get suggestions — v0.7
+- ✓ Synchronous query with full analysis result (code, chart spec, explanation) — v0.7
+
+**API Infrastructure (5/5):**
+- ✓ SPECTRA_MODE=api enables API routes, deployable as 5th Dokploy service — v0.7
+- ✓ API routes versioned under /api/v1/, active in dev mode alongside existing routes — v0.7
+- ✓ Structured request/error logging for all API requests — v0.7
+
+**MCP Server (5/5):**
+- ✓ 6 curated spectra_ tools for upload, query, list, delete, download, get context — v0.7
+- ✓ MCP server authenticates using Bearer token API keys — v0.7
+
+**v0.7 Total: 30/30 requirements satisfied (100%)**
+
 ### Active
 
-<!-- Next milestone requirements will be defined via /gsd:new-milestone -->
+<!-- Next milestone requirements — see .planning/REQUIREMENTS.md after /gsd:new-milestone -->
+
+(No active requirements — run `/gsd:new-milestone` to define v0.8)
 
 ### Out of Scope
 
@@ -519,5 +554,12 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | 4 Dokploy Application services (not 1 Compose stack) | Independent deploy, scale, and restart per service | ✓ Good — cleaner than managing a remote compose stack |
 | Backend has no public domain | Reduced attack surface; frontend proxies via Swarm DNS | ✓ Good — simpler than exposing backend directly |
 
+| SHA-256 API key hashing (not Argon2) | High-entropy random token; industry standard (GitHub, Stripe), no perf penalty | ✓ Good — fast auth with no brute-force risk on random tokens |
+| `spe_` prefix for API keys | Recognizable in logs and configs | ✓ Good — easy to identify and route in auth middleware |
+| MCP tools call REST API via httpx loopback | Preserves credit deduction and usage logging middleware chain | ✓ Good — single billing path for both REST and MCP |
+| Unified get_authenticated_user() dependency | JWT fast path first, SHA-256 key fallback | ✓ Good — existing frontend auth unchanged, API keys "just work" |
+| FastMCP 3.0.2 with manually curated tools | Auto-generation produces poor LLM tool descriptions | ✓ Good — better tool discovery by AI agents |
+| Stateless HTTP transport for MCP | Each request independent, no session state | ✓ Good — simpler deployment, works behind load balancers |
+
 ---
-*Last updated: 2026-02-21 after v0.6 milestone*
+*Last updated: 2026-02-25 after v0.7 milestone*
