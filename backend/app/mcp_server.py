@@ -36,7 +36,7 @@ from typing import Sequence
 import httpx
 from fastmcp import Context, FastMCP
 from fastmcp.exceptions import ToolError
-from fastmcp.server.dependencies import get_http_headers
+from fastmcp.server.dependencies import get_http_request
 from fastmcp.server.middleware import Middleware, MiddlewareContext
 from fastmcp.tools.tool import ToolResult
 from mcp.types import TextContent
@@ -97,8 +97,8 @@ class ApiKeyAuthMiddleware(Middleware):
             ToolError: If the Authorization header is missing/invalid or
                        the token does not have the spe_ prefix.
         """
-        headers = get_http_headers()
-        auth_header = headers.get("authorization", "")
+        request = get_http_request()
+        auth_header = request.headers.get("authorization", "")
 
         if not auth_header.startswith("Bearer "):
             raise ToolError(
