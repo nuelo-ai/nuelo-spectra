@@ -310,14 +310,24 @@ General tab:
 
 | Variable | Value | Notes |
 |----------|-------|-------|
-| `SPECTRA_MODE` | `api` | API-only mode -- no frontend routes, no admin routes |
+| `SPECTRA_MODE` | `api` | API-only mode — no frontend, auth, or admin routes |
 | `DATABASE_URL` | `postgresql+asyncpg://...` | Same as other backends |
 | `SECRET_KEY` | *(same as other backends)* | Shared JWT signing key |
+| `ALGORITHM` | `HS256` | JWT signing algorithm |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | `30` | |
+| `APP_VERSION` | `v0.7` | Returned in `/health` and `/api/v1/health` responses |
 | `ANTHROPIC_API_KEY` | *(your key)* | Required for analysis queries |
-| `E2B_API_KEY` | *(your key)* | Required for code execution |
-| `GOOGLE_API_KEY` | *(your key)* | If using Google LLM provider |
+| `E2B_API_KEY` | *(your key)* | Required for code execution sandbox |
+| `TAVILY_API_KEY` | *(your key)* | Required for web search in queries |
+| `SEARCH_DEPTH` | `basic` | `basic` or `advanced` |
+| `OPENAI_API_KEY` | *(optional)* | If using OpenAI models |
+| `GOOGLE_API_KEY` | *(optional)* | If using Gemini models |
+| `OPENROUTER_API_KEY` | *(optional)* | If using OpenRouter models |
+| `MCP_API_BASE_URL` | `http://<api-swarm-service-name>:8000` | Internal loopback URL for MCP tools to call the REST API. Set to the service's own Swarm DNS name. |
 | `ENABLE_SCHEDULER` | `false` | API service does not run scheduled tasks |
-| `TAVILY_API_KEY` | *(your key)* | If web search is configured |
+
+**CORS note:** `SPECTRA_MODE=api` uses open CORS (`Access-Control-Allow-Origin: *`) with no credentials. No `CORS_ORIGINS` variable is needed — it is not read in this mode.
 
 ### Step 9c -- Domain Configuration
 
@@ -328,6 +338,8 @@ In Dokploy Application -> Domains:
 | Container Port | `8000` |
 | HTTPS | Enabled |
 | Certificate | `letsencrypt` |
+
+This domain serves both the REST API (`https://api.yourdomain.com/api/v1/*`) and the MCP server (`https://api.yourdomain.com/mcp/`). No separate domain is needed for MCP.
 
 ### Step 9d -- Volume Mount (configure BEFORE deploying)
 
