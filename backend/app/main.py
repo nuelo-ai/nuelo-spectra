@@ -24,6 +24,7 @@ from fastapi.responses import JSONResponse
 from app.config import get_settings
 from app.database import engine
 from app.routers import auth, chat, chat_sessions, files, health, search, version
+from app.routers.health import llm_router as health_llm_router
 
 # Get settings
 settings = get_settings()
@@ -378,6 +379,9 @@ else:
 
 # Health is always available (all modes)
 app.include_router(health.router)
+# /health/llm is for dev/testing only — not exposed in SPECTRA_MODE=api
+if mode != "api":
+    app.include_router(health_llm_router)
 app.include_router(version.router)           # GET /version — for public frontend proxy
 app.include_router(version.router, prefix="/api")  # GET /api/version — for admin frontend proxy
 
