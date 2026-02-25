@@ -20,11 +20,17 @@ This was a workaround from Phase 39 UAT gap closure because the public frontend 
 
 ## Solution
 
-Fix the frontend proxy to preserve the `/api` prefix, then mount the router only once at `/api/v1`. This affects:
+The proposed proxy fix (strip removal) is **not safe** as a simple patch. The public frontend proxy strips `/api` for ALL routes — not just v1. The backend mounts `auth`, `chat`, `files`, `credits`, `search`, `chat_sessions` all without an `/api` prefix.
 
-1. `frontend/src/app/api/[...slug]/route.ts` — adjust proxy path rewriting
-2. `admin-frontend/src/app/api/[...slug]/route.ts` — same adjustment
-3. `backend/app/main.py` — remove the duplicate `include_router` call, keep only `/api/v1`
-4. Update any frontend API client base URLs if they reference `/v1/` directly
+The correct full solution requires migrating ALL those routers to use an `/api` prefix on the backend:
 
-Target: v0.7.1 patch release.
+1. `backend/app/main.py` — add `prefix="/api"` to auth, chat, files, credits, search, chat_sessions routers
+2. Verify no backend-internal route references break
+3. `frontend/src/app/api/[...slug]/route.ts` — remove the `replace(/^\/api/, "")` strip
+4. Then remove the duplicate v1 router mount
+
+This is a planned migration, not a quick patch. Do as a dedicated phase.
+
+## Attempted (v0.7.1 — REVERTED in v0.7.2)
+
+Attempted to remove proxy strip + single v1 mount — broke login and all non-v1 public routes. Reverted immediately.
