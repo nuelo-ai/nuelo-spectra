@@ -191,7 +191,7 @@ Copy `backend/.env.example` to `backend/.env` and fill in:
 | `CORS_ORIGINS` | Allowed CORS origins (e.g., `["http://localhost:3000"]`) |
 | `E2B_API_KEY` | E2B sandbox API key from [e2b.dev](https://e2b.dev/dashboard) |
 | `ANTHROPIC_API_KEY` | Anthropic API key (default LLM provider) |
-| `SPECTRA_MODE` | Router mode: `dev` (all routes), `public` (user-facing only), `admin` (admin-only). Default: `dev` |
+| `SPECTRA_MODE` | Router mode: `dev` (all routes), `public` (user-facing only), `admin` (admin-only), `api` (external API + MCP). Default: `dev` |
 | `ADMIN_EMAIL` | Admin account email — **required when `SPECTRA_MODE=dev` or `admin`** |
 | `ADMIN_PASSWORD` | Admin account password — **required when `SPECTRA_MODE=dev` or `admin`** |
 
@@ -287,7 +287,7 @@ The migration automatically backfills existing users with `is_admin=false`, `use
 ### Verify Installation
 
 1. Backend health: `http://localhost:8000/health`
-2. LLM health: `http://localhost:8000/health/llm`
+2. LLM health: `http://localhost:8000/health/llm` *(dev/public/admin modes only — not available in `SPECTRA_MODE=api`)*
 3. Open `http://localhost:3000`, sign up, upload a CSV, and ask a question
 4. Admin portal (optional): `http://localhost:3001`, log in with seeded admin credentials
 
@@ -362,7 +362,13 @@ allowed_libraries:
 
 Changes to YAML configs require server restart.
 
-## Current Status (v0.7)
+## Current Status (v0.7.5)
+
+### v0.7.5 API Surface Cleanup (February 2026)
+- Removed duplicate "API v1" catch-all group from Swagger — endpoints now appear only under their own tagged groups
+- `/api/v1/keys` (self-service key management) no longer exposed in `SPECTRA_MODE=api` — only available in `public`/`dev` modes
+- `/health/llm` restricted to `dev`/`public`/`admin` modes only — not reachable externally in `SPECTRA_MODE=api`
+- `/health` now returns `app_version` from settings instead of hardcoded `"0.1.0"`
 
 ### v0.7 API Services & MCP (February 2026)
 - API key infrastructure with SHA-256 hashing, `spe_` prefix, user self-service + admin management
@@ -440,4 +446,4 @@ MIT License - See LICENSE file for details.
 
 - **GitHub**: [github.com/marwazihs/nuelo-spectra](https://github.com/marwazihs/nuelo-spectra)
 - **Issues**: Report bugs or request features via GitHub Issues
-- **Version**: v0.7 (February 2026)
+- **Version**: v0.7.5 (February 2026)
