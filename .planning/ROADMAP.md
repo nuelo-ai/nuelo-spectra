@@ -8,7 +8,7 @@
 - ✅ **v0.4 Data Visualization** — Phases 20-25 (shipped 2026-02-15)
 - ✅ **v0.5 Admin Portal** — Phases 26-32 (shipped 2026-02-18)
 - ✅ **v0.6 Docker and Dokploy Support** — Phases 33-37 (shipped 2026-02-21)
-- 🚧 **v0.7 API Services & MCP** — Phases 38-41 (in progress)
+- ✅ **v0.7 API Services & MCP** — Phases 38-41 (shipped 2026-02-25)
 
 ## Phases
 
@@ -85,87 +85,15 @@
 
 </details>
 
-### v0.7 API Services & MCP (In Progress)
+<details>
+<summary>✅ v0.7 API Services & MCP (Phases 38-41) — SHIPPED 2026-02-25</summary>
 
-**Milestone Goal:** Expose Spectra's data analysis capabilities as a public REST API and MCP server, enabling programmatic access and AI agent integrations.
+- [x] Phase 38: API Key Infrastructure (4/4 plans) — completed 2026-02-23
+- [x] Phase 39: API Key Management UI + Deployment Mode (5/5 plans) — completed 2026-02-24
+- [x] Phase 40: REST API v1 Endpoints (4/4 plans) — completed 2026-02-24
+- [x] Phase 41: MCP Server (2/2 plans) — completed 2026-02-24
 
-- [x] **Phase 38: API Key Infrastructure** - Data model, ApiKeyService, Alembic migration, auth middleware, and frontend management UI — completed 2026-02-23
-- [x] **Phase 39: API Key Management UI + Deployment Mode** - User Settings page, admin User Management extension, and SPECTRA_MODE=api as 5th Dokploy service (UAT gap closure in progress) (completed 2026-02-24)
-- [x] **Phase 40: REST API v1 Endpoints** - File management, file context, and synchronous query endpoints with credit deduction and usage logging (completed 2026-02-24)
-- [x] **Phase 41: MCP Server** - Manually curated MCP tools wrapping Phase 40 endpoints, ASGI mounting, and Streamable HTTP transport (completed 2026-02-24)
-
-## Phase Details
-
-### Phase 38: API Key Infrastructure
-**Goal**: Users can create, view, and revoke API keys, and the backend can authenticate API requests using those keys
-**Depends on**: Phase 37 (v0.6 complete)
-**Requirements**: APIKEY-01, APIKEY-02, APIKEY-03, APIKEY-04, APIKEY-05, APISEC-01, APISEC-02, APIINFRA-01, APIINFRA-02, APIINFRA-05
-**Success Criteria** (what must be TRUE):
-  1. User can create an API key with a name; the full key is displayed once and cannot be retrieved again
-  2. User can view their existing API keys showing name, prefix (first 8-12 chars), and creation date
-  3. User can revoke an API key; revoked keys immediately return 401 on any API request
-  4. An API request with a valid Bearer token is authenticated as the key's owner; an invalid or revoked token returns 401
-  5. API routes are served under `/api/v1/` versioned prefix when `SPECTRA_MODE=api` is set
-  6. In `SPECTRA_MODE=dev` (Docker Compose), all `/api/v1/` routes are active alongside existing backend routes — no separate service needed locally
-**Plans**: 4 plans
-
-Plans:
-- [ ] 38-01-PLAN.md — ApiKey model, Alembic migration, User relationship, config.py api mode acceptance
-- [ ] 38-02-PLAN.md — ApiKeyService TDD (generate, create, list, revoke, authenticate) + Pydantic schemas
-- [ ] 38-03-PLAN.md — api_v1 router + CRUD endpoints + get_authenticated_user() + main.py mode gate
-- [ ] 38-04-PLAN.md — Frontend hooks (useApiKeys) + ApiKeySection component + Settings page integration
-
-### Phase 39: API Key Management UI + Deployment Mode
-**Goal**: API key management is accessible from the public frontend Settings page, admins can manage keys for any user, and the api mode backend is deployable as a standalone Dokploy service
-**Depends on**: Phase 38
-**Requirements**: APIKEY-06, APIKEY-07, APIKEY-08, APIINFRA-03
-**Success Criteria** (what must be TRUE):
-  1. User can manage API keys from a dedicated section on their Settings page (create, view prefix/name, revoke)
-  2. Admin can view all API keys for any user from the User Management screen
-  3. Admin can create and revoke API keys on behalf of any user
-  4. A `SPECTRA_MODE=api` backend service is deployable as a 5th Dokploy Application with its own public HTTPS domain
-**Plans**: 5 plans
-
-Plans:
-- [x] 39-01-PLAN.md — Backend: ApiKey model migration, admin service methods, admin API key router, /api/v1/health endpoint
-- [x] 39-02-PLAN.md — Public frontend ApiKeySection enhancement (credit usage column) + DEPLOYMENT.md 5th service docs + API mode CORS
-- [x] 39-03-PLAN.md — Admin frontend: UserApiKeysTab component + hooks + UserDetailTabs 5th tab integration
-- [ ] 39-04-PLAN.md — Gap closure: Fix /api/v1 router prefix, admin revoke 204 handling, admin key list table layout
-- [ ] 39-05-PLAN.md — Gap closure: Public frontend credit usage label, last used display, admin badge for admin-created keys
-
-### Phase 40: REST API v1 Endpoints
-**Goal**: External callers can programmatically manage files, retrieve file context, and run synchronous analysis queries — all authenticated by API key with credit deduction and usage logging
-**Depends on**: Phase 39
-**Requirements**: APIF-01, APIF-02, APIF-03, APIF-04, APIC-01, APIC-02, APIC-03, APIQ-01, APISEC-03, APISEC-04, APIINFRA-04
-**Success Criteria** (what must be TRUE):
-  1. API caller can upload a CSV/Excel file and receive the AI-generated data brief and query suggestions in the response
-  2. API caller can list, download, and delete files belonging to their account
-  3. API caller can retrieve a file's full context (data brief, summary, suggestions) and update the summary/context fields
-  4. API caller can send a natural language query against a file and receive the complete analysis result (code, chart spec, explanation) synchronously
-  5. Each analysis query deducts credits from the caller's balance; each API request is logged (endpoint, credits used, status code) and structured request/error logs are written
-**Plans**: 4 plans
-
-Plans:
-- [ ] 40-01-PLAN.md — Foundation: API envelope schemas, ApiUsageLog model + migration, usage service, credit refund, auth api_key_id tracking
-- [ ] 40-02-PLAN.md — File + context endpoints: upload, list, delete, download, get context, update context, get suggestions
-- [ ] 40-03-PLAN.md — Query endpoint + usage logging: stateless analysis with credit deduction/refund, API usage middleware
-- [ ] 40-04-PLAN.md — Gap closure: Fix context update persistence (flush->commit) and auth error ApiErrorResponse envelope
-
-### Phase 41: MCP Server
-**Goal**: Claude Desktop, Claude Code, or any MCP host can use Spectra's analysis capabilities as first-class tools via a production-ready MCP server
-**Depends on**: Phase 40
-**Requirements**: MCP-01, MCP-02, MCP-03, MCP-04, MCP-05
-**Success Criteria** (what must be TRUE):
-  1. An MCP host can upload a file and receive the AI-generated data brief through a curated `spectra_upload_file` tool
-  2. An MCP host can query a file with a natural language question and receive the full analysis result through `spectra_run_analysis`
-  3. An MCP host can list, delete, and download files through dedicated tools
-  4. An MCP host can retrieve file context and query suggestions through a dedicated tool
-  5. All MCP tools authenticate using a Spectra API key; tool calls are billed and logged identically to direct REST API calls
-**Plans**: 2 plans
-
-Plans:
-- [ ] 41-01-PLAN.md — FastMCP dependency, MCP server module with auth middleware and 6 curated tools
-- [ ] 41-02-PLAN.md — Mount MCP server at /mcp/ on FastAPI, lifespan coordination, config settings
+</details>
 
 ## Progress
 
@@ -208,7 +136,7 @@ Plans:
 | 35. Docker Compose and Local Validation | v0.6 | 1/1 | Complete | 2026-02-19 |
 | 36. Dokploy Deployment and DEPLOYMENT.md | v0.6 | 3/3 | Complete | 2026-02-20 |
 | 37. Admin Seed on Startup | v0.6 | 1/1 | Complete | 2026-02-21 |
-| 38. API Key Infrastructure (incl. dev mode) | v0.7 | Complete    | 2026-02-24 | 2026-02-23 |
-| 39. API Key Management UI + Deployment Mode | 5/5 | Complete    | 2026-02-24 | - |
-| 40. REST API v1 Endpoints | 4/4 | Complete    | 2026-02-24 | - |
-| 41. MCP Server | 2/2 | Complete    | 2026-02-24 | - |
+| 38. API Key Infrastructure | v0.7 | 4/4 | Complete | 2026-02-23 |
+| 39. API Key Management UI + Deployment Mode | v0.7 | 5/5 | Complete | 2026-02-24 |
+| 40. REST API v1 Endpoints | v0.7 | 4/4 | Complete | 2026-02-24 |
+| 41. MCP Server | v0.7 | 2/2 | Complete | 2026-02-24 |

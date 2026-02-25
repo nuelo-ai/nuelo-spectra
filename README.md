@@ -15,6 +15,9 @@ Spectra bridges the gap between raw data and actionable insights. Upload your da
 - **Multi-Provider LLM**: Choose from Anthropic, OpenAI, Google, Ollama, or OpenRouter per agent
 - **Production Security**: E2B Firecracker microVM isolation for safe code execution
 - **Admin Portal**: Internal admin dashboard with user management, credit system, invitations, and platform settings
+- **Public REST API**: Versioned API v1 for programmatic file management, context retrieval, and synchronous data analysis
+- **MCP Server**: 6 curated tools for Claude Desktop, Claude Code, and any MCP-compatible AI agent
+- **API Key Management**: User self-service and admin key management with SHA-256 hashing and credit tracking
 
 ## Features
 
@@ -29,12 +32,15 @@ Spectra bridges the gap between raw data and actionable insights. Upload your da
 - **Authentication**: JWT with refresh tokens and secure password reset
 - **Theming**: Dark/light mode with Nord palette
 - **Admin Portal**: Separate admin app for user management, credits, invitations, platform settings, and audit logging
+- **REST API v1**: File upload/list/download/delete, file context, synchronous query — all with Bearer token auth and credit deduction
+- **MCP Server**: FastMCP 3.0.2 with Streamable HTTP transport at `/mcp/`, 6 `spectra_` tools for AI agent integrations
+- **API Key Management**: Create, view, revoke keys from Settings page; admin manages keys for all users
 
 ## Tech Stack
 
 | Layer | Technologies |
 |-------|-------------|
-| **Backend** | FastAPI, Python 3.12+, PostgreSQL 16, SQLAlchemy 2.0 (async), asyncpg, APScheduler |
+| **Backend** | FastAPI, Python 3.12+, PostgreSQL 16, SQLAlchemy 2.0 (async), asyncpg, APScheduler, FastMCP 3.0.2 |
 | **AI/Agents** | LangGraph, LangChain, 6 agents with YAML prompts, Tavily web search |
 | **LLM Providers** | Anthropic (default), OpenAI, Google, Ollama, OpenRouter |
 | **Sandbox** | E2B Firecracker microVMs, AST validation, library allowlisting |
@@ -202,6 +208,33 @@ Copy `backend/.env.example` to `backend/.env` and fill in:
 | `SMTP_USER` / `SMTP_PASS` | SMTP credentials |
 | `LANGSMITH_API_KEY` | LangSmith tracing key |
 
+### Upgrading from v0.6 to v0.7
+
+```bash
+# 1. Pull latest code
+git pull origin master
+
+# 2. Install new backend dependencies (adds fastmcp)
+cd backend
+uv sync
+
+# 3. Run database migrations (adds api_keys and api_usage_logs tables)
+uv run alembic upgrade head
+
+# 4. Optional: Add MCP_API_BASE_URL to backend/.env (defaults to http://localhost:8000)
+#    Only needed if your API service runs on a different host/port
+
+# 5. Rebuild frontend apps (API key management UI added to Settings)
+cd ../frontend && npm install
+cd ../admin-frontend && npm install
+```
+
+New endpoints available:
+- REST API: `http://localhost:8000/api/v1/` (requires `SPECTRA_MODE=api` or `dev`)
+- MCP Server: `http://localhost:8000/mcp/` (requires `SPECTRA_MODE=api` or `dev`)
+
+For Docker/production deployment of the API service, see `DEPLOYMENT.md`.
+
 ### Upgrading from v0.5 to v0.6
 
 ```bash
@@ -329,7 +362,15 @@ allowed_libraries:
 
 Changes to YAML configs require server restart.
 
-## Current Status (v0.6)
+## Current Status (v0.7)
+
+### v0.7 API Services & MCP (February 2026)
+- API key infrastructure with SHA-256 hashing, `spe_` prefix, user self-service + admin management
+- Public REST API v1: file upload/list/download/delete, file context get/update/suggestions, synchronous query
+- Credit deduction and API usage logging on all `/v1/` requests with structured request/error logs
+- `SPECTRA_MODE=api` as 5th deployment mode, deployable as standalone Dokploy service
+- MCP server with 6 curated `spectra_` tools via FastMCP 3.0.2 at `/mcp/` with Streamable HTTP transport
+- Bearer token auth middleware for MCP with per-request validation
 
 ### v0.6 Docker and Dokploy Support (February 2026)
 - Production Dockerfiles for all 3 services (backend, public frontend, admin frontend)
@@ -399,4 +440,4 @@ MIT License - See LICENSE file for details.
 
 - **GitHub**: [github.com/marwazihs/nuelo-spectra](https://github.com/marwazihs/nuelo-spectra)
 - **Issues**: Report bugs or request features via GitHub Issues
-- **Version**: v0.6 (February 2026)
+- **Version**: v0.7 (February 2026)

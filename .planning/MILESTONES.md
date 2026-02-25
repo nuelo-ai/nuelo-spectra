@@ -215,10 +215,68 @@
 
 ## v0.6 Docker and Dokploy Support (Shipped: 2026-02-21)
 
-**Phases completed:** 5 phases, 10 plans, 0 tasks
+**Delivered:** Full production deployment package — Docker Compose for local dev, Dockerfiles for all 3 services, 4 Dokploy services with Tailscale split-horizon architecture, fail-fast startup validation, automatic admin seeding, and DEPLOYMENT.md guide
+
+**Phases completed:** 33-37 (5 phases, 10 plans)
 
 **Key accomplishments:**
-- (none recorded)
+
+- Built production Dockerfiles for all 3 services (backend multi-stage uv, frontend/admin standalone Next.js) with .dockerignore and non-root users
+- Created docker-entrypoint.sh with PostgreSQL readiness wait, Alembic migrations on startup, and uvicorn as PID 1
+- Shipped Docker Compose for local full-stack development with health-ordered startup and named volumes
+- Deployed 4 Dokploy Application services with Tailscale split-horizon architecture (public HTTPS, admin VPN-only)
+- Added fail-fast startup validation requiring ADMIN_EMAIL/ADMIN_PASSWORD in dev/admin modes with automatic admin seeding
+- Created DEPLOYMENT.md step-by-step guide for Dokploy + Tailscale deployment
+
+**Stats:**
+
+- 5 phases, 10 plans executed
+- 3 days development time (Feb 19-21, 2026)
+
+**Git range:** `v0.5` → `v0.6`
+
+**Requirements:** 28/28 satisfied (100%)
+
+**What's next:** v0.7 API Services & MCP
+
+---
+
+
+## v0.7 API Services & MCP (Shipped: 2026-02-25)
+
+**Delivered:** Public REST API and MCP server exposing Spectra's data analysis capabilities for programmatic access and AI agent integrations, with API key management, credit deduction, and usage logging
+
+**Phases completed:** 38-41 (4 phases, 15 plans)
+
+**Key accomplishments:**
+
+- Built API key infrastructure with SHA-256 hashing, `spe_` prefix format, user self-service management, and admin key management for all users
+- Shipped public REST API v1 with file management (upload, list, download, delete), file context (get/update, suggestions), and synchronous query endpoint
+- Implemented credit deduction and API usage logging on all `/v1/` requests with structured request/error logging and credit refund on failure
+- Added `SPECTRA_MODE=api` as 5th deployment mode with its own CORS config, deployable as standalone Dokploy service
+- Created MCP server with 6 curated `spectra_` tools via FastMCP 3.0.2, mounted at `/mcp/` with Streamable HTTP transport
+- Implemented Bearer token auth middleware for MCP with per-request validation on both tool calls and tool listing
+
+**Stats:**
+
+- 4 phases, 15 plans executed
+- 88 commits over 4 days (Feb 21-24, 2026)
+- 129 files changed (+14,703 / -3,002 lines)
+
+**Git range:** `v0.6` → `v0.7`
+
+**Requirements:** 30/30 satisfied (100%)
+- API Key Management: 8/8 (APIKEY)
+- API Authentication & Security: 4/4 (APISEC)
+- API Files: 4/4 (APIF)
+- API File Context: 3/3 (APIC)
+- API Chat/Query: 1/1 (APIQ)
+- API Infrastructure: 5/5 (APIINFRA)
+- MCP Server: 5/5 (MCP)
+
+**Testing:** UAT passed for all phases — Phase 39 (8 tests, 2 rounds with gap closure), Phase 40 (11 tests, 2 rounds with gap closure), Phase 41 (6 tests, 1 bug fixed during UAT)
+
+**What's next:** v0.8 will be defined via `/gsd:new-milestone`
 
 ---
 
