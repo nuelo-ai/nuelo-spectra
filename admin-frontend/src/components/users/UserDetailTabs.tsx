@@ -499,7 +499,7 @@ function CreditsTab({ user }: { user: UserDetail }) {
 // Activity Tab
 // ---------------------------------------------------------------------------
 function ActivityTab({ userId }: { userId: string }) {
-  const { data, isLoading } = useUserActivity(userId);
+  const { data, isLoading, isError, refetch } = useUserActivity(userId);
 
   if (isLoading) {
     return (
@@ -508,6 +508,19 @@ function ActivityTab({ userId }: { userId: string }) {
           <Skeleton key={i} className="h-12 w-full" />
         ))}
       </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center text-sm text-muted-foreground space-y-3">
+          <p>Failed to load activity data</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 
