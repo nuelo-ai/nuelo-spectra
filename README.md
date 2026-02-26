@@ -362,7 +362,18 @@ allowed_libraries:
 
 Changes to YAML configs require server restart.
 
-## Current Status (v0.7.6)
+## Current Status (v0.7.9)
+
+### v0.7.9 Admin Users Activity Tab Fix (February 2026)
+- Fixed `GET /api/admin/users/{id}/activity` returning HTTP 500 — SQLAlchemy generated separate bind parameters for each occurrence of `func.date_trunc("month", col)` in SELECT, GROUP BY, and ORDER BY, causing PostgreSQL to throw `GroupingError`. Fixed by using `text("1")` ordinal position reference for GROUP BY and ORDER BY on both the messages and sessions queries
+- Fixed admin frontend `ActivityTab` component silently swallowing the 500 error — `isError` was never checked, so failures rendered as "No activity data available" with no indication of what went wrong. Added explicit error state with Retry button
+
+### v0.7.8 MCP Chart Spec Binary Decoding + API Docs (February 2026)
+- Fixed MCP `spectra_run_analysis` returning Plotly binary typed arrays (`{"dtype":"f8","bdata":"<base64>"}`) in chart specs — Plotly serializes numpy numeric arrays as binary for space efficiency, but this is opaque to AI agents. The MCP layer now decodes all binary nodes to plain JSON numbers before returning. Covers all dtypes (`f8`, `f4`, `i8`, `i4`, `u4`); unknown dtypes are passed through with a warning log. Blanket guarantee: all queries, all chart types
+- Renamed `API-REFERENCE.md` → `API_MCP_REFERENCE.md` with full documentation update: mcp-remote setup for Claude Desktop, expanded `spectra_run_analysis` response format, HTML + CDN Plotly rendering guide for MCP chart output
+
+### v0.7.7 MCP Execution Result Data Table (February 2026)
+- Added `execution_result` data table as first content block in `spectra_run_analysis` MCP output — the raw computed result rows were returned by the backend but omitted from MCP tool output. AI agents now see the data as a markdown table (max 50 rows with truncation note) before the narrative analysis, enabling direct data reasoning and verification
 
 ### v0.7.6 MCP Bug Fixes (February 2026)
 - Fixed MCP tools returning "Invalid token" — `set_state`/`get_state` are async but were called without `await`, causing the API key to never be stored or read from context state; header became `Bearer <coroutine ...>` which failed JWT validation
@@ -451,4 +462,4 @@ MIT License - See LICENSE file for details.
 
 - **GitHub**: [github.com/marwazihs/nuelo-spectra](https://github.com/marwazihs/nuelo-spectra)
 - **Issues**: Report bugs or request features via GitHub Issues
-- **Version**: v0.7.6 (February 2026)
+- **Version**: v0.7.9 (February 2026)
