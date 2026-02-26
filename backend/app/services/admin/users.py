@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import select, func, or_, update
+from sqlalchemy import select, func, or_, update, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
@@ -272,14 +272,17 @@ async def get_user_activity(
     cutoff = datetime.now(timezone.utc) - timedelta(days=months * 30)
 
     # Messages by month
+    # Note: GROUP BY / ORDER BY use positional reference (text("1")) to avoid PostgreSQL
+    # GroupingError caused by SQLAlchemy generating separate bind parameters for each
+    # occurrence of the literal "month" in func.date_trunc("month", ...).
     msg_result = await db.execute(
         select(
             func.date_trunc("month", ChatMessage.created_at).label("month"),
             func.count(ChatMessage.id).label("count"),
         )
         .where(ChatMessage.user_id == user_id, ChatMessage.created_at >= cutoff)
-        .group_by(func.date_trunc("month", ChatMessage.created_at))
-        .order_by(func.date_trunc("month", ChatMessage.created_at))
+        .group_by(text("1"))
+        .order_by(text("1"))
     )
     msg_rows = msg_result.all()
 
@@ -290,8 +293,8 @@ async def get_user_activity(
             func.count(ChatSession.id).label("count"),
         )
         .where(ChatSession.user_id == user_id, ChatSession.created_at >= cutoff)
-        .group_by(func.date_trunc("month", ChatSession.created_at))
-        .order_by(func.date_trunc("month", ChatSession.created_at))
+        .group_by(text("1"))
+        .order_by(text("1"))
     )
     sess_rows = sess_result.all()
 
