@@ -362,7 +362,12 @@ allowed_libraries:
 
 Changes to YAML configs require server restart.
 
-## Current Status (v0.7.9)
+## Current Status (v0.7.10)
+
+### v0.7.10 Admin Credit Usage Display Fix (February 2026)
+- Fixed admin Activity Tab showing zero activity for API-only users — `get_user_activity()` now queries `api_usage_logs` by month and merges `api_query_count` into the monthly breakdown; "API Queries" column added to the activity table
+- Fixed admin Sessions Tab stats excluding API query activity — `get_user_detail()` now aggregates `api_query_count` from `api_usage_logs`; `last_message_at` fixed to `MAX` across both `chat_messages` and `api_usage_logs` so pure API users no longer show "No session activity yet"; "API Queries" stat card added to the Sessions tab
+- Added credit transaction source attribution — new nullable `api_key_id` column on `credit_transactions` (Alembic migration); `CreditService.deduct_credit()` accepts optional `api_key_id`; API query path (`POST /v1/chat/query`) threads the key through; Credits tab in admin now shows an "API" badge on transactions sourced from API key usage
 
 ### v0.7.9 Admin Users Activity Tab Fix (February 2026)
 - Fixed `GET /api/admin/users/{id}/activity` returning HTTP 500 — SQLAlchemy generated separate bind parameters for each occurrence of `func.date_trunc("month", col)` in SELECT, GROUP BY, and ORDER BY, causing PostgreSQL to throw `GroupingError`. Fixed by using `text("1")` ordinal position reference for GROUP BY and ORDER BY on both the messages and sessions queries
@@ -462,4 +467,4 @@ MIT License - See LICENSE file for details.
 
 - **GitHub**: [github.com/marwazihs/nuelo-spectra](https://github.com/marwazihs/nuelo-spectra)
 - **Issues**: Report bugs or request features via GitHub Issues
-- **Version**: v0.7.9 (February 2026)
+- **Version**: v0.7.10 (February 2026)
