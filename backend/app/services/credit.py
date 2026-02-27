@@ -19,7 +19,7 @@ class CreditService:
 
     @staticmethod
     async def deduct_credit(
-        db: AsyncSession, user_id: UUID, cost: Decimal
+        db: AsyncSession, user_id: UUID, cost: Decimal, api_key_id: UUID | None = None
     ) -> CreditDeductionResult:
         """Atomically deduct credits from a user's balance.
 
@@ -45,6 +45,7 @@ class CreditService:
                 amount=-cost,
                 balance_after=Decimal("-1"),  # sentinel for unlimited
                 transaction_type="usage",
+                api_key_id=api_key_id,
             )
             db.add(transaction)
             await db.flush()
@@ -93,6 +94,7 @@ class CreditService:
             amount=-cost,
             balance_after=credit.balance,
             transaction_type="usage",
+            api_key_id=api_key_id,
         )
         db.add(transaction)
         await db.flush()

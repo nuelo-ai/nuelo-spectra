@@ -11,10 +11,10 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 
 Phase: 41 of 41 (v0.7) — Complete
 Plan: All complete
-Status: Patch v0.7.9 applied
-Last activity: 2026-02-25 — v0.7.9: Fix admin users activity tab (backend 500 + silent error swallowing)
+Status: Patch v0.7.10 applied
+Last activity: 2026-02-27 — v0.7.10: Fix admin credit usage display to include API query data
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.4 ✅ | v0.7.5 ✅ | v0.7.6 ✅ | v0.7.7 ✅ | v0.7.8 ✅ | v0.7.9 ✅
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.4 ✅ | v0.7.5 ✅ | v0.7.6 ✅ | v0.7.7 ✅ | v0.7.8 ✅ | v0.7.9 ✅ | v0.7.10 ✅
 
 ## Performance Metrics
 
@@ -36,6 +36,7 @@ See PROJECT.md Key Decisions table for full decision log.
 - [ ] Show suggestions in Data Summary sidebar panel (ui)
 - [ ] Use Pydantic structured output for agent JSON responses (consistency)
 - [ ] Plan production environment variable cleanup and validation (deployment)
+- [ ] Add execution result data table to MCP spectra_run_analysis output (api)
 
 ### Patch History (post v0.7)
 
@@ -47,6 +48,7 @@ See PROJECT.md Key Decisions table for full decision log.
 | v0.7.7 | 2026-02-25 | MCP spectra_run_analysis: add execution_result as markdown data table |
 | v0.7.8 | 2026-02-25 | MCP: decode Plotly binary typed arrays in chart spec; API_MCP_REFERENCE.md |
 | v0.7.9 | 2026-02-25 | Admin users activity tab: fix backend GroupingError 500 + silent error swallowing in frontend |
+| v0.7.10 | 2026-02-27 | Admin credit usage display: add API query counts to activity/sessions tabs + credit transaction source attribution |
 
 ### Blockers/Concerns
 
@@ -55,6 +57,6 @@ See PROJECT.md Key Decisions table for full decision log.
 
 ## Session Continuity
 
-Last session: 2026-02-25
-Stopped at: v0.7.9 patch shipped — 3 hotfixes + API/MCP docs complete
+Last session: 2026-02-27
+Stopped at: v0.7.10 patch shipped — admin credit usage display fix (3 fixes: activity tab, sessions tab, credit attribution)
 Resume with: `/gsd:new-milestone` to define v0.8

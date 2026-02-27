@@ -21,6 +21,7 @@ export interface UserDetail extends UserSummary {
   file_count: number;
   session_count: number;
   message_count: number;
+  api_query_count: number;
   last_message_at: string | null;
 }
 
@@ -28,6 +29,7 @@ export interface ActivityMonth {
   month: string; // ISO format "2026-01"
   message_count: number;
   session_count: number;
+  api_query_count: number;
 }
 
 export interface UserActivityResponse {
@@ -68,6 +70,7 @@ export interface CreditTransaction {
   transaction_type: string;
   reason: string | null;
   admin_id: string | null;
+  api_key_id: string | null;
   created_at: string;
 }
 

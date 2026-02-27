@@ -71,14 +71,14 @@ async def api_query(
     # Deduct credit before analysis
     cost_value = await platform_settings.get(db, "default_credit_cost")
     cost = Decimal(str(cost_value))
-    deduction = await CreditService.deduct_credit(db, user.id, cost)
+    api_key_id = getattr(request.state, "api_key_id", None)
+    deduction = await CreditService.deduct_credit(db, user.id, cost, api_key_id=api_key_id)
     if not deduction.success:
         return api_error(402, "INSUFFICIENT_CREDITS")
     # Commit credit deduction independently before agent execution
     await db.commit()
 
     # Run analysis (refund on failure)
-    api_key_id = getattr(request.state, "api_key_id", None)
     try:
         result = await run_api_query(
             db,
