@@ -52,6 +52,7 @@ class UserDetailResponse(BaseModel):
     file_count: int
     session_count: int
     message_count: int
+    api_query_count: int
     last_message_at: datetime | None
 
 
@@ -61,6 +62,7 @@ class ActivityMonth(BaseModel):
     month: str  # ISO format "2026-01"
     message_count: int
     session_count: int
+    api_query_count: int = 0
 
 
 class UserActivityResponse(BaseModel):

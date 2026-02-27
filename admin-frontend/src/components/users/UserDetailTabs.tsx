@@ -464,9 +464,16 @@ function CreditsTab({ user }: { user: UserDetail }) {
                       {formatShortDate(tx.created_at)}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="text-xs">
-                        {tx.transaction_type}
-                      </Badge>
+                      <div className="flex items-center gap-1.5">
+                        <Badge variant="outline" className="text-xs">
+                          {tx.transaction_type}
+                        </Badge>
+                        {tx.api_key_id && (
+                          <Badge variant="secondary" className="text-xs font-mono">
+                            API
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell
                       className={`text-right font-mono ${
@@ -549,6 +556,7 @@ function ActivityTab({ userId }: { userId: string }) {
               <TableHead>Month</TableHead>
               <TableHead className="text-right">Messages</TableHead>
               <TableHead className="text-right">Sessions</TableHead>
+              <TableHead className="text-right">API Queries</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -560,6 +568,9 @@ function ActivityTab({ userId }: { userId: string }) {
                 </TableCell>
                 <TableCell className="text-right">
                   {m.session_count.toLocaleString()}
+                </TableCell>
+                <TableCell className="text-right">
+                  {(m.api_query_count ?? 0).toLocaleString()}
                 </TableCell>
               </TableRow>
             ))}
@@ -583,7 +594,7 @@ function SessionsTab({ user }: { user: UserDetail }) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-4 sm:grid-cols-3 mb-6">
+        <div className="grid gap-4 sm:grid-cols-4 mb-6">
           <div className="rounded-lg border p-4 text-center">
             <div className="text-2xl font-bold">{user.session_count}</div>
             <div className="text-xs text-muted-foreground">Total Sessions</div>
@@ -591,6 +602,10 @@ function SessionsTab({ user }: { user: UserDetail }) {
           <div className="rounded-lg border p-4 text-center">
             <div className="text-2xl font-bold">{user.message_count}</div>
             <div className="text-xs text-muted-foreground">Total Messages</div>
+          </div>
+          <div className="rounded-lg border p-4 text-center">
+            <div className="text-2xl font-bold">{user.api_query_count}</div>
+            <div className="text-xs text-muted-foreground">API Queries</div>
           </div>
           <div className="rounded-lg border p-4 text-center">
             <div className="text-2xl font-bold">{user.file_count}</div>

@@ -40,6 +40,7 @@ class CreditTransactionResponse(BaseModel):
     transaction_type: str
     reason: str | None
     admin_id: UUID | None
+    api_key_id: UUID | None
     created_at: datetime
 
     model_config = {"from_attributes": True}
