@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
 from app.dependencies import clear_user_deactivation, mark_user_deactivated
+from app.models.api_usage_log import ApiUsageLog
 from app.models.chat_message import ChatMessage
 from app.models.chat_session import ChatSession
 from app.models.file import File
@@ -222,13 +223,31 @@ async def get_user_detail(db: AsyncSession, user_id: UUID) -> dict:
     )
     message_count = message_count_result.scalar_one()
 
-    # Last message timestamp
-    last_message_result = await db.execute(
+    # API query count
+    api_query_count_result = await db.execute(
+        select(func.count(ApiUsageLog.id)).where(ApiUsageLog.user_id == user_id)
+    )
+    api_query_count = api_query_count_result.scalar_one()
+
+    # Last activity timestamp — max across chat messages and API queries
+    chat_last_result = await db.execute(
         select(func.max(ChatMessage.created_at)).where(
             ChatMessage.user_id == user_id
         )
     )
-    last_message_at = last_message_result.scalar_one_or_none()
+    chat_last = chat_last_result.scalar_one_or_none()
+
+    api_last_result = await db.execute(
+        select(func.max(ApiUsageLog.created_at)).where(
+            ApiUsageLog.user_id == user_id
+        )
+    )
+    api_last = api_last_result.scalar_one_or_none()
+
+    if chat_last and api_last:
+        last_message_at = max(chat_last, api_last)
+    else:
+        last_message_at = chat_last or api_last
 
     # Credit balance
     credit_result = await db.execute(
@@ -252,6 +271,7 @@ async def get_user_detail(db: AsyncSession, user_id: UUID) -> dict:
         "file_count": file_count,
         "session_count": session_count,
         "message_count": message_count,
+        "api_query_count": api_query_count,
         "last_message_at": last_message_at,
     }
 
@@ -298,17 +318,34 @@ async def get_user_activity(
     )
     sess_rows = sess_result.all()
 
+    # API queries by month
+    api_result = await db.execute(
+        select(
+            func.date_trunc("month", ApiUsageLog.created_at).label("month"),
+            func.count(ApiUsageLog.id).label("count"),
+        )
+        .where(ApiUsageLog.user_id == user_id, ApiUsageLog.created_at >= cutoff)
+        .group_by(text("1"))
+        .order_by(text("1"))
+    )
+    api_rows = api_result.all()
+
     # Merge into monthly activity
     activity_map: dict[str, dict] = {}
     for row in msg_rows:
         month_key = row.month.strftime("%Y-%m")
-        activity_map.setdefault(month_key, {"message_count": 0, "session_count": 0})
+        activity_map.setdefault(month_key, {"message_count": 0, "session_count": 0, "api_query_count": 0})
         activity_map[month_key]["message_count"] = row.count
 
     for row in sess_rows:
         month_key = row.month.strftime("%Y-%m")
-        activity_map.setdefault(month_key, {"message_count": 0, "session_count": 0})
+        activity_map.setdefault(month_key, {"message_count": 0, "session_count": 0, "api_query_count": 0})
         activity_map[month_key]["session_count"] = row.count
+
+    for row in api_rows:
+        month_key = row.month.strftime("%Y-%m")
+        activity_map.setdefault(month_key, {"message_count": 0, "session_count": 0, "api_query_count": 0})
+        activity_map[month_key]["api_query_count"] = row.count
 
     # Sort by month and build list
     activity_months = [
