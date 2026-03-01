@@ -5,9 +5,10 @@
 > 1. **Naming:** "Spectra Pulse" confirmed. Individual findings = "Signals". ✓
 > 2. **Step 3 (Model) UX:** Needs visual mockups before engineering — cannot proceed without wireframes for sensitivity overview → lever playground → scenario comparison flow. **Action: Create UI/UX mockups for all 3 stages before development.**
 > 3. **Data model:** Revised. Collection = workspace (data + process + output). 1 Collection → many Reports. Supports investigation reports, predictive analysis reports, and chat-originated data cards. User can replay findings with different outcomes.
-> 4. **Milestone sequence:** Confirmed: v0.8 (Pulse) → v0.9 (Collections) → v0.10 (Explain) → v1.0 (Model). ✓
+> 4. **Milestone sequence:** Confirmed: v0.8 (Pulse) → v0.9 (Collections) → v0.10 (Explain) → v1.0 (Model) → v0.11 (Admin Workspace Management). ✓
 > 5. **PDF generation:** Skip unless explicitly requested. ✓
 > 6. **Monitoring module:** Deferred to post-v1.0 backlog. Confirmed. ✓
+> 7. **Admin Portal:** Added. Tier-based access gating (free_trial=1 collection, free=no access, standard=5, premium=unlimited). Granular credit costs per Workspace activity. Admin monitoring dashboard for Workspace usage and per-user activity tracking.
 
 ## The Problem
 
@@ -644,11 +645,155 @@ Each edge case needs a graceful degradation path, not a crash or misleading resu
 
 ---
 
+## Admin Portal: Analysis Workspace Management
+
+The Analysis Workspace is a premium, token-heavy feature. The Admin Portal needs controls for **access gating**, **cost management**, and **activity monitoring**. This builds on the existing tier system (`user_classes.yaml`) and credit infrastructure.
+
+### 1. Tier-Based Access & Collection Limits
+
+The Analysis Workspace is not available to all tiers by default. Each tier gets a configurable access level and collection limit.
+
+| Tier | Workspace Access | Max Active Collections | Rationale |
+|------|:---:|:---:|---|
+| `free_trial` | Yes | 1 | Let them experience it once — this is the "wow" moment that converts |
+| `free` | No | 0 | Free tier is chat-only. Workspace is the upgrade incentive |
+| `standard` | Yes | 5 | Enough for regular use |
+| `premium` | Yes | Unlimited | Power users, no friction |
+| `internal` | Yes | Unlimited | Internal/admin testing |
+
+**Key design decisions:**
+- **"Active" vs. "Archived":** Limit applies to active Collections only. Users can archive completed Collections to free up slots. Archived Collections are read-only (view reports, download) but cannot run new Pulse/Investigate/Model operations.
+- **Collection limit is configurable per tier** — stored in `user_classes.yaml` alongside existing credits/reset fields. Admin can adjust without code change (but requires redeploy, same as current tier config).
+- **Upgrade prompt:** When a user hits their collection limit, show a clear message: "You've reached the limit for your plan. Archive a Collection or upgrade to [next tier]."
+
+**Proposed `user_classes.yaml` extension:**
+
+```yaml
+free_trial:
+  display_name: "Free Trial"
+  credits: 100
+  reset_policy: none
+  workspace_access: true
+  max_active_collections: 1
+
+free:
+  display_name: "Free"
+  credits: 10
+  reset_policy: weekly
+  workspace_access: false
+  max_active_collections: 0
+
+standard:
+  display_name: "Standard"
+  credits: 100
+  reset_policy: weekly
+  workspace_access: true
+  max_active_collections: 5
+
+premium:
+  display_name: "Premium"
+  credits: 500
+  reset_policy: monthly
+  workspace_access: true
+  max_active_collections: -1  # unlimited
+
+internal:
+  display_name: "Internal"
+  credits: 0
+  reset_policy: unlimited
+  workspace_access: true
+  max_active_collections: -1  # unlimited
+```
+
+### 2. Granular Credit Costs per Workspace Activity
+
+The existing system has a single `default_credit_cost` (1.0 per message). Analysis Workspace activities are **significantly more token-intensive** than a single chat message — a Pulse run may execute 5-10 statistical analyses, and an Investigation may involve multiple agent exchanges. Costs must be granular and configurable.
+
+**Proposed credit cost structure:**
+
+| Activity | Default Cost | What It Covers | Why This Cost |
+|----------|:---:|---|---|
+| **Pulse: Run Detection** | 5.0 | Data profiling + all statistical analyses + Signal generation | Multiple analysis passes, potentially 5-10 methods run in E2B |
+| **Explain: Start Investigation** | 3.0 | First exchange of guided Q&A (ANOVA ranking, initial hypothesis) | Agent reasoning + statistical method execution |
+| **Explain: Per Q&A Exchange** | 1.0 | Each subsequent exchange in the investigation | Similar to a chat message but with statistical backing |
+| **Model: Sensitivity Analysis** | 3.0 | Tornado chart generation, regression fitting | Multiple regression runs + perturbation analysis |
+| **Model: Simulation Run** | 2.0 | Each lever adjustment → projected outcome recalculation | Regression + Monte Carlo confidence intervals |
+| **Model: Scenario Save & Compare** | 1.0 | Comparison table + overlay chart generation | Mostly rendering, light computation |
+| **Report: Compile & Generate** | 1.0 | Markdown compilation from analysis journey | Template-based, minimal LLM usage |
+| **Report: PDF Export** | 0.5 | PDF rendering from markdown | Server-side rendering, no LLM |
+
+**Implementation approach:**
+- Store as **`platform_settings`** entries (same pattern as `default_credit_cost`) — runtime configurable via Admin Portal without redeploy
+- Setting keys: `workspace_credit_cost_pulse`, `workspace_credit_cost_investigate_start`, `workspace_credit_cost_investigate_exchange`, etc.
+- Admin UI: dedicated "Workspace Credit Costs" section in Settings page with all costs editable
+- Pre-check: before each activity, verify user has sufficient credits. Show cost estimate before running ("This will use ~5 credits. You have 23 remaining.")
+
+**Credit transparency for users:**
+- Show credit cost estimate before each action (e.g., "Run Detection (5 credits)")
+- Show running total in Collection header: "Credits used in this Collection: 14"
+- Credit deduction follows existing pattern: deduct before execution, refund on failure
+
+### 3. Admin Monitoring & Analytics
+
+Admins need visibility into how the Analysis Workspace is being used — both for business insights (is the feature driving engagement?) and operational concerns (who's consuming the most resources?).
+
+**3a. Workspace Activity Dashboard (new Admin page)**
+
+| Metric | Description | Visualization |
+|--------|-------------|---------------|
+| **Total Collections created** | Count over time (daily/weekly/monthly) | Line chart with trend |
+| **Active vs. Archived Collections** | Current snapshot | Donut chart |
+| **Pulse runs per day** | Detection activity volume | Bar chart |
+| **Investigations started** | Explain step adoption | Bar chart |
+| **Simulations run** | Model step adoption | Bar chart |
+| **Reports generated** | Output/deliverable production | Bar chart |
+| **Funnel: Pulse → Explain → Model** | Stage adoption drop-off | Funnel chart |
+| **Workspace credits consumed** | Total workspace-related credit usage over time | Line chart, broken down by activity type |
+| **Avg. credits per Collection** | Average total cost of a Collection lifecycle | KPI card |
+
+**3b. Per-User Workspace Activity**
+
+Extend the existing Admin user detail page (which already has activity/sessions tabs) with a **Workspace tab**:
+
+- List of user's Collections (name, status, created date, signal count, report count, total credits used)
+- Workspace credit consumption breakdown (Pulse vs. Explain vs. Model vs. Reports)
+- Activity timeline: when they last used the Workspace, frequency
+- Collection limit usage: "3 of 5 active collections"
+
+**3c. Workspace Activity Log**
+
+Extend the existing `credit_transactions` table or create a parallel `workspace_activity_log`:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Primary key |
+| `user_id` | FK | Who performed the action |
+| `collection_id` | FK | Which Collection |
+| `activity_type` | enum | `pulse_run`, `investigation_start`, `investigation_exchange`, `sensitivity_analysis`, `simulation_run`, `scenario_compare`, `report_compile`, `report_export` |
+| `credit_cost` | decimal | Credits charged for this activity |
+| `duration_ms` | int | How long the activity took (E2B execution time) |
+| `metadata` | JSON | Activity-specific data (signal count, method used, etc.) |
+| `created_at` | datetime | Timestamp |
+
+This enables:
+- Filtering activity by user, collection, activity type, date range
+- Identifying heavy users or unusual patterns
+- Understanding which Workspace features are most/least used
+- Correlating credit consumption with actual value delivered
+
+**3d. Alerts & Operational Monitoring**
+
+- **High-cost Collection alert:** Flag Collections that have consumed > X credits (configurable threshold)
+- **Failed Pulse runs:** Track and surface Pulse runs that failed or returned no signals (detection quality monitoring)
+- **Workspace adoption rate:** % of eligible users (by tier) who have created at least one Collection
+
+---
+
 ## Revised Milestone Sequence — CONFIRMED
 
-> **Decision (2026-03-01):** Milestone sequence confirmed: v0.8 (Pulse) → v0.9 (Collections) → v0.10 (Explain) → v1.0 (Model). Monitoring deferred to post-v1.0 backlog — confirmed.
+> **Decision (2026-03-01):** Milestone sequence confirmed: v0.8 (Pulse) → v0.9 (Collections) → v0.10 (Explain) → v1.0 (Model) → v0.11 (Admin Workspace Management). Monitoring deferred to post-v1.0 backlog — confirmed.
 
-Based on the challenges above, the scope focuses on three stages (Pulse → Explain → Model) with Collections as the output layer throughout. Monitoring is deferred to post-v1.0 backlog.
+Based on the challenges above, the scope focuses on three stages (Pulse → Explain → Model) with Collections as the output layer throughout. Admin Portal management for the Workspace is a cross-cutting milestone after the core feature is complete. Monitoring is deferred to post-v1.0 backlog.
 
 ```mermaid
 graph LR
@@ -656,13 +801,15 @@ graph LR
     V09["<b>v0.9</b><br/>Collections<br/>+ Report Export<br/><i>The deliverable</i>"]
     V010["<b>v0.10</b><br/>Guided Q&A<br/>Investigation<br/><i>The explain step</i>"]
     V10["<b>v1.0</b><br/>Simulation<br/>& What-If<br/><i>The business value</i>"]
+    V011["<b>v0.11</b><br/>Admin Portal<br/>Workspace Mgmt<br/><i>The controls</i>"]
 
-    V08 --> V09 --> V010 --> V10
+    V08 --> V09 --> V010 --> V10 --> V011
 
     style V08 fill:#5E81AC,stroke:#D8DEE9,color:#ECEFF4
     style V09 fill:#D08770,stroke:#D8DEE9,color:#ECEFF4
     style V010 fill:#EBCB8B,stroke:#2E3440,color:#2E3440
     style V10 fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
+    style V011 fill:#B48EAD,stroke:#D8DEE9,color:#ECEFF4
 ```
 
 | Milestone | Scope | Proves | Ship Criteria |
@@ -671,6 +818,7 @@ graph LR
 | **v0.9** | Collections module + report export (Markdown + PDF). Auto-save all analysis progress. Collections list view with search/filter. Download reports. | The deliverable loop works. Reports look polished enough to share with a stakeholder. | Generate 3 sample reports → a non-user rates them "would share with my boss" or higher. |
 | **v0.10** | Guided Q&A investigation (the Explain step). Tap a Signal → doctor-style interview → root cause hypothesis. Root causes can link to multiple Signals. | The guided flow is better than freeform chat for investigation. Users reach root cause faster than with Chat. | 5 test scenarios with known root causes → guided flow identifies the correct driver in at least 4. |
 | **v1.0** | Optimization Studio — sensitivity analysis, lever playground with sliders, scenario comparison, breakeven analysis. | Users trust and use the simulation. What-if feels intuitive, not intimidating. | 3 test scenarios → user can set up and run a meaningful simulation in < 2 minutes without help. |
+| **v0.11** | Admin Portal — tier-based Workspace access gating, collection limits per tier, granular credit cost configuration per activity, Workspace activity dashboard, per-user monitoring. | Admins can control costs, gate access, and monitor adoption. | Admin can: change tier access settings, adjust per-activity credit costs, view Workspace usage dashboard, see per-user activity breakdown. |
 
 ### Scope per Milestone
 
