@@ -37,6 +37,7 @@ See PROJECT.md Key Decisions table for full decision log.
 - [ ] Use Pydantic structured output for agent JSON responses (consistency)
 - [ ] Plan production environment variable cleanup and validation (deployment)
 - [ ] Add execution result data table to MCP spectra_run_analysis output (api)
+- [ ] Fix admin credit usage display to include API query data (api)
 
 ### Patch History (post v0.7)
 
