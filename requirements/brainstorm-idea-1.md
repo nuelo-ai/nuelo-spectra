@@ -9,6 +9,7 @@
 > 5. **PDF generation:** Skip unless explicitly requested. ✓
 > 6. **Monitoring module:** Deferred to post-v1.0 backlog. Confirmed. ✓
 > 7. **Admin Portal:** Added. Tier-based access gating (free_trial=1 collection, free=no access, standard=5, premium=unlimited). Granular credit costs per Workspace activity. Admin monitoring dashboard for Workspace usage and per-user activity tracking.
+> 8. **Persistent AI Memory:** Future exploration (post v0.11). OpenClaw's memory system documented as reference architecture. Not in scope for milestones 0.8–0.11 but to be considered when core Workspace is mature.
 
 ## The Problem
 
@@ -1041,3 +1042,71 @@ Most target users don't have automated data pipelines today. They export from ER
 - **Resolved signals:** Previous patterns that have improved
 - **Trend direction:** Is each metric improving or worsening?
 - **Flagged thresholds:** Any user-defined thresholds breached
+
+---
+
+## Future Exploration: Persistent AI Memory System (post v0.11)
+
+> **Status: Future consideration.** Not in scope for milestones v0.8–v0.11. Documented here for exploration when the core Analysis Workspace is mature.
+>
+> **Reference:** [OpenClaw Memory System Deep Dive](https://snowan.gitbook.io/study-notes/ai-blogs/openclaw-memory-system-deep-dive)
+
+### The Opportunity
+
+Today, every Spectra session starts from zero — the AI has no memory of previous interactions, user preferences, or past analyses. As users return to the Analysis Workspace repeatedly, this becomes a friction point. A persistent memory system would give Spectra a "personal" touch:
+
+- **"Last time you analyzed this dataset, you focused on APAC revenue. Want to continue from there?"**
+- **"You tend to prefer conservative scenarios — starting with that as default."**
+- **"This Signal is similar to one you investigated in Collection X — the root cause was pricing changes."**
+
+This transforms Spectra from a stateless tool into a **personal analyst that learns your patterns and preferences over time.**
+
+### What to Learn from OpenClaw's Approach
+
+OpenClaw uses a three-tier memory architecture that's worth studying:
+
+| Memory Tier | OpenClaw Implementation | Spectra Equivalent |
+|-------------|------------------------|-------------------|
+| **Ephemeral (daily logs)** | Append-only daily markdown files loaded at session start | Per-session context: recent interactions, current Collection state |
+| **Durable (curated knowledge)** | `MEMORY.md` file with important decisions, conventions, and long-term facts | User profile memory: preferences, past root causes, terminology, industry context |
+| **Session memory** | Auto-saved conversations with searchable index | Analysis history: past investigations, scenarios, report conclusions |
+
+**Key technical patterns worth exploring:**
+
+1. **Hybrid retrieval (BM25 + vector search)** — combines exact keyword matching (function names, KPI names) with semantic similarity ("revenue decline" ≈ "sales drop"). OpenClaw uses 70% vector / 30% BM25 weighted scoring.
+
+2. **File-first storage** — memories stored as human-readable markdown (not opaque vector DBs). This makes debugging, auditing, and user transparency easier.
+
+3. **SQLite with vector extension** — `sqlite-vec` for in-database cosine similarity queries. No external vector DB dependency (Pinecone, Weaviate). Keeps infrastructure simple.
+
+4. **Delta-based incremental indexing** — only re-embed changed content, not full reindex. SHA-256 hash-based deduplication prevents re-embedding identical content.
+
+5. **Pre-compaction memory flush** — when approaching context window limits, system triggers a save of important insights before context is compressed. Prevents knowledge loss.
+
+6. **Local-first embeddings** — tries local model first, falls back to API (OpenAI/Gemini). Cost-effective at scale.
+
+### What Spectra Would Remember
+
+| Category | Examples | Value |
+|----------|---------|-------|
+| **Analysis patterns** | "User usually investigates revenue-related Signals first" | Pre-sort Signal cards by relevance to user's focus areas |
+| **Domain knowledge** | "User works in retail, fiscal year starts in April" | Better Signal interpretation, smarter Q&A questions |
+| **Past findings** | "Previous root cause in similar dataset was seasonal hiring patterns" | Cross-Collection intelligence, faster investigations |
+| **Preferences** | "User prefers confidence intervals shown as %, not absolute values" | Personalized output formatting |
+| **Terminology** | "User calls 'operating margin' as 'OM', uses 'rev' for revenue" | Better NL understanding, more natural responses |
+| **Scenario defaults** | "User typically models Conservative/Moderate/Aggressive at -5%/0%/+10%" | Pre-populate scenario templates |
+
+### Architecture Considerations for Spectra
+
+- **Per-user memory isolation** — each user's memories must be fully isolated (multi-tenant). OpenClaw uses per-agent SQLite stores; Spectra would need per-user partitioning.
+- **Privacy and consent** — users must be able to view, edit, and delete what Spectra remembers about them. "Memory settings" page with opt-in/opt-out.
+- **Memory scope** — should memories span across Collections? Probably yes for preferences and domain knowledge, probably no for specific findings (to avoid cross-contamination between unrelated analyses).
+- **Storage cost** — OpenClaw estimates ~500MB SQLite index for annual heavy use (~1,000 sessions). For multi-tenant SaaS, this needs a shared DB approach, not per-user files.
+- **Tier gating** — persistent memory could be a premium-tier feature (another upgrade incentive).
+
+### Why Not Now
+
+1. The core Analysis Workspace (Pulse → Explain → Model) must prove value first without memory
+2. Memory quality depends on having enough interaction history — needs users actively using the Workspace
+3. Memory UX design (what to surface, when, how to avoid being "creepy") needs careful thought
+4. Technical complexity is non-trivial but well-documented thanks to OpenClaw's open approach
