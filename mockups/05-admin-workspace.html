@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spectra Admin — Workspace Management</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root {
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --nord0: #2E3440; --nord1: #3B4252; --nord2: #434C5E; --nord3: #4C566A;
+    --nord4: #D8DEE9; --nord5: #E5E9F0; --nord6: #ECEFF4;
+    --frost0: #8FBCBB; --frost1: #88C0D0; --frost2: #81A1C1; --frost3: #5E81AC;
+    --red: #BF616A; --orange: #D08770; --yellow: #EBCB8B; --green: #A3BE8C; --purple: #B48EAD;
+    --sidebar-width: 256px;
+    --sidebar-collapsed: 64px;
+    --transition: 280ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  [data-theme="dark"] {
+    --bg: var(--nord0); --bg-card: var(--nord1); --bg-elevated: var(--nord2);
+    --border: var(--nord2); --border-subtle: rgba(67,76,94,0.6);
+    --text: var(--nord4); --text-bright: var(--nord6); --text-muted: #7B88A1;
+    --primary: var(--frost2); --primary-hover: var(--frost1);
+    --primary-bg: rgba(129,161,193,0.1);
+    --shadow: 0 1px 3px rgba(0,0,0,0.3);
+    --badge-active-bg: rgba(163,190,140,0.15); --badge-active-text: var(--green);
+    --badge-inactive-bg: rgba(191,97,106,0.15); --badge-inactive-text: var(--red);
+    --badge-free-bg: rgba(76,86,106,0.4); --badge-free-text: var(--nord3);
+    --badge-standard-bg: rgba(129,161,193,0.15); --badge-standard-text: var(--frost2);
+    --badge-premium-bg: rgba(180,142,173,0.15); --badge-premium-text: var(--purple);
+    --badge-trial-bg: rgba(235,203,139,0.15); --badge-trial-text: var(--yellow);
+  }
+  [data-theme="light"] {
+    --bg: #F0F2F5; --bg-card: #FFFFFF; --bg-elevated: #F8F9FA;
+    --border: #E2E5EA; --border-subtle: #EBEDEF;
+    --text: #3B4252; --text-bright: #2E3440; --text-muted: #8994A6;
+    --primary: var(--frost3); --primary-hover: var(--frost2);
+    --primary-bg: rgba(94,129,172,0.08);
+    --shadow: 0 1px 3px rgba(0,0,0,0.06);
+    --badge-active-bg: rgba(163,190,140,0.15); --badge-active-text: #6B8A50;
+    --badge-inactive-bg: rgba(191,97,106,0.15); --badge-inactive-text: #A54E56;
+    --badge-free-bg: rgba(76,86,106,0.1); --badge-free-text: #8994A6;
+    --badge-standard-bg: rgba(94,129,172,0.12); --badge-standard-text: #4A6FA0;
+    --badge-premium-bg: rgba(180,142,173,0.15); --badge-premium-text: #8A6A84;
+    --badge-trial-bg: rgba(235,203,139,0.18); --badge-trial-text: #A08930;
+  }
+  html { font-size: 16px; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.5; min-height: 100vh; display: flex; overflow: hidden; transition: background var(--transition), color var(--transition); }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--nord2); border-radius: 3px; }
+
+  /* Admin Sidebar */
+  .sidebar {
+    width: var(--sidebar-width); min-width: var(--sidebar-width); height: 100vh;
+    background: var(--bg-card); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; transition: width var(--transition), min-width var(--transition);
+    overflow: hidden; z-index: 20;
+  }
+  .sidebar.collapsed { width: var(--sidebar-collapsed); min-width: var(--sidebar-collapsed); }
+
+  .sidebar-header {
+    padding: 20px; display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid var(--border-subtle); min-height: 65px;
+  }
+  .logo-icon {
+    width: 28px; height: 28px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--frost2), var(--frost3));
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  }
+  .logo-icon svg { width: 14px; height: 14px; }
+  .logo-text { font-size: 16px; font-weight: 700; color: var(--text-bright); white-space: nowrap; overflow: hidden; transition: opacity var(--transition); }
+  .logo-sub { font-size: 11px; color: var(--primary); font-weight: 600; letter-spacing: 0.5px; }
+  .sidebar.collapsed .logo-text, .sidebar.collapsed .logo-sub { opacity: 0; width: 0; }
+  .sidebar.collapsed .sidebar-header { justify-content: center; padding: 20px 0; }
+
+  .sidebar-nav { flex: 1; padding: 12px 8px; display: flex; flex-direction: column; gap: 2px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+    border-radius: 8px; color: var(--text-muted); text-decoration: none;
+    font-size: 14px; font-weight: 500; transition: all 160ms ease; cursor: pointer;
+    white-space: nowrap; position: relative;
+  }
+  .nav-item:hover { background: var(--primary-bg); color: var(--text); }
+  .nav-item.active { background: var(--primary-bg); color: var(--primary); }
+  .nav-item svg { width: 20px; height: 20px; flex-shrink: 0; }
+  .nav-label { overflow: hidden; transition: opacity var(--transition); }
+  .sidebar.collapsed .nav-label { opacity: 0; }
+  .sidebar.collapsed .nav-item { justify-content: center; padding: 10px; }
+  .nav-item .tooltip {
+    position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%);
+    background: var(--nord1); color: var(--nord6); padding: 6px 12px; border-radius: 6px;
+    font-size: 13px; white-space: nowrap; pointer-events: none; opacity: 0;
+    transition: opacity 160ms ease; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 100;
+  }
+  .sidebar.collapsed .nav-item:hover .tooltip { opacity: 1; }
+
+  .nav-divider { height: 1px; background: var(--border-subtle); margin: 8px 0; }
+
+  .sidebar-footer { padding: 12px 8px; border-top: 1px solid var(--border-subtle); }
+  .collapse-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 8px; border-radius: 8px;
+    background: none; border: none; color: var(--text-muted);
+    cursor: pointer; font-size: 13px; font-family: var(--font); transition: all 160ms ease;
+  }
+  .collapse-btn:hover { background: var(--primary-bg); color: var(--text); }
+  .collapse-btn svg { width: 18px; height: 18px; flex-shrink: 0; transition: transform var(--transition); }
+  .sidebar.collapsed .collapse-btn svg { transform: rotate(180deg); }
+  .collapse-label { overflow: hidden; transition: opacity var(--transition); }
+  .sidebar.collapsed .collapse-label { opacity: 0; width: 0; }
+
+  /* Main */
+  .main { flex: 1; overflow-y: auto; height: 100vh; }
+
+  .admin-header {
+    padding: 20px 32px; border-bottom: 1px solid var(--border);
+    background: var(--bg-card); display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .admin-header h1 { font-size: 20px; font-weight: 700; color: var(--text-bright); }
+  .header-actions { display: flex; gap: 8px; }
+  .theme-toggle {
+    width: 36px; height: 36px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    background: none; border: 1px solid var(--border); color: var(--text-muted);
+    cursor: pointer; transition: all 160ms ease;
+  }
+  .theme-toggle:hover { background: var(--primary-bg); color: var(--text); }
+  .theme-toggle svg { width: 16px; height: 16px; }
+
+  .content { padding: 28px 32px; }
+
+  /* Metric Cards */
+  .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  @media (max-width: 1000px) { .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 600px) { .metrics-grid { grid-template-columns: 1fr; } }
+
+  .metric-card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; box-shadow: var(--shadow);
+    animation: fadeIn 350ms ease both;
+  }
+  .metric-card:nth-child(1) { animation-delay: 50ms; }
+  .metric-card:nth-child(2) { animation-delay: 100ms; }
+  .metric-card:nth-child(3) { animation-delay: 150ms; }
+  .metric-card:nth-child(4) { animation-delay: 200ms; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .metric-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .metric-label { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+  .metric-icon {
+    width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    background: var(--primary-bg); color: var(--primary);
+  }
+  .metric-icon svg { width: 18px; height: 18px; }
+  .metric-value { font-size: 28px; font-weight: 700; color: var(--text-bright); margin-bottom: 4px; }
+  .metric-change { font-size: 12px; display: flex; align-items: center; gap: 4px; }
+  .metric-change.up { color: var(--green); }
+  .metric-change.down { color: var(--red); }
+  .metric-change svg { width: 12px; height: 12px; }
+
+  /* Section Headers */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; margin-top: 8px; }
+  .section-title { font-size: 17px; font-weight: 700; color: var(--text-bright); }
+
+  /* Collections Table */
+  .table-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; margin-bottom: 28px; }
+  .table-toolbar { padding: 16px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap; }
+  .search-input {
+    flex: 1; min-width: 200px; padding: 8px 12px 8px 36px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-size: 13px; font-family: var(--font); outline: none;
+    position: relative; transition: border-color 160ms ease;
+  }
+  .search-input:focus { border-color: var(--primary); }
+  .search-wrap { position: relative; flex: 1; min-width: 200px; }
+  .search-wrap svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text-muted); }
+  .search-wrap input { width: 100%; padding: 8px 12px 8px 36px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px; font-family: var(--font); outline: none; }
+  .search-wrap input::placeholder { color: var(--text-muted); }
+  .search-wrap input:focus { border-color: var(--primary); }
+
+  .filter-select {
+    padding: 8px 28px 8px 10px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-size: 13px; font-family: var(--font);
+    appearance: none; cursor: pointer; outline: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234C566A' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center;
+  }
+  .filter-select option { background: var(--bg-card); color: var(--text); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    text-align: left; padding: 12px 16px; background: var(--bg-elevated);
+    color: var(--text-muted); font-weight: 600; font-size: 12px;
+    text-transform: uppercase; letter-spacing: 0.3px;
+    border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  tbody td { padding: 12px 16px; border-bottom: 1px solid var(--border-subtle); white-space: nowrap; }
+  tbody tr:hover td { background: var(--primary-bg); }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .user-cell { display: flex; align-items: center; gap: 10px; }
+  .user-avatar {
+    width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; color: #FFF; flex-shrink: 0;
+  }
+  .user-name { font-weight: 500; color: var(--text-bright); }
+
+  .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .badge-active { background: var(--badge-active-bg); color: var(--badge-active-text); }
+  .badge-archived { background: var(--badge-inactive-bg); color: var(--badge-inactive-text); }
+  .badge-free { background: var(--badge-free-bg); color: var(--badge-free-text); }
+  .badge-standard { background: var(--badge-standard-bg); color: var(--badge-standard-text); }
+  .badge-premium { background: var(--badge-premium-bg); color: var(--badge-premium-text); }
+  .badge-trial { background: var(--badge-trial-bg); color: var(--badge-trial-text); }
+
+  .action-btn {
+    padding: 5px 10px; border-radius: 6px; background: none;
+    border: 1px solid var(--border); color: var(--text-muted);
+    font-size: 12px; font-family: var(--font); cursor: pointer; transition: all 160ms ease;
+  }
+  .action-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+  .table-footer {
+    padding: 12px 20px; display: flex; align-items: center; justify-content: space-between;
+    border-top: 1px solid var(--border-subtle); font-size: 13px; color: var(--text-muted);
+  }
+  .pagination { display: flex; gap: 4px; }
+  .page-btn {
+    width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    background: none; border: 1px solid var(--border); color: var(--text-muted);
+    font-size: 13px; font-family: var(--font); cursor: pointer; transition: all 160ms ease;
+  }
+  .page-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .page-btn.active { background: var(--primary); border-color: var(--primary); color: #FFF; }
+
+  /* Config Cards */
+  .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 900px) { .config-grid { grid-template-columns: 1fr; } }
+
+  .config-card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px; box-shadow: var(--shadow);
+  }
+  .config-title { font-size: 15px; font-weight: 700; color: var(--text-bright); margin-bottom: 4px; }
+  .config-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 18px; }
+
+  .config-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0; border-bottom: 1px solid var(--border-subtle); font-size: 14px;
+  }
+  .config-row:last-child { border-bottom: none; }
+  .config-label { color: var(--text); font-weight: 500; }
+  .config-value { color: var(--text-bright); font-weight: 600; }
+  .config-value.muted { color: var(--text-muted); font-weight: 400; }
+
+  /* Toggle switch */
+  .toggle {
+    width: 44px; height: 24px; border-radius: 12px; background: var(--border);
+    position: relative; cursor: pointer; transition: background 200ms ease;
+  }
+  .toggle.on { background: var(--green); }
+  .toggle::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: white; transition: transform 200ms ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .toggle.on::after { transform: translateX(20px); }
+
+  .tier-row { display: flex; align-items: center; gap: 12px; }
+
+  .credit-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0; border-bottom: 1px solid var(--border-subtle); font-size: 14px;
+  }
+  .credit-item:last-child { border-bottom: none; }
+  .credit-activity { color: var(--text); font-weight: 500; display: flex; align-items: center; gap: 8px; }
+  .credit-activity svg { width: 16px; height: 16px; color: var(--text-muted); }
+  .credit-cost {
+    padding: 4px 10px; background: var(--primary-bg); border-radius: 6px;
+    font-weight: 600; color: var(--primary); font-size: 13px;
+    font-family: var(--font);
+  }
+
+  @media (max-width: 700px) {
+    .content { padding: 20px; }
+    .admin-header { padding: 16px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Admin Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+      </svg>
+    </div>
+    <div>
+      <div class="logo-text">Spectra</div>
+      <div class="logo-sub">ADMIN</div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a class="nav-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+      <span class="nav-label">Dashboard</span><span class="tooltip">Dashboard</span>
+    </a>
+    <a class="nav-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span class="nav-label">Users</span><span class="tooltip">Users</span>
+    </a>
+    <a class="nav-item active" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+      <span class="nav-label">Workspace</span><span class="tooltip">Workspace</span>
+    </a>
+    <a class="nav-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+      <span class="nav-label">API Keys</span><span class="tooltip">API Keys</span>
+    </a>
+    <div class="nav-divider"></div>
+    <a class="nav-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m-7-3.5 5.2-3m1.6-.9L17 3.5M1 12h6m6 0h6M4.5 19.5l5.2-3m1.6-.9 5.2-3"/></svg>
+      <span class="nav-label">Settings</span><span class="tooltip">Settings</span>
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <button class="collapse-btn" onclick="document.getElementById('sidebar').classList.toggle('collapsed')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17l-5-5 5-5"/><path d="M18 17l-5-5 5-5"/></svg>
+      <span class="collapse-label">Collapse</span>
+    </button>
+  </div>
+</aside>
+
+<!-- Main Content -->
+<main class="main">
+  <div class="admin-header">
+    <h1>Workspace Management</h1>
+    <div class="header-actions">
+      <button class="theme-toggle" onclick="toggleTheme()">
+        <svg id="iconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg id="iconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Metrics -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-top">
+          <span class="metric-label">Total Collections</span>
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+          </div>
+        </div>
+        <div class="metric-value">47</div>
+        <div class="metric-change up">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+          +12 this month
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-top">
+          <span class="metric-label">Active Users</span>
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          </div>
+        </div>
+        <div class="metric-value">23</div>
+        <div class="metric-change up">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+          +5 this month
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-top">
+          <span class="metric-label">Signals Generated</span>
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+        </div>
+        <div class="metric-value">312</div>
+        <div class="metric-change up">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+          +89 this month
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-top">
+          <span class="metric-label">Credits Used</span>
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          </div>
+        </div>
+        <div class="metric-value">1,847</div>
+        <div class="metric-change down">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          68% of monthly budget
+        </div>
+      </div>
+    </div>
+
+    <!-- Collections Table -->
+    <div class="section-header">
+      <h2 class="section-title">All Collections</h2>
+    </div>
+
+    <div class="table-card">
+      <div class="table-toolbar">
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="Search collections...">
+        </div>
+        <select class="filter-select">
+          <option>All Users</option>
+          <option>Sarah Chen</option>
+          <option>Marcus Johnson</option>
+          <option>Emily Rivera</option>
+        </select>
+        <select class="filter-select">
+          <option>All Status</option>
+          <option>Active</option>
+          <option>Archived</option>
+        </select>
+      </div>
+
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Collection</th>
+              <th>Status</th>
+              <th>Signals</th>
+              <th>Files</th>
+              <th>Credits</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><div class="user-cell"><div class="user-avatar" style="background:var(--frost2)">SC</div><span class="user-name">Sarah Chen</span></div></td>
+              <td>Q4 Revenue Analysis</td>
+              <td><span class="badge badge-active">Active</span></td>
+              <td>12</td><td>5</td><td>43</td>
+              <td>Feb 12, 2026</td>
+              <td><button class="action-btn">View</button></td>
+            </tr>
+            <tr>
+              <td><div class="user-cell"><div class="user-avatar" style="background:var(--green)">MJ</div><span class="user-name">Marcus Johnson</span></div></td>
+              <td>Customer Churn Study</td>
+              <td><span class="badge badge-active">Active</span></td>
+              <td>8</td><td>3</td><td>28</td>
+              <td>Feb 18, 2026</td>
+              <td><button class="action-btn">View</button></td>
+            </tr>
+            <tr>
+              <td><div class="user-cell"><div class="user-avatar" style="background:var(--frost2)">SC</div><span class="user-name">Sarah Chen</span></div></td>
+              <td>Marketing ROI 2025</td>
+              <td><span class="badge badge-active">Active</span></td>
+              <td>15</td><td>7</td><td>62</td>
+              <td>Jan 30, 2026</td>
+              <td><button class="action-btn">View</button></td>
+            </tr>
+            <tr>
+              <td><div class="user-cell"><div class="user-avatar" style="background:var(--purple)">ER</div><span class="user-name">Emily Rivera</span></div></td>
+              <td>Product Launch Metrics</td>
+              <td><span class="badge badge-active">Active</span></td>
+              <td>6</td><td>4</td><td>21</td>
+              <td>Feb 25, 2026</td>
+              <td><button class="action-btn">View</button></td>
+            </tr>
+            <tr>
+              <td><div class="user-cell"><div class="user-avatar" style="background:var(--green)">MJ</div><span class="user-name">Marcus Johnson</span></div></td>
+              <td>Supply Chain Optimization</td>
+              <td><span class="badge badge-archived">Archived</span></td>
+              <td>20</td><td>10</td><td>95</td>
+              <td>Nov 5, 2025</td>
+              <td><button class="action-btn">View</button></td>
+            </tr>
+            <tr>
+              <td><div class="user-cell"><div class="user-avatar" style="background:var(--orange)">AK</div><span class="user-name">Alex Kim</span></div></td>
+              <td>Employee Satisfaction</td>
+              <td><span class="badge badge-archived">Archived</span></td>
+              <td>4</td><td>2</td><td>15</td>
+              <td>Oct 12, 2025</td>
+              <td><button class="action-btn">View</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-footer">
+        <span>Showing 1–6 of 47 collections</span>
+        <div class="pagination">
+          <button class="page-btn active">1</button>
+          <button class="page-btn">2</button>
+          <button class="page-btn">3</button>
+          <button class="page-btn">...</button>
+          <button class="page-btn">8</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Configuration Cards -->
+    <div class="section-header">
+      <h2 class="section-title">Configuration</h2>
+    </div>
+
+    <div class="config-grid">
+      <!-- Tier Configuration -->
+      <div class="config-card">
+        <div class="config-title">Tier Access Configuration</div>
+        <div class="config-desc">Control workspace access and collection limits per subscription tier.</div>
+
+        <div class="config-row">
+          <div>
+            <div class="config-label">Free Trial</div>
+            <div style="font-size:12px;color:var(--text-muted)">Max 2 active collections</div>
+          </div>
+          <div class="tier-row">
+            <span class="badge badge-trial">Trial</span>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+        </div>
+        <div class="config-row">
+          <div>
+            <div class="config-label">Free</div>
+            <div style="font-size:12px;color:var(--text-muted)">Max 3 active collections</div>
+          </div>
+          <div class="tier-row">
+            <span class="badge badge-free">Free</span>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+        </div>
+        <div class="config-row">
+          <div>
+            <div class="config-label">Standard</div>
+            <div style="font-size:12px;color:var(--text-muted)">Max 10 active collections</div>
+          </div>
+          <div class="tier-row">
+            <span class="badge badge-standard">Standard</span>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+        </div>
+        <div class="config-row">
+          <div>
+            <div class="config-label">Premium</div>
+            <div style="font-size:12px;color:var(--text-muted)">Unlimited active collections</div>
+          </div>
+          <div class="tier-row">
+            <span class="badge badge-premium">Premium</span>
+            <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Credit Cost Configuration -->
+      <div class="config-card">
+        <div class="config-title">Credit Cost per Activity</div>
+        <div class="config-desc">Configure how many credits each workspace activity consumes.</div>
+
+        <div class="credit-item">
+          <span class="credit-activity">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Pulse Detection
+          </span>
+          <span class="credit-cost">5 credits</span>
+        </div>
+        <div class="credit-item">
+          <span class="credit-activity">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Investigation (per exchange)
+          </span>
+          <span class="credit-cost">3 credits</span>
+        </div>
+        <div class="credit-item">
+          <span class="credit-activity">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            Sensitivity Analysis
+          </span>
+          <span class="credit-cost">4 credits</span>
+        </div>
+        <div class="credit-item">
+          <span class="credit-activity">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/></svg>
+            Lever Simulation
+          </span>
+          <span class="credit-cost">2 credits</span>
+        </div>
+        <div class="credit-item">
+          <span class="credit-activity">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Scenario Export
+          </span>
+          <span class="credit-cost">1 credit</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  function toggleTheme() {
+    const html = document.documentElement;
+    const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    document.getElementById('iconMoon').style.display = next === 'dark' ? 'block' : 'none';
+    document.getElementById('iconSun').style.display = next === 'light' ? 'block' : 'none';
+  }
+</script>
+
+</body>
+</html>
