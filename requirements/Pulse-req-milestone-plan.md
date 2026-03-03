@@ -50,15 +50,15 @@ This is the foundation milestone. It introduces the Analysis Workspace as a new 
 | `Signal` | id, collection_id, title, description, severity, category, visualization (JSON), statistical_evidence (JSON) | Individual findings from Pulse analysis. |
 
 **API endpoints:**
-- `POST /api/v1/collections` — Create a new Collection
-- `GET /api/v1/collections` — List user's Collections (with pagination, status filter)
-- `GET /api/v1/collections/{id}` — Get Collection detail with Signals
-- `PATCH /api/v1/collections/{id}` — Update Collection name/description
-- `DELETE /api/v1/collections/{id}` — Delete Collection (soft delete or archive)
-- `POST /api/v1/collections/{id}/files` — Attach file(s) to Collection
-- `DELETE /api/v1/collections/{id}/files/{file_id}` — Remove file from Collection
-- `POST /api/v1/collections/{id}/pulse` — Trigger Pulse detection run
-- `GET /api/v1/collections/{id}/signals` — List Signals for a Collection
+- `POST /collections` — Create a new Collection
+- `GET /collections` — List user's Collections (with pagination, status filter)
+- `GET /collections/{id}` — Get Collection detail with Signals
+- `PATCH /collections/{id}` — Update Collection name/description
+- `DELETE /collections/{id}` — Delete Collection (soft delete or archive)
+- `POST /collections/{id}/files` — Attach file(s) to Collection
+- `DELETE /collections/{id}/files/{file_id}` — Remove file from Collection
+- `POST /collections/{id}/pulse` — Trigger Pulse detection run
+- `GET /collections/{id}/signals` — List Signals for a Collection
 
 **Pulse Agent (new agent):**
 - Follows existing agent system patterns (extends base agent class)
@@ -154,14 +154,14 @@ This milestone adds the output layer to the workspace: structured reports compil
 | `ChatItem` | id, collection_id, chat_session_id, data_card_id, title, content (JSON), added_at | Bridge from Chat sessions to Collections. |
 
 **API endpoints:**
-- `POST /api/v1/collections/{id}/reports` — Compile report from Pulse signals
-- `GET /api/v1/collections/{id}/reports` — List reports for a Collection
-- `GET /api/v1/collections/{id}/reports/{report_id}` — Get report content
-- `GET /api/v1/collections/{id}/reports/{report_id}/download` — Download as markdown or PDF
-- `PATCH /api/v1/collections/{id}/archive` — Archive a Collection
-- `PATCH /api/v1/collections/{id}/unarchive` — Unarchive a Collection
-- `POST /api/v1/collections/{id}/chat-items` — Add data card from Chat to Collection
-- `GET /api/v1/collections/{id}/chat-items` — List Chat items in a Collection
+- `POST /collections/{id}/reports` — Compile report from Pulse signals
+- `GET /collections/{id}/reports` — List reports for a Collection
+- `GET /collections/{id}/reports/{report_id}` — Get report content
+- `GET /collections/{id}/reports/{report_id}/download` — Download as markdown or PDF
+- `PATCH /collections/{id}/archive` — Archive a Collection
+- `PATCH /collections/{id}/unarchive` — Unarchive a Collection
+- `POST /collections/{id}/chat-items` — Add data card from Chat to Collection
+- `GET /collections/{id}/chat-items` — List Chat items in a Collection
 
 **Report compilation:**
 - Generate structured markdown from Pulse signals (title, findings, visualizations, evidence)
@@ -238,11 +238,11 @@ This milestone adds the second stage of the Detect -> Explain -> What-If pipelin
 | `RootCause` | id, investigation_id, hypothesis, confidence (high/medium/low), evidence (JSON), related_signal_ids (JSON) | Root cause identified from investigation. Can link to multiple Signals. |
 
 **API endpoints:**
-- `POST /api/v1/signals/{id}/investigations` — Start investigation for a Signal
-- `GET /api/v1/signals/{id}/investigations` — List past investigations for a Signal
-- `GET /api/v1/investigations/{id}` — Get investigation detail with Q&A trail
-- `POST /api/v1/investigations/{id}/exchange` — Submit answer, get next question
-- `GET /api/v1/investigations/{id}/root-causes` — List root causes from investigation
+- `POST /signals/{id}/investigations` — Start investigation for a Signal
+- `GET /signals/{id}/investigations` — List past investigations for a Signal
+- `GET /investigations/{id}` — Get investigation detail with Q&A trail
+- `POST /investigations/{id}/exchange` — Submit answer, get next question
+- `GET /investigations/{id}/root-causes` — List root causes from investigation
 
 **Investigation Agent (new agent):**
 - Follows existing agent system patterns
@@ -330,13 +330,13 @@ This milestone adds the second stage of the Detect -> Explain -> What-If pipelin
 | `Scenario` | id, root_cause_id, objective, name, narrative, assumptions (JSON), projected_outcomes (JSON), confidence, confidence_rationale, data_backing (JSON), refinement_trail (JSON), is_selected (boolean) | AI-generated scenario with data-backed estimates. |
 
 **API endpoints:**
-- `POST /api/v1/root-causes/{id}/scenarios` — Generate scenarios for a root cause (requires objective)
-- `GET /api/v1/root-causes/{id}/scenarios` — List scenarios for a root cause
-- `GET /api/v1/scenarios/{id}` — Get scenario detail
-- `POST /api/v1/scenarios/{id}/refine` — Refine scenario via scoped chat exchange
-- `POST /api/v1/root-causes/{id}/scenarios/add` — Generate additional scenario
-- `PATCH /api/v1/scenarios/{id}/select` — Mark scenario as selected
-- `GET /api/v1/root-causes/{id}/scenarios/compare` — Get comparison view of all scenarios
+- `POST /root-causes/{id}/scenarios` — Generate scenarios for a root cause (requires objective)
+- `GET /root-causes/{id}/scenarios` — List scenarios for a root cause
+- `GET /scenarios/{id}` — Get scenario detail
+- `POST /scenarios/{id}/refine` — Refine scenario via scoped chat exchange
+- `POST /root-causes/{id}/scenarios/add` — Generate additional scenario
+- `PATCH /scenarios/{id}/select` — Mark scenario as selected
+- `GET /root-causes/{id}/scenarios/compare` — Get comparison view of all scenarios
 
 **Strategy Agent (new agent):**
 - Takes objective + root cause context + original data
@@ -446,12 +446,12 @@ This milestone builds the admin-facing monitoring and management layer for the w
 Activity type enum values: `pulse_run`, `investigation_start`, `investigation_exchange`, `whatif_generate`, `whatif_refine`, `whatif_add_scenario`, `report_compile`, `report_export`
 
 **API endpoints:**
-- `GET /api/v1/admin/workspace/dashboard` — Workspace activity dashboard metrics (aggregated)
-- `GET /api/v1/admin/workspace/users/{user_id}/activity` — Per-user workspace activity
-- `GET /api/v1/admin/workspace/activity-log` — Activity log with filtering (user, collection, type, date range)
-- `GET /api/v1/admin/workspace/funnel` — Funnel analytics: Pulse -> Explain -> What-If adoption
-- `GET /api/v1/admin/workspace/alerts` — Active alerts (high-cost collections, failed runs)
-- `PATCH /api/v1/admin/workspace/alerts/thresholds` — Configure alert thresholds
+- `GET /api/admin/workspace/dashboard` — Workspace activity dashboard metrics (aggregated)
+- `GET /api/admin/workspace/users/{user_id}/activity` — Per-user workspace activity
+- `GET /api/admin/workspace/activity-log` — Activity log with filtering (user, collection, type, date range)
+- `GET /api/admin/workspace/funnel` — Funnel analytics: Pulse -> Explain -> What-If adoption
+- `GET /api/admin/workspace/alerts` — Active alerts (high-cost collections, failed runs)
+- `PATCH /api/admin/workspace/alerts/thresholds` — Configure alert thresholds
 
 **Dashboard metrics computation:**
 - Total Collections over time (daily/weekly/monthly aggregation)
