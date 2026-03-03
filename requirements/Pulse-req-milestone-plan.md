@@ -11,12 +11,12 @@ This document breaks down the full Spectra Pulse (Analysis Workspace) implementa
 **Confirmed milestone sequence** (Decisions Log #4):
 
 ```
-v0.8 (Pulse) -> v0.9 (Collections) -> v0.10 (Explain) -> v1.0 (What-If Scenarios) -> v0.11 (Admin Workspace Management)
+v0.8 (Pulse) -> v0.9 (Collections) -> v0.10 (Explain) -> v0.11 (What-If Scenarios) -> v0.12 (Admin Workspace Management)
 ```
 
 **Deferred items:**
-- Monitoring module (recurring automated analysis) — deferred to post-v1.0 backlog (Decision #6)
-- Persistent AI Memory — future exploration post-v0.11 (Decision #8)
+- Monitoring module (recurring automated analysis) — deferred to post-v0.12 backlog (Decision #6)
+- Persistent AI Memory — future exploration post-v0.12 (Decision #8)
 - Full predictive ML model — moved to Appendix in requirements, not in milestone scope
 
 ---
@@ -28,8 +28,8 @@ v0.8 (Pulse) -> v0.9 (Collections) -> v0.10 (Explain) -> v1.0 (What-If Scenarios
 | **v0.8** | Spectra Pulse (Detection) | Create Collections, attach files, run Pulse, view Signals | Signal cards with statistical findings | XL |
 | **v0.9** | Collections (Workspace Persistence) | Reports, archiving, Chat-to-Collection bridge | Persistent workspace with downloadable reports | L |
 | **v0.10** | Explain (Guided Investigation) | Q&A investigation flow, root cause identification | Doctor-style interview leading to root cause hypothesis | L |
-| **v1.0** | What-If Scenarios (Prescriptive) | AI-generated scenarios, refinement, comparison | Data-backed scenario cards with side-by-side comparison | XL |
-| **v0.11** | Admin Workspace Management | Activity dashboard, per-user tracking, alerts | Full admin visibility over workspace usage | M |
+| **v0.11** | What-If Scenarios (Prescriptive) | AI-generated scenarios, refinement, comparison | Data-backed scenario cards with side-by-side comparison | XL |
+| **v0.12** | Admin Workspace Management | Activity dashboard, per-user tracking, alerts | Full admin visibility over workspace usage | M |
 
 ---
 
@@ -129,12 +129,12 @@ This is the foundation milestone. It introduces the Analysis Workspace as a new 
 ### NOT in v0.8
 
 - Investigation / Explain (v0.10)
-- What-If Scenarios (v1.0)
+- What-If Scenarios (v0.11)
 - Reports and report compilation (v0.9)
 - Chat-to-Collection bridge (v0.9)
 - PDF export (v0.9)
-- Admin workspace dashboard (v0.11)
-- Monitoring module (deferred post-v1.0)
+- Admin workspace dashboard (v0.12)
+- Monitoring module (deferred post-v0.12)
 
 ---
 
@@ -216,9 +216,9 @@ This milestone adds the output layer to the workspace: structured reports compil
 ### NOT in v0.9
 
 - Investigation / Explain (v0.10)
-- What-If Scenarios (v1.0)
+- What-If Scenarios (v0.11)
 - User document upload during investigation
-- Admin workspace activity dashboard (v0.11)
+- Admin workspace activity dashboard (v0.12)
 
 ---
 
@@ -311,17 +311,15 @@ This milestone adds the second stage of the Detect -> Explain -> What-If pipelin
 
 ### NOT in v0.10
 
-- What-If Scenarios (v1.0)
+- What-If Scenarios (v0.11)
 - User document upload during investigation (noted as "later version" in requirements Section 6 Step 2)
-- Admin workspace dashboard (v0.11)
+- Admin workspace dashboard (v0.12)
 
 ---
 
-## v1.0 — What-If Scenarios (Prescriptive Analytics)
+## v0.11 — What-If Scenarios (Prescriptive Analytics)
 
-**Goal:** Users can explore data-backed what-if scenarios from root causes, compare options with estimated impacts, refine via scoped chat, and decide on an approach. This completes the full Pulse -> Explain -> What-If pipeline.
-
-This is the "1.0" milestone — the Analysis Workspace reaches its complete vision. Users go from raw data to actionable recommendations in a single guided workflow.
+**Goal:** Users can explore data-backed what-if scenarios from root causes, compare options with estimated impacts, refine via scoped chat, and decide on an approach. This completes the full Pulse -> Explain -> What-If pipeline and the Analysis Workspace reaches its complete vision.
 
 ### Backend Scope
 
@@ -423,15 +421,15 @@ This is the "1.0" milestone — the Analysis Workspace reaches its complete visi
 - v0.9 complete (Reports — scenario comparison generates a report)
 - v0.8 complete (Signals, Collections, Pulse)
 
-### NOT in v1.0
+### NOT in v0.11
 
-- Admin workspace dashboard (v0.11)
-- Monitoring module (deferred post-v1.0)
-- Persistent AI Memory (future exploration post-v0.11)
+- Admin workspace dashboard (v0.12)
+- Monitoring module (deferred post-v0.12)
+- Persistent AI Memory (future exploration post-v0.12)
 
 ---
 
-## v0.11 — Admin Workspace Management
+## v0.12 — Admin Workspace Management
 
 **Goal:** Full admin visibility and control over Analysis Workspace usage, including activity dashboards, per-user tracking, credit cost management, and operational alerts.
 
@@ -509,7 +507,7 @@ Activity type enum values: `pulse_run`, `investigation_start`, `investigation_ex
 
 ### Key Dependencies
 
-- v1.0 complete (all workspace features must exist for meaningful monitoring)
+- v0.11 complete (all workspace features must exist for meaningful monitoring)
 - Existing Admin Portal infrastructure (user detail page, settings page)
 
 ---
@@ -547,7 +545,7 @@ New agents follow existing agent system patterns:
 |-------|-----------|------|
 | **Pulse Agent** | v0.8 | Data profiling, statistical analysis, Signal generation |
 | **Investigation Agent** | v0.10 | Hypothesis generation, structured Q&A, root cause identification |
-| **Strategy Agent** | v1.0 | Objective-based scenario generation, data-backed estimates, refinement |
+| **Strategy Agent** | v0.11 | Objective-based scenario generation, data-backed estimates, refinement |
 
 All agents:
 - Extend the base agent class
@@ -576,12 +574,12 @@ Graceful degradation if any workspace operation fails mid-execution:
 
 ## Deferred / Out of Scope
 
-These items are explicitly excluded from milestones v0.8 through v0.11:
+These items are explicitly excluded from milestones v0.8 through v0.12:
 
 | Item | Status | Reference |
 |------|--------|-----------|
-| **Monitoring module** (recurring automated analysis) | Post-v1.0 backlog | Decision #6 |
-| **Persistent AI Memory** (cross-session context) | Future exploration post-v0.11 | Decision #8 |
+| **Monitoring module** (recurring automated analysis) | Post-v0.12 backlog | Decision #6 |
+| **Persistent AI Memory** (cross-session context) | Future exploration post-v0.12 | Decision #8 |
 | **PDF generation** (elaborate templating) | Skip unless explicitly requested | Decision #5. Note: v0.9 includes basic PDF download option but no elaborate generation/templating. |
 | **User document upload during investigation** | Later version | Section 6 Step 2: "this is for later version" |
 | **Full predictive ML model** | Appendix concept | Moved to Appendix in requirements, not in milestone scope |
@@ -599,9 +597,9 @@ All workspace credit costs, aggregated for reference. All values are defaults st
 | `workspace_credit_cost_report_export` | Report: PDF Export | 0.5 | v0.9 |
 | `workspace_credit_cost_investigate_start` | Explain: Start Investigation | 3.0 | v0.10 |
 | `workspace_credit_cost_investigate_exchange` | Explain: Per Q&A Exchange | 1.0 | v0.10 |
-| `workspace_credit_cost_whatif_generate` | What-If: Generate Scenarios | 5.0 | v1.0 |
-| `workspace_credit_cost_whatif_refine` | What-If: Refine Scenario | 1.0 | v1.0 |
-| `workspace_credit_cost_whatif_add_scenario` | What-If: Add Scenario | 2.0 | v1.0 |
+| `workspace_credit_cost_whatif_generate` | What-If: Generate Scenarios | 5.0 | v0.11 |
+| `workspace_credit_cost_whatif_refine` | What-If: Refine Scenario | 1.0 | v0.11 |
+| `workspace_credit_cost_whatif_add_scenario` | What-If: Add Scenario | 2.0 | v0.11 |
 
 ---
 

@@ -11,11 +11,11 @@
 > 1. **Naming:** "Spectra Pulse" confirmed. Individual findings = "Signals". ✓
 > 2. **Step 3 (What-If Scenarios) UX:** Revised (2026-03-02). Original "Model & Simulate" approach (tornado charts, lever sliders, Monte Carlo) was too naive — assumed data could be auto-modeled. Replaced with AI-agent-driven What-If Scenarios: objective-first, AI generates narrative scenarios backed by data analysis in E2B, user refines via scoped chat, multi-scenario comparison. Full predictive ML model concept moved to Appendix as future separate module. **Action: Update mockup Screen 4 to reflect new flow.**
 > 3. **Data model:** Revised. Collection = workspace (data + process + output). 1 Collection → many Reports. Supports investigation reports, predictive analysis reports, and chat-originated data cards. User can replay findings with different outcomes.
-> 4. **Milestone sequence:** Confirmed: v0.8 (Pulse) → v0.9 (Collections) → v0.10 (Explain) → v1.0 (What-If Scenarios) → v0.11 (Admin Workspace Management). ✓
+> 4. **Milestone sequence:** Confirmed: v0.8 (Pulse) → v0.9 (Collections) → v0.10 (Explain) → v0.11 (What-If Scenarios) → v0.12 (Admin Workspace Management). ✓
 > 5. **PDF generation:** Skip unless explicitly requested. ✓
-> 6. **Monitoring module:** Deferred to post-v1.0 backlog. Confirmed. ✓
+> 6. **Monitoring module:** Deferred to post-v0.12 backlog. Confirmed. ✓
 > 7. **Admin Portal:** Added. Tier-based access gating (free_trial=1 collection, free=no access, standard=5, premium=unlimited). Granular credit costs per Workspace activity. Admin monitoring dashboard for Workspace usage and per-user activity tracking.
-> 8. **Persistent AI Memory:** Future exploration (post v0.11). OpenClaw's memory system documented as reference architecture. Not in scope for milestones 0.8–0.11 but to be considered when core Workspace is mature.
+> 8. **Persistent AI Memory:** Future exploration (post v0.12). OpenClaw's memory system documented as reference architecture. Not in scope for milestones 0.8–0.12 but to be considered when core Workspace is mature.
 
 ---
 
@@ -27,7 +27,7 @@ Spectra today is a **reactive analysis tool** — users upload data, ask questio
 graph LR
     A["<b>Descriptive</b><br/><i>Current v0.7</i><br/>Show me sales by region"] -->
     B["<b>Diagnostic</b><br/><i>v0.8–v0.9</i><br/>Why did Q4 drop 18%?"] -->
-    C["<b>Prescriptive</b><br/><i>v1.0</i><br/>Here's what to change<br/>and the expected impact"]
+    C["<b>Prescriptive</b><br/><i>v0.11</i><br/>Here's what to change<br/>and the expected impact"]
 
     style A fill:#4C566A,stroke:#D8DEE9,color:#ECEFF4
     style B fill:#5E81AC,stroke:#D8DEE9,color:#ECEFF4
@@ -88,9 +88,9 @@ graph TB
     style R fill:#4C566A,stroke:#D8DEE9,color:#ECEFF4
 ```
 
-### Module 3: Monitoring (DEFERRED — post v1.0 backlog)
+### Module 3: Monitoring (DEFERRED — post v0.12 backlog)
 
-Recurring automated analysis when data is regularly updated. Concept and details retained in Appendix for future reference. Not in scope for v0.8–v1.0.
+Recurring automated analysis when data is regularly updated. Concept and details retained in Appendix for future reference. Not in scope for v0.8–v0.12.
 
 ### Platform Architecture
 

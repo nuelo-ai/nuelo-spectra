@@ -67,5 +67,5 @@ See PROJECT.md Key Decisions table for full decision log.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Quick task 3 complete — Spectra Pulse milestone implementation plan created
+Stopped at: Updated milestone versioning — What-If is now v0.11, Admin Workspace is v0.12 (no v1.0 yet)
 Resume with: `/gsd:new-milestone` to define v0.8
