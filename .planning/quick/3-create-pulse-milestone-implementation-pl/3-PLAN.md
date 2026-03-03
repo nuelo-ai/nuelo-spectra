@@ -10,10 +10,10 @@ autonomous: true
 requirements: [QUICK-3]
 must_haves:
   truths:
-    - "Document covers all milestones v0.8 through v0.11 plus v1.0 as defined in Decisions Log"
+    - "Document covers all milestones v0.8 through v0.12 as defined in Decisions Log"
     - "Each milestone has clear scope, deliverables, and frontend/backend breakdown"
     - "Admin portal planning is included with tier gating, credit costs, and monitoring"
-    - "Document references the confirmed sequence: v0.8 Pulse, v0.9 Collections, v0.10 Explain, v1.0 What-If, v0.11 Admin Workspace"
+    - "Document references the confirmed sequence: v0.8 Pulse, v0.9 Collections, v0.10 Explain, v0.11 What-If, v0.12 Admin Workspace"
   artifacts:
     - path: "requirements/Pulse-req-milestone-plan.md"
       provides: "Phased milestone implementation plan for Spectra Pulse module"
@@ -24,7 +24,7 @@ must_haves:
 <objective>
 Create a phased milestone implementation plan document for the Spectra Pulse module (Analysis Workspace).
 
-Purpose: Provide a structured roadmap breaking down the full Spectra Pulse implementation into versioned milestones (v0.8 through v0.11 + v1.0), with clear scope, deliverables, and frontend/backend/admin breakdown per milestone.
+Purpose: Provide a structured roadmap breaking down the full Spectra Pulse implementation into versioned milestones (v0.8 through v0.12), with clear scope, deliverables, and frontend/backend/admin breakdown per milestone.
 
 Output: `requirements/Pulse-req-milestone-plan.md`
 </objective>
@@ -52,9 +52,9 @@ Create `requirements/Pulse-req-milestone-plan.md` — a comprehensive milestone 
 1. **Header and Overview**
    - Title: "Spectra Pulse — Milestone Implementation Plan"
    - Brief intro: link back to Spectra-Pulse-Requirement.md as the source requirements
-   - Confirmed milestone sequence from Decisions Log: v0.8 (Pulse) -> v0.9 (Collections) -> v0.10 (Explain) -> v1.0 (What-If Scenarios) -> v0.11 (Admin Workspace Management)
-   - Note that Monitoring module is deferred to post-v1.0 backlog (Decision #6)
-   - Note that Persistent AI Memory is future exploration post-v0.11 (Decision #8)
+   - Confirmed milestone sequence from Decisions Log: v0.8 (Pulse) -> v0.9 (Collections) -> v0.10 (Explain) -> v0.11 (What-If Scenarios) -> v0.12 (Admin Workspace Management)
+   - Note that Monitoring module is deferred to post-v0.12 backlog (Decision #6)
+   - Note that Persistent AI Memory is future exploration post-v0.12 (Decision #8)
 
 2. **Milestone Summary Table**
    - One table with all milestones: version, name, one-line scope, key deliverable, estimated complexity (S/M/L/XL)
@@ -124,7 +124,7 @@ Create `requirements/Pulse-req-milestone-plan.md` — a comprehensive milestone 
    - **Key dependencies:** v0.9 (Collections with reports), v0.8 (Signals)
    - **NOT in v0.10:** What-If scenarios, user document upload for investigation context
 
-6. **v1.0 — What-If Scenarios (Prescriptive Analytics)**
+6. **v0.11 — What-If Scenarios (Prescriptive Analytics)**
    - **Goal:** Users can explore data-backed what-if scenarios from root causes, compare options, and decide
    - **Backend scope:**
      - Scenario model/table (from Section 5)
@@ -146,7 +146,7 @@ Create `requirements/Pulse-req-milestone-plan.md` — a comprehensive milestone 
    - **Key dependencies:** v0.10 (Investigation + Root Cause), v0.9 (Reports)
    - **This is the "1.0" milestone** — completes the full Pulse -> Explain -> What-If pipeline
 
-7. **v0.11 — Admin Workspace Management**
+7. **v0.12 — Admin Workspace Management**
    - **Goal:** Full admin visibility and control over Analysis Workspace usage
    - **Backend scope:**
      - workspace_activity_log table (Section 7.3c): user_id, collection_id, activity_type enum, credit_cost, duration_ms, metadata JSON
@@ -168,7 +168,7 @@ Create `requirements/Pulse-req-milestone-plan.md` — a comprehensive milestone 
        - Collection limit usage display
      - Workspace Credit Costs settings section: editable costs for all activity types
      - Alerts section: configurable thresholds, alert list
-   - **Key dependencies:** v1.0 (all workspace features must exist for meaningful monitoring)
+   - **Key dependencies:** v0.11 complete (all workspace features must exist for meaningful monitoring)
 
 8. **Cross-Cutting Concerns (apply across all milestones)**
    - Credit pre-check pattern: verify sufficient credits before each activity, show cost estimate, deduct before execution, refund on failure
@@ -178,8 +178,8 @@ Create `requirements/Pulse-req-milestone-plan.md` — a comprehensive milestone 
    - Error handling: graceful degradation if Pulse/Investigation/What-If fails mid-execution
 
 9. **Deferred / Out of Scope**
-   - Monitoring module (recurring automated analysis) — post v1.0 backlog (Decision #6)
-   - Persistent AI Memory — future exploration post v0.11 (Decision #8)
+   - Monitoring module (recurring automated analysis) — post v0.12 backlog (Decision #6)
+   - Persistent AI Memory — future exploration post v0.12 (Decision #8)
    - PDF generation — skip unless explicitly requested (Decision #5)
      - Note: v0.9 includes basic PDF export as download option per Section 6 Step 4, but no elaborate PDF generation/templating
    - User document upload during investigation (noted as "later version" in Section 6 Step 2)
@@ -198,7 +198,7 @@ Create `requirements/Pulse-req-milestone-plan.md` — a comprehensive milestone 
   </verify>
   <done>
 - requirements/Pulse-req-milestone-plan.md exists with 200+ lines
-- Document covers all 5 milestones: v0.8 (Pulse), v0.9 (Collections), v0.10 (Explain), v1.0 (What-If), v0.11 (Admin Workspace)
+- Document covers all 5 milestones: v0.8 (Pulse), v0.9 (Collections), v0.10 (Explain), v0.11 (What-If), v0.12 (Admin Workspace)
 - Each milestone has backend, frontend, and admin scope sections
 - Cross-cutting concerns and deferred items documented
 - Milestone sequence matches confirmed decisions from requirements
@@ -209,7 +209,7 @@ Create `requirements/Pulse-req-milestone-plan.md` — a comprehensive milestone 
 
 <verification>
 - File exists at requirements/Pulse-req-milestone-plan.md
-- Document covers all milestones from v0.8 through v0.11 + v1.0
+- Document covers all milestones from v0.8 through v0.12
 - Each milestone has backend, frontend, and admin subsections
 - Deferred items clearly called out
 - Cross-cutting concerns documented
