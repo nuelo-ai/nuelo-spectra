@@ -15,7 +15,19 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 **Branch:** master
 **Latest Tag:** v0.7 (2026-02-25)
 
-## Latest Milestone: v0.7 API Services & MCP (Shipped 2026-02-25)
+## Current Milestone: v0.7.11 Spectra Pulse Mockup
+
+**Goal:** Create a standalone UI/UX frontend mockup covering the full Analysis Workspace feature set — from Pulse detection through Explain, What-If Scenarios, and Admin Workspace Management — to serve as the design reference for v0.8–v0.12 implementation milestones.
+
+**Target features:**
+- Analysis Workspace entry point, Collection list page, Collection detail page
+- Signal cards UI (Pulse detection output: severity, category, visualization, evidence)
+- Guided Investigation Q&A flow (doctor-style, structured choices, root cause display)
+- What-If Scenarios (objective setting, scenario cards, refinement chat, side-by-side comparison)
+- Collections persistence (reports viewer, archive/unarchive, Chat-to-Collection bridge, download)
+- Admin Workspace Management (activity dashboard, per-user workspace tab, credit cost settings, alerts)
+
+## Previous Milestone: v0.7 API Services & MCP (Shipped 2026-02-25)
 
 **Delivered:** Public REST API and MCP server exposing Spectra's data analysis capabilities for programmatic access and AI agent integrations, with API key management, credit deduction, and usage logging.
 
@@ -445,9 +457,18 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 ### Active
 
-<!-- Next milestone requirements — see .planning/REQUIREMENTS.md after /gsd:new-milestone -->
+<!-- v0.7.11 Spectra Pulse Mockup — see .planning/REQUIREMENTS.md -->
 
-(No active requirements — run `/gsd:new-milestone` to define v0.8)
+- [ ] Mockup: Analysis Workspace entry and Collection list page
+- [ ] Mockup: Collection detail page with file selection and Run Detection flow
+- [ ] Mockup: Signal cards UI (left panel list + main detail panel with chart, severity, evidence)
+- [ ] Mockup: Guided Investigation Q&A flow (structured choices, progress indicator, root cause card)
+- [ ] Mockup: What-If Scenarios (objective setting, scenario cards, refinement chat, comparison view)
+- [ ] Mockup: Collections reports viewer with download options and archive/unarchive
+- [ ] Mockup: Chat-to-Collection bridge (Add to Collection action on data cards)
+- [ ] Mockup: Admin Workspace Activity Dashboard (charts, funnel, KPI cards)
+- [ ] Mockup: Admin per-user Workspace tab extension
+- [ ] Mockup: Admin Workspace Credit Costs settings section
 
 ### Out of Scope
 
@@ -562,4 +583,4 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | Stateless HTTP transport for MCP | Each request independent, no session state | ✓ Good — simpler deployment, works behind load balancers |
 
 ---
-*Last updated: 2026-02-25 after v0.7 milestone*
+*Last updated: 2026-03-03 after starting v0.7.11 Spectra Pulse Mockup milestone*
