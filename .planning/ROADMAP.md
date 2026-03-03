@@ -9,6 +9,7 @@
 - ✅ **v0.5 Admin Portal** — Phases 26-32 (shipped 2026-02-18)
 - ✅ **v0.6 Docker and Dokploy Support** — Phases 33-37 (shipped 2026-02-21)
 - ✅ **v0.7 API Services & MCP** — Phases 38-41 (shipped 2026-02-25)
+- 🚧 **v0.7.11 Spectra Pulse Mockup** — Phases 42-46 (in progress)
 
 ## Phases
 
@@ -95,6 +96,79 @@
 
 </details>
 
+### 🚧 v0.7.11 Spectra Pulse Mockup (In Progress)
+
+**Milestone Goal:** Create a standalone Next.js UI/UX mockup covering the full Analysis Workspace feature set — Pulse detection through Explain, What-If Scenarios, and Admin Workspace Management — to serve as the design reference for v0.8–v0.12 implementation milestones. No backend integration; all screens use static/hardcoded data.
+
+- [ ] **Phase 42: Analysis Workspace & Pulse Detection** - Mockup screens for workspace entry, Collection list/detail, signal cards, and Run Detection flow
+- [ ] **Phase 43: Collections & Reports** - Mockup screens for report viewer, archive/unarchive, Chat-to-Collection bridge, and usage indicators
+- [ ] **Phase 44: Guided Investigation (Explain)** - Mockup screens for doctor-style Q&A flow, progress tracking, root cause display, and investigation history
+- [ ] **Phase 45: What-If Scenarios** - Mockup screens for objective selection, scenario cards, refinement chat, side-by-side comparison, and generated report section
+- [ ] **Phase 46: Admin Workspace Management** - Mockup screens for workspace activity dashboard, per-user workspace tab, credit cost settings, and alerts
+
+## Phase Details
+
+### Phase 42: Analysis Workspace & Pulse Detection
+**Goal**: The reviewer can navigate through the full Analysis Workspace entry point and Pulse Detection flow — from the workspace landing page through Collection management to the signal results view with credit awareness — all rendered as polished static mockup pages.
+**Depends on**: Nothing (first phase of this milestone)
+**Requirements**: PULSE-01, PULSE-02, PULSE-03, PULSE-04, PULSE-05, PULSE-06, PULSE-07, PULSE-08
+**Success Criteria** (what must be TRUE):
+  1. Reviewer can open the Analysis Workspace entry page and see it visually distinct from the Chat interface, with correct navigation and Spectra branding
+  2. Reviewer can see a Collection list page displaying collection cards with name, status badge (active/archived), created date, and signal count, plus a "Create New Collection" entry point
+  3. Reviewer can see a Collection detail page with a file selection area (pick from uploaded files or upload new) and the "Run Detection" button showing a credit cost estimate and a 15–30s loading/progress state
+  4. Reviewer can see the Signal results layout with a left scrollable panel listing signal cards (title, severity badge, category tag) and a main detail panel showing chart area, description, severity, statistical evidence, and category
+  5. Reviewer can see a credit balance indicator and a pre-action cost estimate ("This will use ~5 credits") displayed before triggering detection
+**Plans**: TBD
+
+### Phase 43: Collections & Reports
+**Goal**: The reviewer can see the full Collections lifecycle — report browsing, in-page reading, download options, archive state management, Chat-to-Collection bridging, and credit usage display — all as static mockup screens.
+**Depends on**: Phase 42
+**Requirements**: COLL-01, COLL-02, COLL-03, COLL-04, COLL-05, COLL-06, COLL-07
+**Success Criteria** (what must be TRUE):
+  1. Reviewer can see archive and unarchive action controls on a Collection with a visible status indicator distinguishing active from archived collections
+  2. Reviewer can see a collection limit usage display ("3 of 5 active collections") with an upgrade prompt when the limit is reached
+  3. Reviewer can see a Report list within a Collection showing report type, title, and generated date, plus an in-page report reader rendering markdown content with proper typography
+  4. Reviewer can see "Download as Markdown" and "Download as PDF" download buttons on a report
+  5. Reviewer can see the Chat-to-Collection bridge — an "Add to Collection" action on a data card that opens a Collection picker modal
+  6. Reviewer can see a running credit total displayed in the Collection header ("Credits used: 14")
+**Plans**: TBD
+
+### Phase 44: Guided Investigation (Explain)
+**Goal**: The reviewer can walk through the complete Guided Investigation flow — from triggering an investigation on a signal through the doctor-style Q&A steps to a root cause summary — and review past investigations and cross-signal links, all as static mockup screens.
+**Depends on**: Phase 42
+**Requirements**: EXPL-01, EXPL-02, EXPL-03, EXPL-04, EXPL-05, EXPL-06
+**Success Criteria** (what must be TRUE):
+  1. Reviewer can see an "Investigate" button on a Signal card with an investigation status indicator showing whether investigation is pending, in progress, or complete
+  2. Reviewer can see the doctor-style Q&A interface with a hypothesis text block, structured radio-button choices, and a free-text option for custom answers
+  3. Reviewer can see a progress indicator across the 3–5 Q&A exchange steps that visually conveys narrowing scope toward a root cause
+  4. Reviewer can see a Root Cause summary card displaying the hypothesis statement, a confidence badge (high/medium/low color-coded), and supporting evidence items
+  5. Reviewer can see an investigation history list showing date, status, root cause summary text, and exchange count per past investigation, plus a display linking which Signals share the same root cause
+**Plans**: TBD
+
+### Phase 45: What-If Scenarios
+**Goal**: The reviewer can see the complete What-If Scenarios flow — from objective selection through scenario generation, per-scenario refinement chat, side-by-side comparison, and the generated What-If report section — all as static mockup screens.
+**Depends on**: Phase 44
+**Requirements**: WHAT-01, WHAT-02, WHAT-03, WHAT-04, WHAT-05, WHAT-06, WHAT-07
+**Success Criteria** (what must be TRUE):
+  1. Reviewer can see the Objective selection screen with root cause context displayed, structured selection choices, and a free-text option for custom objectives
+  2. Reviewer can see a scenario generation loading state with a progress indicator conveying that generation is underway
+  3. Reviewer can see Scenario cards presenting name, narrative, estimated impact range, assumptions list, confidence badge with rationale, and a data backing summary
+  4. Reviewer can see a per-scenario refinement chat panel scoped to one scenario, and an "Add Scenario" action labelled with its credit cost (2 credits) alongside existing scenarios
+  5. Reviewer can see a side-by-side comparison view showing scenario name, impact range, confidence, time to impact, and a Select action per scenario, plus a generated What-If Report section showing objective, evaluated scenarios, and selected approach
+**Plans**: TBD
+
+### Phase 46: Admin Workspace Management
+**Goal**: The reviewer can see the full Admin Workspace Management extension — activity dashboard with multiple chart types, per-user workspace tab, credit cost settings, and alerts — all integrated into the existing admin UI as static mockup screens.
+**Depends on**: Phase 42
+**Requirements**: ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04, ADMIN-05, ADMIN-06
+**Success Criteria** (what must be TRUE):
+  1. Reviewer can see a Workspace Activity Dashboard with a line chart (Collections over time), a donut chart (active vs. archived), and bar charts covering Pulse, Investigation, What-If, and Report activity
+  2. Reviewer can see a funnel chart displaying adoption drop-off across the Pulse → Explain → What-If pipeline stages
+  3. Reviewer can see workspace credit consumption charts broken down by activity type over time, and a KPI card showing average credits per Collection
+  4. Reviewer can see a per-user Workspace tab extension on a user detail page showing Collections list, credit breakdown chart, activity timeline, and limit usage
+  5. Reviewer can see a Workspace Credit Costs settings section with editable input fields for all 8 activity costs, and an Alerts section with configurable threshold fields and an active alert list with dismiss actions
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -140,3 +214,8 @@
 | 39. API Key Management UI + Deployment Mode | v0.7 | 5/5 | Complete | 2026-02-24 |
 | 40. REST API v1 Endpoints | v0.7 | 4/4 | Complete | 2026-02-24 |
 | 41. MCP Server | v0.7 | 2/2 | Complete | 2026-02-24 |
+| 42. Analysis Workspace & Pulse Detection | v0.7.11 | 0/TBD | Not started | - |
+| 43. Collections & Reports | v0.7.11 | 0/TBD | Not started | - |
+| 44. Guided Investigation (Explain) | v0.7.11 | 0/TBD | Not started | - |
+| 45. What-If Scenarios | v0.7.11 | 0/TBD | Not started | - |
+| 46. Admin Workspace Management | v0.7.11 | 0/TBD | Not started | - |

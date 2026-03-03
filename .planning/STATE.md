@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** v0.7.11 Spectra Pulse Mockup — defining requirements
+**Current focus:** v0.7.11 Spectra Pulse Mockup — roadmap defined, ready to plan Phase 42
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-03-03 — Milestone v0.7.11 started
+Phase: 42 of 46 (Analysis Workspace & Pulse Detection)
+Plan: 0 of TBD in current phase
+Status: Ready to plan
+Last activity: 2026-03-03 — Roadmap created for v0.7.11 (Phases 42-46, 34 requirements mapped)
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.4 ✅ | v0.7.5 ✅ | v0.7.6 ✅ | v0.7.7 ✅ | v0.7.8 ✅ | v0.7.9 ✅ | v0.7.10 ✅
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.11 🚧
 
 ## Performance Metrics
 
@@ -29,6 +29,12 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7
 
 See PROJECT.md Key Decisions table for full decision log.
 
+Recent decisions affecting current work:
+- v0.7.11 is a FRONTEND MOCKUP milestone only — no backend, no live API calls
+- Tech stack: Next.js + React + shadcn/ui + Recharts + Plotly.js (same as existing frontends)
+- Mockup phases group by feature milestone area (v0.8 through v0.12 screens)
+- What-If is v0.11, Admin Workspace is v0.12 (no v1.0 yet)
+
 ### Pending Todos
 
 - [ ] Create Dokploy Docker deployment package for spectra-api service (deployment)
@@ -36,8 +42,6 @@ See PROJECT.md Key Decisions table for full decision log.
 - [ ] Show suggestions in Data Summary sidebar panel (ui)
 - [ ] Use Pydantic structured output for agent JSON responses (consistency)
 - [ ] Plan production environment variable cleanup and validation (deployment)
-- [ ] Add execution result data table to MCP spectra_run_analysis output (api)
-- [ ] Fix admin credit usage display to include API query data (api)
 
 ### Patch History (post v0.7)
 
@@ -48,7 +52,7 @@ See PROJECT.md Key Decisions table for full decision log.
 | v0.7.6 | 2026-02-25 | MCP auth fix (await set_state/get_state) + loopback URL fix |
 | v0.7.7 | 2026-02-25 | MCP spectra_run_analysis: add execution_result as markdown data table |
 | v0.7.8 | 2026-02-25 | MCP: decode Plotly binary typed arrays in chart spec; API_MCP_REFERENCE.md |
-| v0.7.9 | 2026-02-25 | Admin users activity tab: fix backend GroupingError 500 + silent error swallowing in frontend |
+| v0.7.9 | 2026-02-25 | Admin users activity tab: fix backend GroupingError 500 + silent error swallowing |
 | v0.7.10 | 2026-02-27 | Admin credit usage display: add API query counts to activity/sessions tabs + credit transaction source attribution |
 
 ### Quick Tasks Completed
@@ -67,5 +71,5 @@ See PROJECT.md Key Decisions table for full decision log.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Updated milestone versioning — What-If is now v0.11, Admin Workspace is v0.12 (no v1.0 yet)
-Resume with: `/gsd:new-milestone` to define v0.8
+Stopped at: Roadmap created for v0.7.11 — Phases 42-46 defined, all 34 requirements mapped
+Resume with: `/gsd:plan-phase 42` to plan the Analysis Workspace & Pulse Detection mockup phase
