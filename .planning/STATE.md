@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 Phase: 41 of 41 (v0.7) — Complete
 Plan: All complete
 Status: Patch v0.7.10 applied
-Last activity: 2026-02-27 — v0.7.10: Fix admin credit usage display to include API query data
+Last activity: 2026-03-03 — Quick task 1: commit cleanup changes to non-codebase files
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.4 ✅ | v0.7.5 ✅ | v0.7.6 ✅ | v0.7.7 ✅ | v0.7.8 ✅ | v0.7.9 ✅ | v0.7.10 ✅
 
@@ -50,6 +50,12 @@ See PROJECT.md Key Decisions table for full decision log.
 | v0.7.8 | 2026-02-25 | MCP: decode Plotly binary typed arrays in chart spec; API_MCP_REFERENCE.md |
 | v0.7.9 | 2026-02-25 | Admin users activity tab: fix backend GroupingError 500 + silent error swallowing in frontend |
 | v0.7.10 | 2026-02-27 | Admin credit usage display: add API query counts to activity/sessions tabs + credit transaction source attribution |
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 1 | commit cleanup changes to non-codebase files | 2026-03-03 | 4736f51 | [1-commit-cleanup-changes-to-non-codebase-f](.planning/quick/1-commit-cleanup-changes-to-non-codebase-f/) |
 
 ### Blockers/Concerns
 
