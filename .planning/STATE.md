@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** Planning next milestone
+**Current focus:** Between milestones — run `/gsd:new-milestone` to define v0.8
 
 ## Current Position
 
@@ -58,6 +58,6 @@ See PROJECT.md Key Decisions table for full decision log.
 
 ## Session Continuity
 
-Last session: 2026-02-27
-Stopped at: v0.7.10 patch shipped — admin credit usage display fix (3 fixes: activity tab, sessions tab, credit attribution)
+Last session: 2026-03-03
+Stopped at: v0.7 milestone archival complete — MILESTONES.md updated with v0.7.10 patch history, RETROSPECTIVE.md created, archive files finalized
 Resume with: `/gsd:new-milestone` to define v0.8
