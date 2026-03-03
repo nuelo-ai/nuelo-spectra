@@ -3,9 +3,9 @@
 > ### Decisions Log (2026-03-01)
 >
 > 1. **Naming:** "Spectra Pulse" confirmed. Individual findings = "Signals". ✓
-> 2. **Step 3 (Model) UX:** Needs visual mockups before engineering — cannot proceed without wireframes for sensitivity overview → lever playground → scenario comparison flow. **Action: Create UI/UX mockups for all 3 stages before development.**
+> 2. **Step 3 (What-If Scenarios) UX:** Revised (2026-03-02). Original "Model & Simulate" approach (tornado charts, lever sliders, Monte Carlo) was too naive — assumed data could be auto-modeled. Replaced with AI-agent-driven What-If Scenarios: objective-first, AI generates narrative scenarios backed by data analysis in E2B, user refines via scoped chat, multi-scenario comparison. Full predictive ML model concept moved to Appendix as future separate module. **Action: Update mockup Screen 4 to reflect new flow.**
 > 3. **Data model:** Revised. Collection = workspace (data + process + output). 1 Collection → many Reports. Supports investigation reports, predictive analysis reports, and chat-originated data cards. User can replay findings with different outcomes.
-> 4. **Milestone sequence:** Confirmed: v0.8 (Pulse) → v0.9 (Collections) → v0.10 (Explain) → v1.0 (Model) → v0.11 (Admin Workspace Management). ✓
+> 4. **Milestone sequence:** Confirmed: v0.8 (Pulse) → v0.9 (Collections) → v0.10 (Explain) → v1.0 (What-If Scenarios) → v0.11 (Admin Workspace Management). ✓
 > 5. **PDF generation:** Skip unless explicitly requested. ✓
 > 6. **Monitoring module:** Deferred to post-v1.0 backlog. Confirmed. ✓
 > 7. **Admin Portal:** Added. Tier-based access gating (free_trial=1 collection, free=no access, standard=5, premium=unlimited). Granular credit costs per Workspace activity. Admin monitoring dashboard for Workspace usage and per-user activity tracking.
@@ -56,7 +56,7 @@ The current chat-with-your-data flow. Stays as-is. Becomes the most primitive fe
 
 ### Module 2: Analysis Workspace (new — the differentiator)
 
-A completely separate module with its own entry point, its own flow, and its own output format. This is where Spectra becomes a business tool, not just a data tool. Core focus: **Detect → Explain → Model** (three stages within one workspace).
+A completely separate module with its own entry point, its own flow, and its own output format. This is where Spectra becomes a business tool, not just a data tool. Core focus: **Detect → Explain → What-If** (three stages within one workspace).
 
 ```mermaid
 graph TB
@@ -64,7 +64,7 @@ graph TB
         direction LR
         D["💡 <b>PULSE</b><br/>What's happening"]
         E["🧠 <b>EXPLAIN</b><br/>Why it happened"]
-        M["⚙️ <b>MODEL</b><br/>What to do next"]
+        M["⚙️ <b>WHAT-IF</b><br/>What to do next"]
         D --> E --> M
     end
 
@@ -93,7 +93,7 @@ graph TB
         subgraph modules["User-Facing Modules"]
             direction LR
             Chat["💬 <b>Chat Sessions</b><br/><i>Freeform exploration</i><br/>Ad-hoc questions<br/>Quick analysis"]
-            Workspace["📊 <b>Analysis Workspace</b><br/><i>Guided investigation</i><br/>Pulse → Explain → Model<br/>Structured reports"]
+            Workspace["📊 <b>Analysis Workspace</b><br/><i>Guided investigation</i><br/>Pulse → Explain → What-If<br/>Structured reports"]
         end
 
         subgraph shared["Shared Engine"]
@@ -140,7 +140,7 @@ graph TB
 > **Decision (2026-03-01):** A Collection is the **workspace** — it contains the data, the process, and the output. It is where the user interacts with their data. One Collection can produce **many different outcomes/reports** depending on:
 >
 > a) **Investigation reports** — findings narrowed to specific root causes
-> b) **Predictive analysis reports** — scenario modeling based on different models/assumptions
+> b) **What-If scenario reports** — scenario exploration based on different objectives/assumptions
 > c) **Chat-originated items** — data cards added from existing Chat sessions into the Collection
 >
 > At any time, the user can return to a Collection and "play around" with the same finding but produce very different reports/outputs. The Collection is persistent and replayable.
@@ -154,7 +154,7 @@ erDiagram
     SIGNAL ||--o{ INVESTIGATION : "investigated into"
     INVESTIGATION ||--o{ ROOT_CAUSE : "identifies"
     ROOT_CAUSE }o--o{ SIGNAL : "can explain multiple"
-    ROOT_CAUSE ||--o{ SCENARIO : "modeled with"
+    ROOT_CAUSE ||--o{ SCENARIO : "explored with what-if"
     INVESTIGATION ||--|| REPORT : "produces"
     SCENARIO ||--o| REPORT : "produces"
     CHAT_ITEM ||--o| REPORT : "compiled into"
@@ -211,10 +211,16 @@ erDiagram
     SCENARIO {
         string id PK
         string root_cause_id FK
-        string name "e.g. Conservative, Aggressive"
-        json lever_values "input variable settings"
-        json projected_outcomes "model results"
-        json confidence_interval "range estimates"
+        string objective "user's stated goal"
+        string name "e.g. SMB Push, Channel Expansion"
+        string narrative "AI-generated scenario description"
+        json assumptions "key assumptions behind estimate"
+        json projected_outcomes "estimated impact with ranges"
+        string confidence "high | medium | low"
+        string confidence_rationale "why this confidence level"
+        json data_backing "references to data analysis results"
+        json refinement_trail "chat exchanges refining scenario"
+        boolean is_selected "user's preferred scenario"
     }
 
     CHAT_ITEM {
@@ -244,7 +250,7 @@ erDiagram
 - **1 Signal : many Investigations** — a user can investigate the same signal multiple times, exploring different angles, and arrive at different conclusions each time
 - **1 Investigation : many Root Causes** — an investigation can produce multiple hypotheses
 - **Many Root Causes : many Signals** — a single root cause can explain multiple signals (e.g., "APAC pricing change" explains both "revenue drop" and "customer churn spike")
-- **1 Root Cause : many Scenarios** — each root cause can have multiple what-if simulations
+- **1 Root Cause : many Scenarios** — each root cause can have multiple what-if scenarios, each with its own objective, narrative, and data backing
 - **1 Collection : many Reports** — different outcomes from the same data: investigation reports, scenario reports, pulse summaries, or compilations of chat-originated items
 - **Chat → Collection bridge** — users can add data cards from Chat sessions into a Collection, bringing freeform exploration into the structured workspace
 
@@ -264,9 +270,9 @@ The most dangerous issues are the ones I *didn't think to check*. But equally �
 
 When my boss asks "why did margins drop?", I spend hours slicing data in Excel. If Spectra walks me through it — like a doctor interview, starting with hypotheses and letting me confirm or challenge them — that saves real time. **A raw diagnostic dump would be useless. A guided conversation that arrives at an answer is gold.**
 
-### Optimization Studio (Model) — CAUTIOUS YES
+### What-If Scenarios — CAUTIOUS YES
 
-I'd use scenario modeling ("what if we raise prices 5%?") weekly. But I'd be skeptical of model recommendations unless I understand how it got there. **Start with simulation (let me play with inputs and see outputs), not prescription (Spectra tells me what to do).** Trust needs to be earned over time.
+I'd use scenario exploration ("what if we focus on SMB instead of Enterprise?") weekly. But I'd be skeptical unless I understand how it got there. **The AI needs to show its reasoning — what data backed the estimate, what assumptions were made, and what the confidence level is.** If it just says "$420K" with no explanation, I won't trust it. If it says "$420K–$580K based on your Q3-Q4 SMB trend of +12% MoM, assuming seasonal adjustment" — now I can evaluate whether the reasoning holds. Trust comes from transparency, not precision.
 
 ### Collections (saved reports) — THE SLEEPER FEATURE
 
@@ -285,7 +291,7 @@ Design philosophy: hide complexity, reveal it progressively, make the default pa
 ### Core UX Principles
 
 **1. Progressive disclosure, not feature overload**
-- User starts at Pulse. They *can* go to Explain. They *can* go to Model.
+- User starts at Pulse. They *can* go to Explain. They *can* go to What-If.
 - But if all they need is "see the signals" — they stop at step 1 and download the report.
 - No one is forced through all three stages.
 - Think: Apple Health shows "cardio fitness declining" → tap → contributing factors → tap → recommendations. Each layer is optional.
@@ -300,11 +306,11 @@ Design philosophy: hide complexity, reveal it progressively, make the default pa
 - Collections makes Spectra the system of record for data-driven decisions.
 - All progress auto-saves. The report compiles automatically from the analysis journey.
 
-**4. Simulation over prescription**
-- Don't tell users what to do. Give them levers to pull and show them projected outcomes.
-- Simple interface: sliders/inputs for key variables.
-- Side-by-side: "Current trajectory" vs "Your scenario."
-- No ML jargon. No "model training." User adjusts business levers, sees projected results.
+**4. AI-guided scenarios, not raw simulation**
+- Don't tell users what to do. Don't give them raw sliders either — most users don't know which lever to pull.
+- Instead: AI proposes 2-3 data-backed scenarios as narratives. User refines, compares, decides.
+- Each scenario shows its reasoning: what data backs the estimate, what assumptions were made, confidence level.
+- No ML jargon. No "model training." The AI does the analytical work; the user evaluates the options.
 
 ### The User Journey (end to end)
 
@@ -322,11 +328,11 @@ graph TD
 
     Explain --> Choice2{Root cause identified}
     Choice2 -->|"Download report"| Save
-    Choice2 -->|"Model scenarios"| Model
+    Choice2 -->|"Explore what-if"| WhatIf
 
-    Model["⚙️ <b>MODEL</b><br/>Sensitivity analysis first<br/>Then slider/input simulation<br/>Side-by-side scenario comparison"]
+    WhatIf["⚙️ <b>WHAT-IF</b><br/>Set objective from root cause<br/>AI generates scenario options<br/>Refine, compare, decide"]
 
-    Model --> Save
+    WhatIf --> Save
 
     Save["💾 <b>AUTO-SAVED TO COLLECTION</b><br/>All progress saves continuously<br/>Download as Markdown or PDF"]
 
@@ -335,7 +341,7 @@ graph TD
     style Pick fill:#4C566A,stroke:#D8DEE9,color:#ECEFF4
     style Pulse fill:#5E81AC,stroke:#D8DEE9,color:#ECEFF4
     style Explain fill:#EBCB8B,stroke:#2E3440,color:#2E3440
-    style Model fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
+    style WhatIf fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
     style Save fill:#5E81AC,stroke:#D8DEE9,color:#ECEFF4
     style Choice1 fill:#3B4252,stroke:#D8DEE9,color:#ECEFF4
     style Choice2 fill:#3B4252,stroke:#D8DEE9,color:#ECEFF4
@@ -363,47 +369,85 @@ graph TD
 - User can upload additional resources (documents: pdf, pptx, docs or images) for the diagnosis. NOTE: this is for later version.
 - **Output:** Comprehensive analysis with root cause hypothesis. One root cause may explain multiple Signals.
 
-**Step 3: Model & Simulate — Deliverable: SCENARIO SIMULATION**
+**Step 3: What-If Scenarios — Deliverable: SCENARIO COMPARISON & RECOMMENDATION**
 
-> **Note (2026-03-01):** This step needs visual UI/UX mockups before engineering can begin. The sensitivity overview → lever playground → scenario comparison flow must be wireframed and reviewed.
+> **Revised (2026-03-02):** Original "Model & Simulate" approach (tornado charts, lever sliders, Monte Carlo) was replaced. The old approach was naive — it assumed the user's data could be auto-modeled with meaningful input-output relationships, and that users would know which "levers" to adjust. The revised approach uses Spectra's AI agent to generate data-backed narrative scenarios that users can evaluate, refine, and compare. Full predictive ML model concept is documented in [Appendix: Predictive ML Model Platform](#appendix-predictive-ml-model-platform-future-module) as a future separate module.
 
-After root cause identification, Spectra offers modeling. The UX has three sub-steps:
+After root cause identification, Spectra offers What-If scenario exploration. The flow has four phases:
 
 ```mermaid
 graph TD
-    RC["🧠 Root cause identified"] --> Sensitivity["<b>3a: Sensitivity Overview</b><br/>Tornado chart shows which<br/>levers have most impact<br/><i>'Price has 3x more impact<br/>than headcount on margin'</i>"]
+    RC["🧠 Root cause identified<br/>'APAC Enterprise pricing<br/>caused revenue drop'"] --> Objective["<b>Phase 1: Set Objective</b><br/>User states what they want<br/>to achieve based on the findings"]
 
-    Sensitivity --> Levers["<b>3b: Lever Playground</b><br/>Sliders + inputs for key variables<br/>Real-time projected outcome updates<br/>Confidence band shown"]
+    Objective --> Generate["<b>Phase 2: AI Generates Scenarios</b><br/>Agent analyzes data in E2B<br/>Produces 2-3 narrative scenarios<br/>with data-backed estimates"]
 
-    Levers --> Compare["<b>3c: Scenario Comparison</b><br/>Name and save scenarios<br/>Side-by-side comparison table<br/>Overlay chart: baseline vs scenarios"]
+    Generate --> Refine["<b>Phase 3: Explore & Refine</b><br/>User drills into scenarios<br/>Challenges assumptions<br/>Requests additional scenarios"]
 
-    Compare --> Recommend["📋 <b>Scenario Summary</b><br/>Auto-generated recommendation<br/>based on user's preferred scenario<br/>Added to collection report"]
+    Refine --> Compare["<b>Phase 4: Compare & Decide</b><br/>Side-by-side scenario cards<br/>User selects preferred approach<br/>Comparison becomes report section"]
 
     style RC fill:#EBCB8B,stroke:#2E3440,color:#2E3440
-    style Sensitivity fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
-    style Levers fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
-    style Compare fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
-    style Recommend fill:#5E81AC,stroke:#D8DEE9,color:#ECEFF4
+    style Objective fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
+    style Generate fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
+    style Refine fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
+    style Compare fill:#5E81AC,stroke:#D8DEE9,color:#ECEFF4
 ```
 
-**3a: Sensitivity Overview (What levers matter?)**
-- Before showing sliders, Spectra shows a **tornado chart** — which variables have the most impact on the target KPI when changed by ±10%
-- This prevents users from wasting time on levers that don't matter
-- User understands the landscape before playing with numbers
-- Example: "Price has 3x more impact than headcount on operating margin"
+**Phase 1: Set Objective (What do you want to achieve?)**
+- Triggered after Investigation. Spectra presents the root cause context and asks the user to state their objective.
+- Presented as a selection with free-text option — not a chat, not a form. One question:
+  - *"Revenue declined 18% due to APAC Enterprise pricing pressure. What would you like to explore?"*
+  - "How do I recover the lost revenue?"
+  - "Which segments should I double down on?"
+  - "What's my realistic Q1 outlook?"
+  - [Type your own objective]
+- The objective anchors everything that follows. Without it, the AI has no direction.
 
-**3b: Lever Playground (What if I change X?)**
-- Sliders and number inputs for the top variables identified in sensitivity analysis
-- As user adjusts a slider, the projected outcome updates in real-time
-- **Always shows a confidence band**, not just a point estimate ("Revenue: $1.0M–$1.3M" not just "$1.15M")
-- A small text disclaimer: "Based on historical relationships in your data. Does not account for external factors."
-- User can set a **target goal** ("I want to reach $1.2M revenue") and Spectra reverse-solves: "You'd need to reduce price by ~8% to hit that target"
+**Phase 2: AI Generates Scenarios (Here are your options)**
+- The AI agent takes the objective + root cause + data and does the analytical work:
+  1. Runs targeted analysis in E2B (groupbys, historical trends, segment performance, period comparisons)
+  2. Identifies what the data can actually support as scenarios
+  3. Generates 2-3 **narrative scenarios** simultaneously, each saved as a named entity
+- Each scenario is a **story with numbers**, not a spreadsheet:
+  - Scenario name (e.g., "Shift Focus to Domestic SMB")
+  - Narrative explanation of the approach
+  - Estimated impact with range (e.g., "$420K–$580K over Q1")
+  - Key requirements/assumptions (e.g., "Requires ~28 additional SMB deals vs. Q4 average of 22/month")
+  - Confidence level with rationale (e.g., "Medium — based on Q3-Q4 trend continuation")
+  - Data backing — exactly what calculations produced these numbers
+- **No pre-built simulation engine.** The AI agent writes Python, runs it in E2B, interprets results, and presents them as scenarios. This uses Spectra's existing architecture — no new infrastructure.
+- **Loading state:** While AI generates scenarios, user sees a progress indicator. Generation may take 15-30 seconds as multiple analyses run.
 
-**3c: Scenario Comparison (Which option is best?)**
-- User names and saves different lever configurations as scenarios (e.g., "Conservative", "Moderate", "Aggressive")
-- **Comparison table:** Each column is a scenario, each row is an outcome metric
-- **Overlay chart:** All scenarios plotted on the same timeline/axis, color-coded
-- User selects their preferred scenario → Spectra auto-generates a recommendation summary added to the collection report
+**Phase 3: Explore & Refine (Dig deeper, challenge assumptions)**
+- User picks a scenario they're interested in and can ask follow-up questions via a **scoped chat** (not freeform — stays on-topic with these scenarios):
+  - "What if we combine Scenario A and B?"
+  - "The SMB growth was seasonal — Q4 always spikes. Don't extrapolate that."
+  - "What about exiting APAC entirely?"
+- AI runs additional analysis in E2B to back up every response — no hallucinated numbers.
+- User can request **additional scenarios** — AI generates new ones alongside the existing set.
+- Each refinement is saved to the scenario's `refinement_trail`.
+- The user's domain knowledge fills causal gaps — same principle as the Investigation step.
+
+**Phase 4: Compare & Decide (Which approach wins?)**
+- All scenarios displayed as **clean comparison cards** — not a table-heavy spreadsheet:
+  - Scenario name + one-line summary
+  - Estimated impact range
+  - Confidence level
+  - Time to impact
+- User selects their preferred scenario → the comparison itself becomes a **report section**:
+  - Objective stated, scenarios evaluated, selected approach with rationale
+  - This is what gets shared with the VP — ready to read without reformatting.
+- User can revisit and re-run scenarios later with updated data.
+
+**Why this works (and why the old approach didn't):**
+
+| Old approach (Model & Simulate) | New approach (What-If Scenarios) |
+|---|---|
+| Tornado chart — assumes auto-identified "levers" exist | AI tells you what options exist in plain language |
+| Sliders with hardcoded ranges — where do these come from? | AI generates scenarios based on what the data actually supports |
+| Fixed number of levers — what if data only supports 2? Or 10? | Flexible — AI produces whatever number of scenarios makes sense |
+| User drives the simulation manually | AI proposes, user refines — less effort, more insight |
+| Technical feel — "sensitivity analysis" | Strategic feel — "here are your options" |
+| Requires pre-built simulation engine | Uses existing AI agent + E2B — no new infrastructure |
 
 **Step 4: Save to Collections**
 - All progress is automatically saved to the Collection throughout the process
@@ -506,45 +550,52 @@ graph TD
 
 ---
 
-### Stage 3: MODEL — Simulation & What-If Scenarios
+### Stage 3: WHAT-IF — AI-Driven Scenario Exploration
 
-The goal is to answer: **"What happens if we change X?"** through a sensitivity overview, lever playground, and scenario comparison.
+> **Revised (2026-03-02):** The original Stage 3 prescribed specific statistical methods (linear regression, Monte Carlo, tornado charts) as a deterministic simulation engine. This was naive — it assumed the user's dataset had clean input-output relationships that could be modeled. The revised approach delegates analytical decisions to the AI agent, which selects appropriate methods based on the data and objective.
+
+The goal is to answer: **"What are my options, and what's the likely impact of each?"** The AI agent — not a pre-built engine — drives the analysis.
 
 ```mermaid
 graph TD
-    RootCause["🧠 Root cause identified<br/>'APAC Enterprise pricing<br/>caused revenue drop'"] --> Variables["<b>Step 1: Identify Levers</b><br/>Spectra suggests adjustable<br/>variables from the data"]
-    Variables --> Baseline["<b>Step 2: Build Baseline Model</b><br/>Fit relationship between<br/>levers and target KPI"]
-    Baseline --> Simulate["<b>Step 3: User Adjusts Levers</b><br/>Sliders/inputs change variables<br/>Model projects new outcome"]
-    Simulate --> Compare["<b>Step 4: Compare Scenarios</b><br/>Side-by-side: current trajectory<br/>vs. user's scenario"]
-    Compare --> Confidence["<b>Step 5: Confidence Range</b><br/>Show uncertainty band<br/>not just a point estimate"]
+    RootCause["🧠 Root cause identified"] --> Objective["<b>Phase 1: User Sets Objective</b><br/>'I want to recover the<br/>lost revenue'"]
+    Objective --> Analyze["<b>Phase 2: AI Analyzes Options</b><br/>Agent runs targeted analysis<br/>in E2B based on objective"]
+    Analyze --> Scenarios["<b>Phase 3: Scenarios Generated</b><br/>2-3 narrative scenarios<br/>each with data backing"]
+    Scenarios --> Refine["<b>Phase 4: User Refines</b><br/>Challenge assumptions<br/>Request additional scenarios"]
 
     style RootCause fill:#EBCB8B,stroke:#2E3440,color:#2E3440
-    style Variables fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
-    style Baseline fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
-    style Simulate fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
-    style Compare fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
-    style Confidence fill:#5E81AC,stroke:#D8DEE9,color:#ECEFF4
+    style Objective fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
+    style Analyze fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
+    style Scenarios fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
+    style Refine fill:#5E81AC,stroke:#D8DEE9,color:#ECEFF4
 ```
 
-| Method | What It Does | When To Use | Python Library |
-|--------|-------------|-------------|----------------|
-| **Linear regression** | Models the relationship between input variables and target KPI. User adjusts inputs → model projects new target value. | Default for all simulation — simple, interpretable, fast. "If you reduce price by 10%, projected volume increases by X based on historical relationship." | `sklearn.linear_model.LinearRegression`, `statsmodels.OLS` |
-| **Elasticity estimation** | Calculates % change in outcome per % change in input (price elasticity, demand elasticity). More intuitive than raw regression coefficients. | When user adjusts price, volume, or spend levers — "Price elasticity is -1.3, meaning a 10% price cut → ~13% volume increase" | Derived from log-log regression |
-| **Time-series extrapolation (Holt-Winters)** | Projects the "current trajectory" baseline — what happens if nothing changes. Accounts for trend and seasonality. | Always as the baseline comparison — "Without intervention, revenue is projected to be $X in Q2" | `statsmodels.tsa.holtwinters.ExponentialSmoothing` |
-| **Monte Carlo simulation** | Generates confidence intervals by running thousands of scenarios with random variation. Shows best/worst/expected outcomes instead of a single point estimate. | After linear regression to show uncertainty — "Expected outcome: $1.1M (90% CI: $0.9M–$1.3M)" | `numpy.random` + model re-sampling |
-| **Sensitivity analysis (tornado chart)** | Shows which input variable has the most impact on the outcome when changed by ±10%. Displayed as a horizontal bar chart (tornado). | Before simulation — helps user know which lever to pull first — "Price has 3x more impact than headcount on margin" | Systematic perturbation of regression inputs |
-| **Scenario comparison matrix** | Side-by-side table of multiple scenarios with different input combinations. Each column is a scenario, each row is an outcome metric. | When user wants to compare 2-3 scenarios — "Conservative vs. Moderate vs. Aggressive pricing strategy" | `pandas.DataFrame` presentation |
-| **Breakeven analysis** | Calculates the input value needed to hit a specific target — "What price point gets us back to $1M revenue?" | When user has a specific goal — reverse-solve the regression | Algebraic inversion of regression equation |
+**How the AI agent generates scenarios:**
 
-**Important design principles for Model stage:**
+The agent is not limited to a fixed set of methods. Based on the objective and data shape, it selects from its available toolkit:
 
-1. **Always show confidence intervals, never just point estimates.** A single number ("revenue will be $1.1M") creates false precision. A range ("$0.9M–$1.3M with 90% confidence") is honest and builds trust.
+| What the Agent Does | Example | Methods It May Use |
+|---|---|---|
+| **Segment performance analysis** | "Which product categories are growing vs. declining?" | `pandas.groupby`, period-over-period comparison, trend calculation |
+| **Historical extrapolation** | "If SMB trend continues, Q1 estimate is $X" | Rolling averages, seasonal adjustment, `statsmodels` Holt-Winters |
+| **Contribution modeling** | "Focusing on SMB would contribute $X to total revenue" | Additive decomposition, proportional scaling from historical data |
+| **Correlation-based estimation** | "Discount changes historically correlate with volume changes at r=0.82" | `pandas.corr()`, `scipy.stats.spearmanr` |
+| **Comparative benchmarking** | "Your Americas channel converts at 38% vs. APAC at 22%" | Cross-segment comparison, `scipy.stats.ttest_ind` |
+| **Scenario arithmetic** | "Combining Scenario A + B: overlap is minimal, combined estimate is $X" | Set operations, additive/multiplicative composition |
 
-2. **Start with linear regression, not complex ML.** Users need to understand *why* the model predicts what it does. A linear model is explainable: "For every $1 price reduction, we expect 150 more units sold." A neural network is a black box.
+The key difference from the old approach: **the AI decides which analysis to run based on the specific objective and data, rather than running a fixed pipeline.** This is the same E2B-based architecture used in Pulse and Investigate — no new infrastructure needed.
 
-3. **Show the model's limitations explicitly.** "This projection assumes the historical relationship between price and volume continues. It does not account for competitor actions, market shifts, or capacity constraints." Transparency builds trust.
+**Design principles for What-If stage:**
 
-4. **Sensitivity analysis before simulation.** Before letting users play with sliders, show them which levers actually matter. This prevents wasted time adjusting variables that have minimal impact.
+1. **Always show ranges, never point estimates.** "$420K–$580K" not "$500K." Ranges are honest and build trust.
+
+2. **Every number must have data backing.** The scenario must explain *how* the estimate was derived — which data, which calculation, which assumptions. Users (and their VPs) need to evaluate the reasoning, not just the conclusion.
+
+3. **Confidence levels are explicit and plain-language.** "Medium confidence — based on Q3-Q4 trend continuation, but Q1 may have seasonal effects not captured" is better than "p < 0.05."
+
+4. **Scenarios are narratives, not spreadsheets.** The primary output is readable text with supporting numbers. Charts can supplement but the story comes first. This is what gets pasted into reports.
+
+5. **User domain knowledge fills causal gaps.** The AI can identify patterns ("SMB grew 12%") but the user knows context ("Q4 always spikes for SMB — don't extrapolate"). The refinement chat exists specifically for this collaboration.
 
 ---
 
@@ -554,12 +605,14 @@ Not all methods work on all datasets. The Pulse Agent must detect data shape fir
 
 | Data Characteristic | Methods Enabled | Methods Disabled |
 |---|---|---|
-| **< 30 rows** | Grubbs' test, basic stats, IQR | Isolation Forest, STL, PELT, Monte Carlo (insufficient data) |
+| **< 30 rows** | Grubbs' test, basic stats, IQR | Isolation Forest, STL, PELT (insufficient data) |
 | **No time column** | All cross-sectional methods | Changepoint, STL, trend break, Holt-Winters, period-over-period |
-| **No categorical columns** | Z-score, IQR, correlation, regression | Contribution analysis, Chi-squared, ANOVA, HHI |
-| **Single numeric column** | Z-score, IQR, Grubbs', distribution analysis | Isolation Forest, correlation, regression, decision tree |
-| **All categorical (no numeric)** | Duplicate detection, missing value patterns, Chi-squared | All numeric methods, regression, simulation |
+| **No categorical columns** | Z-score, IQR, correlation | Contribution analysis, Chi-squared, ANOVA, HHI |
+| **Single numeric column** | Z-score, IQR, Grubbs', distribution analysis | Isolation Forest, correlation, decision tree |
+| **All categorical (no numeric)** | Duplicate detection, missing value patterns, Chi-squared | All numeric methods |
 | **Wide data (50+ columns)** | All methods, but need column selection/ranking first | Running everything on all columns (too slow, too noisy) |
+
+**Note on What-If stage:** Method availability for What-If Scenarios is not constrained by a fixed pipeline — the AI agent selects appropriate analysis methods based on the user's objective and the data shape. The constraints above apply primarily to Pulse and Investigate stages.
 
 ### Library Requirements (E2B Sandbox)
 
@@ -568,10 +621,10 @@ These Python packages need to be available in the E2B sandbox environment:
 | Package | Used For | Already in Spectra? |
 |---------|---------|-------------------|
 | `pandas` | Data manipulation, groupby, profiling | Yes |
-| `numpy` | Numerical operations, Monte Carlo | Yes |
+| `numpy` | Numerical operations, scenario arithmetic | Yes |
 | `scipy` | Statistical tests (t-test, chi-squared, z-score, correlation) | Yes |
-| `scikit-learn` | Isolation Forest, Decision Tree, Linear Regression | Yes |
-| `statsmodels` | OLS regression, ANOVA, Holt-Winters, STL decomposition | Needs verification |
+| `scikit-learn` | Isolation Forest, Decision Tree | Yes |
+| `statsmodels` | ANOVA, Holt-Winters, STL decomposition | Needs verification |
 | `ruptures` | Changepoint detection (PELT algorithm) | Needs installation |
 | `missingno` | Missing value pattern visualization | Optional (can use pandas) |
 
@@ -663,7 +716,7 @@ The Analysis Workspace is not available to all tiers by default. Each tier gets 
 | `internal` | Yes | Unlimited | Internal/admin testing |
 
 **Key design decisions:**
-- **"Active" vs. "Archived":** Limit applies to active Collections only. Users can archive completed Collections to free up slots. Archived Collections are read-only (view reports, download) but cannot run new Pulse/Investigate/Model operations.
+- **"Active" vs. "Archived":** Limit applies to active Collections only. Users can archive completed Collections to free up slots. Archived Collections are read-only (view reports, download) but cannot run new Pulse/Investigate/What-If operations.
 - **Collection limit is configurable per tier** — stored in `user_classes.yaml` alongside existing credits/reset fields. Admin can adjust without code change (but requires redeploy, same as current tier config).
 - **Upgrade prompt:** When a user hits their collection limit, show a clear message: "You've reached the limit for your plan. Archive a Collection or upgrade to [next tier]."
 
@@ -717,9 +770,9 @@ The existing system has a single `default_credit_cost` (1.0 per message). Analys
 | **Pulse: Run Detection** | 5.0 | Data profiling + all statistical analyses + Signal generation | Multiple analysis passes, potentially 5-10 methods run in E2B |
 | **Explain: Start Investigation** | 3.0 | First exchange of guided Q&A (ANOVA ranking, initial hypothesis) | Agent reasoning + statistical method execution |
 | **Explain: Per Q&A Exchange** | 1.0 | Each subsequent exchange in the investigation | Similar to a chat message but with statistical backing |
-| **Model: Sensitivity Analysis** | 3.0 | Tornado chart generation, regression fitting | Multiple regression runs + perturbation analysis |
-| **Model: Simulation Run** | 2.0 | Each lever adjustment → projected outcome recalculation | Regression + Monte Carlo confidence intervals |
-| **Model: Scenario Save & Compare** | 1.0 | Comparison table + overlay chart generation | Mostly rendering, light computation |
+| **What-If: Generate Scenarios** | 5.0 | AI agent analyzes data + generates 2-3 scenario narratives | Multiple E2B analysis runs + LLM reasoning for narrative generation |
+| **What-If: Refine Scenario** | 1.0 | Each follow-up exchange in the refinement chat | Similar to investigation exchange — agent analysis + response |
+| **What-If: Add Scenario** | 2.0 | User requests additional scenario beyond initial set | New E2B analysis run + narrative generation |
 | **Report: Compile & Generate** | 1.0 | Markdown compilation from analysis journey | Template-based, minimal LLM usage |
 | **Report: PDF Export** | 0.5 | PDF rendering from markdown | Server-side rendering, no LLM |
 
@@ -746,9 +799,9 @@ Admins need visibility into how the Analysis Workspace is being used — both fo
 | **Active vs. Archived Collections** | Current snapshot | Donut chart |
 | **Pulse runs per day** | Detection activity volume | Bar chart |
 | **Investigations started** | Explain step adoption | Bar chart |
-| **Simulations run** | Model step adoption | Bar chart |
+| **What-If scenarios generated** | What-If step adoption | Bar chart |
 | **Reports generated** | Output/deliverable production | Bar chart |
-| **Funnel: Pulse → Explain → Model** | Stage adoption drop-off | Funnel chart |
+| **Funnel: Pulse → Explain → What-If** | Stage adoption drop-off | Funnel chart |
 | **Workspace credits consumed** | Total workspace-related credit usage over time | Line chart, broken down by activity type |
 | **Avg. credits per Collection** | Average total cost of a Collection lifecycle | KPI card |
 
@@ -757,7 +810,7 @@ Admins need visibility into how the Analysis Workspace is being used — both fo
 Extend the existing Admin user detail page (which already has activity/sessions tabs) with a **Workspace tab**:
 
 - List of user's Collections (name, status, created date, signal count, report count, total credits used)
-- Workspace credit consumption breakdown (Pulse vs. Explain vs. Model vs. Reports)
+- Workspace credit consumption breakdown (Pulse vs. Explain vs. What-If vs. Reports)
 - Activity timeline: when they last used the Workspace, frequency
 - Collection limit usage: "3 of 5 active collections"
 
@@ -770,7 +823,7 @@ Extend the existing `credit_transactions` table or create a parallel `workspace_
 | `id` | UUID | Primary key |
 | `user_id` | FK | Who performed the action |
 | `collection_id` | FK | Which Collection |
-| `activity_type` | enum | `pulse_run`, `investigation_start`, `investigation_exchange`, `sensitivity_analysis`, `simulation_run`, `scenario_compare`, `report_compile`, `report_export` |
+| `activity_type` | enum | `pulse_run`, `investigation_start`, `investigation_exchange`, `whatif_generate`, `whatif_refine`, `whatif_add_scenario`, `report_compile`, `report_export` |
 | `credit_cost` | decimal | Credits charged for this activity |
 | `duration_ms` | int | How long the activity took (E2B execution time) |
 | `metadata` | JSON | Activity-specific data (signal count, method used, etc.) |
@@ -792,16 +845,16 @@ This enables:
 
 ## Revised Milestone Sequence — CONFIRMED
 
-> **Decision (2026-03-01):** Milestone sequence confirmed: v0.8 (Pulse) → v0.9 (Collections) → v0.10 (Explain) → v1.0 (Model) → v0.11 (Admin Workspace Management). Monitoring deferred to post-v1.0 backlog — confirmed.
+> **Decision (2026-03-01):** Milestone sequence confirmed: v0.8 (Pulse) → v0.9 (Collections) → v0.10 (Explain) → v1.0 (What-If Scenarios) → v0.11 (Admin Workspace Management). Monitoring deferred to post-v1.0 backlog — confirmed.
 
-Based on the challenges above, the scope focuses on three stages (Pulse → Explain → Model) with Collections as the output layer throughout. Admin Portal management for the Workspace is a cross-cutting milestone after the core feature is complete. Monitoring is deferred to post-v1.0 backlog.
+Based on the challenges above, the scope focuses on three stages (Pulse → Explain → What-If) with Collections as the output layer throughout. Admin Portal management for the Workspace is a cross-cutting milestone after the core feature is complete. Monitoring is deferred to post-v1.0 backlog.
 
 ```mermaid
 graph LR
     V08["<b>v0.8</b><br/>Analysis Workspace<br/>+ Pulse<br/><i>The 'wow' moment</i>"]
     V09["<b>v0.9</b><br/>Collections<br/>+ Report Export<br/><i>The deliverable</i>"]
     V010["<b>v0.10</b><br/>Guided Q&A<br/>Investigation<br/><i>The explain step</i>"]
-    V10["<b>v1.0</b><br/>Simulation<br/>& What-If<br/><i>The business value</i>"]
+    V10["<b>v1.0</b><br/>What-If<br/>Scenarios<br/><i>The business value</i>"]
     V011["<b>v0.11</b><br/>Admin Portal<br/>Workspace Mgmt<br/><i>The controls</i>"]
 
     V08 --> V09 --> V010 --> V10 --> V011
@@ -818,7 +871,7 @@ graph LR
 | **v0.8** | Analysis Workspace shell + Pulse (Detect only). User creates Collection, selects data → sees Signals as cards with charts. No investigation, no Collections export yet. | The "wow" moment works. Proactive detection surfaces useful signals. Users understand findings without explanation. | Upload 5 different real-world datasets → Pulse flags useful signals in at least 4 of them with < 20% false positive rate. |
 | **v0.9** | Collections module + report export (Markdown + PDF). Auto-save all analysis progress. Collections list view with search/filter. Download reports. | The deliverable loop works. Reports look polished enough to share with a stakeholder. | Generate 3 sample reports → a non-user rates them "would share with my boss" or higher. |
 | **v0.10** | Guided Q&A investigation (the Explain step). Tap a Signal → doctor-style interview → root cause hypothesis. Root causes can link to multiple Signals. | The guided flow is better than freeform chat for investigation. Users reach root cause faster than with Chat. | 5 test scenarios with known root causes → guided flow identifies the correct driver in at least 4. |
-| **v1.0** | Optimization Studio — sensitivity analysis, lever playground with sliders, scenario comparison, breakeven analysis. | Users trust and use the simulation. What-if feels intuitive, not intimidating. | 3 test scenarios → user can set up and run a meaningful simulation in < 2 minutes without help. |
+| **v1.0** | What-If Scenarios — objective-driven scenario generation, AI-produced narrative scenarios with data backing, scoped refinement chat, multi-scenario comparison. | Users trust and use the AI-generated scenarios. What-if feels like strategic consulting, not a spreadsheet exercise. | 3 test objectives → AI generates relevant, data-backed scenarios that a business user rates as "actionable" within 2 minutes. |
 | **v0.11** | Admin Portal — tier-based Workspace access gating, collection limits per tier, granular credit cost configuration per activity, Workspace activity dashboard, per-user monitoring. | Admins can control costs, gate access, and monitor adoption. | Admin can: change tier access settings, adjust per-activity credit costs, view Workspace usage dashboard, see per-user activity breakdown. |
 
 ### Scope per Milestone
@@ -829,7 +882,7 @@ graph LR
 |---------|---------|
 | Analysis Workspace as new frontend module with own nav | Guided Q&A / investigation (v0.10) |
 | Collection create/list/open (project-like container) | Report export / download (v0.9) |
-| Data source picker (select from uploaded files + upload new) | Simulation / what-if (v1.0) |
+| Data source picker (select from uploaded files + upload new) | What-If Scenarios (v1.0) |
 | Pulse Agent — signal detection on "Run Detection" click | Monitoring / recurring (backlog) |
 | Signal cards with classification (opportunity/warning/critical/info) | |
 | Supporting charts on Signal cards | |
@@ -852,7 +905,7 @@ graph LR
 
 ### The Four-Step Flow: Who Does What?
 
-The proposed Spectra flow is: **Detect signals → Guided root cause investigation → Scenario simulation → Report generation.** No single product fully delivers all four today.
+The proposed Spectra flow is: **Detect signals → Guided root cause investigation → What-If scenario exploration → Report generation.** No single product fully delivers all four today.
 
 ```mermaid
 quadrantChart
@@ -882,7 +935,7 @@ quadrantChart
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | 1. Proactive Signal Detection | Yes | Yes | Yes (best) | Limited | Yes | No | **Yes** |
 | 2. Guided Root Cause Investigation | Yes (Agent) | Partial | Partial | No | No | No | **Yes** |
-| 3. Scenario / What-If Simulation | Yes | No | Limited | Yes (best) | No | No | **Yes** |
+| 3. AI-Guided What-If Scenarios | Yes | No | Limited | Yes (best) | No | No | **Yes** |
 | 4. Polished Report Generation | Partial | No | No | Partial | Yes (slides) | No | **Yes** |
 | **Coverage Score** | **3.5/4** | **1.5/4** | **1.5/4** | **2/4** | **1.5/4** | **0/4** | **4/4** |
 
@@ -947,7 +1000,7 @@ graph LR
         direction LR
         Det["💡 PULSE<br/><i>Anodot, ThoughtSpot</i><br/>Strong standalone"]
         Exp["🧠 EXPLAIN<br/><i>Sisu (dead), Tellius</i><br/>Sisu acquired, gap unfilled"]
-        Sim["⚙️ SIMULATE<br/><i>DataRobot, Obviously AI</i><br/>Requires knowing what to test"]
+        Sim["⚙️ WHAT-IF<br/><i>DataRobot, Obviously AI</i><br/>Requires knowing what to test"]
         Rep["📄 REPORT<br/><i>Power BI, Beautiful.ai</i><br/>Disconnected from analysis"]
     end
 
@@ -963,7 +1016,7 @@ graph LR
 
 - **Detection specialists** (Anodot, Outlier.ai) stop at alerting — they tell you something is happening but leave investigation to you
 - **Investigation tools** (Sisu Data) have been acquired and discontinued — the capability is being absorbed into data warehouse platforms, not served standalone
-- **Simulation platforms** (DataRobot, Obviously AI) require users to already know what to simulate — there's no automatic path from "here's a signal" to "here's a simulation"
+- **Simulation platforms** (DataRobot, Obviously AI) require users to already know what to simulate — there's no automatic path from "here's a signal" to "here are your options"
 - **Report tools** (Beautiful.ai, Narrative Science) are completely disconnected from the analysis — you do analysis in one tool, then manually create reports in another
 - **BI platforms** (ThoughtSpot, Tableau, Power BI) are adding AI incrementally but not rethinking the end-to-end workflow
 
@@ -988,6 +1041,62 @@ Not: *"We do everything Tellius does."* — because we don't, and won't for a lo
 
 ---
 
+## Why Spectra, Not ChatGPT/Claude?
+
+> **Added (2026-03-02).** This section addresses the existential question: why would a user pay for Spectra when they can upload a CSV to ChatGPT or Claude and ask the same questions?
+
+A user could upload a CSV to Claude, say "Revenue dropped 18%, why?" and get a decent answer. So why Spectra?
+
+### What general AI chat tools do well
+- Accept a CSV and run Python on it
+- Answer analytical questions with reasonable depth
+- Generate charts and summaries
+
+### Where they fundamentally break down
+
+**1. No persistent knowledge across analyses**
+
+Upload a CSV to Claude, get an answer, close the tab. Next week, upload the updated CSV — Claude has no idea you did this before. No history, no comparison, no "last month you found X, this month it's changed to Y."
+
+Spectra's Collection is a **living workspace**. Every Signal, Investigation, and What-If scenario is saved, organized, and connected. When the user returns in Q2, they can see what they projected in Q1 and compare against actuals. That's not a chat feature — that's a **system of record for analytical decisions.**
+
+**2. No structured process = inconsistent quality**
+
+Ask Claude the same question three times, get three different analyses. Different methods, different depth, different focus. Quality depends entirely on how well the user prompts.
+
+Spectra runs the **same rigorous pipeline every time**: Pulse checks every applicable statistical method. Investigation follows a structured narrowing process. What-If scenarios are grounded in actual data calculations, not LLM reasoning about numbers. A business analyst shouldn't need to be a prompt engineer to get reliable analysis.
+
+**3. No multi-scenario management**
+
+In ChatGPT, comparing three What-If scenarios means copy-pasting between messages, tracking which assumptions changed manually. There's no "save this scenario, create another, compare side by side."
+
+Spectra manages **scenarios as first-class objects**: generate multiple simultaneously, save each with assumptions and data backing, compare visually, refine one without losing others, track which was selected and why. This is decision workspace functionality, not chat functionality.
+
+**4. No deliverable output**
+
+Claude gives you a message in a chat thread. To share it with your VP, you copy-paste into a doc, reformat, add context, fix the charts. Every time.
+
+Spectra produces a **structured report** that includes the full journey: what was detected, what was investigated, what scenarios were evaluated, which one was chosen and why. It's a deliverable, not a conversation.
+
+**5. Proactive vs. reactive**
+
+ChatGPT/Claude wait for you to ask. Spectra's Pulse **proactively surfaces what you didn't think to check.** The most dangerous issues — and the biggest opportunities — are the ones you never asked about.
+
+### The positioning table
+
+| | ChatGPT / Claude | Spectra |
+|---|---|---|
+| **Interaction** | Freeform — quality depends on prompt | Guided — consistent depth every time |
+| **Memory** | Stateless — every session starts from zero | Persistent — Collections remember everything |
+| **Scenarios** | One at a time, manually tracked | Multiple saved, compared, refined side-by-side |
+| **Output** | Chat messages you copy-paste | Structured reports you download and share |
+| **Process** | Reactive — answers what you ask | Proactive — surfaces what you didn't think to check |
+| **Consistency** | Variable — depends on prompting | Standardized — same statistical rigor every run |
+
+**The one-liner:** ChatGPT is a conversation. Spectra is a workflow that produces a deliverable.
+
+---
+
 ## Practicality Notes
 
 **What makes this buildable now:**
@@ -1006,7 +1115,7 @@ Not: *"We do everything Tellius does."* — because we don't, and won't for a lo
 - Detection accuracy is the #1 risk — false positives kill trust faster than missing patterns
 - The Q&A flow needs UX prototyping before engineering — wireframe and test with users first
 - Report quality (markdown structure, chart rendering) is a trust signal — ugly reports = no sharing = no value
-- Simulation model accuracy (v1.0) is the hardest challenge — start with simple projections
+- What-If scenario quality (v1.0) depends on AI agent's ability to select relevant analyses and produce honest estimates — needs rigorous testing with real datasets
 - Edge cases (messy data, small datasets, no time dimension) need graceful degradation, not errors
 - Credit cost of proactive analysis needs clear communication to users upfront
 
@@ -1106,7 +1215,60 @@ OpenClaw uses a three-tier memory architecture that's worth studying:
 
 ### Why Not Now
 
-1. The core Analysis Workspace (Pulse → Explain → Model) must prove value first without memory
+1. The core Analysis Workspace (Pulse → Explain → What-If) must prove value first without memory
 2. Memory quality depends on having enough interaction history — needs users actively using the Workspace
 3. Memory UX design (what to surface, when, how to avoid being "creepy") needs careful thought
 4. Technical complexity is non-trivial but well-documented thanks to OpenClaw's open approach
+
+---
+
+## Appendix: Predictive ML Model Platform (Future Module)
+
+> **Status: Future consideration — separate module.** Not part of the Analysis Workspace. Would be a new top-level module alongside Chat and Analysis Workspace. Documented here for reference.
+>
+> **Added (2026-03-02):** During brainstorming of the What-If Scenarios step, we explored a full predictive ML model workflow (Pecan AI-style). The conclusion was that building/training ML models is a fundamentally different product from the guided What-If scenario exploration in the Analysis Workspace. It deserves its own module with its own UX paradigm.
+>
+> **References:** [Pecan AI: Build Your First Predictive ML Model](https://help.pecan.ai/en/articles/8665302-build-your-first-predictive-ml-model), [Pecan AI: How to Add Attributes](https://help.pecan.ai/en/articles/8656723-how-to-add-attributes-to-your-model)
+
+### The Concept
+
+A dedicated **Predictive Models** module where users can build, train, and use ML models for prediction. Unlike the What-If Scenarios (which use AI-driven data analysis for directional scenario exploration), this module would produce actual trained models that can make predictions on new data.
+
+### How It Differs from What-If Scenarios
+
+| | What-If Scenarios (Analysis Workspace) | Predictive Models (Future Module) |
+|---|---|---|
+| **Purpose** | "What are my strategic options?" | "What will happen next?" |
+| **Input** | Root cause + objective → AI generates scenarios | Training data + prediction target → trained model |
+| **Output** | Narrative scenarios with data-backed estimates | Predictions on new data with confidence scores |
+| **Method** | AI agent runs targeted analyses, interprets results | Actual ML model training (regression, classification, time-series) |
+| **Time** | Seconds (analysis runs in E2B) | Minutes to hours (model training) |
+| **Reuse** | Scenarios are point-in-time | Trained model can predict on new data repeatedly |
+| **User skill** | Business analyst | Business analyst with data understanding |
+
+### Proposed Flow (Pecan-inspired)
+
+1. **Objective Chat** — AI asks: "What do you want to predict? Over what timeframe? One-time or recurring?"
+2. **Data Assessment** — AI validates if user's data is sufficient for the prediction. Identifies: prediction target (label column), entity ID, required history depth, missing attributes.
+3. **Data Preparation** — User links or uploads data. AI validates structure:
+   - **Core Set** — historical behavior data (one row per entity with target label)
+   - **Attribute Tables** — enrichment data (demographics, product details, etc.) joined to core set
+   - **Critical validation:** No label leakage (label column not in attributes), temporal filtering on 1:many joins, columns available at prediction time
+4. **Model Training** — Async background process. User is notified when ready. Training runs in E2B sandbox.
+5. **Model Validation** — Performance metrics in business language: "This model predicts next quarter's revenue within ±12%. Strongest predictors: seasonality, product mix, discount rate."
+6. **Prediction** — User inputs new data or values → model returns predictions with confidence intervals.
+
+### Model Types (ordered by priority)
+
+| Model Type | Example | User Value |
+|---|---|---|
+| **Time-series forecast** | "Predict next quarter's revenue" | High — most intuitive for business users |
+| **Regression** | "What drives deal size?" | Medium — explanatory |
+| **Classification** | "Which customers will churn?" | High — actionable |
+
+### Why Not Now
+
+1. **Different UX paradigm.** Building ML models requires understanding training data, feature engineering, and model validation — a significantly different skill set from the guided What-If flow. Mixing them would confuse the Analysis Workspace's simplicity.
+2. **Infrastructure complexity.** Model training is async, compute-intensive, and requires model storage/versioning. The current E2B sandbox is designed for short-lived analysis runs, not long-running training jobs.
+3. **The Analysis Workspace must prove value first.** If users don't adopt Pulse → Explain → What-If, adding a predictive module won't help.
+4. **Competitive positioning.** Spectra wins on accessibility and guided UX. Predictive ML is where DataRobot, Pecan AI, and H2O.ai compete with years of head start. We should only enter this space when we have a clear UX advantage — not just feature parity.
