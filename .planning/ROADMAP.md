@@ -96,9 +96,9 @@
 
 </details>
 
-### 🚧 v0.7.11 Spectra Pulse Mockup (In Progress)
+### v0.7.11 Spectra Pulse Mockup (In Progress)
 
-**Milestone Goal:** Create a standalone Next.js UI/UX mockup covering the full Analysis Workspace feature set — Pulse detection through Explain, What-If Scenarios, and Admin Workspace Management — to serve as the design reference for v0.8–v0.12 implementation milestones. No backend integration; all screens use static/hardcoded data.
+**Milestone Goal:** Create a standalone Next.js UI/UX mockup covering the full Analysis Workspace feature set — Pulse detection through Explain, What-If Scenarios, and Admin Workspace Management — to serve as the design reference for v0.8-v0.12 implementation milestones. No backend integration; all screens use static/hardcoded data.
 
 - [ ] **Phase 42: Analysis Workspace & Pulse Detection** - Mockup screens for workspace entry, Collection list/detail, signal cards, and Run Detection flow
 - [ ] **Phase 43: Collections & Reports** - Mockup screens for report viewer, archive/unarchive, Chat-to-Collection bridge, and usage indicators
@@ -115,10 +115,15 @@
 **Success Criteria** (what must be TRUE):
   1. Reviewer can open the Analysis Workspace entry page and see it visually distinct from the Chat interface, with correct navigation and Spectra branding
   2. Reviewer can see a Collection list page displaying collection cards with name, status badge (active/archived), created date, and signal count, plus a "Create New Collection" entry point
-  3. Reviewer can see a Collection detail page with a file selection area (pick from uploaded files or upload new) and the "Run Detection" button showing a credit cost estimate and a 15–30s loading/progress state
+  3. Reviewer can see a Collection detail page with a file selection area (pick from uploaded files or upload new) and the "Run Detection" button showing a credit cost estimate and a 15-30s loading/progress state
   4. Reviewer can see the Signal results layout with a left scrollable panel listing signal cards (title, severity badge, category tag) and a main detail panel showing chart area, description, severity, statistical evidence, and category
   5. Reviewer can see a credit balance indicator and a pre-action cost estimate ("This will use ~5 credits") displayed before triggering detection
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 42-01-PLAN.md — Scaffold Next.js app, app shell (sidebar + header + theme toggle + credit indicator), mock data
+- [ ] 42-02-PLAN.md — Collection list page with cards and Create Collection dialog
+- [ ] 42-03-PLAN.md — Collection detail with file table, sticky action bar, and detection loading
+- [ ] 42-04-PLAN.md — Signal results page with signal list panel, detail panel, and chart visualizations
 
 ### Phase 43: Collections & Reports
 **Goal**: The reviewer can see the full Collections lifecycle — report browsing, in-page reading, download options, archive state management, Chat-to-Collection bridging, and credit usage display — all as static mockup screens.
@@ -140,7 +145,7 @@
 **Success Criteria** (what must be TRUE):
   1. Reviewer can see an "Investigate" button on a Signal card with an investigation status indicator showing whether investigation is pending, in progress, or complete
   2. Reviewer can see the doctor-style Q&A interface with a hypothesis text block, structured radio-button choices, and a free-text option for custom answers
-  3. Reviewer can see a progress indicator across the 3–5 Q&A exchange steps that visually conveys narrowing scope toward a root cause
+  3. Reviewer can see a progress indicator across the 3-5 Q&A exchange steps that visually conveys narrowing scope toward a root cause
   4. Reviewer can see a Root Cause summary card displaying the hypothesis statement, a confidence badge (high/medium/low color-coded), and supporting evidence items
   5. Reviewer can see an investigation history list showing date, status, root cause summary text, and exchange count per past investigation, plus a display linking which Signals share the same root cause
 **Plans**: TBD
@@ -163,7 +168,7 @@
 **Requirements**: ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04, ADMIN-05, ADMIN-06
 **Success Criteria** (what must be TRUE):
   1. Reviewer can see a Workspace Activity Dashboard with a line chart (Collections over time), a donut chart (active vs. archived), and bar charts covering Pulse, Investigation, What-If, and Report activity
-  2. Reviewer can see a funnel chart displaying adoption drop-off across the Pulse → Explain → What-If pipeline stages
+  2. Reviewer can see a funnel chart displaying adoption drop-off across the Pulse -> Explain -> What-If pipeline stages
   3. Reviewer can see workspace credit consumption charts broken down by activity type over time, and a KPI card showing average credits per Collection
   4. Reviewer can see a per-user Workspace tab extension on a user detail page showing Collections list, credit breakdown chart, activity timeline, and limit usage
   5. Reviewer can see a Workspace Credit Costs settings section with editable input fields for all 8 activity costs, and an Alerts section with configurable threshold fields and an active alert list with dismiss actions
@@ -214,7 +219,7 @@
 | 39. API Key Management UI + Deployment Mode | v0.7 | 5/5 | Complete | 2026-02-24 |
 | 40. REST API v1 Endpoints | v0.7 | 4/4 | Complete | 2026-02-24 |
 | 41. MCP Server | v0.7 | 2/2 | Complete | 2026-02-24 |
-| 42. Analysis Workspace & Pulse Detection | v0.7.11 | 0/TBD | Not started | - |
+| 42. Analysis Workspace & Pulse Detection | v0.7.11 | 0/4 | Planned | - |
 | 43. Collections & Reports | v0.7.11 | 0/TBD | Not started | - |
 | 44. Guided Investigation (Explain) | v0.7.11 | 0/TBD | Not started | - |
 | 45. What-If Scenarios | v0.7.11 | 0/TBD | Not started | - |
