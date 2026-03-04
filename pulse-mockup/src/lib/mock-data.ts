@@ -1,0 +1,350 @@
+// ============================================================
+// Mock Data — shared across the entire pulse-mockup application
+// All plans import from here for consistent types and data.
+// ============================================================
+
+// --- Types ---
+
+export type CollectionStatus = "active" | "archived";
+
+export interface Collection {
+  id: string;
+  name: string;
+  description: string;
+  status: CollectionStatus;
+  createdAt: string;
+  signalCount: number;
+  filesCount: number;
+  creditsUsed: number;
+}
+
+export type ProfilingStatus = "profiling" | "ready" | "error";
+
+export interface FileItem {
+  id: string;
+  name: string;
+  type: "csv" | "xlsx" | "xls";
+  size: string;
+  uploadDate: string;
+  profilingStatus: ProfilingStatus;
+}
+
+export type SignalSeverity = "critical" | "warning" | "info";
+export type SignalCategory = "Anomaly" | "Trend" | "Correlation" | "Opportunity";
+export type ChartType = "line" | "bar" | "scatter";
+
+export interface Signal {
+  id: string;
+  title: string;
+  description: string;
+  severity: SignalSeverity;
+  category: SignalCategory;
+  statisticalEvidence: string;
+  chartType: ChartType;
+  chartData: Record<string, unknown>[];
+}
+
+// --- Constants ---
+
+export const CREDIT_BALANCE = 47;
+export const COST_PER_FILE = 2;
+
+// --- Mock Collections ---
+
+export const MOCK_COLLECTIONS: Collection[] = [
+  {
+    id: "col-001",
+    name: "Q3 Revenue Analysis",
+    description: "Quarterly revenue breakdown with anomaly detection across all product lines",
+    status: "active",
+    createdAt: "2026-02-15",
+    signalCount: 6,
+    filesCount: 4,
+    creditsUsed: 8,
+  },
+  {
+    id: "col-002",
+    name: "Customer Churn Study",
+    description: "Monthly churn rate analysis with predictive signals for at-risk segments",
+    status: "active",
+    createdAt: "2026-02-20",
+    signalCount: 4,
+    filesCount: 3,
+    creditsUsed: 6,
+  },
+  {
+    id: "col-003",
+    name: "Supply Chain Metrics",
+    description: "End-to-end supply chain performance analysis with bottleneck detection",
+    status: "active",
+    createdAt: "2026-03-01",
+    signalCount: 8,
+    filesCount: 5,
+    creditsUsed: 10,
+  },
+  {
+    id: "col-004",
+    name: "2025 Marketing ROI",
+    description: "Historical marketing spend vs. conversion analysis across channels",
+    status: "archived",
+    createdAt: "2025-12-10",
+    signalCount: 3,
+    filesCount: 2,
+    creditsUsed: 4,
+  },
+  {
+    id: "col-005",
+    name: "Employee Engagement Survey",
+    description: "Annual engagement metrics with department-level trend analysis",
+    status: "archived",
+    createdAt: "2025-11-05",
+    signalCount: 5,
+    filesCount: 3,
+    creditsUsed: 6,
+  },
+];
+
+// --- Mock Files ---
+
+export const MOCK_FILES: FileItem[] = [
+  {
+    id: "file-001",
+    name: "revenue_q3_2026.csv",
+    type: "csv",
+    size: "2.4 MB",
+    uploadDate: "2026-02-15",
+    profilingStatus: "ready",
+  },
+  {
+    id: "file-002",
+    name: "product_sales_breakdown.xlsx",
+    type: "xlsx",
+    size: "5.1 MB",
+    uploadDate: "2026-02-15",
+    profilingStatus: "ready",
+  },
+  {
+    id: "file-003",
+    name: "customer_segments.csv",
+    type: "csv",
+    size: "1.8 MB",
+    uploadDate: "2026-02-20",
+    profilingStatus: "ready",
+  },
+  {
+    id: "file-004",
+    name: "churn_monthly_2025.csv",
+    type: "csv",
+    size: "890 KB",
+    uploadDate: "2026-02-20",
+    profilingStatus: "ready",
+  },
+  {
+    id: "file-005",
+    name: "supply_chain_orders.xlsx",
+    type: "xlsx",
+    size: "12.3 MB",
+    uploadDate: "2026-03-01",
+    profilingStatus: "ready",
+  },
+  {
+    id: "file-006",
+    name: "logistics_performance.csv",
+    type: "csv",
+    size: "3.7 MB",
+    uploadDate: "2026-03-01",
+    profilingStatus: "ready",
+  },
+  {
+    id: "file-007",
+    name: "warehouse_inventory.xls",
+    type: "xls",
+    size: "8.2 MB",
+    uploadDate: "2026-03-02",
+    profilingStatus: "profiling",
+  },
+  {
+    id: "file-008",
+    name: "marketing_spend_2025.csv",
+    type: "csv",
+    size: "1.2 MB",
+    uploadDate: "2025-12-10",
+    profilingStatus: "ready",
+  },
+];
+
+// --- Mock Signals ---
+
+export const MOCK_SIGNALS: Signal[] = [
+  {
+    id: "sig-001",
+    title: "Revenue Anomaly Detected Q3",
+    description:
+      "A statistically significant revenue spike was detected in the SaaS product line during weeks 8-10 of Q3, exceeding the 3-sigma threshold. This anomaly correlates with the launch of the enterprise tier pricing update and suggests a sustained uplift rather than a one-time event.",
+    severity: "critical",
+    category: "Anomaly",
+    statisticalEvidence:
+      "Z-score: 3.42 | p-value: 0.0006 | Confidence: 99.94% | Compared against 12-month rolling baseline",
+    chartType: "line",
+    chartData: [
+      { week: "W1", revenue: 42000, baseline: 40000 },
+      { week: "W2", revenue: 41500, baseline: 40200 },
+      { week: "W3", revenue: 43000, baseline: 40400 },
+      { week: "W4", revenue: 42800, baseline: 40600 },
+      { week: "W5", revenue: 44200, baseline: 40800 },
+      { week: "W6", revenue: 43500, baseline: 41000 },
+      { week: "W7", revenue: 45000, baseline: 41200 },
+      { week: "W8", revenue: 52000, baseline: 41400 },
+      { week: "W9", revenue: 54500, baseline: 41600 },
+      { week: "W10", revenue: 56200, baseline: 41800 },
+      { week: "W11", revenue: 53800, baseline: 42000 },
+      { week: "W12", revenue: 55100, baseline: 42200 },
+    ],
+  },
+  {
+    id: "sig-002",
+    title: "Customer Churn Rate Spike",
+    description:
+      "Monthly churn rate increased from 2.1% to 4.8% in the SMB segment over the last 60 days. The acceleration pattern matches a known churn cascade signature where early departures trigger peer-effect churn in connected accounts.",
+    severity: "critical",
+    category: "Anomaly",
+    statisticalEvidence:
+      "Chi-squared: 18.7 | p-value: 0.0001 | Effect size (Cramer's V): 0.31 | SMB segment only",
+    chartType: "bar",
+    chartData: [
+      { month: "Sep", churnRate: 2.1, segment: "SMB" },
+      { month: "Oct", churnRate: 2.3, segment: "SMB" },
+      { month: "Nov", churnRate: 2.0, segment: "SMB" },
+      { month: "Dec", churnRate: 2.8, segment: "SMB" },
+      { month: "Jan", churnRate: 3.5, segment: "SMB" },
+      { month: "Feb", churnRate: 4.8, segment: "SMB" },
+    ],
+  },
+  {
+    id: "sig-003",
+    title: "Seasonal Demand Pattern",
+    description:
+      "A recurring seasonal demand pattern was identified with a 90-day cycle in the consumer electronics category. Peak demand consistently occurs in the first 3 weeks of each quarter, followed by a predictable trough. This pattern holds across 8 quarters of data.",
+    severity: "info",
+    category: "Trend",
+    statisticalEvidence:
+      "Autocorrelation lag-90: 0.87 | Seasonal decomposition R-squared: 0.91 | 8 quarters validated",
+    chartType: "line",
+    chartData: [
+      { day: 0, demand: 1200, trend: 1100 },
+      { day: 15, demand: 1450, trend: 1120 },
+      { day: 30, demand: 1100, trend: 1140 },
+      { day: 45, demand: 980, trend: 1160 },
+      { day: 60, demand: 920, trend: 1180 },
+      { day: 75, demand: 1050, trend: 1200 },
+      { day: 90, demand: 1250, trend: 1220 },
+      { day: 105, demand: 1480, trend: 1240 },
+      { day: 120, demand: 1150, trend: 1260 },
+      { day: 135, demand: 1000, trend: 1280 },
+      { day: 150, demand: 950, trend: 1300 },
+      { day: 165, demand: 1100, trend: 1320 },
+      { day: 180, demand: 1300, trend: 1340 },
+    ],
+  },
+  {
+    id: "sig-004",
+    title: "Marketing Spend vs. Conversion Correlation",
+    description:
+      "Strong positive correlation identified between social media ad spend and conversion rate, but with diminishing returns above $15K/month. The relationship follows a logarithmic curve suggesting an optimal spend ceiling.",
+    severity: "info",
+    category: "Correlation",
+    statisticalEvidence:
+      "Pearson r: 0.89 | R-squared: 0.79 | Optimal spend threshold: $15,200/mo | Diminishing returns coefficient: -0.023",
+    chartType: "scatter",
+    chartData: [
+      { spend: 5000, conversions: 120 },
+      { spend: 7500, conversions: 185 },
+      { spend: 9000, conversions: 220 },
+      { spend: 10000, conversions: 250 },
+      { spend: 12000, conversions: 290 },
+      { spend: 13500, conversions: 310 },
+      { spend: 15000, conversions: 325 },
+      { spend: 17000, conversions: 330 },
+      { spend: 20000, conversions: 338 },
+      { spend: 22000, conversions: 340 },
+      { spend: 25000, conversions: 342 },
+    ],
+  },
+  {
+    id: "sig-005",
+    title: "Inventory Turnover Bottleneck",
+    description:
+      "Warehouse C consistently shows 40% slower inventory turnover compared to other facilities. Cross-referencing with logistics data reveals a correlation with the regional carrier scheduling delays in the Pacific Northwest corridor.",
+    severity: "warning",
+    category: "Anomaly",
+    statisticalEvidence:
+      "ANOVA F-statistic: 12.4 | p-value: 0.002 | Warehouse C turnover: 3.2x vs. network avg: 5.3x",
+    chartType: "bar",
+    chartData: [
+      { warehouse: "A", turnover: 5.8 },
+      { warehouse: "B", turnover: 5.4 },
+      { warehouse: "C", turnover: 3.2 },
+      { warehouse: "D", turnover: 5.1 },
+      { warehouse: "E", turnover: 5.6 },
+    ],
+  },
+  {
+    id: "sig-006",
+    title: "Cross-sell Opportunity in Enterprise Tier",
+    description:
+      "Enterprise accounts using the analytics module are 3.2x more likely to adopt the reporting add-on within 60 days. Currently 68% of eligible accounts have not been targeted for this cross-sell opportunity, representing an estimated $420K ARR expansion.",
+    severity: "info",
+    category: "Opportunity",
+    statisticalEvidence:
+      "Lift ratio: 3.2x | Untapped accounts: 68% (142/209) | Estimated ARR impact: $420K | Confidence: 95%",
+    chartType: "bar",
+    chartData: [
+      { segment: "With Analytics", adoptionRate: 72 },
+      { segment: "Without Analytics", adoptionRate: 22 },
+      { segment: "Targeted", adoptionRate: 85 },
+      { segment: "Not Targeted", adoptionRate: 18 },
+    ],
+  },
+  {
+    id: "sig-007",
+    title: "Delivery Time Degradation Trend",
+    description:
+      "Average delivery time has increased by 18% over the past 4 months, from 3.2 days to 3.8 days. The trend is accelerating and, if unchecked, projects to exceed the 4.5-day SLA threshold within 6 weeks.",
+    severity: "warning",
+    category: "Trend",
+    statisticalEvidence:
+      "Linear regression slope: +0.15 days/month | R-squared: 0.94 | SLA breach projection: 6 weeks",
+    chartType: "line",
+    chartData: [
+      { month: "Oct", avgDays: 3.2, sla: 4.5 },
+      { month: "Nov", avgDays: 3.3, sla: 4.5 },
+      { month: "Dec", avgDays: 3.4, sla: 4.5 },
+      { month: "Jan", avgDays: 3.6, sla: 4.5 },
+      { month: "Feb", avgDays: 3.8, sla: 4.5 },
+      { month: "Mar (proj)", avgDays: 4.0, sla: 4.5 },
+      { month: "Apr (proj)", avgDays: 4.3, sla: 4.5 },
+      { month: "May (proj)", avgDays: 4.6, sla: 4.5 },
+    ],
+  },
+  {
+    id: "sig-008",
+    title: "Employee Engagement Decline in Engineering",
+    description:
+      "Engineering department engagement scores dropped 12 points year-over-year, the largest decline of any department. Exit interview data correlates with concerns about tooling and on-call rotation burden.",
+    severity: "warning",
+    category: "Trend",
+    statisticalEvidence:
+      "YoY change: -12 pts (78 to 66) | Department rank: last of 8 | Correlation with attrition: r=0.76",
+    chartType: "bar",
+    chartData: [
+      { department: "Engineering", score: 66 },
+      { department: "Product", score: 78 },
+      { department: "Sales", score: 82 },
+      { department: "Marketing", score: 75 },
+      { department: "Support", score: 71 },
+      { department: "Finance", score: 80 },
+      { department: "HR", score: 84 },
+      { department: "Operations", score: 73 },
+    ],
+  },
+];
