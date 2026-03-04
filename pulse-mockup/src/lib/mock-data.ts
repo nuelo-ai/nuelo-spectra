@@ -402,6 +402,83 @@ export const MOCK_REPORTS: Report[] = [
   },
 ];
 
+// --- Chat Types and Mock Data ---
+
+export type ChatMessageRole = "user" | "assistant";
+export type ChatResultType = "table" | "chart" | "text";
+
+export interface ChatResultCard {
+  id: string;
+  type: ChatResultType;
+  title: string;
+  content: string; // Markdown text for "text" type; description for table/chart
+  tableData?: { headers: string[]; rows: string[][] }; // For type="table"
+  chartDescription?: string; // For type="chart" — describe the chart shown
+}
+
+export interface ChatMessage {
+  id: string;
+  role: ChatMessageRole;
+  content: string; // User message text or assistant prose text
+  resultCards?: ChatResultCard[]; // Assistant messages may have result cards
+}
+
+export const MOCK_CHAT_MESSAGES: ChatMessage[] = [
+  {
+    id: "msg-001",
+    role: "user",
+    content: "Show me a breakdown of revenue by product line for Q3 2026",
+  },
+  {
+    id: "msg-002",
+    role: "assistant",
+    content: "Here's the Q3 2026 revenue breakdown by product line based on your uploaded data:",
+    resultCards: [
+      {
+        id: "card-001",
+        type: "table",
+        title: "Revenue by Product Line — Q3 2026",
+        content: "Quarterly revenue table showing performance across all product lines.",
+        tableData: {
+          headers: ["Product Line", "Q3 Revenue", "QoQ Change", "YoY Change"],
+          rows: [
+            ["SaaS Enterprise", "$2,840,000", "+34%", "+67%"],
+            ["SaaS Mid-Market", "$1,220,000", "+12%", "+28%"],
+            ["Professional Services", "$480,000", "-5%", "+3%"],
+            ["Marketplace Fees", "$195,000", "+8%", "+22%"],
+            ["Total", "$4,735,000", "+19%", "+41%"],
+          ],
+        },
+      },
+    ],
+  },
+  {
+    id: "msg-003",
+    role: "user",
+    content: "Can you chart the SaaS enterprise revenue trend over the past 6 months?",
+  },
+  {
+    id: "msg-004",
+    role: "assistant",
+    content: "Here's the SaaS Enterprise revenue trend for the past 6 months. The upward trajectory starting in September aligns with the enterprise tier pricing update.",
+    resultCards: [
+      {
+        id: "card-002",
+        type: "chart",
+        title: "SaaS Enterprise Revenue — 6-Month Trend",
+        content: "Line chart showing month-over-month SaaS Enterprise revenue from Sep 2025 to Feb 2026, with a steep upturn visible from Dec 2025 onward.",
+        chartDescription: "Line chart: Sep $1.8M → Oct $1.9M → Nov $2.0M → Dec $2.3M → Jan $2.6M → Feb $2.84M",
+      },
+      {
+        id: "card-003",
+        type: "text",
+        title: "Key Insight",
+        content: "**Enterprise revenue growth is accelerating**, not decelerating. The +34% QoQ jump is the largest single-quarter increase in the past 8 quarters. If this trend sustains into Q4, annual enterprise ARR could reach $12.8M — a 58% YoY increase. This growth appears structural (driven by the pricing tier change) rather than seasonal.",
+      },
+    ],
+  },
+];
+
 // --- Mock Activity ---
 
 export const MOCK_ACTIVITY: ActivityItem[] = [
