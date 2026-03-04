@@ -219,7 +219,7 @@ Plans:
 | 39. API Key Management UI + Deployment Mode | v0.7 | 5/5 | Complete | 2026-02-24 |
 | 40. REST API v1 Endpoints | v0.7 | 4/4 | Complete | 2026-02-24 |
 | 41. MCP Server | v0.7 | 2/2 | Complete | 2026-02-24 |
-| 42. Analysis Workspace & Pulse Detection | 1/4 | In Progress|  | - |
+| 42. Analysis Workspace & Pulse Detection | 2/4 | In Progress|  | - |
 | 43. Collections & Reports | v0.7.11 | 0/TBD | Not started | - |
 | 44. Guided Investigation (Explain) | v0.7.11 | 0/TBD | Not started | - |
 | 45. What-If Scenarios | v0.7.11 | 0/TBD | Not started | - |
