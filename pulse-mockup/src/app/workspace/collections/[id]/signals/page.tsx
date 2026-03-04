@@ -37,7 +37,7 @@ export default function SignalsPage() {
   const selectedSignal = signals.find((s) => s.id === selectedSignalId) ?? null;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full -m-6">
       {/* Page Header */}
       <div className="px-6 py-4 border-b border-border">
         <div className="flex items-center gap-3 mb-1">

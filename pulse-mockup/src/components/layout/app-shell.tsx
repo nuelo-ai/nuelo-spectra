@@ -33,7 +33,7 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
         <Header title={title} subtitle={subtitle} />
 
         {/* Page content */}
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 p-6">{children}</main>
       </div>
     </div>
   );
