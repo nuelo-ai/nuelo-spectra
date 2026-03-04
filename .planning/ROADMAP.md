@@ -101,7 +101,7 @@
 **Milestone Goal:** Create a standalone Next.js UI/UX mockup covering the full Analysis Workspace feature set — Pulse detection through Explain, What-If Scenarios, and Admin Workspace Management — to serve as the design reference for v0.8-v0.12 implementation milestones. No backend integration; all screens use static/hardcoded data.
 
 - [x] **Phase 42: Analysis Workspace & Pulse Detection** - Mockup screens for workspace entry, Collection list/detail, signal cards, and Run Detection flow (completed 2026-03-04)
-- [ ] **Phase 43: Collections & Reports** - Mockup screens for report viewer, archive/unarchive, Chat-to-Collection bridge, and usage indicators
+- [x] **Phase 43: Collections & Reports** - Mockup screens for report viewer, archive/unarchive, Chat-to-Collection bridge, and usage indicators (completed 2026-03-04)
 - [ ] **Phase 44: Guided Investigation (Explain)** - Mockup screens for doctor-style Q&A flow, progress tracking, root cause display, and investigation history
 - [ ] **Phase 45: What-If Scenarios** - Mockup screens for objective selection, scenario cards, refinement chat, side-by-side comparison, and generated report section
 - [ ] **Phase 46: Admin Workspace Management** - Mockup screens for workspace activity dashboard, per-user workspace tab, credit cost settings, and alerts
@@ -138,9 +138,9 @@ Plans:
   6. Reviewer can see a running credit total displayed in the Collection header ("Credits used: 14")
 **Plans**: 3 plans
 Plans:
-- [ ] 43-01-PLAN.md — Extend mock data, redesign collection detail as four-tab hub with Overview tab and credit display
-- [ ] 43-02-PLAN.md — Full-page document-style report reader with sticky download header
-- [ ] 43-03-PLAN.md — Chat page with data result cards, Add-to-Collection modal, sidebar Chat link
+- [x] 43-01-PLAN.md — Extend mock data, redesign collection detail as four-tab hub with Overview tab and credit display
+- [x] 43-02-PLAN.md — Full-page document-style report reader with sticky download header
+- [x] 43-03-PLAN.md — Chat page with data result cards, Add-to-Collection modal, sidebar Chat link
 
 ### Phase 44: Guided Investigation (Explain)
 **Goal**: The reviewer can walk through the complete Guided Investigation flow — from triggering an investigation on a signal through the doctor-style Q&A steps to a root cause summary — and review past investigations and cross-signal links, all as static mockup screens.
@@ -224,7 +224,7 @@ Plans:
 | 40. REST API v1 Endpoints | v0.7 | 4/4 | Complete | 2026-02-24 |
 | 41. MCP Server | v0.7 | 2/2 | Complete | 2026-02-24 |
 | 42. Analysis Workspace & Pulse Detection | 4/4 | Complete   | 2026-03-04 | - |
-| 43. Collections & Reports | 2/3 | In Progress|  | - |
+| 43. Collections & Reports | 3/3 | Complete   | 2026-03-04 | - |
 | 44. Guided Investigation (Explain) | v0.7.11 | 0/TBD | Not started | - |
 | 45. What-If Scenarios | v0.7.11 | 0/TBD | Not started | - |
 | 46. Admin Workspace Management | v0.7.11 | 0/TBD | Not started | - |

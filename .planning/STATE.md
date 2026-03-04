@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: completed
-stopped_at: Completed 43-02-PLAN.md
-last_updated: "2026-03-04T18:10:48.233Z"
+stopped_at: Completed 43-03-PLAN.md
+last_updated: "2026-03-04T18:26:14.741Z"
 last_activity: 2026-03-04 — Phase 42 complete (signal results & detail, reviewer approved)
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** v0.7.11 Spectra Pulse Mockup — Phase 42 complete, ready for Phase 43
+**Current focus:** v0.7.11 Spectra Pulse Mockup — Phase 43 complete, ready for Phase 44
 
 ## Current Position
 
-Phase: 42 of 46 (Analysis Workspace & Pulse Detection)
-Plan: 4 of 4 in current phase (COMPLETE)
-Status: Phase 42 complete — all 4 plans executed
-Last activity: 2026-03-04 — Phase 42 complete (signal results & detail, reviewer approved)
+Phase: 43 of 46 (Collections & Reports)
+Plan: 3 of 3 in current phase (COMPLETE)
+Status: Phase 43 complete — all 3 plans executed and reviewer-approved
+Last activity: 2026-03-04 — Phase 43 complete (Chat-to-Collection bridge, reviewer approved)
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.11 🚧
 
@@ -58,6 +58,8 @@ Recent decisions affecting current work:
 - [Phase 43-01]: Pass isSelected=false/onSelect=noop to SignalCard in non-interactive link contexts (Overview/Signals tabs)
 - [Phase 43-01]: Use controlled Tabs (value+onValueChange) so Overview 'View all files' button can switch to Files tab programmatically
 - [Phase 43-02]: Used @tailwindcss/typography prose prose-slate classes (already installed) for markdown rendering rather than manual per-element Tailwind styles
+- [Phase 43-collections-reports]: Sidebar Chat href fix: whitelist /workspace and /chat as real routes; other nav items remain # placeholders
+- [Phase 43-collections-reports]: AddToCollectionModal shows only active collections — archived collections cannot receive new content
 
 ### Pending Todos
 
@@ -82,6 +84,7 @@ Recent decisions affecting current work:
 | Phase 42 P04 | 3min | 3 tasks | 5 files |
 | Phase 43-collections-reports P01 | 15min | 2 tasks | 5 files |
 | Phase 43-collections-reports P02 | 5 | 1 tasks | 1 files |
+| Phase 43-collections-reports P03 | continuation | 3 tasks (2 auto + 1 human-verify) | 5 files |
 
 ### Quick Tasks Completed
 
@@ -98,6 +101,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-04T18:10:48.231Z
-Stopped at: Completed 43-02-PLAN.md
-Resume with: `/gsd:execute-phase 43` to start Phase 43 (Data Management)
+Last session: 2026-03-04T18:26:14.738Z
+Stopped at: Completed 43-03-PLAN.md
+Resume with: `/gsd:execute-phase 44` to start Phase 44 (Guided Investigation / Explain)
