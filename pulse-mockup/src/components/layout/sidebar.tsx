@@ -89,7 +89,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           const linkContent = (
             <Link
               key={item.href}
-              href={item.href === "/workspace" ? item.href : "#"}
+              href={item.href === "/workspace" || item.href === "/chat" ? item.href : "#"}
               className={cn(
                 "group flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
                 active
