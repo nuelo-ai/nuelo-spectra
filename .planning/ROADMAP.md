@@ -152,7 +152,12 @@ Plans:
   3. Reviewer can see a progress indicator across the 3-5 Q&A exchange steps that visually conveys narrowing scope toward a root cause
   4. Reviewer can see a Root Cause summary card displaying the hypothesis statement, a confidence badge (high/medium/low color-coded), and supporting evidence items
   5. Reviewer can see an investigation history list showing date, status, root cause summary text, and exchange count per past investigation, plus a display linking which Signals share the same root cause
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 44-01-PLAN.md — Extend mock data with investigation types, add status badge to signal card, add Investigation section to signal detail panel
+- [ ] 44-02-PLAN.md — Full-page investigation Q&A route with conversational thread, active question, checkpoint block, and generation loading
+- [ ] 44-03-PLAN.md — Extend report viewer with Investigation Report badge and Related Signals section
+- [ ] 44-04-PLAN.md — Human verification checkpoint for all 6 EXPL requirements
 
 ### Phase 45: What-If Scenarios
 **Goal**: The reviewer can see the complete What-If Scenarios flow — from objective selection through scenario generation, per-scenario refinement chat, side-by-side comparison, and the generated What-If report section — all as static mockup screens.
@@ -225,6 +230,6 @@ Plans:
 | 41. MCP Server | v0.7 | 2/2 | Complete | 2026-02-24 |
 | 42. Analysis Workspace & Pulse Detection | 4/4 | Complete   | 2026-03-04 | - |
 | 43. Collections & Reports | 3/3 | Complete    | 2026-03-04 | - |
-| 44. Guided Investigation (Explain) | v0.7.11 | 0/TBD | Not started | - |
+| 44. Guided Investigation (Explain) | v0.7.11 | 0/4 | Not started | - |
 | 45. What-If Scenarios | v0.7.11 | 0/TBD | Not started | - |
 | 46. Admin Workspace Management | v0.7.11 | 0/TBD | Not started | - |
