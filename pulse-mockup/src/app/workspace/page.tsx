@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CollectionList } from "@/components/workspace/collection-list";
+import { CreateCollectionDialog } from "@/components/workspace/create-collection-dialog";
 import { MOCK_COLLECTIONS } from "@/lib/mock-data";
 
 export default function WorkspacePage() {
@@ -29,6 +30,12 @@ export default function WorkspacePage() {
       <CollectionList
         collections={MOCK_COLLECTIONS}
         onCreateClick={() => setDialogOpen(true)}
+      />
+
+      {/* Create collection dialog */}
+      <CreateCollectionDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
       />
     </div>
   );
