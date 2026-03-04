@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Download, FileText } from "lucide-react";
+import { ArrowLeft, ArrowRight, Download, FileText, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MOCK_REPORTS } from "@/lib/mock-data";
@@ -40,6 +40,11 @@ export default function ReportReaderPage() {
           <span className="text-sm font-medium truncate max-w-xs">
             {report.title}
           </span>
+          {report.type === "Investigation Report" && (
+            <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-400 border-blue-500/30">
+              Investigation Report
+            </Badge>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -84,6 +89,46 @@ export default function ReportReaderPage() {
               }}
             />
           </div>
+
+          {/* Related Signals section — Investigation Reports only */}
+          {report.type === "Investigation Report" &&
+            report.relatedSignals &&
+            report.relatedSignals.length > 0 && (
+              <div className="mt-8 border-t border-gray-200 pt-6">
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <Link2 className="h-4 w-4" />
+                  Related Signals — Same Root Cause
+                </h3>
+                <div className="space-y-3">
+                  {report.relatedSignals.map((rel) => (
+                    <div
+                      key={rel.signalId}
+                      className="rounded-lg border border-gray-200 bg-gray-50 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {rel.signalTitle}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {rel.rootCauseLink}
+                          </p>
+                        </div>
+                        <Link href={`/workspace/collections/${id}/signals`}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs gap-1 shrink-0 text-gray-700 hover:text-gray-900"
+                          >
+                            View Signal <ArrowRight className="h-3 w-3" />
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
         </div>
       </div>
     </div>
