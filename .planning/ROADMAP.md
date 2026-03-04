@@ -100,7 +100,7 @@
 
 **Milestone Goal:** Create a standalone Next.js UI/UX mockup covering the full Analysis Workspace feature set — Pulse detection through Explain, What-If Scenarios, and Admin Workspace Management — to serve as the design reference for v0.8-v0.12 implementation milestones. No backend integration; all screens use static/hardcoded data.
 
-- [ ] **Phase 42: Analysis Workspace & Pulse Detection** - Mockup screens for workspace entry, Collection list/detail, signal cards, and Run Detection flow
+- [x] **Phase 42: Analysis Workspace & Pulse Detection** - Mockup screens for workspace entry, Collection list/detail, signal cards, and Run Detection flow (completed 2026-03-04)
 - [ ] **Phase 43: Collections & Reports** - Mockup screens for report viewer, archive/unarchive, Chat-to-Collection bridge, and usage indicators
 - [ ] **Phase 44: Guided Investigation (Explain)** - Mockup screens for doctor-style Q&A flow, progress tracking, root cause display, and investigation history
 - [ ] **Phase 45: What-If Scenarios** - Mockup screens for objective selection, scenario cards, refinement chat, side-by-side comparison, and generated report section
@@ -219,7 +219,7 @@ Plans:
 | 39. API Key Management UI + Deployment Mode | v0.7 | 5/5 | Complete | 2026-02-24 |
 | 40. REST API v1 Endpoints | v0.7 | 4/4 | Complete | 2026-02-24 |
 | 41. MCP Server | v0.7 | 2/2 | Complete | 2026-02-24 |
-| 42. Analysis Workspace & Pulse Detection | 3/4 | In Progress|  | - |
+| 42. Analysis Workspace & Pulse Detection | 4/4 | Complete   | 2026-03-04 | - |
 | 43. Collections & Reports | v0.7.11 | 0/TBD | Not started | - |
 | 44. Guided Investigation (Explain) | v0.7.11 | 0/TBD | Not started | - |
 | 45. What-If Scenarios | v0.7.11 | 0/TBD | Not started | - |

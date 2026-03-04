@@ -14,8 +14,8 @@ Mockup screens for the full Analysis Workspace feature set (v0.8–v0.12 scope).
 - [x] **PULSE-03**: Designer can view a "Create New Collection" flow with name input
 - [x] **PULSE-04**: Designer can view a Collection detail page with file selection area (pick from uploaded files or upload new)
 - [x] **PULSE-05**: Designer can view the "Run Detection" button with credit cost display and loading/progress state (15–30s indicator)
-- [ ] **PULSE-06**: Designer can view the Signal cards layout — left scrollable panel (title, severity badge, category tag) + main detail panel
-- [ ] **PULSE-07**: Designer can view a Signal detail view: title, description, severity badge (color-coded), category tag, visualization chart area, statistical evidence summary
+- [x] **PULSE-06**: Designer can view the Signal cards layout — left scrollable panel (title, severity badge, category tag) + main detail panel
+- [x] **PULSE-07**: Designer can view a Signal detail view: title, description, severity badge (color-coded), category tag, visualization chart area, statistical evidence summary
 - [x] **PULSE-08**: Designer can view credit balance indicator and pre-action cost estimate ("This will use ~5 credits")
 
 ### Collections & Reports
@@ -84,8 +84,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PULSE-03 | Phase 42 | Complete |
 | PULSE-04 | Phase 42 | Complete |
 | PULSE-05 | Phase 42 | Complete |
-| PULSE-06 | Phase 42 | Pending |
-| PULSE-07 | Phase 42 | Pending |
+| PULSE-06 | Phase 42 | Complete |
+| PULSE-07 | Phase 42 | Complete |
 | PULSE-08 | Phase 42 | Complete |
 | COLL-01 | Phase 43 | Pending |
 | COLL-02 | Phase 43 | Pending |
