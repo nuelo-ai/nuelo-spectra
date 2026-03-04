@@ -173,6 +173,30 @@ export const MOCK_FILES: FileItem[] = [
   },
 ];
 
+export type ReportType =
+  | "Detection Summary"
+  | "Investigation Report"
+  | "What-If Scenario Report"
+  | "Chat Report"
+  | "Custom Report";
+
+export interface Report {
+  id: string;
+  collectionId: string;
+  type: ReportType;
+  title: string;
+  generatedAt: string; // ISO date string
+  markdownContent: string; // Full markdown body for the report reader
+}
+
+export interface ActivityItem {
+  id: string;
+  collectionId: string;
+  timestamp: string; // ISO date string, displayed as relative or formatted
+  description: string; // e.g. "Detection ran — 6 signals found"
+  icon: "pulse" | "file" | "report" | "chat"; // controls icon in feed
+}
+
 // --- Mock Signals ---
 
 export const MOCK_SIGNALS: Signal[] = [
@@ -346,5 +370,74 @@ export const MOCK_SIGNALS: Signal[] = [
       { department: "HR", score: 84 },
       { department: "Operations", score: 73 },
     ],
+  },
+];
+
+// --- Mock Reports ---
+
+export const MOCK_REPORTS: Report[] = [
+  {
+    id: "rep-001",
+    collectionId: "col-001",
+    type: "Detection Summary",
+    title: "Q3 Revenue — Detection Summary",
+    generatedAt: "2026-02-16",
+    markdownContent: `# Detection Summary: Q3 Revenue Analysis\n\n**Generated:** February 16, 2026  \n**Collection:** Q3 Revenue Analysis  \n**Files analyzed:** 4  \n**Detection duration:** 28 seconds  \n**Credits used:** 8\n\n---\n\n## Overview\n\nPulse detection identified **6 signals** across the Q3 Revenue Analysis dataset. Two signals were rated critical severity, requiring immediate attention. Four signals were informational, highlighting patterns useful for forecasting.\n\n## Signals Detected\n\n### 1. Revenue Anomaly Detected Q3 ⚠️ Critical\n\nA statistically significant revenue spike was detected in the SaaS product line during weeks 8–10 of Q3, exceeding the 3-sigma threshold.\n\n- **Z-score:** 3.42\n- **p-value:** 0.0006\n- **Confidence:** 99.94%\n- **Baseline:** 12-month rolling average\n\nThis anomaly correlates with the launch of the enterprise tier pricing update and suggests a sustained uplift rather than a one-time event.\n\n### 2. Customer Churn Rate Spike ⚠️ Critical\n\nMonthly churn rate increased from 2.1% to 4.8% in the SMB segment over the last 60 days.\n\n- **Chi-squared:** 18.7\n- **p-value:** 0.0001\n- **Effect size (Cramer's V):** 0.31\n\n### 3. Seasonal Demand Pattern ℹ️ Informational\n\nA recurring 90-day seasonal demand cycle was confirmed with R-squared of 0.91 across 8 quarters.\n\n## Recommendations\n\n1. **Investigate the revenue spike** — Run Guided Investigation on Signal 1 to determine root cause and sustainability.\n2. **Act on churn signal** — SMB churn acceleration requires immediate retention intervention.\n3. **Use seasonal pattern for planning** — Adjust Q4 inventory and staffing based on confirmed 90-day cycle.\n\n## Raw Statistics\n\n| Signal | Severity | p-value | Confidence |\n|--------|----------|---------|------------|\n| Revenue Anomaly | Critical | 0.0006 | 99.94% |\n| Churn Rate Spike | Critical | 0.0001 | 99.99% |\n| Seasonal Pattern | Info | — | 91% R² |\n| Marketing Correlation | Info | — | 79% R² |\n`,
+  },
+  {
+    id: "rep-002",
+    collectionId: "col-001",
+    type: "Investigation Report",
+    title: "Revenue Spike — Root Cause Investigation",
+    generatedAt: "2026-02-18",
+    markdownContent: `# Investigation Report: Revenue Spike Root Cause\n\n**Generated:** February 18, 2026  \n**Signal investigated:** Revenue Anomaly Detected Q3  \n**Investigation exchanges:** 4  \n**Confidence:** High\n\n---\n\n## Root Cause\n\n> The Q3 revenue spike is attributable to a **successful enterprise tier pricing update** that triggered accelerated upgrades from mid-market accounts, combined with a seasonal enterprise budget flush in weeks 8–10.\n\n**Confidence:** High (87%)\n\n## Evidence Chain\n\n1. Enterprise tier launch date aligns exactly with spike onset (week 8)\n2. Mid-market upgrade rate increased 340% in the same period\n3. Pattern matches Q3 budget flush behavior from prior 3 years\n4. No external market event explains the magnitude independently\n\n## Supporting Data\n\n| Factor | Contribution | Confidence |\n|--------|-------------|------------|\n| Enterprise tier launch | 62% | High |\n| Budget flush timing | 28% | Medium |\n| Unknown factors | 10% | Low |\n\n## Next Steps\n\n- Model a What-If scenario: sustain enterprise pricing uplift into Q4\n- Monitor whether upgrade rate normalizes or sustains\n`,
+  },
+  {
+    id: "rep-003",
+    collectionId: "col-001",
+    type: "Chat Report",
+    title: "Chat Export — Revenue Breakdown Analysis",
+    generatedAt: "2026-02-20",
+    markdownContent: `# Chat Export: Revenue Breakdown Analysis\n\n**Saved from Chat:** February 20, 2026  \n**Added to collection by:** Demo User\n\n---\n\n## Analysis: Revenue by Product Line\n\nBased on the uploaded Q3 data, here is the revenue breakdown by product line for Q3 2026:\n\n| Product Line | Q3 Revenue | QoQ Change | YoY Change |\n|---|---|---|---|\n| SaaS Enterprise | $2,840,000 | +34% | +67% |\n| SaaS Mid-Market | $1,220,000 | +12% | +28% |\n| Professional Services | $480,000 | -5% | +3% |\n| Marketplace Fees | $195,000 | +8% | +22% |\n| **Total** | **$4,735,000** | **+19%** | **+41%** |\n\n## Key Observations\n\nThe SaaS Enterprise line shows a disproportionately large quarter-over-quarter jump of 34%, which is the primary driver of the overall revenue anomaly detected by Pulse. Mid-Market growth of 12% is healthy but within expected range. Professional Services contracted slightly, likely due to team capacity constraints in Q3.\n\n## Interpretation\n\nThe enterprise tier pricing change introduced in week 8 appears to have accelerated upgrade decisions from mid-market accounts, pulling them into the enterprise segment faster than the historical migration rate would predict.\n`,
+  },
+];
+
+// --- Mock Activity ---
+
+export const MOCK_ACTIVITY: ActivityItem[] = [
+  {
+    id: "act-001",
+    collectionId: "col-001",
+    timestamp: "2026-02-16T10:24:00Z",
+    description: "Detection ran — 6 signals found",
+    icon: "pulse",
+  },
+  {
+    id: "act-002",
+    collectionId: "col-001",
+    timestamp: "2026-02-15T14:10:00Z",
+    description: "4 files uploaded",
+    icon: "file",
+  },
+  {
+    id: "act-003",
+    collectionId: "col-001",
+    timestamp: "2026-02-18T09:05:00Z",
+    description: "Investigation report generated",
+    icon: "report",
+  },
+  {
+    id: "act-004",
+    collectionId: "col-001",
+    timestamp: "2026-02-20T16:33:00Z",
+    description: "Chat result saved as report",
+    icon: "chat",
+  },
+  {
+    id: "act-005",
+    collectionId: "col-001",
+    timestamp: "2026-03-01T11:00:00Z",
+    description: "1 new file uploaded",
+    icon: "file",
   },
 ];
