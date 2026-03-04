@@ -180,6 +180,12 @@ export type ReportType =
   | "Chat Report"
   | "Custom Report";
 
+export interface RelatedSignal {
+  signalId: string;
+  signalTitle: string;
+  rootCauseLink: string;       // short phrase explaining the connection
+}
+
 export interface Report {
   id: string;
   collectionId: string;
@@ -187,6 +193,8 @@ export interface Report {
   title: string;
   generatedAt: string; // ISO date string
   markdownContent: string; // Full markdown body for the report reader
+  signalId?: string;             // which signal this investigation report originated from
+  relatedSignals?: RelatedSignal[];   // cross-signal connections shown at bottom of report
 }
 
 export interface ActivityItem {
@@ -400,6 +408,32 @@ export const MOCK_REPORTS: Report[] = [
     generatedAt: "2026-02-20",
     markdownContent: `# Chat Export: Revenue Breakdown Analysis\n\n**Saved from Chat:** February 20, 2026  \n**Added to collection by:** Demo User\n\n---\n\n## Analysis: Revenue by Product Line\n\nBased on the uploaded Q3 data, here is the revenue breakdown by product line for Q3 2026:\n\n| Product Line | Q3 Revenue | QoQ Change | YoY Change |\n|---|---|---|---|\n| SaaS Enterprise | $2,840,000 | +34% | +67% |\n| SaaS Mid-Market | $1,220,000 | +12% | +28% |\n| Professional Services | $480,000 | -5% | +3% |\n| Marketplace Fees | $195,000 | +8% | +22% |\n| **Total** | **$4,735,000** | **+19%** | **+41%** |\n\n## Key Observations\n\nThe SaaS Enterprise line shows a disproportionately large quarter-over-quarter jump of 34%, which is the primary driver of the overall revenue anomaly detected by Pulse. Mid-Market growth of 12% is healthy but within expected range. Professional Services contracted slightly, likely due to team capacity constraints in Q3.\n\n## Interpretation\n\nThe enterprise tier pricing change introduced in week 8 appears to have accelerated upgrade decisions from mid-market accounts, pulling them into the enterprise segment faster than the historical migration rate would predict.\n`,
   },
+  {
+    id: "rpt-inv-001",
+    collectionId: "col-001",
+    type: "Investigation Report",
+    title: "Investigation — Enterprise Pricing Impact",
+    generatedAt: "2026-03-01",
+    signalId: "sig-001",
+    relatedSignals: [
+      {
+        signalId: "sig-004",
+        signalTitle: "Marketing Spend vs. Conversion Correlation",
+        rootCauseLink: "Same enterprise pricing change drove both conversion improvement and revenue uplift",
+      },
+    ],
+    markdownContent: `# Investigation Report: Enterprise Pricing Impact\n\n**Generated:** March 1, 2026  \n**Signal investigated:** Revenue Anomaly Detected Q3  \n**Investigation exchanges:** 3  \n**Confidence:** High\n\n---\n\n## Signal Summary\n\nA statistically significant revenue spike was detected in the SaaS product line during weeks 8–10 of Q3 2026, exceeding the 3-sigma threshold with a Z-score of 3.42. The anomaly persisted beyond the initial detection window, suggesting a structural shift rather than a transient event. Total revenue during the spike period was approximately 28% above the 12-month rolling baseline.\n\n## Signal Analysis\n\nPulse detection identified the revenue anomaly by comparing week-over-week SaaS revenue against a rolling 12-month baseline. The spike onset at week 8 coincides precisely with the enterprise tier pricing update rollout date. Statistical modeling confirms the anomaly is not attributable to seasonal variance or known cyclical patterns in the dataset.\n\n## Investigation Analysis\n\nBased on the guided investigation Q&A, the primary driver of the revenue spike is the enterprise tier pricing launch. User context confirmed that revenue remained elevated beyond the initial launch period, indicating that the pricing change drove permanent rather than one-time uplift. Enterprise accounts were identified as the segment with the strongest adoption of the new pricing tier.\n\nThe sustained nature of the revenue elevation is consistent with a structural demand shift: existing mid-market accounts accelerated their upgrade timeline to lock in the new enterprise feature set, while net-new enterprise deals closed at a faster rate due to the improved value proposition at the new price point.\n\nCross-referencing with segment data, enterprise account count grew 18% in the same period, confirming that account growth — not just per-account expansion — contributed to the revenue uplift. This dual driver (account growth + pricing uplift per account) explains the magnitude of the anomaly.\n\n## Supporting Evidence\n\n| Metric | Pre-Spike (W1–W7) | Spike Period (W8–W12) | Change |\n|--------|-------------------|----------------------|--------|\n| Weekly SaaS Revenue (avg) | $43,286 | $54,320 | +25.5% |\n| Enterprise Account Count | 142 | 168 | +18.3% |\n| Avg Revenue per Enterprise Account | $1,840 | $1,930 | +4.9% |\n\n## Recommendations\n\n- **Monitor sustainability:** Track enterprise revenue through Q4 to confirm the uplift is structural. If revenue normalizes, revisit the seasonal demand hypothesis.\n- **Replicate in other segments:** Evaluate whether a mid-market pricing tier update could produce similar uplift without cannibalizing existing enterprise growth.\n- **Run a What-If scenario:** Model projected Q4 revenue under three assumptions — sustained uplift, partial reversion, and full reversion — to inform board-level forecasting.\n`,
+  },
+  {
+    id: "rpt-inv-002",
+    collectionId: "col-001",
+    type: "Investigation Report",
+    title: "Investigation — Seasonal Demand Hypothesis",
+    generatedAt: "2026-03-03",
+    signalId: "sig-001",
+    relatedSignals: [],
+    markdownContent: `# Investigation Report: Seasonal Demand Hypothesis\n\n**Generated:** March 3, 2026  \n**Signal investigated:** Revenue Anomaly Detected Q3  \n**Investigation exchanges:** 2  \n**Confidence:** Medium\n\n---\n\n## Signal Summary\n\nThe Q3 revenue anomaly shows a 28% spike above the 12-month rolling baseline during weeks 8–10, with a Z-score of 3.42 and 99.94% confidence. The timing of this spike aligns with both the enterprise tier pricing launch and the historically observed Q3 enterprise budget flush window — creating two competing hypotheses for the root cause.\n\n## Signal Analysis\n\nPulse detection flagged the revenue event as statistically anomalous relative to prior quarters. The anomaly window is narrow (3 weeks), which is consistent with seasonal demand surges but also consistent with the adoption curve of a new pricing tier in its launch window. Distinguishing between the two requires analyst context.\n\n## Investigation Analysis\n\nThis investigation explored the seasonal demand hypothesis. User context identified seasonal demand increase as the primary driver, with SaaS subscriptions as the most correlated product category. This framing suggests the spike reflects a recurring Q3 enterprise budget cycle rather than a structural change driven by the pricing update.\n\nIf the seasonal hypothesis holds, the revenue uplift should partially or fully revert in Q4 as the budget flush cycle ends. The fact that SaaS subscriptions — rather than one-time professional services — drove the spike is consistent with a seasonal renewal and expansion pattern where enterprises renew annual contracts and add seats before fiscal year-end.\n\n## Supporting Evidence\n\n| Metric | Q1 2026 | Q2 2026 | Q3 2026 | YoY Q3 Change |\n|--------|---------|---------|---------|---------------|\n| SaaS Subscription Revenue | $3.8M | $3.6M | $4.7M | +38% |\n| Professional Services Revenue | $0.5M | $0.6M | $0.5M | +2% |\n| Enterprise Renewal Rate | 88% | 86% | 94% | +7pts |\n\n## Recommendations\n\n- **Compare to prior Q3 cycles:** Pull Q3 2024 and Q3 2025 SaaS revenue to test whether a similar seasonal spike appeared in those years.\n- **Separate renewal from expansion:** Isolate new ARR from renewal ARR in the Q3 data to determine whether the spike is driven by renewals (seasonal) or net new expansion (pricing change).\n- **Re-run investigation with pricing data:** If renewal data confirms seasonality, close this signal. If expansion ARR is the driver, the enterprise pricing launch hypothesis (inv-001) is more likely correct.\n`,
+  },
 ];
 
 // --- Chat Types and Mock Data ---
@@ -474,6 +508,151 @@ export const MOCK_CHAT_MESSAGES: ChatMessage[] = [
         type: "text",
         title: "Key Insight",
         content: "**Enterprise revenue growth is accelerating**, not decelerating. The +34% QoQ jump is the largest single-quarter increase in the past 8 quarters. If this trend sustains into Q4, annual enterprise ARR could reach $12.8M — a 58% YoY increase. This growth appears structural (driven by the pricing tier change) rather than seasonal.",
+      },
+    ],
+  },
+];
+
+// --- Investigation Types ---
+
+export type InvestigationStatus = "none" | "in-progress" | "complete";
+
+export interface QAExchange {
+  id: string;
+  question: string;
+  choices: string[];          // 3-4 radio-button choices
+  selectedChoice: string | null;  // null = not yet answered
+  freeTextAnswer: string | null;  // null = used a choice
+}
+
+export interface InvestigationSession {
+  id: string;
+  signalId: string;
+  collectionId: string;
+  status: InvestigationStatus;
+  startedAt: string;           // ISO date string
+  completedAt: string | null;
+  reportId: string | null;     // links to a Report with type "Investigation Report"
+  exchanges: QAExchange[];
+}
+
+// --- Mock Investigation Sessions ---
+
+export const MOCK_INVESTIGATION_SESSIONS: InvestigationSession[] = [
+  {
+    id: "inv-001",
+    signalId: "sig-001",
+    collectionId: "col-001",
+    status: "complete",
+    startedAt: "2026-03-01T08:00:00Z",
+    completedAt: "2026-03-01",
+    reportId: "rpt-inv-001",
+    exchanges: [
+      {
+        id: "exc-001-1",
+        question: "What is the primary driver you believe caused the revenue spike?",
+        choices: [
+          "Enterprise tier pricing launch",
+          "Seasonal demand increase",
+          "One-time bulk order",
+          "Marketing campaign",
+        ],
+        selectedChoice: "Enterprise tier pricing launch",
+        freeTextAnswer: null,
+      },
+      {
+        id: "exc-001-2",
+        question: "Did the spike persist beyond the initial launch period?",
+        choices: [
+          "Yes, revenue remained elevated",
+          "No, it returned to baseline",
+          "Partially — some retained, some reverted",
+          "Unclear from the data",
+        ],
+        selectedChoice: "Yes, revenue remained elevated",
+        freeTextAnswer: null,
+      },
+      {
+        id: "exc-001-3",
+        question: "Which customer segment showed the strongest uptake?",
+        choices: [
+          "Enterprise accounts",
+          "Mid-market",
+          "SMB",
+          "All segments equally",
+        ],
+        selectedChoice: "Enterprise accounts",
+        freeTextAnswer: null,
+      },
+    ],
+  },
+  {
+    id: "inv-002",
+    signalId: "sig-001",
+    collectionId: "col-001",
+    status: "complete",
+    startedAt: "2026-03-03T09:00:00Z",
+    completedAt: "2026-03-03",
+    reportId: "rpt-inv-002",
+    exchanges: [
+      {
+        id: "exc-002-1",
+        question: "What is the primary driver you believe caused the revenue spike?",
+        choices: [
+          "Enterprise tier pricing launch",
+          "Seasonal demand increase",
+          "One-time bulk order",
+          "Marketing campaign",
+        ],
+        selectedChoice: "Seasonal demand increase",
+        freeTextAnswer: null,
+      },
+      {
+        id: "exc-002-2",
+        question: "Is this spike correlated with a specific product category?",
+        choices: [
+          "SaaS subscriptions",
+          "Professional services",
+          "Hardware",
+          "Multiple categories",
+        ],
+        selectedChoice: "SaaS subscriptions",
+        freeTextAnswer: null,
+      },
+    ],
+  },
+  {
+    id: "inv-003",
+    signalId: "sig-002",
+    collectionId: "col-001",
+    status: "in-progress",
+    startedAt: "2026-03-04T10:00:00Z",
+    completedAt: null,
+    reportId: null,
+    exchanges: [
+      {
+        id: "exc-003-1",
+        question: "What is the primary cause of the SMB churn spike?",
+        choices: [
+          "Pricing increase",
+          "Product gap vs competitor",
+          "Support quality decline",
+          "Market contraction",
+        ],
+        selectedChoice: "Pricing increase",
+        freeTextAnswer: null,
+      },
+      {
+        id: "exc-003-2",
+        question: "How long has the pricing differential existed?",
+        choices: [
+          "Less than 1 month",
+          "1-3 months",
+          "3-6 months",
+          "More than 6 months",
+        ],
+        selectedChoice: null,
+        freeTextAnswer: null,
       },
     ],
   },
