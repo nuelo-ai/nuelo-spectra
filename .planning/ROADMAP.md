@@ -230,6 +230,6 @@ Plans:
 | 41. MCP Server | v0.7 | 2/2 | Complete | 2026-02-24 |
 | 42. Analysis Workspace & Pulse Detection | 4/4 | Complete   | 2026-03-04 | - |
 | 43. Collections & Reports | 3/3 | Complete    | 2026-03-04 | - |
-| 44. Guided Investigation (Explain) | v0.7.11 | 0/4 | Not started | - |
+| 44. Guided Investigation (Explain) | 1/4 | In Progress|  | - |
 | 45. What-If Scenarios | v0.7.11 | 0/TBD | Not started | - |
 | 46. Admin Workspace Management | v0.7.11 | 0/TBD | Not started | - |

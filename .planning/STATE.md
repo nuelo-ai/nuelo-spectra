@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: completed
-stopped_at: Phase 44 context gathered
-last_updated: "2026-03-04T19:08:38.425Z"
+stopped_at: Completed 44-01-PLAN.md
+last_updated: "2026-03-04T19:25:50.939Z"
 last_activity: 2026-03-04 — Phase 43 complete (Chat-to-Collection bridge, reviewer approved)
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 11
+  completed_plans: 8
 ---
 
 # Project State
@@ -60,6 +60,7 @@ Recent decisions affecting current work:
 - [Phase 43-02]: Used @tailwindcss/typography prose prose-slate classes (already installed) for markdown rendering rather than manual per-element Tailwind styles
 - [Phase 43-collections-reports]: Sidebar Chat href fix: whitelist /workspace and /chat as real routes; other nav items remain # placeholders
 - [Phase 43-collections-reports]: AddToCollectionModal shows only active collections — archived collections cannot receive new content
+- [Phase 44-guided-investigation-explain]: [Phase 44-01]: RelatedSignal type placed before Report interface; Investigation section fully replaces disabled Tooltip Actions block; collectionId added as required prop on SignalDetailPanel
 
 ### Pending Todos
 
@@ -85,6 +86,7 @@ Recent decisions affecting current work:
 | Phase 43-collections-reports P01 | 15min | 2 tasks | 5 files |
 | Phase 43-collections-reports P02 | 5 | 1 tasks | 1 files |
 | Phase 43-collections-reports P03 | continuation | 3 tasks (2 auto + 1 human-verify) | 5 files |
+| Phase 44-guided-investigation-explain P01 | 8min | 2 tasks | 4 files |
 
 ### Quick Tasks Completed
 
@@ -101,6 +103,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-04T19:08:38.422Z
-Stopped at: Phase 44 context gathered
+Last session: 2026-03-04T19:25:50.937Z
+Stopped at: Completed 44-01-PLAN.md
 Resume with: `/gsd:execute-phase 44` to start Phase 44 (Guided Investigation / Explain)

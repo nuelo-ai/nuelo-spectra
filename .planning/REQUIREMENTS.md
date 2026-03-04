@@ -30,11 +30,11 @@ Mockup screens for the full Analysis Workspace feature set (v0.8–v0.12 scope).
 
 ### Explain (Guided Investigation)
 
-- [ ] **EXPL-01**: Designer can view an "Investigate" button on a Signal card and investigation status indicator
+- [x] **EXPL-01**: Designer can view an "Investigate" button on a Signal card and investigation status indicator
 - [ ] **EXPL-02**: Designer can view the doctor-style Q&A interview flow: hypothesis text + structured choices (radio) + free-text option
 - [ ] **EXPL-03**: Designer can view a progress indicator showing narrowing scope over 3–5 exchange steps
 - [ ] **EXPL-04**: Designer can view a Root Cause summary card: hypothesis statement, confidence badge (high/medium/low), supporting evidence
-- [ ] **EXPL-05**: Designer can view investigation history list (date, status, root cause summary, exchange count)
+- [x] **EXPL-05**: Designer can view investigation history list (date, status, root cause summary, exchange count)
 - [ ] **EXPL-06**: Designer can view which Signals a root cause links to (cross-signal connection display)
 
 ### What-If Scenarios
@@ -94,11 +94,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | COLL-05 | Phase 43 | Complete |
 | COLL-06 | Phase 43 | Complete |
 | COLL-07 | Phase 43 | Complete |
-| EXPL-01 | Phase 44 | Pending |
+| EXPL-01 | Phase 44 | Complete |
 | EXPL-02 | Phase 44 | Pending |
 | EXPL-03 | Phase 44 | Pending |
 | EXPL-04 | Phase 44 | Pending |
-| EXPL-05 | Phase 44 | Pending |
+| EXPL-05 | Phase 44 | Complete |
 | EXPL-06 | Phase 44 | Pending |
 | WHAT-01 | Phase 45 | Pending |
 | WHAT-02 | Phase 45 | Pending |
