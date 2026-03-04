@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: completed
-stopped_at: Completed 44-02-PLAN.md
-last_updated: "2026-03-04T19:29:09.914Z"
+stopped_at: Completed 44-03-PLAN.md
+last_updated: "2026-03-04T19:31:43.601Z"
 last_activity: 2026-03-04 — Phase 43 complete (Chat-to-Collection bridge, reviewer approved)
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 11
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # Project State
@@ -63,6 +63,8 @@ Recent decisions affecting current work:
 - [Phase 44-guided-investigation-explain]: [Phase 44-01]: RelatedSignal type placed before Report interface; Investigation section fully replaces disabled Tooltip Actions block; collectionId added as required prop on SignalDetailPanel
 - [Phase 44]: InvestigationQAThread returns null when all exchanges complete — parent page owns checkpoint visibility via showCheckpoint state
 - [Phase 44]: [Phase 44-02]: useState initializer for showCheckpoint derives initial checkpoint visibility from mock sessions at mount
+- [Phase 44-03]: Light-theme styling (gray-200/gray-50) used for Related Signals inside white paper layout rather than dark card classes from plan template
+- [Phase 44-03]: Investigation Report badge + Related Signals rendered conditionally on report.type — non-investigation reports completely unaffected
 
 ### Pending Todos
 
@@ -90,6 +92,7 @@ Recent decisions affecting current work:
 | Phase 43-collections-reports P03 | continuation | 3 tasks (2 auto + 1 human-verify) | 5 files |
 | Phase 44-guided-investigation-explain P01 | 8min | 2 tasks | 4 files |
 | Phase 44 P02 | 2 | 2 tasks | 3 files |
+| Phase 44-guided-investigation-explain P03 | 3min | 1 tasks | 1 files |
 
 ### Quick Tasks Completed
 
@@ -106,6 +109,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-04T19:29:09.911Z
-Stopped at: Completed 44-02-PLAN.md
+Last session: 2026-03-04T19:31:43.598Z
+Stopped at: Completed 44-03-PLAN.md
 Resume with: `/gsd:execute-phase 44` to start Phase 44 (Guided Investigation / Explain)
