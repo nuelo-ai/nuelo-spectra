@@ -136,7 +136,11 @@ Plans:
   4. Reviewer can see "Download as Markdown" and "Download as PDF" download buttons on a report
   5. Reviewer can see the Chat-to-Collection bridge — an "Add to Collection" action on a data card that opens a Collection picker modal
   6. Reviewer can see a running credit total displayed in the Collection header ("Credits used: 14")
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 43-01-PLAN.md — Extend mock data, redesign collection detail as four-tab hub with Overview tab and credit display
+- [ ] 43-02-PLAN.md — Full-page document-style report reader with sticky download header
+- [ ] 43-03-PLAN.md — Chat page with data result cards, Add-to-Collection modal, sidebar Chat link
 
 ### Phase 44: Guided Investigation (Explain)
 **Goal**: The reviewer can walk through the complete Guided Investigation flow — from triggering an investigation on a signal through the doctor-style Q&A steps to a root cause summary — and review past investigations and cross-signal links, all as static mockup screens.
