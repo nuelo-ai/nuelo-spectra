@@ -31,7 +31,8 @@ See PROJECT.md Key Decisions table for full decision log.
 
 Recent decisions affecting current work:
 - v0.7.11 is a FRONTEND MOCKUP milestone only — no backend, no live API calls
-- Tech stack: Next.js + React + shadcn/ui + Recharts + Plotly.js (same as existing frontends)
+- **Mockup lives in `pulse-mockup/` — a completely separate Next.js app at the repo root. DO NOT modify `frontend/` or `admin-frontend/`.**
+- Tech stack: Next.js + React + shadcn/ui + Recharts + Plotly.js (same as existing frontends, but in new standalone app)
 - Mockup phases group by feature milestone area (v0.8 through v0.12 screens)
 - What-If is v0.11, Admin Workspace is v0.12 (no v1.0 yet)
 

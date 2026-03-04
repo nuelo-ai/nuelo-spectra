@@ -575,6 +575,7 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | 4 Dokploy Application services (not 1 Compose stack) | Independent deploy, scale, and restart per service | ✓ Good — cleaner than managing a remote compose stack |
 | Backend has no public domain | Reduced attack surface; frontend proxies via Swarm DNS | ✓ Good — simpler than exposing backend directly |
 
+| v0.7.11 mockup as separate Next.js app (pulse-mockup/) | Zero interference with production codebase; mockup is design-only, not deployable alongside real app | — Pending |
 | SHA-256 API key hashing (not Argon2) | High-entropy random token; industry standard (GitHub, Stripe), no perf penalty | ✓ Good — fast auth with no brute-force risk on random tokens |
 | `spe_` prefix for API keys | Recognizable in logs and configs | ✓ Good — easy to identify and route in auth middleware |
 | MCP tools call REST API via httpx loopback | Preserves credit deduction and usage logging middleware chain | ✓ Good — single billing path for both REST and MCP |
