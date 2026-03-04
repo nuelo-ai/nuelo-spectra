@@ -2,7 +2,8 @@
 
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import type { Signal } from "@/lib/mock-data";
+import { MOCK_INVESTIGATION_SESSIONS } from "@/lib/mock-data";
+import type { Signal, InvestigationStatus } from "@/lib/mock-data";
 
 const severityConfig = {
   critical: {
@@ -25,8 +26,28 @@ interface SignalCardProps {
   onSelect: (id: string) => void;
 }
 
+const investigationBadgeConfig: Record<
+  Exclude<InvestigationStatus, "none">,
+  { label: string; className: string }
+> = {
+  "in-progress": {
+    label: "Investigating",
+    className: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  },
+  complete: {
+    label: "Investigated",
+    className: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+  },
+};
+
 export function SignalCard({ signal, isSelected, onSelect }: SignalCardProps) {
   const severity = severityConfig[signal.severity];
+
+  const sessions = MOCK_INVESTIGATION_SESSIONS.filter(
+    (s) => s.signalId === signal.id
+  );
+  const latestStatus: InvestigationStatus =
+    sessions.length === 0 ? "none" : sessions[sessions.length - 1].status;
 
   return (
     <button
@@ -56,6 +77,20 @@ export function SignalCard({ signal, isSelected, onSelect }: SignalCardProps) {
           {signal.category}
         </span>
       </div>
+
+      {latestStatus !== "none" && (
+        <div className="mt-1.5">
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-[10px] px-1.5 py-0 h-5",
+              investigationBadgeConfig[latestStatus].className
+            )}
+          >
+            {investigationBadgeConfig[latestStatus].label}
+          </Badge>
+        </div>
+      )}
     </button>
   );
 }

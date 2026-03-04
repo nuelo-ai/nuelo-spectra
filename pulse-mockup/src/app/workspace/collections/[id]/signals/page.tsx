@@ -79,7 +79,7 @@ export default function SignalsPage() {
 
         <div className="flex-1 min-w-0">
           {selectedSignal ? (
-            <SignalDetailPanel signal={selectedSignal} />
+            <SignalDetailPanel signal={selectedSignal} collectionId={collectionId} />
           ) : (
             <div className="flex items-center justify-center h-full text-muted-foreground">
               Select a signal to view details

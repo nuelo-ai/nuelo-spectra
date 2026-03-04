@@ -1,13 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SignalChart } from "@/components/workspace/signal-chart";
-import { Search } from "lucide-react";
+import { Microscope } from "lucide-react";
+import { MOCK_INVESTIGATION_SESSIONS, MOCK_REPORTS } from "@/lib/mock-data";
 import type { Signal } from "@/lib/mock-data";
 
 const severityConfig = {
@@ -39,11 +40,34 @@ function parseStatisticalEvidence(evidence: string) {
 
 interface SignalDetailPanelProps {
   signal: Signal;
+  collectionId: string;
 }
 
-export function SignalDetailPanel({ signal }: SignalDetailPanelProps) {
+export function SignalDetailPanel({ signal, collectionId }: SignalDetailPanelProps) {
   const severity = severityConfig[signal.severity];
   const evidence = parseStatisticalEvidence(signal.statisticalEvidence);
+
+  // Compute past investigation sessions for this signal, most recent first
+  const signalSessions = MOCK_INVESTIGATION_SESSIONS
+    .filter((s) => s.signalId === signal.id)
+    .slice()
+    .reverse();
+
+  // Build list of sessions that have a completed report
+  const investigationReports = signalSessions
+    .filter((s) => s.reportId !== null)
+    .map((s) => {
+      const report = MOCK_REPORTS.find((r) => r.id === s.reportId);
+      return { session: s, report };
+    })
+    .filter((entry): entry is { session: typeof signalSessions[number]; report: NonNullable<typeof entry.report> } =>
+      entry.report !== undefined
+    );
+
+  function formatDate(iso: string) {
+    const d = new Date(iso);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }
 
   return (
     <ScrollArea className="h-full">
@@ -112,21 +136,52 @@ export function SignalDetailPanel({ signal }: SignalDetailPanelProps) {
           </CardContent>
         </Card>
 
-        {/* Actions */}
+        {/* Investigation */}
         <div className="pt-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                className="gap-2 opacity-60 cursor-not-allowed"
-                disabled
-              >
-                <Search className="h-4 w-4" />
-                Investigate
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Coming soon in a future update</TooltipContent>
-          </Tooltip>
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+            Investigation
+          </h3>
+
+          <Link
+            href={`/workspace/collections/${collectionId}/signals/${signal.id}/investigate`}
+          >
+            <Button size="sm" className="gap-2">
+              <Microscope className="h-4 w-4" />
+              Investigate{" "}
+              <span className="text-xs opacity-70 ml-1">(3 credits)</span>
+            </Button>
+          </Link>
+
+          <div className="mt-4">
+            {investigationReports.length > 0 ? (
+              <div className="space-y-0">
+                {investigationReports.map((entry, i) => (
+                  <div key={entry.session.id}>
+                    {i > 0 && <div className="border-t border-border/50" />}
+                    <Link
+                      href={`/workspace/collections/${collectionId}/reports/${entry.report.id}`}
+                      className="flex items-center gap-3 py-1.5 hover:text-foreground text-foreground/80 transition-colors"
+                    >
+                      <span className="text-[11px] text-muted-foreground shrink-0 w-12">
+                        {formatDate(entry.session.completedAt ?? entry.session.startedAt)}
+                      </span>
+                      <span className="text-xs flex-1 line-clamp-1">
+                        {entry.report.title}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] px-1.5 py-0 h-5 bg-emerald-500/15 text-emerald-400 border-emerald-500/30 shrink-0"
+                      >
+                        Complete
+                      </Badge>
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">No investigations yet</p>
+            )}
+          </div>
         </div>
       </div>
     </ScrollArea>
