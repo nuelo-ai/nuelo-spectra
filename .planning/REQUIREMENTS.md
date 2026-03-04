@@ -22,11 +22,11 @@ Mockup screens for the full Analysis Workspace feature set (v0.8–v0.12 scope).
 
 - [ ] **COLL-01**: Designer can view archive/unarchive actions and status indicators (active vs. archived badge)
 - [ ] **COLL-02**: Designer can view Collection limit usage display ("3 of 5 active collections") and upgrade prompt
-- [ ] **COLL-03**: Designer can view a Report list with type, title, and generated date
+- [x] **COLL-03**: Designer can view a Report list with type, title, and generated date
 - [ ] **COLL-04**: Designer can view an in-page Report reader with rendered markdown and proper typography
 - [ ] **COLL-05**: Designer can view Download options: "Download as Markdown" and "Download as PDF" buttons
 - [ ] **COLL-06**: Designer can view the Chat-to-Collection bridge — "Add to Collection" action on a data card with Collection picker modal
-- [ ] **COLL-07**: Designer can view running credit total in Collection header ("Credits used: 14")
+- [x] **COLL-07**: Designer can view running credit total in Collection header ("Credits used: 14")
 
 ### Explain (Guided Investigation)
 
@@ -89,11 +89,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PULSE-08 | Phase 42 | Complete |
 | COLL-01 | Phase 43 | Pending |
 | COLL-02 | Phase 43 | Pending |
-| COLL-03 | Phase 43 | Pending |
+| COLL-03 | Phase 43 | Complete |
 | COLL-04 | Phase 43 | Pending |
 | COLL-05 | Phase 43 | Pending |
 | COLL-06 | Phase 43 | Pending |
-| COLL-07 | Phase 43 | Pending |
+| COLL-07 | Phase 43 | Complete |
 | EXPL-01 | Phase 44 | Pending |
 | EXPL-02 | Phase 44 | Pending |
 | EXPL-03 | Phase 44 | Pending |
