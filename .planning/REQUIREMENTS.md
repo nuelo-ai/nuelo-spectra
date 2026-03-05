@@ -45,7 +45,7 @@ Mockup screens for the full Analysis Workspace feature set (v0.8–v0.12 scope).
 - [x] **WHAT-04**: Designer can view a per-scenario refinement chat panel (scoped, not freeform)
 - [x] **WHAT-05**: Designer can view the "Add Scenario" action (2 credits) alongside existing scenarios
 - [x] **WHAT-06**: Designer can view the side-by-side comparison view: scenario name, impact range, confidence, time to impact, and Select action
-- [ ] **WHAT-07**: Designer can view a generated What-If Report section showing objective + evaluated scenarios + selected approach
+- [x] **WHAT-07**: Designer can view a generated What-If Report section showing objective + evaluated scenarios + selected approach
 
 ### Admin Workspace Management
 
@@ -106,7 +106,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WHAT-04 | Phase 45 | Complete |
 | WHAT-05 | Phase 45 | Complete |
 | WHAT-06 | Phase 45 | Complete |
-| WHAT-07 | Phase 45 | Pending |
+| WHAT-07 | Phase 45 | Complete |
 | ADMIN-01 | Phase 46 | Pending |
 | ADMIN-02 | Phase 46 | Pending |
 | ADMIN-03 | Phase 46 | Pending |
