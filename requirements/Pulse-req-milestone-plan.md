@@ -502,6 +502,8 @@ The `pulse-mockup/` app contains complete, working UI for the entire v0.8–v0.1
 
 The mockup is the UI contract. Any deviation from its component structure or interaction patterns requires explicit product sign-off.
 
+**Design refresh:** Where the existing Spectra frontend (Chat, Files, Settings, Admin) diverges from the `pulse-mockup/` design — colors, component styles, typography, layout patterns, spacing — treat the mockup as the new design standard and align the existing screens accordingly. This is an intentional opportunity to refresh the overall Spectra UI to match the more polished workspace aesthetic. Specific pages and components that need alignment will be identified and clarified during each milestone's development. When in doubt, the `pulse-mockup/` visual decisions take precedence over the existing frontend.
+
 ### Credit Pre-Check Pattern
 
 Every workspace activity that costs credits follows this flow:
