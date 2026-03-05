@@ -462,9 +462,33 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **v0.7.12 Total: 32/34 requirements satisfied (94%)**
 
+## Current Milestone: v0.8 Spectra Pulse (Detection)
+
+**Goal:** Build the Pulse Analysis module — users can create Collections, attach data files, run Pulse detection, and view Signals as cards with statistical findings and visualizations. This is the foundation milestone establishing the Detect → Explain → What-If pipeline.
+
+**Target features:**
+- Collection, File, Signal data models + full CRUD API
+- Pulse Agent (data profiling + statistical analysis in E2B sandbox + Signal generation)
+- Frontend: migrate pulse-mockup UI into main app (Collections list, Collection detail 4-tab, Detection loading state, Detection Results page with SignalListPanel + SignalDetailPanel)
+- Tier-based workspace access gating + credit cost infrastructure for Pulse
+
 ### Active
 
-<!-- Next milestone — run /gsd:new-milestone to define v0.8 requirements -->
+<!-- Current scope: v0.8 Spectra Pulse (Detection) — requirements defined in .planning/REQUIREMENTS.md -->
+
+- [ ] COLL-01: User can create a Collection with a name
+- [ ] COLL-02: User can view list of their Collections
+- [ ] COLL-03: User can view Collection detail with 4-tab layout (Overview, Files, Signals, Reports)
+- [ ] FILE-01: User can upload files (CSV/Excel) to a Collection
+- [ ] FILE-02: User can view column profile of an uploaded file (DataSummaryPanel)
+- [ ] FILE-03: User can remove a file from a Collection
+- [ ] PULSE-01: User can select files and trigger Pulse detection (Run Detection button)
+- [ ] PULSE-02: User sees full-page detection loading state with animated steps
+- [ ] PULSE-03: User can view Signal cards on Detection Results page (sorted by severity)
+- [ ] PULSE-04: User can view Signal detail (visualization, analysis text, statistical evidence)
+- [ ] PULSE-05: Credit cost pre-check and deduction before Pulse run (5 credits default)
+- [ ] ADMIN-01: Admin can configure workspace access per tier in user_classes.yaml
+- [ ] ADMIN-02: Admin can configure Pulse credit cost via platform_settings
 
 ### Out of Scope
 
@@ -585,4 +609,4 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | Violet color scheme for What-If UI | Distinguishes from blue Investigation theme | ✓ Good — clear visual hierarchy across feature areas |
 
 ---
-*Last updated: 2026-03-05 after v0.7.12 Spectra Pulse Mockup milestone*
+*Last updated: 2026-03-05 after v0.8 Spectra Pulse (Detection) milestone start*

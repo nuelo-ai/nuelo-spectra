@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.1
-milestone_name: milestone
-status: completed
-stopped_at: v0.7.12 — UI flow polish from testing applied (mockup)
-last_updated: "2026-03-05T18:58:33.998Z"
-last_activity: 2026-03-05 — Phase 46 complete (Admin Workspace Management, all ADMIN-01 through ADMIN-06 reviewer-approved)
+milestone: v0.8
+milestone_name: Spectra Pulse (Detection)
+status: not_started
+stopped_at: —
+last_updated: "2026-03-05T00:00:00.000Z"
+last_activity: 2026-03-05 — Milestone v0.8 started
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 17
-  completed_plans: 17
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 
 ## Current Position
 
-Phase: 46 of 46 (Admin Workspace Management)
-Plan: 3 of 3 in current phase (COMPLETE)
-Status: Phase 46 complete — all 3 plans executed and all 6 ADMIN requirements reviewer-approved
-Last activity: 2026-03-05 — Phase 46 complete (Admin Workspace Management, all ADMIN-01 through ADMIN-06 reviewer-approved)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-05 — Milestone v0.8 started
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.11 ✅
 
