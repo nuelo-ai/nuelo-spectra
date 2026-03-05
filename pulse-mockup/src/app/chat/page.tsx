@@ -58,7 +58,7 @@ function TableResult({
 function ChartPlaceholder({ description }: { description?: string }) {
   return (
     <div className="p-4">
-      <div className="h-32 rounded-md bg-[#0a0e1a] border border-border/50 flex items-center justify-center">
+      <div className="h-32 rounded-md bg-muted/50 border border-border flex items-center justify-center">
         <div className="text-center px-4">
           <BarChart3 className="h-8 w-8 text-primary/30 mx-auto mb-2" />
           <p className="text-xs text-muted-foreground">{description}</p>
@@ -85,10 +85,10 @@ function ResultCard({
   onAddToCollection: (title: string) => void;
 }) {
   return (
-    <div className="ml-10 rounded-lg border border-border bg-card overflow-hidden">
+    <div className="rounded-lg border border-border bg-card overflow-hidden">
       {/* Card header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-[#111827]">
-        <span className="text-sm font-medium">{card.title}</span>
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/50">
+        <span className="text-sm font-medium text-foreground">{card.title}</span>
         <Button
           size="sm"
           variant="outline"
@@ -123,56 +123,54 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Page header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Chat</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Ask questions about your data
-        </p>
-      </div>
-
-      {/* Messages area */}
-      <div className="flex flex-col gap-6 pb-24">
-        {MOCK_CHAT_MESSAGES.map((message) => {
-          if (message.role === "user") {
-            return (
-              <div key={message.id} className="flex justify-end">
-                <div className="max-w-lg rounded-2xl bg-primary px-4 py-3 text-sm text-primary-foreground">
-                  {message.content}
+      {/* Messages area — centered column, padded for fixed input bar */}
+      <div className="flex-1 overflow-y-auto pb-24">
+        <div className="max-w-2xl mx-auto flex flex-col gap-6 py-4">
+          {MOCK_CHAT_MESSAGES.map((message) => {
+            if (message.role === "user") {
+              return (
+                <div key={message.id} className="flex justify-end">
+                  <div className="max-w-lg rounded-2xl bg-primary px-4 py-3 text-sm text-primary-foreground">
+                    {message.content}
+                  </div>
                 </div>
+              );
+            }
+
+            // Assistant message
+            return (
+              <div key={message.id} className="flex flex-col gap-3">
+                {/* Assistant prose */}
+                <div className="flex items-start gap-3">
+                  <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                    <Activity className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  <p className="text-sm text-foreground pt-0.5 leading-relaxed">
+                    {message.content}
+                  </p>
+                </div>
+
+                {/* Result cards — indented under the avatar */}
+                {message.resultCards && message.resultCards.length > 0 && (
+                  <div className="pl-10 flex flex-col gap-3">
+                    {message.resultCards.map((card) => (
+                      <ResultCard
+                        key={card.id}
+                        card={card}
+                        onAddToCollection={handleAddToCollection}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             );
-          }
-
-          // Assistant message
-          return (
-            <div key={message.id} className="flex flex-col gap-3">
-              {/* Assistant prose */}
-              <div className="flex items-start gap-3">
-                <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                  <Activity className="h-3.5 w-3.5 text-primary" />
-                </div>
-                <p className="text-sm text-foreground pt-0.5">
-                  {message.content}
-                </p>
-              </div>
-
-              {/* Result cards */}
-              {message.resultCards?.map((card) => (
-                <ResultCard
-                  key={card.id}
-                  card={card}
-                  onAddToCollection={handleAddToCollection}
-                />
-              ))}
-            </div>
-          );
-        })}
+          })}
+        </div>
       </div>
 
-      {/* Disabled input bar at bottom */}
-      <div className="fixed bottom-0 left-60 right-0 p-4 bg-[#0a0e1a] border-t border-border">
-        <div className="max-w-3xl mx-auto flex gap-2">
+      {/* Input bar — fixed to bottom, theme-aware */}
+      <div className="fixed bottom-0 left-60 right-0 bg-background border-t border-border px-6 py-4">
+        <div className="max-w-2xl mx-auto flex gap-2">
           <Input
             disabled
             placeholder="Ask a question about your data..."

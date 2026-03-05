@@ -6,7 +6,7 @@
 // the new initialMessages prop automatically — no useEffect reset needed.
 
 import { useEffect, useRef, useState } from "react";
-import { SendHorizonal, MessageSquare } from "lucide-react";
+import { SendHorizonal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { WhatIfScenario, WhatIfChatMessage } from "@/lib/mock-data";
@@ -49,20 +49,11 @@ export function WhatIfRefinementChat({
   }
 
   return (
-    <div className="w-[300px] flex-shrink-0 flex flex-col h-full">
-      {/* Panel Header */}
-      <div className="px-4 py-3 border-b border-border flex items-center gap-2 shrink-0">
-        <MessageSquare className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm font-medium">Refine</span>
-        <span className="text-xs text-muted-foreground line-clamp-1 flex-1 min-w-0">
-          {scenario.name}
-        </span>
-      </div>
-
-      {/* Message Thread */}
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+      {/* Message Thread — fills available space, pins input to bottom */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 py-4 space-y-3"
+        className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0"
       >
         {messages.length === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-8">

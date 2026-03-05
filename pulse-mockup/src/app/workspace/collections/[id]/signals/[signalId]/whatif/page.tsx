@@ -226,7 +226,7 @@ export default function WhatIfObjectivePage() {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1">
         <div className="max-w-2xl mx-auto px-6 py-8 space-y-6">
           {/* Root cause context card */}
           {investigationReport && (
