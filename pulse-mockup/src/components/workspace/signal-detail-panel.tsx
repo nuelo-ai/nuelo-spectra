@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SignalChart } from "@/components/workspace/signal-chart";
-import { Microscope } from "lucide-react";
+import { Microscope, Wand2 } from "lucide-react";
 import { MOCK_INVESTIGATION_SESSIONS, MOCK_REPORTS } from "@/lib/mock-data";
 import type { Signal } from "@/lib/mock-data";
 
@@ -46,6 +46,11 @@ interface SignalDetailPanelProps {
 export function SignalDetailPanel({ signal, collectionId }: SignalDetailPanelProps) {
   const severity = severityConfig[signal.severity];
   const evidence = parseStatisticalEvidence(signal.statisticalEvidence);
+
+  // Check if this signal has at least one complete investigation
+  const hasCompleteInvestigation = MOCK_INVESTIGATION_SESSIONS.some(
+    (s) => s.signalId === signal.id && s.status === "complete"
+  );
 
   // Compute past investigation sessions for this signal, most recent first
   const signalSessions = MOCK_INVESTIGATION_SESSIONS
@@ -142,15 +147,31 @@ export function SignalDetailPanel({ signal, collectionId }: SignalDetailPanelPro
             Investigation
           </h3>
 
-          <Link
-            href={`/workspace/collections/${collectionId}/signals/${signal.id}/investigate`}
-          >
-            <Button size="sm" className="gap-2">
-              <Microscope className="h-4 w-4" />
-              Investigate{" "}
-              <span className="text-xs opacity-70 ml-1">(3 credits)</span>
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/workspace/collections/${collectionId}/signals/${signal.id}/investigate`}
+            >
+              <Button size="sm" className="gap-2">
+                <Microscope className="h-4 w-4" />
+                Investigate{" "}
+                <span className="text-xs opacity-70 ml-1">(3 credits)</span>
+              </Button>
+            </Link>
+            {hasCompleteInvestigation ? (
+              <Link href={`/workspace/collections/${collectionId}/signals/${signal.id}/whatif`}>
+                <Button size="sm" variant="outline" className="gap-2">
+                  <Wand2 className="h-4 w-4" />
+                  What-If <span className="text-xs opacity-70 ml-1">(5 credits)</span>
+                </Button>
+              </Link>
+            ) : (
+              <Button size="sm" variant="outline" className="gap-2 opacity-50 cursor-not-allowed" disabled>
+                <Wand2 className="h-4 w-4" />
+                What-If
+                <span className="text-xs opacity-70 ml-1">(requires investigation)</span>
+              </Button>
+            )}
+          </div>
 
           <div className="mt-4">
             {investigationReports.length > 0 ? (

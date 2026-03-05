@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Download, FileText, Link2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Download, FileText, Link2, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MOCK_REPORTS } from "@/lib/mock-data";
@@ -28,7 +28,7 @@ export default function ReportReaderPage() {
   return (
     <div className="relative min-h-screen">
       {/* Sticky header bar */}
-      <div className="sticky top-0 z-30 flex items-center justify-between px-6 py-3 bg-[#111827] border-b border-[#1e293b] backdrop-blur-md">
+      <div className="sticky top-0 z-30 flex items-center justify-between px-6 py-3 bg-background border-b border-border backdrop-blur-md">
         <div className="flex items-center gap-3">
           <Link href={`/workspace/collections/${id}`}>
             <Button variant="ghost" size="sm" className="gap-1.5">
@@ -43,6 +43,11 @@ export default function ReportReaderPage() {
           {report.type === "Investigation Report" && (
             <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-400 border-blue-500/30">
               Investigation Report
+            </Badge>
+          )}
+          {report.type === "What-If Scenario Report" && (
+            <Badge variant="outline" className="text-xs bg-violet-500/10 text-violet-400 border-violet-500/30">
+              What-If Scenario Report
             </Badge>
           )}
         </div>
@@ -67,7 +72,7 @@ export default function ReportReaderPage() {
       </div>
 
       {/* Document paper area */}
-      <div className="flex justify-center py-10 px-4 bg-[#0a0e1a] min-h-screen">
+      <div className="flex justify-center py-10 px-4 bg-muted min-h-screen">
         <div className="w-full max-w-3xl bg-white rounded-lg shadow-2xl shadow-black/40 px-16 py-12 text-gray-900">
           {/* Report metadata header within the paper */}
           <div className="mb-8 pb-6 border-b border-gray-200">
@@ -129,6 +134,33 @@ export default function ReportReaderPage() {
                 </div>
               </div>
             )}
+
+          {/* Explore What-If Scenarios CTA — Investigation Reports only */}
+          {report.type === "Investigation Report" && (
+            <div className="mt-8 border-t border-gray-200 pt-6">
+              <div className="rounded-lg bg-violet-50 border border-violet-200 p-4 flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-violet-900 flex items-center gap-2">
+                    <Wand2 className="h-4 w-4" />
+                    Explore What-If Scenarios
+                  </h3>
+                  <p className="text-xs text-violet-700 mt-1">
+                    Use this investigation&apos;s root cause as the basis for scenario planning. Model different interventions and compare their projected impact.
+                  </p>
+                </div>
+                {report.signalId && (
+                  <Link href={`/workspace/collections/${id}/signals/${report.signalId}/whatif`}>
+                    <Button
+                      size="sm"
+                      className="shrink-0 bg-violet-600 hover:bg-violet-700 text-white border-0"
+                    >
+                      Start What-If →
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
