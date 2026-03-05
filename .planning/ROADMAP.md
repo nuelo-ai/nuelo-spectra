@@ -235,5 +235,5 @@ Plans:
 | 42. Analysis Workspace & Pulse Detection | 4/4 | Complete   | 2026-03-04 | - |
 | 43. Collections & Reports | 3/3 | Complete    | 2026-03-04 | - |
 | 44. Guided Investigation (Explain) | 4/4 | Complete    | 2026-03-05 | - |
-| 45. What-If Scenarios | 3/3 | Complete   | 2026-03-05 | - |
+| 45. What-If Scenarios | 3/3 | Complete    | 2026-03-05 | - |
 | 46. Admin Workspace Management | v0.7.11 | 0/TBD | Not started | - |
