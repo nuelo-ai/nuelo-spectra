@@ -169,7 +169,11 @@ Plans:
   3. Reviewer can see Scenario cards presenting name, narrative, estimated impact range, assumptions list, confidence badge with rationale, and a data backing summary
   4. Reviewer can see a per-scenario refinement chat panel scoped to one scenario, and an "Add Scenario" action labelled with its credit cost (2 credits) alongside existing scenarios
   5. Reviewer can see a side-by-side comparison view showing scenario name, impact range, confidence, time to impact, and a Select action per scenario, plus a generated What-If Report section showing objective, evaluated scenarios, and selected approach
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 45-01-PLAN.md — Extend mock data with WhatIf types, objective selection page with command-palette search bar and scenario generation loading state
+- [ ] 45-02-PLAN.md — 4-panel What-If session page with scenario list, scenario detail, and refinement chat panels
+- [ ] 45-03-PLAN.md — Entry points (signal detail + investigation report CTA), What-If report rendering, and human verification checkpoint
 
 ### Phase 46: Admin Workspace Management
 **Goal**: The reviewer can see the full Admin Workspace Management extension — activity dashboard with multiple chart types, per-user workspace tab, credit cost settings, and alerts — all integrated into the existing admin UI as static mockup screens.
