@@ -62,13 +62,13 @@ Throughout this document, the detection stage is referred to as **Pulse**. Indiv
 
 The current chat-with-your-data flow. Stays as-is. Becomes the most primitive feature of Spectra — freeform exploration, quick questions, ad-hoc analysis. Think of it as the "calculator" — always available, always useful, but not the main event.
 
-### Module 2: Analysis Workspace (new — the differentiator)
+### Module 2: Pulse Analysis (new — the differentiator)
 
 A completely separate module with its own entry point, its own flow, and its own output format. This is where Spectra becomes a business tool, not just a data tool. Core focus: **Detect → Explain → What-If** (three stages within one workspace).
 
 ```mermaid
 graph TB
-    subgraph workspace["ANALYSIS WORKSPACE"]
+    subgraph workspace["PULSE ANALYSIS"]
         direction LR
         D["💡 <b>PULSE</b><br/>What's happening"]
         E["🧠 <b>EXPLAIN</b><br/>Why it happened"]
@@ -101,7 +101,7 @@ graph TB
         subgraph modules["User-Facing Modules"]
             direction LR
             Chat["💬 <b>Chat Sessions</b><br/><i>Freeform exploration</i><br/>Ad-hoc questions<br/>Quick analysis"]
-            Workspace["📊 <b>Analysis Workspace</b><br/><i>Guided investigation</i><br/>Pulse → Explain → What-If<br/>Structured reports"]
+            Workspace["📊 <b>Pulse Analysis</b><br/><i>Guided investigation</i><br/>Pulse → Explain → What-If<br/>Structured reports"]
         end
 
         subgraph shared["Shared Engine"]
@@ -133,7 +133,7 @@ graph TB
 
 **Both modules share** the same data layer, same agents, same E2B engine — but have completely different UX paradigms:
 
-| | Chat Sessions | Analysis Workspace |
+| | Chat Sessions | Pulse Analysis |
 |---|---|---|
 | **Purpose** | Exploration | Deliverables |
 | **Interaction** | Freeform typing | Guided steps + Q&A |
@@ -270,7 +270,7 @@ erDiagram
 
 ```mermaid
 graph TD
-    Start["👤 User enters Analysis Workspace<br/>Sidebar: 'Analysis Workspace' → /workspace<br/>Landing page title: 'Collections'"] --> Create["📁 Create new Collection<br/>'Create Collection' dialog<br/>Name field only"]
+    Start["👤 User enters Pulse Analysis<br/>Sidebar: 'Pulse Analysis' → /workspace<br/>Landing page title: 'Collections'"] --> Create["📁 Create new Collection<br/>'Create Collection' dialog<br/>Name field only"]
     Create --> Files["📂 Collection Detail — Files tab<br/>Upload files or select from uploaded<br/>Click file → DataSummaryPanel (column profile)<br/>Check files → sticky action bar appears"]
     Files --> Pulse["💡 <b>PULSE</b><br/>Click 'Run Detection (5 credits)'<br/>Full-page DetectionLoading state<br/>Animated steps — replaces entire page content"]
 
@@ -322,7 +322,7 @@ graph TD
 ```
 
 **Step 1: Start an Analysis — Deliverable: SIGNALS**
-- User enters Analysis Workspace via sidebar nav (label: "Analysis Workspace", route: /workspace). The landing page title is "Collections".
+- User enters Pulse Analysis via sidebar nav (label: "Pulse Analysis", route: /workspace). The landing page title is "Collections".
 - User creates a new Collection via the "Create Collection" button, which opens a dialog with a name field.
 - Collection detail page has 4 tabs: Overview, Files, Signals, Reports.
 - Files tab: FileUploadZone (drag/drop or click to upload) plus FileTable with row checkboxes. Clicking a file row opens a DataSummaryPanel (slide-out sheet showing column profile). Selecting files via checkboxes activates a sticky action bar at the bottom showing selected count and "Run Detection (5 credits)" button.
@@ -428,13 +428,13 @@ These features are described in the full product spec but are not implemented in
 
 ---
 
-## 7. Admin Portal: Analysis Workspace Management
+## 7. Admin Portal: Pulse Analysis Management
 
-The Analysis Workspace is a premium, token-heavy feature. The Admin Portal needs controls for **access gating**, **cost management**, and **activity monitoring**. This builds on the existing tier system (`user_classes.yaml`) and credit infrastructure.
+The Pulse Analysis is a premium, token-heavy feature. The Admin Portal needs controls for **access gating**, **cost management**, and **activity monitoring**. This builds on the existing tier system (`user_classes.yaml`) and credit infrastructure.
 
 ### 1. Tier-Based Access & Collection Limits
 
-The Analysis Workspace is not available to all tiers by default. Each tier gets a configurable access level and collection limit.
+The Pulse Analysis is not available to all tiers by default. Each tier gets a configurable access level and collection limit.
 
 | Tier | Workspace Access | Max Active Collections | Rationale |
 |------|:---:|:---:|---|
@@ -490,7 +490,7 @@ internal:
 
 ### 2. Granular Credit Costs per Workspace Activity
 
-The existing system has a single `default_credit_cost` (1.0 per message). Analysis Workspace activities are **significantly more token-intensive** than a single chat message — a Pulse run may execute 5-10 statistical analyses, and an Investigation may involve multiple agent exchanges. Costs must be granular and configurable.
+The existing system has a single `default_credit_cost` (1.0 per message). Pulse Analysis activities are **significantly more token-intensive** than a single chat message — a Pulse run may execute 5-10 statistical analyses, and an Investigation may involve multiple agent exchanges. Costs must be granular and configurable.
 
 **Proposed credit cost structure:**
 
@@ -518,7 +518,7 @@ The existing system has a single `default_credit_cost` (1.0 per message). Analys
 
 ### 3. Admin Monitoring & Analytics
 
-Admins need visibility into how the Analysis Workspace is being used — both for business insights (is the feature driving engagement?) and operational concerns (who's consuming the most resources?).
+Admins need visibility into how the Pulse Analysis is being used — both for business insights (is the feature driving engagement?) and operational concerns (who's consuming the most resources?).
 
 **3a. Workspace Activity Dashboard (new Admin page)**
 

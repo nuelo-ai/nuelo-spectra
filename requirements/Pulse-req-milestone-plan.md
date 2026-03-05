@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document breaks down the full Spectra Pulse (Analysis Workspace) implementation into versioned milestones with clear scope, deliverables, and frontend/backend/admin breakdown per milestone.
+This document breaks down the full Spectra Pulse (Pulse Analysis) implementation into versioned milestones with clear scope, deliverables, and frontend/backend/admin breakdown per milestone.
 
 > **Frontend Implementation Basis:** The `pulse-mockup/` Next.js app (v0.7.11–v0.7.12) is the authoritative frontend reference for all v0.8–v0.12 milestones. When building the actual functionality, **adopt and migrate the mockup code directly** — component structure, routing, layout, and styling are already production-ready. Do not rebuild the UI from scratch. Replace mock data and hardcoded state with real API calls and backend integration. The mockup routes, component names, and interaction patterns documented in each milestone's Frontend Scope section below correspond directly to files in `pulse-mockup/app/` and `pulse-mockup/components/`.
 
@@ -39,7 +39,7 @@ v0.8 (Pulse) -> v0.9 (Collections) -> v0.10 (Explain) -> v0.11 (What-If Scenario
 
 **Goal:** Users can create a Collection, attach data files, run Pulse detection, and view Signals as cards with statistical findings and visualizations.
 
-This is the foundation milestone. It introduces the Analysis Workspace as a new module separate from Chat, establishes the core data model (Collection, File, Signal), and delivers the first stage of the Detect -> Explain -> What-If pipeline.
+This is the foundation milestone. It introduces the Pulse Analysis as a new module separate from Chat, establishes the core data model (Collection, File, Signal), and delivers the first stage of the Detect -> Explain -> What-If pipeline.
 
 ### Backend Scope
 
@@ -82,7 +82,7 @@ This is the foundation milestone. It introduces the Analysis Workspace as a new 
 ### Frontend Scope
 
 **Navigation:**
-- New "Analysis Workspace" sidebar entry (label: "Analysis Workspace", links to /workspace). Routes: /workspace (Collections list) and /workspace/collections/[id] (Collection detail).
+- New "Pulse Analysis" sidebar entry (label: "Pulse Analysis", links to /workspace). Routes: /workspace (Collections list) and /workspace/collections/[id] (Collection detail).
 - Sidebar also includes Chat, Files, API, Settings, Admin Panel entries. Only /workspace, /chat, and /admin are live routes — others remain # placeholders.
 - Sidebar collapse toggle for desktop. Credit balance shown in the header as a Zap-icon pill.
 
@@ -315,7 +315,7 @@ This milestone adds the second stage of the Detect -> Explain -> What-If pipelin
 
 ## v0.11 — What-If Scenarios (Prescriptive Analytics)
 
-**Goal:** Users can explore data-backed what-if scenarios from root causes, compare options with estimated impacts, refine via scoped chat, and decide on an approach. This completes the full Pulse -> Explain -> What-If pipeline and the Analysis Workspace reaches its complete vision.
+**Goal:** Users can explore data-backed what-if scenarios from root causes, compare options with estimated impacts, refine via scoped chat, and decide on an approach. This completes the full Pulse -> Explain -> What-If pipeline and the Pulse Analysis reaches its complete vision.
 
 ### Backend Scope
 
@@ -405,7 +405,7 @@ This milestone adds the second stage of the Detect -> Explain -> What-If pipelin
 
 ## v0.12 — Admin Workspace Management
 
-**Goal:** Full admin visibility and control over Analysis Workspace usage, including activity dashboards, per-user tracking, credit cost management, and operational alerts.
+**Goal:** Full admin visibility and control over Pulse Analysis usage, including activity dashboards, per-user tracking, credit cost management, and operational alerts.
 
 This milestone builds the admin-facing monitoring and management layer for the workspace. It requires all workspace features (Pulse, Collections, Explain, What-If) to exist for meaningful analytics.
 
