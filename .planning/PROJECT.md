@@ -15,28 +15,18 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 **Branch:** master
 **Latest Tag:** v0.7 (2026-02-25)
 
-## Current Milestone: v0.7.11 Spectra Pulse Mockup
+## Previous Milestones
 
-**Goal:** Create a standalone UI/UX frontend mockup covering the full Analysis Workspace feature set — from Pulse detection through Explain, What-If Scenarios, and Admin Workspace Management — to serve as the design reference for v0.8–v0.12 implementation milestones.
+**v0.7.12 Spectra Pulse Mockup (Shipped 2026-03-05):** Standalone Next.js mockup (`pulse-mockup/`) covering full Analysis Workspace — Pulse detection, Collections, Guided Investigation, What-If Scenarios, and Admin Workspace Management. Design reference for v0.8–v0.12 implementation milestones.
 
-**Target features:**
-- Analysis Workspace entry point, Collection list page, Collection detail page
-- Signal cards UI (Pulse detection output: severity, category, visualization, evidence)
-- Guided Investigation Q&A flow (doctor-style, structured choices, root cause display)
-- What-If Scenarios (objective setting, scenario cards, refinement chat, side-by-side comparison)
-- Collections persistence (reports viewer, archive/unarchive, Chat-to-Collection bridge, download)
-- Admin Workspace Management (activity dashboard, per-user workspace tab, credit cost settings, alerts)
-
-## Previous Milestone: v0.7 API Services & MCP (Shipped 2026-02-25)
-
-**Delivered:** Public REST API and MCP server exposing Spectra's data analysis capabilities for programmatic access and AI agent integrations, with API key management, credit deduction, and usage logging.
+**v0.7 API Services & MCP (Shipped 2026-02-25):** Public REST API and MCP server exposing Spectra's data analysis capabilities for programmatic access and AI agent integrations, with API key management, credit deduction, and usage logging.
 
 ## Current State
 
-**Shipped:** v0.7 API Services & MCP (2026-02-25)
-**Status:** Milestone complete — planning next milestone
-**Codebase:** ~65,000 LOC (Python app + TypeScript/TSX across public frontend + admin frontend + Docker/shell infra)
-**Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily + Plotly + APScheduler (backend), Next.js 16 + React 19 + TanStack + Zustand + shadcn/ui + next-themes + Plotly.js + Recharts (frontend + admin frontend), Docker + Dokploy + Tailscale (deployment)
+**Shipped:** v0.7.12 Spectra Pulse Mockup (2026-03-05)
+**Status:** Milestone complete — planning next milestone (v0.8 implementation)
+**Codebase:** ~73,000 LOC (Python app + TypeScript/TSX across public frontend + admin frontend + pulse-mockup + Docker/shell infra)
+**Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily + Plotly + APScheduler (backend), Next.js 16 + React 19 + TanStack + Zustand + shadcn/ui + next-themes + Plotly.js + Recharts (frontend + admin frontend), Docker + Dokploy + Tailscale (deployment), Next.js + shadcn/ui + Recharts (pulse-mockup)
 
 **What works:**
 - ✅ Complete authentication system with JWT, refresh tokens, and SMTP password reset
@@ -455,20 +445,26 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **v0.7 Total: 30/30 requirements satisfied (100%)**
 
+**✅ v0.7.12 Spectra Pulse Mockup — Shipped 2026-03-05**
+
+- ✓ Mockup: Analysis Workspace entry and Collection list page — v0.7.12
+- ✓ Mockup: Collection detail page with file selection and Run Detection flow — v0.7.12
+- ✓ Mockup: Signal cards UI (left panel list + main detail panel with chart, severity, evidence) — v0.7.12
+- ✓ Mockup: Guided Investigation Q&A flow (structured choices, progress indicator, root cause card) — v0.7.12
+- ✓ Mockup: What-If Scenarios (objective setting, scenario cards, refinement chat, comparison view) — v0.7.12
+- ✓ Mockup: Collections reports viewer with download options — v0.7.12
+- ✓ Mockup: Chat-to-Collection bridge (Add to Collection action on data cards) — v0.7.12
+- ✓ Mockup: Admin Workspace Activity Dashboard (charts, funnel, KPI cards) — v0.7.12
+- ✓ Mockup: Admin per-user Workspace tab extension — v0.7.12
+- ✓ Mockup: Admin Workspace Credit Costs settings section — v0.7.12
+- ⚠ COLL-01: Archive/unarchive status indicators — deferred (known gap, not fully implemented)
+- ⚠ COLL-02: Collection limit usage display ("3 of 5 active collections") — deferred (known gap)
+
+**v0.7.12 Total: 32/34 requirements satisfied (94%)**
+
 ### Active
 
-<!-- v0.7.11 Spectra Pulse Mockup — see .planning/REQUIREMENTS.md -->
-
-- [ ] Mockup: Analysis Workspace entry and Collection list page
-- [ ] Mockup: Collection detail page with file selection and Run Detection flow
-- [ ] Mockup: Signal cards UI (left panel list + main detail panel with chart, severity, evidence)
-- [ ] Mockup: Guided Investigation Q&A flow (structured choices, progress indicator, root cause card)
-- [ ] Mockup: What-If Scenarios (objective setting, scenario cards, refinement chat, comparison view)
-- [ ] Mockup: Collections reports viewer with download options and archive/unarchive
-- [ ] Mockup: Chat-to-Collection bridge (Add to Collection action on data cards)
-- [ ] Mockup: Admin Workspace Activity Dashboard (charts, funnel, KPI cards)
-- [ ] Mockup: Admin per-user Workspace tab extension
-- [ ] Mockup: Admin Workspace Credit Costs settings section
+<!-- Next milestone — run /gsd:new-milestone to define v0.8 requirements -->
 
 ### Out of Scope
 
@@ -575,13 +571,18 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | 4 Dokploy Application services (not 1 Compose stack) | Independent deploy, scale, and restart per service | ✓ Good — cleaner than managing a remote compose stack |
 | Backend has no public domain | Reduced attack surface; frontend proxies via Swarm DNS | ✓ Good — simpler than exposing backend directly |
 
-| v0.7.11 mockup as separate Next.js app (pulse-mockup/) | Zero interference with production codebase; mockup is design-only, not deployable alongside real app | — Pending |
+| v0.7.11 mockup as separate Next.js app (pulse-mockup/) | Zero interference with production codebase; mockup is design-only, not deployable alongside real app | ✓ Good — clean separation, 7,869 LOC in 62 files |
 | SHA-256 API key hashing (not Argon2) | High-entropy random token; industry standard (GitHub, Stripe), no perf penalty | ✓ Good — fast auth with no brute-force risk on random tokens |
 | `spe_` prefix for API keys | Recognizable in logs and configs | ✓ Good — easy to identify and route in auth middleware |
 | MCP tools call REST API via httpx loopback | Preserves credit deduction and usage logging middleware chain | ✓ Good — single billing path for both REST and MCP |
 | Unified get_authenticated_user() dependency | JWT fast path first, SHA-256 key fallback | ✓ Good — existing frontend auth unchanged, API keys "just work" |
 | FastMCP 3.0.2 with manually curated tools | Auto-generation produces poor LLM tool descriptions | ✓ Good — better tool discovery by AI agents |
 | Stateless HTTP transport for MCP | Each request independent, no session state | ✓ Good — simpler deployment, works behind load balancers |
+| Hex.tech dark palette for pulse-mockup | #0a0e1a bg, #111827 cards, #1e293b borders, #3b82f6 accent | ✓ Good — visually distinctive and consistent across all mockup screens |
+| Admin layout without Header component | Each admin page renders its own page title inline | ✓ Good — simpler layout, consistent with admin design pattern |
+| CSS funnel chart (proportional divs) | No external library needed for funnel approximation | ✓ Good — zero dependency, adequate fidelity for mockup |
+| key={selectedScenarioId} for WhatIfRefinementChat | React remount on scenario switch — no useEffect reset needed | ✓ Good — clean state isolation without manual cleanup |
+| Violet color scheme for What-If UI | Distinguishes from blue Investigation theme | ✓ Good — clear visual hierarchy across feature areas |
 
 ---
-*Last updated: 2026-03-03 after starting v0.7.11 Spectra Pulse Mockup milestone*
+*Last updated: 2026-03-05 after v0.7.12 Spectra Pulse Mockup milestone*

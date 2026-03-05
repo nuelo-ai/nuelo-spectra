@@ -1,5 +1,32 @@
 # Project Milestones: Spectra
 
+## v0.7.12 Spectra Pulse Mockup (Shipped: 2026-03-05)
+
+**Delivered:** Standalone Next.js UI/UX mockup covering the full Analysis Workspace feature set — Pulse detection through Explain, What-If Scenarios, and Admin Workspace Management — as static design reference for v0.8–v0.12 implementation milestones
+
+**Phases completed:** 42–46 (5 phases, 17 plans)
+
+**Key accomplishments:**
+- Built standalone `pulse-mockup/` Next.js app with full app shell (Sidebar, Header, credit indicator, theme toggle) and Hex.tech dark palette; 7,869 LOC TypeScript/TSX across 62 files
+- Implemented Analysis Workspace with Collection list/detail, Run Detection flow with credit estimate and loading state, and Signal results page with severity-sorted signal list and chart detail panel
+- Built Collections & Reports hub with four-tab Collection detail, full-page report reader with markdown typography, Chat-to-Collection modal bridge, and running credit total display
+- Delivered Guided Investigation (Explain) flow: doctor-style Q&A with progress indicator, root cause summary card, investigation history list, and related signals cross-link display
+- Built What-If Scenarios flow: objective selection with command-palette search, scenario cards (impact/assumptions/confidence), per-scenario refinement chat overlay, and What-If report section
+- Delivered Admin Workspace Management extension: activity dashboard (line/donut/bar/funnel/stacked charts), per-user Workspace tab with credit breakdown, and Settings page with 8 editable credit cost inputs and dismissable alerts
+
+**Stats:**
+- 5 phases (42–46), 17 plans
+- 91 commits, 200 files changed (+28,242 / -3,389 lines)
+- 7,869 LOC TypeScript/TSX (pulse-mockup/src — 62 files)
+- Timeline: 3 days (2026-03-03 → 2026-03-05)
+
+**Requirements:** 32/34 satisfied (94%)
+- Known gaps: COLL-01 (archive/unarchive status indicators), COLL-02 (collection limit usage display)
+
+**Git range:** `cd1431c` (milestone docs start) → `6343cf8` (v0.7.12 UI polish)
+
+---
+
 ## v0.1 Beta MVP (Shipped: 2026-02-06)
 
 **Delivered:** AI-powered data analytics platform with natural language querying, secure code execution, and interactive data visualization

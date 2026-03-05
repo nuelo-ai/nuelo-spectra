@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: completed
-stopped_at: Completed 46-03-PLAN.md — Phase 46 complete, v0.7.11 milestone complete
-last_updated: "2026-03-05T18:35:34.082Z"
+stopped_at: v0.7.12 — UI flow polish from testing applied (mockup)
+last_updated: "2026-03-05T18:58:33.998Z"
 last_activity: 2026-03-05 — Phase 46 complete (Admin Workspace Management, all ADMIN-01 through ADMIN-06 reviewer-approved)
 progress:
   total_phases: 5
@@ -20,7 +20,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** v0.7.11 Spectra Pulse Mockup — Phase 46 complete, all 6 ADMIN requirements reviewer-approved. v0.7.11 milestone complete.
+**Current focus:** v0.7.12 milestone complete — planning next milestone (v0.8 Analysis Workspace implementation)
 
 ## Current Position
 
@@ -101,6 +101,8 @@ Recent decisions affecting current work:
 | v0.7.8 | 2026-02-25 | MCP: decode Plotly binary typed arrays in chart spec; API_MCP_REFERENCE.md |
 | v0.7.9 | 2026-02-25 | Admin users activity tab: fix backend GroupingError 500 + silent error swallowing |
 | v0.7.10 | 2026-02-27 | Admin credit usage display: add API query counts to activity/sessions tabs + credit transaction source attribution |
+| v0.7.11 | 2026-03-05 | Spectra Pulse Mockup milestone — Phases 42-46 complete (Analysis, Collections, Investigation, What-If, Admin) |
+| v0.7.12 | 2026-03-05 | Mockup UI flow polish: chat centering, investigate closing-question flow, whatif overlay + back button, collections reports signal source line |
 | Phase 42 P03 | 3min | 2 tasks | 8 files |
 | Phase 42 P04 | 3min | 3 tasks | 5 files |
 | Phase 43-collections-reports P01 | 15min | 2 tasks | 5 files |
@@ -133,5 +135,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-05T18:30:00.000Z
-Stopped at: Completed 46-03-PLAN.md — Phase 46 complete, v0.7.11 milestone complete
-Resume with: All 46 phases complete. v0.7.11 Spectra Pulse Mockup milestone fully delivered.
+Stopped at: v0.7.12 — UI flow polish from testing applied (mockup)
+Resume with: All 46 phases complete. v0.7.11 milestone delivered + v0.7.12 patch. Ready for /gsd:complete-milestone or next milestone.

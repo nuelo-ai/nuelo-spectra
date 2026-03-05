@@ -53,6 +53,48 @@
 
 ---
 
+## Milestone: v0.7.12 — Spectra Pulse Mockup
+
+**Shipped:** 2026-03-05
+**Phases:** 5 (42–46) | **Plans:** 17
+
+### What Was Built
+- App shell + Hex.tech dark palette with sidebar collapse, credit indicator, and theme toggle (Phase 42)
+- Collection list/detail, Run Detection flow with credit estimate and loading state, Signal results with severity-sorted panel (Phase 42)
+- Collections four-tab hub, full-page markdown report reader, Chat-to-Collection bridge modal (Phase 43)
+- Guided Investigation Q&A with doctor-style flow, progress indicator, root cause summary, history list, and related signals (Phase 44)
+- What-If Scenarios: objective selection, scenario cards, per-scenario refinement chat overlay, comparison view, generated report section (Phase 45)
+- Admin Workspace Activity Dashboard (line/donut/bar/funnel/stacked charts), per-user Workspace tab, Settings (8 credit cost inputs + dismissable alerts) (Phase 46)
+
+### What Worked
+- **Separate Next.js app** (`pulse-mockup/`) was the right call — zero interference with production code, independent deploy, no bundling concerns
+- **Hex.tech dark palette** as a single design constraint kept all screens visually coherent across 5 different feature areas
+- **GSD phase grouping by feature area** (not by page count) made each phase self-contained and easy to UAT
+- **key={selectedScenarioId} remount pattern** for chat components is a clean React idiom — no manual state cleanup
+- **Violet for What-If, blue for Investigation** — color-coding feature themes is intuitive and worth formalizing for v0.8+
+
+### What Was Inefficient
+- COLL-01 (archive/unarchive status indicators) and COLL-02 (collection limit display) were never checked off — checkbox hygiene in REQUIREMENTS.md lagged behind implementation
+- v0.7.12 was a post-ship polish commit but not called out as a separate GSD plan — should have been a quick task or plan 46-04 to keep execution history clean
+- Phase 42–43 SUMMARY.md files didn't capture `one_liner` fields — made automated accomplishment extraction fail (gsd-tools returned empty)
+
+### Patterns Established
+- **Mockup-first milestone before feature implementation** — creates concrete design artifact with zero backend risk; reviewers get full E2E flow before a line of real code is written
+- **Feature color theming** — violet/What-If, blue/Investigation — should be documented as a design system decision in v0.8 implementation plan
+- **Admin layout without shared Header** — each page owns its own title; simpler and more flexible for admin-specific layouts
+
+### Key Lessons
+- When closing a mockup milestone, explicitly check REQUIREMENTS.md checkbox parity against what was actually built during each phase execution
+- Post-ship polish commits (like v0.7.12) should either be a named quick task or an explicit plan to maintain clean execution history
+- SUMMARY.md `one_liner` field should be filled — GSD tooling depends on it for MILESTONES.md auto-population
+
+### Cost Observations
+- Sessions: ~8 across 3 days
+- All work in a standalone Next.js app made context much cheaper — no backend complexity in scope
+- Phase-by-phase execution was efficient; no rework rounds needed
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -66,6 +108,7 @@
 | v0.5 | 7 | 24 | 2 days | Audit milestone before complete; deferred reqs tracked |
 | v0.6 | 5 | 10 | 3 days | Docker multi-stage; all modes tested in containers |
 | v0.7 | 4 | 15 | 4 days (+3 patches) | MCP loopback arch; 7 hotfixes post-ship |
+| v0.7.12 | 5 | 17 | 3 days (+1 polish patch) | Mockup-first milestone pattern; separate Next.js app |
 
 ### Cumulative Quality
 
@@ -78,6 +121,7 @@
 | v0.5 | 86 | 95% | 3 (CREDIT-11, SETTINGS-06, TIER-02) |
 | v0.6 | 28 | 100% | 0 |
 | v0.7 | 30 | 100% | 0 |
+| v0.7.12 | 34 | 94% | 2 (COLL-01, COLL-02) |
 
 ### Top Lessons (Verified Across Milestones)
 
