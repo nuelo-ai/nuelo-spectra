@@ -801,6 +801,208 @@ export const MOCK_WHATIF_SESSIONS: WhatIfSession[] = [
   },
 ];
 
+// --- Admin Workspace Management mock data ---
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  tier: "free" | "pro" | "enterprise";
+  status: "active" | "suspended";
+  credits: number;
+}
+
+export const ADMIN_USERS: AdminUser[] = [
+  { id: "u1", name: "Alice Chen", email: "alice@acmecorp.com", tier: "pro", status: "active", credits: 142 },
+  { id: "u2", name: "Bob Martinez", email: "bob@acmecorp.com", tier: "enterprise", status: "active", credits: 389 },
+  { id: "u3", name: "Carol Smith", email: "carol@acmecorp.com", tier: "free", status: "active", credits: 27 },
+  { id: "u4", name: "David Kim", email: "david@acmecorp.com", tier: "pro", status: "suspended", credits: 0 },
+];
+
+// Line chart: Collections created per month
+export const COLLECTIONS_OVER_TIME = [
+  { month: "Oct", count: 4 },
+  { month: "Nov", count: 7 },
+  { month: "Dec", count: 5 },
+  { month: "Jan", count: 11 },
+  { month: "Feb", count: 9 },
+  { month: "Mar", count: 14 },
+];
+
+// Donut chart: active vs. archived
+export const COLLECTION_STATUS_BREAKDOWN = [
+  { name: "Active", value: 38, color: "#10b981" },
+  { name: "Archived", value: 12, color: "#6b7280" },
+];
+
+// Bar charts: activity counts by month
+export const ACTIVITY_BY_TYPE = [
+  { month: "Oct", pulse: 18, investigation: 9, whatif: 4, report: 12 },
+  { month: "Nov", pulse: 24, investigation: 14, whatif: 7, report: 18 },
+  { month: "Dec", pulse: 19, investigation: 11, whatif: 5, report: 14 },
+  { month: "Jan", pulse: 31, investigation: 19, whatif: 11, report: 23 },
+  { month: "Feb", pulse: 28, investigation: 16, whatif: 9, report: 19 },
+  { month: "Mar", pulse: 37, investigation: 22, whatif: 13, report: 27 },
+];
+
+// Funnel chart: pipeline adoption
+export const PIPELINE_ADOPTION = [
+  { stage: "Pulse Detection", count: 157, color: "#3b82f6" },
+  { stage: "Explain (Investigation)", count: 89, color: "#8b5cf6" },
+  { stage: "What-If Scenarios", count: 41, color: "#a78bfa" },
+];
+
+// Credit usage stacked bar by activity type over time
+export const CREDIT_USAGE_OVER_TIME = [
+  { month: "Oct", pulse: 36, investigation: 45, whatif: 16, report: 24 },
+  { month: "Nov", pulse: 48, investigation: 70, whatif: 28, report: 36 },
+  { month: "Dec", pulse: 38, investigation: 55, whatif: 20, report: 28 },
+  { month: "Jan", pulse: 62, investigation: 95, whatif: 44, report: 46 },
+  { month: "Feb", pulse: 56, investigation: 80, whatif: 36, report: 38 },
+  { month: "Mar", pulse: 74, investigation: 110, whatif: 52, report: 54 },
+];
+
+// Per-user Workspace tab data (keyed by user id)
+export interface UserCollectionSummary {
+  id: string;
+  name: string;
+  status: "active" | "archived";
+  signals: number;
+  credits: number;
+}
+
+export interface UserActivityEvent {
+  timestamp: string;
+  event: string;
+}
+
+export interface UserWorkspaceData {
+  collections: UserCollectionSummary[];
+  creditBreakdown: { name: string; value: number; color: string }[];
+  activityTimeline: UserActivityEvent[];
+  creditsUsed: number;
+  creditLimit: number;
+}
+
+export const USER_WORKSPACE_DATA: Record<string, UserWorkspaceData> = {
+  u1: {
+    collections: [
+      { id: "c1", name: "Q3 Revenue Anomaly", status: "active", signals: 7, credits: 48 },
+      { id: "c2", name: "Churn Risk Analysis", status: "active", signals: 4, credits: 31 },
+      { id: "c3", name: "Product Usage Trends", status: "archived", signals: 12, credits: 63 },
+    ],
+    creditBreakdown: [
+      { name: "Pulse", value: 48, color: "#3b82f6" },
+      { name: "Investigation", value: 60, color: "#8b5cf6" },
+      { name: "What-If", value: 20, color: "#a78bfa" },
+      { name: "Reports", value: 14, color: "#6366f1" },
+    ],
+    activityTimeline: [
+      { timestamp: "Mar 5, 10:42 AM", event: "Detection ran — 7 signals found" },
+      { timestamp: "Mar 4, 3:18 PM", event: "Investigation completed — root cause identified" },
+      { timestamp: "Mar 3, 11:05 AM", event: "What-If session started" },
+      { timestamp: "Mar 2, 2:30 PM", event: "Report generated and saved" },
+      { timestamp: "Feb 28, 9:14 AM", event: "New collection created: Churn Risk Analysis" },
+    ],
+    creditsUsed: 142,
+    creditLimit: 500,
+  },
+  u2: {
+    collections: [
+      { id: "c4", name: "Enterprise Expansion", status: "active", signals: 9, credits: 72 },
+      { id: "c5", name: "Pricing Model Review", status: "active", signals: 6, credits: 54 },
+      { id: "c6", name: "Q4 Forecast Analysis", status: "active", signals: 11, credits: 98 },
+      { id: "c7", name: "Competitor Benchmarking", status: "archived", signals: 8, credits: 65 },
+      { id: "c8", name: "Market Share Trends", status: "active", signals: 5, credits: 44 },
+    ],
+    creditBreakdown: [
+      { name: "Pulse", value: 100, color: "#3b82f6" },
+      { name: "Investigation", value: 150, color: "#8b5cf6" },
+      { name: "What-If", value: 80, color: "#a78bfa" },
+      { name: "Reports", value: 59, color: "#6366f1" },
+    ],
+    activityTimeline: [
+      { timestamp: "Mar 5, 9:30 AM", event: "Detection ran — 9 signals found" },
+      { timestamp: "Mar 5, 8:15 AM", event: "What-If scenario finalized" },
+      { timestamp: "Mar 4, 4:00 PM", event: "Investigation started on pricing anomaly" },
+      { timestamp: "Mar 3, 1:22 PM", event: "Collection created: Competitor Benchmarking" },
+    ],
+    creditsUsed: 389,
+    creditLimit: 1000,
+  },
+  u3: {
+    collections: [
+      { id: "c9", name: "Sales Pipeline Review", status: "active", signals: 3, credits: 27 },
+    ],
+    creditBreakdown: [
+      { name: "Pulse", value: 18, color: "#3b82f6" },
+      { name: "Investigation", value: 9, color: "#8b5cf6" },
+    ],
+    activityTimeline: [
+      { timestamp: "Mar 4, 2:10 PM", event: "Detection ran — 3 signals found" },
+      { timestamp: "Mar 1, 11:00 AM", event: "Collection created: Sales Pipeline Review" },
+    ],
+    creditsUsed: 27,
+    creditLimit: 100,
+  },
+  u4: {
+    collections: [],
+    creditBreakdown: [],
+    activityTimeline: [],
+    creditsUsed: 0,
+    creditLimit: 500,
+  },
+};
+
+// Credit cost configuration
+export interface CreditCostConfig {
+  activity: string;
+  costPerUnit: number;
+  description: string;
+}
+
+export const CREDIT_COST_CONFIG: CreditCostConfig[] = [
+  { activity: "Pulse Detection", costPerUnit: 5, description: "Per detection run" },
+  { activity: "Investigation (Explain)", costPerUnit: 8, description: "Per investigation session" },
+  { activity: "What-If Scenario", costPerUnit: 2, description: "Per scenario generated" },
+  { activity: "Report Generation", costPerUnit: 3, description: "Per report saved" },
+  { activity: "Chat Analysis", costPerUnit: 1, description: "Per chat session" },
+  { activity: "File Profiling", costPerUnit: 2, description: "Per file uploaded" },
+  { activity: "Data Export", costPerUnit: 1, description: "Per export action" },
+  { activity: "API Call", costPerUnit: 1, description: "Per API request" },
+];
+
+// Alert items
+export type AlertSeverity = "warning" | "critical";
+
+export interface AlertItem {
+  id: string;
+  severity: AlertSeverity;
+  message: string;
+  timestamp: string;
+}
+
+export const MOCK_ALERTS: AlertItem[] = [
+  {
+    id: "a1",
+    severity: "critical",
+    message: "Bob Martinez exceeded 350 credits in the last 30 days (limit: 300)",
+    timestamp: "Mar 5, 2026 — 8:42 AM",
+  },
+  {
+    id: "a2",
+    severity: "warning",
+    message: "Alice Chen is at 85% of monthly credit limit (142 / 500)",
+    timestamp: "Mar 4, 2026 — 3:15 PM",
+  },
+  {
+    id: "a3",
+    severity: "warning",
+    message: "3 users have not run any detection in the past 14 days",
+    timestamp: "Mar 3, 2026 — 9:00 AM",
+  },
+];
+
 // --- Mock Activity ---
 
 export const MOCK_ACTIVITY: ActivityItem[] = [
