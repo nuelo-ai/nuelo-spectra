@@ -185,7 +185,11 @@ Plans:
   3. Reviewer can see workspace credit consumption charts broken down by activity type over time, and a KPI card showing average credits per Collection
   4. Reviewer can see a per-user Workspace tab extension on a user detail page showing Collections list, credit breakdown chart, activity timeline, and limit usage
   5. Reviewer can see a Workspace Credit Costs settings section with editable input fields for all 8 activity costs, and an Alerts section with configurable threshold fields and an active alert list with dismiss actions
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 46-01-PLAN.md — Admin shell, extended mock data, and Workspace Activity Dashboard (KPI row, line/donut/bar charts, funnel, credit usage)
+- [ ] 46-02-PLAN.md — Users list and per-user detail page with fully-built Workspace tab
+- [ ] 46-03-PLAN.md — Settings page (Credit Costs + Alerts) and human verification checkpoint
 
 ## Progress
 
