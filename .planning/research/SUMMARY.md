@@ -1,17 +1,17 @@
 # Project Research Summary
 
-**Project:** Spectra v0.7 — API Services and MCP Server
-**Domain:** Programmatic API access layer and AI agent integration (MCP) for an existing AI-powered data analytics platform
-**Researched:** 2026-02-23
+**Project:** Spectra Pulse v0.8 — Detection Module
+**Domain:** Statistical analysis module additive to existing LLM-powered data analytics SaaS
+**Researched:** 2026-03-05
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Spectra v0.7 adds three tightly layered capabilities on top of an already-complete FastAPI monolith: API key management (new DB table, hashed storage, user self-service UI, admin visibility), a versioned public REST API (v1 endpoints for file listing, data context, and synchronous analysis), and an MCP server that wraps those REST endpoints as tools callable by Claude Desktop, Claude Code, or any MCP host. All three surfaces follow a strict dependency chain — keys must exist before the API can authenticate, the API must exist before the MCP server has anything to call. The recommended build order mirrors this: data model and service layer first, auth layer second, REST endpoints third, MCP last.
+Spectra v0.8 (Pulse) is a statistical detection module built entirely on top of an existing production platform (FastAPI, LangGraph, E2B, Next.js, PostgreSQL). The scope is deliberately additive: 3 new Python libraries, 3 new SQLAlchemy models, 9 new API endpoints, a new LangGraph pipeline, and a frontend component migration from an already-completed mockup. Nothing in the existing stack changes. The primary engineering challenge is building a high-quality Pulse Agent that produces structured, schema-validated Signal outputs — not building infrastructure, which is already in place.
 
-The stack change is deliberately minimal: only two new Python packages are needed — `fastmcp>=3.0.2` (the de facto Python MCP server framework, released 2026-01-19, with native FastAPI integration) and `slowapi>=0.1.9` (per-key rate limiting). Everything else — FastAPI, SQLAlchemy, Alembic, LangGraph, E2B, Pydantic settings — carries forward unchanged. API key generation and hashing use Python stdlib (`secrets`, `hashlib`, `hmac`). The MCP server mounts as an ASGI sub-application on a new `SPECTRA_MODE=api` deployment, keeping it isolated from the public web frontend without requiring any new infrastructure. No Redis, no Celery, no message broker, no frontend changes.
+The recommended approach is a strict build-order that lets each layer validate before the next begins: data models and migrations first, backend CRUD API second, Pulse Agent third (with its own validation milestone before frontend wiring), and frontend migration last. The pulse-mockup in the repo is the authoritative UI contract — 20 components should be migrated (not rebuilt) with only import paths, mock data, and setTimeout stubs swapped for live API calls. The frontend migration also requires two mandatory setup steps before any component is copied: a globals.css token update (Nord palette to Hex.tech palette) and a ThemeProvider addition to the main app's provider tree.
 
-The primary risk area is MCP server quality, not correctness. FastMCP's `from_fastapi()` auto-generation is a tempting shortcut but produces tool descriptions that LLMs use poorly — FastMCP's own documentation warns about this explicitly. The recommendation is to bootstrap with auto-generation as scaffolding, then hand-curate each of the 3-5 tool descriptions for AI agent clarity. A secondary risk is the synchronous query endpoint timeout: LangGraph analysis runs take 10-45 seconds, so the `api` mode service needs an explicit 120-second uvicorn request timeout — the default 30 seconds will silently cut off legitimate queries. The v0.7 infrastructure also inherits the Docker/Dokploy deployment patterns from v0.6, so all volume, secret, and SPECTRA_MODE pitfalls documented in PITFALLS.md remain relevant for the new `spectra-api` Dokploy service.
+The two highest risks in v0.8 are both in the backend. First, the Pulse Agent must emit schema-validated JSON Signals — this is a known gap in the existing agent system and the only agent in the codebase where Pydantic structured output is essential (Signals are schema-sensitive in a way that chat code generation is not). Second, E2B sandbox timeout defaults (60 seconds) are sized for interactive chat queries and will consistently fail on multi-file statistical analysis — a Pulse-specific 300-second timeout must be set before writing any Pulse execution code. Both risks are avoidable with explicit early decisions and are not blockers to launching v0.8.
 
 ---
 
@@ -19,143 +19,187 @@ The primary risk area is MCP server quality, not correctness. FastMCP's `from_fa
 
 ### Recommended Stack
 
-The existing stack handles v0.7 completely with two additions. `fastmcp>=3.0.2` is the de facto Python MCP server framework — it provides `FastMCP.from_fastapi()` for OpenAPI-based auto-generation, `DebugTokenVerifier` for database-backed token validation, and native Streamable HTTP transport. `slowapi>=0.1.9` provides FastAPI-native rate limiting via a single middleware line and `@limiter.limit()` decorator, with a custom `key_func` that extracts the API key from the Authorization header rather than rate-limiting by IP.
+The existing stack is locked (FastAPI, PostgreSQL, LangGraph, E2B, Next.js 16, React 19, shadcn/ui, TanStack Query, Zustand, Plotly.js). v0.8 adds three Python libraries and one frontend package.
 
-API key hashing deliberately uses `hashlib.sha256()` rather than Argon2 — this is correct practice, not a shortcut. API keys are 32 bytes of cryptographic randomness, making brute force computationally infeasible regardless of hash speed. Argon2 would add ~250ms to every API request. SHA-256 is the industry standard for high-entropy random keys (GitHub, Stripe, Twilio all use this pattern). API keys use the prefix format `spe_<secrets.token_urlsafe(32)>`, stored as `sha256(full_key).hexdigest()` with only the first 8-12 characters stored as plaintext for display.
+**Core technology additions:**
 
-**Core technologies:**
-- `fastmcp>=3.0.2`: MCP server framework — only Python library with native `from_fastapi()` auto-generation, built-in auth providers, and Streamable HTTP transport; v3.0 stable and widely adopted
-- `slowapi>=0.1.9`: Per-key rate limiting — thin `limits` wrapper, FastAPI middleware integration, no Redis dependency for single-instance deployment
-- `secrets` + `hashlib` + `hmac` (stdlib): API key generation and hashing — no additional packages; SHA-256 appropriate for high-entropy random keys
-- `fastapi[standard]>=0.115` (existing): Extended with new v1 router prefix and `api` mode gate — zero changes to existing router registrations
-- `sqlalchemy[asyncio]` + `alembic` (existing): New `api_keys` table follows identical ORM and migration patterns as all existing models
+- `scipy >=1.11.0`: univariate anomaly detection (Z-score, IQR) and data quality checks — pre-installed in E2B default Python environment; no sandbox config changes needed
+- `statsmodels >=0.14.0`: trend analysis with statistical significance (OLS regression, Augmented Dickey-Fuller) — produces p-values and confidence intervals that populate Signal `statistical_evidence` fields
+- `scikit-learn >=1.3.0`: multi-column anomaly detection (Isolation Forest) and concentration analysis — handles cross-column interactions that per-column statistics miss
+- `recharts ^2.15.3`: Signal visualizations (AreaChart for trends, BarChart for concentration, ScatterChart for anomalies) — already present in pulse-mockup at this version; Recharts v3 was alpha as of March 2026, stay on v2.x
 
-**What NOT to add:** `fastapi-mcp` (tadata/last release July 2025), base `mcp` SDK directly, `bcrypt` for key hashing, Redis for rate limiting, `fastapi-versioning`, OAuth2, Celery.
+All three Python libraries are compatible with the existing pandas dependency and share the same numpy transitive dependency without conflicts. Version requirements verified on PyPI (scipy 1.17.1, statsmodels 0.14.6, sklearn 1.8.0). See `.planning/research/STACK-pulse-v0.8.md` for installation commands and full compatibility matrix.
+
+**What NOT to add:** `prophet` (requires Stan/C++ build toolchain), `pyod` (wraps sklearn with unnecessary overhead), Plotly in Signal visualization JSON (conflicts with chat DataCard format), Celery (E2B execution is the bottleneck; async task queue adds infrastructure without UX improvement).
 
 ### Expected Features
 
-All v0.7 features are P1 (launch-blocking) except three P2 items deferred until the first user requests them. The feature dependency graph is strictly linear: API key infrastructure → auth middleware → REST v1 endpoints → MCP tools.
+**Must have (table stakes) — v0.8 launch:**
 
-**Must have (table stakes):**
-- `api_keys` table + CRUD endpoints — foundation; nothing else works without this
-- User self-service key management UI — create (display-once modal with copy button), list (prefix + metadata), revoke (immediate, soft-delete for audit trail)
-- REST API v1 auth middleware — validate Bearer key, lookup by SHA-256 hash, check revocation, update `last_used_at`
-- `GET /api/v1/files` — list user's files; simplest endpoint; validates auth plumbing end-to-end
-- `GET /api/v1/files/{id}/context` — AI-generated data profile; high value, zero new computation (pre-computed at upload)
-- `POST /api/v1/analysis` — synchronous query; core product capability; credit deduction mandatory (same atomic `SELECT FOR UPDATE` as web UI)
-- `GET /api/v1/me` — current user info + credits; developer validation endpoint
-- Consistent JSON error envelope (`{"error": {"code": "...", "message": "...", "request_id": "..."}}`) across all v1 routes
-- OpenAPI docs at `/api/v1/docs` — auto-generated by FastAPI; zero implementation cost; essential for developer adoption
-- MCP server with 3 core tools: `spectra_list_files`, `spectra_get_file_context`, `spectra_run_analysis`
-- Admin portal key view and revoke — security requirement; extends existing user management screen
-- `SPECTRA_MODE=api` — 5th Dokploy service; clean API-only backend with its own domain
+- Collection CRUD (create, list, view with 4-tab layout) — workspace entry point; no Pulse without it
+- File attachment to Collection (upload CSV/Excel, view column profile, remove) — Pulse requires data
+- Pulse detection trigger (Run Detection button, credit pre-check, deduction, refund on failure) — core v0.8 deliverable
+- Full-page detection loading state with 4-step animated indicator — mandatory per NNG guidelines for 5-30s operations
+- Signal list sorted by severity (critical first, auto-select highest on page load) — unsorted results feel broken
+- Signal detail panel with chart, analysis text, and statistical evidence grid — signal without evidence is unactionable
+- Pre-run credit cost estimate in button label and sticky action bar — table stakes for credit-based systems
+- Tier-based workspace access gating (workspace_access + max_active_collections per tier) — must be live at launch
 
-**Should have (add after first user request):**
-- `X-Credits-Remaining` response header — track consumption per-request without polling `/api/v1/me`; one line of middleware
-- API key scopes (`files:read`, `analysis:run`) — least-privilege access; accommodate `scopes TEXT[]` column in DB schema from day one even if unused at launch
-- Key expiration / TTL (`expires_at TIMESTAMPTZ NULL` column) — short-lived keys for automation pipelines
+**Should have (differentiators) — v0.8 if time allows, else v0.9:**
 
-**Defer (v1.x / v2+):**
-- File upload via REST API — significantly expands scope; requires async profiling pipeline decisions
-- Async analysis with job ID polling — only if 60-second synchronous timeout regularly triggers
-- OAuth 2.0 — only justified when third-party delegated access is required
-- SDK libraries (Python, JS) — auto-generate with Speakeasy or OpenAPI Generator after stable API surface
-- SSE streaming on REST API — adds client SDK complexity with no benefit for the MCP use case
+- Concentration analysis (Pareto/80-20 signals) — answers business questions that statistical outlier detection misses; not present in Julius.ai or Power BI
+- Data quality as a signal type — surfaces missing data patterns that block investigation of other signals
+- Category-aware chart type per signal (agent-determined; no user configuration) — competitors show anomalies as generic line charts
+- Statistical evidence grid (method, values, confidence, baseline) — "anomaly detected" is insufficient; Spectra shows the statistical proof
+- Inline credit balance transparency — pre-run estimate plus running total in collection header
 
-**Anti-features to explicitly avoid building:**
-- SSE streaming on v1 API — AI agent tool calls need a single return value; synchronous JSON is correct
-- GraphQL — REST with a consistent envelope covers all v0.7 use cases without schema definition overhead
-- Per-key rate limiting as primary consumption gate — credits already serve this role; add hard abuse-prevention floor (e.g., 120 req/min) only as a secondary floor, not as the primary mechanism
+**Defer to v0.9:**
+
+- Collection archiving and limit display ("X of Y active collections")
+- Report compilation from Signals
+- Chat-to-Collection bridge (add-to-collection-modal.tsx exists in mockup but is deferred)
+- PDF export on compiled Reports (button is "present but disabled" in mockup — correct for v0.8)
+
+**Permanent anti-features (do not build):**
+
+- Real-time monitoring / scheduled re-runs — requires scheduling infrastructure; deferred post-v0.12
+- Sensitivity threshold sliders — users lack statistical expertise to tune safely; filter by severity tier instead
+- "Opportunity" as a fourth severity level — severity must map to urgency, not valence; signal valence belongs in title text
+
+See `.planning/research/FEATURES.md` for full feature prioritization matrix, behavioral clarifications, and statistical method recommendations.
 
 ### Architecture Approach
 
-The v0.7 architecture extends the existing SPECTRA_MODE split-horizon pattern with a 5th mode (`api`) that mounts the v1 router and MCP server, while keeping all existing public/admin/dev modes unchanged. The unified auth dependency (`get_authenticated_user()`) tries JWT decode first (fast, in-memory, no DB hit), then falls back to SHA-256 key lookup if JWT decode fails — a single dependency serves all v1 routes without modifying the existing `get_current_user` JWT-only path. MCP tool handlers call v1 endpoints via httpx loopback rather than importing service functions directly — this preserves the full auth, credit deduction, and usage logging middleware chain and ensures MCP calls are indistinguishable from REST API calls in terms of billing and audit.
+v0.8 adds a completely independent module to the existing platform. No existing router, model, service, or agent file is modified. The Pulse pipeline is a separate LangGraph `StateGraph` with its own `PulseAgentState` TypedDict — it shares E2B sandbox runtime and the LLM factory with the chat pipeline, but has no shared state or graph nodes. Frontend workspace routes are placed in a new `(workspace)` route group (parallel to the existing `(dashboard)` group), with their own layout, rather than inheriting the Chat sidebar layout.
 
 **Major components:**
-1. `ApiKey` ORM model + `ApiKeyService` — create, validate (SHA-256 hash lookup), list, revoke; the shared service boundary used by auth dependency, user CRUD routes, and admin routes
-2. `get_authenticated_user()` dependency — unified JWT-or-API-key auth; additive change to `dependencies.py`; used exclusively on v1 routes; existing `get_current_user` is unchanged
-3. `routers/api/v1/` directory — files, context, query endpoints; calls service layer directly (not existing routers); independent public API contract versioned from day one
-4. `mcp_server.py` — FastMCP instance with 3 manually curated tools; mounted on FastAPI app via ASGI in `api`/`dev` modes; uses `combine_lifespans` for clean lifecycle coordination
-5. `SPECTRA_MODE=api` gate in `main.py` — registers v1 router and MCP mount; separate Dokploy service (`spectra-api`) at its own domain
-6. `api_usage_log` table — append-only per-request log (key ID, endpoint, credits used, status code); admin visibility without v0.7 reporting UI
 
-**Key patterns to enforce across all phases:**
-- v1 routers call service layer functions, never import existing routers (avoids coupling public API contract to internal router implementation details)
-- MCP tools call REST API via httpx loopback, never import service functions directly (preserves credit deduction and usage logging middleware chain)
-- `api` mode intentionally excludes SSE streaming routes, password reset flows, and cookie-based session routes — minimal attack surface
-- `scopes TEXT[]` and `expires_at TIMESTAMPTZ` columns in `api_keys` table from day one even if unused — avoids migration pain when P2 features ship
+1. `Collection`, `CollectionFile`, `Signal` models — three new SQLAlchemy models; `CollectionFile` uses `__tablename__ = "collection_files"` (never "files" — name collision with existing model)
+2. `CollectionService` and `PulseService` — service layer between router and agent; routers own HTTP concerns only
+3. `pulse/graph.py` — independent LangGraph pipeline: `profile_data_node` → `run_analyses_node` → `generate_signals_node`; separate E2B executions per analysis type
+4. `pulse/analyzers.py` — E2B-executable Python scripts for anomaly, trend, concentration, quality checks
+5. `/collections` router — 9 endpoints with `WorkspaceAccess` FastAPI dependency for tier and collection limit enforcement
+6. `frontend/src/components/workspace/` — 15 migrated components from pulse-mockup (copy-and-wire, not rebuild)
+7. `(workspace)/` route group — 3 new pages: `/workspace`, `/workspace/collections/[id]`, `/workspace/collections/[id]/signals`
+
+**Critical path:** data models → Alembic migration → CollectionService → collections router → Pulse Agent validation → Pulse endpoint → frontend migration.
+
+See `.planning/research/ARCHITECTURE.md` for complete data flow diagrams, component responsibility table, anti-patterns, and build-order dependency chain.
 
 ### Critical Pitfalls
 
-The PITFALLS.md file covers v0.6 Docker/Dokploy deployment infrastructure. The pitfalls most relevant to v0.7 planning:
+1. **CollectionFile model named "File" — import collision with existing `app.models.file.File`** — Name the new model `CollectionFile` with `__tablename__ = "collection_files"`. Phase 1 decision; all downstream work depends on it being correct.
 
-1. **MCP lifespan coordination** — FastMCP's `http_app()` carries its own ASGI lifespan. The existing FastAPI app also has a lifespan. Use `combine_lifespans(existing_lifespan, mcp_app.lifespan)` from `fastmcp.utilities.asgi` when constructing the FastAPI app in `api` mode. Failing to merge lifespans causes the MCP server to never initialize its connection pool or to abort silently during shutdown.
+2. **E2B sandbox timeout (60s default) too short for multi-file statistical analysis** — Create `PULSE_SANDBOX_TIMEOUT_SECONDS` config (default: 300). Instantiate `E2BSandboxRuntime(timeout_seconds=300)` in the Pulse Agent. Must be set before writing any Pulse execution code.
 
-2. **Synchronous query timeout misconfiguration** — LangGraph analysis runs take 10-45 seconds. Default uvicorn timeout (30 seconds) will silently abort legitimate queries. Set `api_query_timeout_seconds: int = 120` in Settings and pass it as a uvicorn startup argument specifically for the `spectra-api` service. This is separate from the existing `stream_timeout_seconds` field which controls SSE.
+3. **Pulse Agent LLM output inconsistency breaks Signal parsing** — Known gap in the existing agent system. For Pulse specifically: use a strict `PulseAgentOutput` Pydantic model with `Literal["critical", "warning", "info"]` for severity. A Signal schema with missing or invalid fields silently discards user-paid results.
 
-3. **MCP tool descriptions: auto-generation is not enough** — `FastMCP.from_fastapi()` produces tool descriptions that LLMs use poorly. FastMCP's own documentation warns: "LLMs achieve significantly better performance with well-designed and curated MCP servers than with auto-converted OpenAPI servers." Use auto-generation as scaffolding only; manually curate all tool descriptions before shipping.
+4. **Dashboard layout wraps workspace pages in Chat sidebar** — Create a `(workspace)` route group parallel to `(dashboard)`, with its own layout.tsx. Never nest `/workspace` inside `(dashboard)`. Must be established before any component migration.
 
-4. **API keys as long-lived JWTs (anti-pattern)** — JWTs are self-contained and cannot be instantly revoked. API keys must be instantly revocable (set `is_active=false` in one DB row). Never generate a "long-lived JWT" and call it an API key. Use opaque random tokens stored as SHA-256 hashes.
+5. **CSS token conflict: Nord palette (main frontend) vs. Hex.tech palette (mockup)** — Update `globals.css` dark mode tokens globally to the mockup's Hex.tech palette before migrating any components. Also add `ThemeProvider` from `next-themes` to `frontend/src/app/providers.tsx` (currently absent).
 
-5. **Secrets baked into Docker image layers** (from PITFALLS.md) — directly relevant to the new `spectra-api` Dokploy service. `SECRET_KEY` (needed for JWT validation even in API mode), `ANTHROPIC_API_KEY`, and `E2B_API_KEY` must never appear in Dockerfile `ARG` or `ENV` instructions. Pass at runtime via Dokploy environment variables panel only.
+6. **Credit deduction with no atomic rollback on long-running Pulse failures** — Add an APScheduler orphan-refund job that scans for credit deductions with no matching Signal rows after N minutes. Implement before the Pulse endpoint goes live.
 
-6. **SPECTRA_MODE=api on the wrong service** (from PITFALLS.md pattern) — `api` mode must never be set on the public or admin backend services. The existing `logger.info(f"Starting Spectra in {mode.upper()} mode")` startup log is a useful smoke test signal; verify mode in post-deploy health check.
+See `.planning/research/PITFALLS-v0.8-pulse.md` for full "Looks Done But Isn't" checklist, recovery strategies, integration gotchas, and security mistakes.
 
 ---
 
 ## Implications for Roadmap
 
-The dependency chain dictates a strict 4-phase build order. No phase should begin before the prior phase is validated end-to-end with tests.
+The architecture research identifies a clear build-order based on hard layer dependencies. The phase structure below follows that order with pitfall-avoidance checkpoints at each transition.
 
-### Phase 1: API Key Infrastructure
-**Rationale:** Everything in v0.7 depends on the ability to create, store, and validate API keys. This phase has zero dependencies on anything new — it follows identical patterns to existing models (`CreditService`, `FileService`, existing Alembic migrations). Build first, validate independently before writing any other v0.7 code.
-**Delivers:** `api_keys` table migration, `ApiKey` ORM model, `api_usage_log` table migration, `ApiKeyService` (create/validate/list/revoke), Alembic migration, user-facing CRUD endpoints at `/api/keys`, admin key management extension in the admin portal, user self-service UI screen in the public frontend
-**Addresses:** All APIKEY-* and APIKEY-ADMIN-* features; `scopes TEXT[]` and `expires_at TIMESTAMPTZ NULL` columns included in schema even if unused at launch
-**Avoids:** Argon2 for key hashing (use SHA-256); hard-deleting revoked keys (use `revoked_at` soft-delete for audit trail); calling this a "long-lived JWT"
-**Research flag:** No additional research needed — follows exact existing patterns
+### Phase 1: Data Foundation
 
-### Phase 2: Unified Auth Layer and SPECTRA_MODE Extension
-**Rationale:** The auth dependency must be solid and independently testable before any v1 endpoint is written. A broken auth layer makes every endpoint test ambiguous — is the bug in the endpoint or the auth? Resolving auth first makes Phase 3 deterministic.
-**Delivers:** `get_authenticated_user()` dependency in `dependencies.py`, `ApiUser` type alias, `config.py` extended with `api` mode and rate limit settings, `main.py` updated with `api`/`dev` mode routing block, `slowapi` middleware registered with per-key `key_func`
-**Uses:** `fastapi[standard]` (existing), `slowapi>=0.1.9` (new), `HTTPBearer(auto_error=False)` pattern from FastAPI official docs
-**Implements:** Unified auth dependency (JWT fast path, API key fallback); SPECTRA_MODE=api gate
-**Avoids:** Using `OAuth2PasswordBearer` for the combined dependency (generates wrong Swagger UI behavior for API key flows); mounting MCP or v1 routes in `public` mode
-**Research flag:** Verify `slowapi>=0.1.9` compatibility with FastAPI 0.115+ and custom `key_func` behavior before writing middleware (rated MEDIUM confidence in STACK.md)
+**Rationale:** Every other phase depends on the data models and configuration. This is the critical path blocker. Must be done first and done correctly — the CollectionFile naming decision here affects import trees across all backend phases.
 
-### Phase 3: REST API v1 Endpoints
-**Rationale:** v1 endpoints are the substantive implementation. Each endpoint is independently testable with a valid API key from Phase 1. Build the three endpoints in increasing complexity: file listing (read-only, no credits), file context (read-only, no credits), analysis query (LangGraph invocation, credit deduction, synchronous await with 120s timeout).
-**Delivers:** `GET /api/v1/me`, `GET /api/v1/files`, `GET /api/v1/files/{id}/context`, `POST /api/v1/analysis` (synchronous, 120s timeout), consistent JSON error envelope, OpenAPI docs at `/api/v1/docs`, `api_usage_log` inserts on every request
-**Uses:** Existing `FileService`, `CreditService`, LangGraph graph (`await graph.ainvoke()`); `fastapi[standard]` (existing)
-**Implements:** `routers/api/v1/` directory; `schemas/api_v1.py`; synchronous LangGraph wrapper
-**Avoids:** Missing credit deduction on analysis endpoint; importing existing routers into v1 routers; SSE streaming on v1 endpoints; timeout shorter than 120 seconds
-**Research flag:** No additional research needed — synchronous `await graph.ainvoke()` is existing LangGraph usage; REST patterns are standard FastAPI
+**Delivers:** Three new SQLAlchemy models (`Collection`, `CollectionFile`, `Signal`) with Alembic migration, user_classes.yaml extended with `workspace_access` and `max_active_collections` per tier, `workspace_credit_cost_pulse` added to platform_settings DEFAULTS and VALID_KEYS.
 
-### Phase 4: MCP Server and api Mode Deployment
-**Rationale:** MCP tools are thin wrappers over Phase 3 endpoints. Building last, when endpoints are stable, means tool descriptions can be accurate and integration tests can run end-to-end through the full stack. Building earlier couples MCP development to unstable endpoint contracts.
-**Delivers:** `mcp_server.py` with 3 manually curated tools (`spectra_list_files`, `spectra_get_file_context`, `spectra_run_analysis`), lifespan coordination via `combine_lifespans`, MCP mount in `main.py` `api`/`dev` block, 5th Dokploy `spectra-api` service configuration with its own domain (`api.spectra.io`), 120-second uvicorn timeout for the api-mode service
-**Uses:** `fastmcp>=3.0.2` (new); `httpx` (existing, already installed); Streamable HTTP transport
-**Implements:** FastMCP instance mounted as ASGI sub-application; tools call REST API via httpx loopback; `SPECTRA_MODE=api` Dokploy service
-**Avoids:** Auto-generated tool descriptions only — manually curate all tool descriptions; MCP tools importing service functions directly (bypasses credits and logging); mounting MCP in `public` mode; sharing the `spectra_uploads` volume without confirming Dokploy host topology
-**Research flag:** Verify `combine_lifespans` import path and behavior in FastMCP 3.x at implementation time — the library moved quickly around the v3.0 release and the API may have changed from earlier community examples
+**Addresses:** COLL-01 through COLL-03 data layer, FILE-01 through FILE-03 data layer, ADMIN-01, ADMIN-02 data layer
+
+**Avoids:**
+- Pitfall 1 (CollectionFile name collision) — naming decision made before any downstream imports
+- Pitfall 7 (Alembic migration table name inconsistency) — review autogenerated migration before running; confirm `__tablename__` matches migration exactly
+
+### Phase 2: Backend CRUD API
+
+**Rationale:** The frontend cannot develop against live APIs until CRUD endpoints exist. This phase unblocks parallel frontend work and provides a Postman/curl validation milestone before agent complexity is introduced.
+
+**Delivers:** Full `/collections` router with CRUD endpoints, file upload, `WorkspaceAccess` dependency, Pydantic schemas. Frontend can list, create, and upload files before the Pulse Agent exists.
+
+**Uses:** `CollectionService`, existing `CreditService` (deduct-before-execute pattern), `user_classes.yaml` tier enforcement via `WorkspaceAccess` dependency
+
+**Avoids:**
+- Pitfall 6 (credit deduction with no rollback) — design APScheduler orphan-refund safety net in this phase before wiring the Pulse endpoint
+
+### Phase 3: Pulse Agent
+
+**Rationale:** The Pulse Agent is the core value proposition of v0.8. It must be validated against real CSV data independently before the frontend signal display is built. Discovering agent output quality issues after building the UI wastes effort. Phase 3 can begin in parallel with Phase 2 after Phase 1 completes.
+
+**Delivers:** `PulseAgentState` TypedDict, `pulse/analyzers.py` (per-analysis-type E2B scripts), `pulse/agent.py` (LLM structuring with Pydantic output), `pulse/graph.py` (3-node pipeline), `pulse_service.py`. Validates Signal generation from a test CSV before any frontend work begins.
+
+**Uses:** scipy (anomaly/quality), statsmodels (trend), scikit-learn (concentration and multi-column anomaly), `E2BSandboxRuntime` with Pulse-specific 300s timeout, `get_llm()` factory with new `pulse_agent` entry in `prompts.yaml`
+
+**Avoids:**
+- Pitfall 2 (E2B timeout) — `PULSE_SANDBOX_TIMEOUT_SECONDS=300` set before first execution
+- Pitfall 8 (LLM output inconsistency) — `PulseAgentOutput` Pydantic schema defined before writing the agent prompt; severity `Literal["critical", "warning", "info"]` enforced
+
+### Phase 4: Pulse Endpoint Wire-Up
+
+**Rationale:** Short phase connecting the validated Pulse Agent to the API layer. Only begins after Phase 3 produces confirmed Signal output from real data files.
+
+**Delivers:** `POST /collections/{id}/pulse` endpoint with credit pre-check, atomic deduction, agent invocation, credit refund on failure (try/finally), returns signals list in response.
+
+**Avoids:**
+- Pitfall 6 continued — orphan-refund APScheduler job tested end-to-end; tier re-check on pulse trigger (not just on collection creation)
+
+### Phase 5: Frontend Migration
+
+**Rationale:** With Phases 1-4 complete, the backend contract is fully defined and stable. Frontend migration is low-risk: copy-and-wire from a completed mockup with only import paths, mock data, and setTimeout stubs changing.
+
+**Delivers:** 15 workspace components in `frontend/src/components/workspace/`, 3 new route pages in `(workspace)/` group, TanStack Query hooks (useCollections, useCollection, usePulse), Next.js API route handlers, recharts installed, ChatSidebar "Pulse Analysis" nav entry.
+
+**Uses:** recharts v2.15.3, existing TanStack Query patterns, existing Zustand stores (no new store needed)
+
+**Build order within Phase 5:** globals.css token update → ThemeProvider addition → `(workspace)` route group and layout → workspace list page → collection detail (Files tab first, then Overview, then Signals tab, then Reports stub) → detection results page → sidebar nav entry
+
+**Avoids:**
+- Pitfall 4 (dashboard layout wrapping workspace) — `(workspace)` route group created before migrating any component
+- Pitfall 5 (CSS token conflict) — globals.css updated to Hex.tech palette before any component copy
+- Pitfall 6 (missing ThemeProvider) — added to providers.tsx before any component copy
+
+### Phase 6: Admin and Tier Gating QA
+
+**Rationale:** Access gating must be verified end-to-end before the feature is released. This is validation work, not new development — confirming that WorkspaceAccess dependency, tier config, and credit cost config all behave correctly for every tier.
+
+**Delivers:** Confirmed tier access enforcement (free tier blocked, trial tier limited, premium unlimited), collection limit enforcement, workspace_credit_cost_pulse editable via admin settings page.
+
+**Addresses:** ADMIN-01, ADMIN-02 verified end-to-end; tier re-check on Pulse trigger (not just Collection creation)
+
+**Use the "Looks Done But Isn't" checklist** from `.planning/research/PITFALLS-v0.8-pulse.md` as the verification checklist for this phase.
+
+---
 
 ### Phase Ordering Rationale
 
-- **Infrastructure before API surface:** API key infrastructure (Phase 1) and auth layer (Phase 2) produce no user-visible output on their own but gate everything else. Completing them first means Phases 3 and 4 can move fast with high confidence.
-- **REST before MCP:** The MCP server is architecturally a client of the REST API. Until `/api/v1/analysis` returns stable JSON, tool descriptions cannot be accurate and integration tests cannot be trusted end-to-end.
-- **Services over routers as the shared boundary:** Both v1 routers and MCP tool handlers use service layer functions — not each other's router handlers. This is the single most important architectural discipline to enforce across all four phases.
-- **Schema accommodates future from day one:** `scopes TEXT[]` and `expires_at TIMESTAMPTZ NULL` go into the `api_keys` table in Phase 1 even though the P2 features using them are deferred. Adding them later requires a migration and potential downtime.
-- **Docker pitfalls are live for the new service:** The `spectra-api` service introduced in Phase 4 is a new Dokploy Application. All v0.6 deployment disciplines apply: correct context path, no secrets in image layers, explicit `SPECTRA_MODE=api` verification, and a plan for the `spectra_uploads` volume sharing strategy before deploying to production.
+- Phase 1 blocks everything — no model means no migration, no service, no router, no frontend
+- Phase 2 before Phase 5 — frontend needs stable API contracts; CRUD is low-risk and unblocks parallel mockup study
+- Phase 3 can run in parallel with Phase 2 — agent work depends only on Phase 1 models, not on CRUD routes
+- Phase 3 must complete with validated Signal output before Phase 5 Signals tab is built — this is the quality gate protecting the core v0.8 value proposition
+- Phase 5 migration is copy-and-wire only when Phases 1-4 are stable — reduces rework risk significantly
+- Phase 6 is QA and gating verification, not net-new development — correctly positioned last
 
 ### Research Flags
 
-Phases needing verification or attention during implementation:
-- **Phase 2:** Verify `slowapi>=0.1.9` compatibility with FastAPI 0.115+ and test that the custom `key_func` correctly extracts API keys from `Authorization: Bearer <key>` headers in the project's specific Depends() chain before writing the rate limiting middleware.
-- **Phase 4:** Verify the `combine_lifespans` import path (`fastmcp.utilities.asgi`) and API behavior in FastMCP 3.x at implementation time. If the API has changed, use a manual lifespan merge pattern as the fallback.
-- **Phase 4:** Confirm `spectra-api` and `spectra-public` Dokploy host topology before deploying. If both run on the same host, the `spectra_uploads` named volume is shared automatically. If they run on different hosts, a shared storage strategy (S3 or NFS) is required before the `api` mode service can access files uploaded via the web UI.
+Phases needing deeper investigation during planning:
 
-Phases with well-documented patterns (no additional research needed):
-- **Phase 1:** Exact same ORM + Alembic + service patterns as existing `CreditService`, `FileService`. SHA-256 key hashing is thoroughly documented. HIGH confidence.
-- **Phase 3:** Standard FastAPI router patterns. `await graph.ainvoke()` is existing LangGraph usage. Credit deduction is existing `CreditService`. No novel patterns.
+- **Phase 3 (Pulse Agent):** Agent prompt engineering for Signal generation quality is empirical. The statistical method-to-signal-category mapping in FEATURES.md is a recommendation, not a codified standard. Allocate iteration cycles for prompt development and multi-provider testing before declaring the agent done.
+- **Phase 3 (Pulse Agent):** The split of analyses across separate E2B executions (one per detection type) reduces timeout risk but adds implementation complexity. Validate the exact split strategy against actual user file sizes before finalizing the analyzer design.
+
+Phases with well-documented patterns (research phase can be skipped):
+
+- **Phase 1 (Data Foundation):** Standard SQLAlchemy 2.0 model plus Alembic migration. Existing codebase has clear, inspected examples for every pattern used.
+- **Phase 2 (Backend CRUD):** Standard FastAPI router plus service layer. Pattern is identical to the existing files and sessions routers inspected in architecture research.
+- **Phase 5 (Frontend Migration):** Copy-and-wire from completed mockup. Component tree, prop names, and interactions are fully defined in pulse-mockup source. No pattern research needed — only import and data wiring changes.
 
 ---
 
@@ -163,51 +207,55 @@ Phases with well-documented patterns (no additional research needed):
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | `fastmcp>=3.0.2` verified on PyPI (released 2026-02-22), official FastMCP docs consulted for all key patterns; `slowapi` rated MEDIUM (community consensus, multiple sources, not Context7-verified) |
-| Features | HIGH | Industry patterns verified against Stripe, OpenAI, and official MCP documentation; feature dependency graph is unambiguous and directly derived from the codebase |
-| Architecture | HIGH | Core FastAPI patterns from official docs and official FastAPI repo discussions; MCP mounting pattern from official FastMCP docs; direct codebase analysis of existing `main.py`, `dependencies.py`, `config.py` |
-| Pitfalls | HIGH (v0.6 Docker) / MEDIUM (v0.7-specific) | v0.6 Docker/Dokploy pitfalls from official docs and verified GitHub issues; v0.7-specific pitfalls (MCP lifespan, query timeout) derived from architecture research and FastMCP documentation |
+| Stack | HIGH | All new library versions verified on PyPI. recharts v2.15.3 confirmed working in pulse-mockup against React 19. scipy/statsmodels/sklearn compatibility matrix cross-verified. E2B pre-installation of all three confirmed. |
+| Features | HIGH | Mockup directly inspected as authoritative UI contract. Feature classification informed by Adobe Analytics, Power BI, and NNG primary sources. Statistical method-to-category mapping is MEDIUM within overall HIGH confidence. |
+| Architecture | HIGH | Based entirely on direct codebase inspection — every claim traced to a specific file. Build order derived from hard dependency analysis, not opinion. |
+| Pitfalls | HIGH | All eight critical pitfalls verified against the actual codebase: existing File model import sites counted, sandbox timeout config confirmed, providers.tsx ThemeProvider absence confirmed, globals.css tokens directly compared. No speculative pitfalls. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **`slowapi` version pinning:** Rated MEDIUM confidence in STACK.md. Before writing rate limiting middleware in Phase 2, confirm `slowapi>=0.1.9` works with FastAPI 0.115+ and that the `key_func` correctly extracts API keys from `Authorization: Bearer` headers in the project's specific dependency injection pattern.
-
-- **`combine_lifespans` API stability:** FastMCP's `combine_lifespans` utility for merging ASGI lifespans is referenced in ARCHITECTURE.md but its exact import path and behavior in FastMCP 3.x should be verified before Phase 4 begins. The library released v3.0 on 2026-01-19 and may have reorganized internal utilities. Fallback: manual lifespan merge using `asynccontextmanager` composition.
-
-- **Shared volume strategy for `spectra-api`:** ARCHITECTURE.md notes that file volume sharing between `spectra-public` and `spectra-api` is only automatic on a single Dokploy host. If the `api` service runs on a different host, an S3 or NFS strategy is needed — and the existing file storage pattern (local disk) would need to change. Clarify deployment topology before configuring the Phase 4 Dokploy service.
-
-- **User key management UI placement:** FEATURES.md implies the user self-service key management screen lives in the existing public frontend (served by `spectra-public`). ARCHITECTURE.md shows the `/api-keys` CRUD endpoints registered in `public`/`dev` modes. The frontend routing for this new screen should be confirmed before Phase 1 backend CRUD endpoints are finalized, to ensure the API shape matches what the UI will need.
+- **Statistical severity thresholds:** The thresholds in FEATURES.md (Z-score > 3 = critical, etc.) are reasonable starting values but need empirical validation against real user data. Externalize to YAML config from day one so they can be tuned post-launch without code changes.
+- **Pulse Agent prompt quality:** Cannot be fully specified in research — requires iteration against real CSV inputs. Allocate explicit time in Phase 3 for prompt development and multi-provider testing before treating the agent as production-ready.
+- **Per-file vs. flat credit pricing:** The mockup implies per-file pricing but requirements specify flat cost (5.0 credits regardless of file count). FEATURES.md resolves this in favor of flat pricing, but confirm the decision with the owner before Phase 2 wires the credit check.
+- **Detection Results page cancel UX:** PITFALLS.md flags that the full-page loading state blocks back navigation. FEATURES.md does not specify a cancel action. Decide before Phase 5 — either implement a cancel endpoint or allow navigation away with a "Detection running in background" toast.
 
 ---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- FastMCP official docs (gofastmcp.com) — `from_fastapi()`, HTTP transport, lifespan coordination (`combine_lifespans`), auth providers, `DebugTokenVerifier`, tool description quality warning
-- FastMCP PyPI — version 3.0.2, release date 2026-02-22, Python >=3.10 requirement verified
-- MCP Python SDK (github.com/modelcontextprotocol/python-sdk) — protocol transport, `tools/list`, `tools/call` primitives
-- modelcontextprotocol.io official docs — MCP architecture, JSON Schema tool definitions, Streamable HTTP transport recommendation
-- FastAPI official docs — `HTTPBearer(auto_error=False)`, `APIKeyHeader`, router prefix, combined auth dependencies
-- FastAPI official repo (GitHub Discussion #9601) — JWT + API key combined dependency patterns
-- Python stdlib docs — `secrets.token_urlsafe()`, `hashlib.sha256()`, `hmac.compare_digest()` usage
-- Next.js official docs — `NEXT_PUBLIC_*` build-time variable behavior (relevant for v0.6 infrastructure carrying into v0.7)
-- Docker official docs — layer secrets, `.dockerignore`, health check patterns
-- Direct codebase analysis — `backend/app/main.py`, `backend/app/config.py`, `backend/app/dependencies.py`, `backend/app/utils/security.py`, `backend/app/models/user.py`
+
+- `pulse-mockup/src/components/workspace/` — 20 component files, authoritative UI contract
+- `pulse-mockup/src/lib/mock-data.ts` — `ChartType = "line" | "bar" | "scatter"` type definition
+- `backend/app/models/file.py` — existing `File` model, 8+ import sites confirmed
+- `backend/app/services/credit.py` — `SELECT FOR UPDATE` atomic deduction pattern
+- `backend/app/services/sandbox/e2b_runtime.py` — 60s sandbox timeout confirmed
+- `backend/app/config.py` — `sandbox_timeout_seconds: 60`, `stream_timeout_seconds: 180`
+- `frontend/src/app/(dashboard)/layout.tsx` — ChatSidebar + LinkedFilesPanel hardcoded on all dashboard routes
+- `frontend/src/app/providers.tsx` — ThemeProvider absence confirmed
+- `pulse-mockup/src/app/globals.css` vs `frontend/src/app/globals.css` — Hex.tech vs. Nord palette difference confirmed
+- `requirements/Pulse-req-milestone-plan.md` — authoritative v0.8 scope
+- `requirements/Spectra-Pulse-Requirement.md` — ER diagram, user journey, data model decisions
+- [SciPy 1.17.1 on PyPI](https://pypi.org/project/SciPy/) — current version verified
+- [statsmodels 0.14.6 on PyPI](https://pypi.org/project/statsmodels/) — current version verified
+- [scikit-learn 1.8.0 documentation](https://scikit-learn.org/stable/) — current version verified
+- [Recharts API documentation](https://recharts.github.io/en-US/api/) — AreaChart, BarChart, ScatterChart API verified stable in v2.x
 
 ### Secondary (MEDIUM confidence)
-- freeCodeCamp — API key best practices (prefix format, SHA-256 hashing, display-once UX)
-- Stripe, OpenAI, Perplexity API documentation — competitor key management UX feature comparison
-- AppMaster blog — API key rotation, scoping, UX patterns
-- oneuptime.com (2026-02-20) — API key management best practices; SHA-256 vs Argon2 for random keys
-- slowapi GitHub (laurentS/slowapi) — FastAPI rate limiting, custom `key_func` documentation
-- Medium (MCP Streamable HTTP production transport) — production deployment patterns, 2025
-- greeden.me (2025-12-30) — practical FastAPI JWT + API key combined security guide
-- Dokploy official docs — build types, env vars, volumes, Application model (carried from v0.6 research)
-- Docker community forums and HackerNoon — volume persistence and startup race condition patterns
+
+- Adobe Analytics Anomaly Detection Statistical Techniques — ETS/GESD methodology; statistical method-to-category mapping informed by this
+- NNG Skeleton Screens research — progress bars required for 10+ second waits; informs detection loading UX requirement
+- Power BI Anomaly Detection documentation — severity tier vs. sensitivity slider design decision
+- IBM Databand — severity-prioritized alert view confirmed as industry pattern
+- Pareto Chart 101 (Mode.com) — sorted bar plus cumulative line as canonical Pareto output
+
+### Tertiary (LOW confidence)
+
+- Statistical severity thresholds (Z-score > 3 = critical, etc.) — reasoned starting values based on academic statistics conventions; require empirical validation against user data before treating as final
 
 ---
 
-*Research completed: 2026-02-23*
+*Research completed: 2026-03-05*
 *Ready for roadmap: yes*

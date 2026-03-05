@@ -1,632 +1,787 @@
-# Architecture Research: API Services & MCP Server
+# Architecture Research: v0.8 Spectra Pulse (Detection)
 
-**Domain:** API key management, public REST API v1, and MCP server layered onto existing FastAPI monolith
-**Researched:** 2026-02-23
-**Confidence:** HIGH (core FastAPI patterns from official docs + direct codebase analysis; MCP SDK mounting from official GitHub + FastMCP docs)
+**Domain:** Adding Pulse Analysis module to an existing FastAPI + LangGraph + Next.js platform
+**Researched:** 2026-03-05
+**Confidence:** HIGH (direct codebase inspection — models, agents, routers, frontend routes, services all read)
 
 ---
 
 ## Standard Architecture
 
-### System Overview
+### System Overview — v0.8 Integration Layer
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                        SPECTRA BACKEND (single FastAPI process)                  │
-├────────────────┬──────────────────┬──────────────────┬──────────────────────────┤
-│  SPECTRA_MODE  │      public       │      admin        │     api   (NEW v0.7)     │
-│   Routes       │  /auth/*          │  /api/admin/*     │  /api/v1/*               │
-│                │  /files/*         │                   │  /mcp  (SSE transport)   │
-│                │  /chat/*          │                   │                          │
-│                │  /sessions/*      │                   │                          │
-├────────────────┴──────────────────┴──────────────────┴──────────────────────────┤
-│                        Auth Middleware Layer                                      │
-│  ┌──────────────────────┐   ┌──────────────────────────────────────────────┐    │
-│  │  JWT (existing)       │   │  API Key  (NEW v0.7)                          │    │
-│  │  OAuth2PasswordBearer │   │  APIKeyHeader("Authorization") + DB lookup    │    │
-│  │  get_current_user()   │   │  get_current_user_from_api_key()              │    │
-│  └──────────────────────┘   └──────────────────────────────────────────────┘    │
-│                    ↓ unified: get_authenticated_user()                            │
-├────────────────────────────────────────────────────────────────────────────────┤
-│                        Service Layer (shared across modes)                        │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌───────────────┐    │
-│  │  files   │  │  chat    │  │ sessions │  │  credits │  │  api_keys     │    │
-│  │ service  │  │ service  │  │ service  │  │  service │  │  service(NEW) │    │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  └───────────────┘    │
-├────────────────────────────────────────────────────────────────────────────────┤
-│                        Database Layer (PostgreSQL)                                │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌───────────────┐    │
-│  │  users   │  │  files   │  │ sessions │  │  credits │  │   api_keys    │    │
-│  │          │  │          │  │          │  │          │  │   (NEW table) │    │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  └───────────────┘    │
-└────────────────────────────────────────────────────────────────────────────────┘
-
-External consumers:
-  ┌──────────────────────────────────────────────────────────┐
-  │  MCP Clients (Claude Desktop, Claude.ai, AI agents)      │
-  │    ↓  MCP SSE or Streamable HTTP transport               │
-  │  GET /mcp  (mounted on api-mode backend)                 │
-  └──────────────────────────────────────────────────────────┘
-  ┌──────────────────────────────────────────────────────────┐
-  │  REST API clients (scripts, integrations)                │
-  │    ↓  HTTP + Authorization: Bearer <api_key>             │
-  │  /api/v1/*                                               │
-  └──────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                    NEXT.JS FRONTEND (frontend/src/)                   │
+├──────────────────────────────────────────────────────────────────────┤
+│  (auth)/ routes    │  (dashboard)/ routes          │  Workspace routes │
+│  login, register   │  sessions/[id], my-files,     │  /workspace       │
+│  invite, reset     │  settings, dashboard           │  /workspace/      │
+│                    │                               │  collections/[id] │
+│                    │  ChatSidebar (modified: add    │  /[id]/signals    │
+│                    │  "Pulse Analysis" nav entry)  │  (NEW v0.8)       │
+├──────────────────────────────────────────────────────────────────────┤
+│  Zustand: sessionStore, tabStore (unchanged)                          │
+│  TanStack Query: existing hooks + NEW useCollections, useCollection  │
+│  New components: frontend/src/components/workspace/ (migrated)       │
+└────────────────────────────┬─────────────────────────────────────────┘
+                             │ HTTP (route handler proxies, unchanged pattern)
+┌────────────────────────────▼─────────────────────────────────────────┐
+│                    FASTAPI BACKEND (backend/app/)                      │
+├──────────────────────────────────────────────────────────────────────┤
+│  Routers: auth, chat, chat_sessions, files, health, search, version  │
+│           admin/*, api_v1/*, mcp (all UNCHANGED)                     │
+│           + NEW: /collections router (v0.8)                          │
+├──────────────────────────────────────────────────────────────────────┤
+│  Services: auth, file, credit, chat_session, platform_settings, ...  │
+│            (all UNCHANGED)                                           │
+│            + NEW: collection_service, pulse_service (v0.8)          │
+├──────────────────────────────────────────────────────────────────────┤
+│  Agents (LangGraph):                                                  │
+│    Chat pipeline (graph.py): manager, coding, code_checker,          │
+│    data_analysis, visualization, onboarding — ALL UNCHANGED           │
+│    + NEW: pulse/graph.py — independent Pulse pipeline (v0.8)        │
+│    + NEW: pulse/agent.py — PulseAgent node                           │
+│    + NEW: pulse/analyzers.py — E2B statistical analysis scripts      │
+├──────────────────────────────────────────────────────────────────────┤
+│  E2B Sandbox: UNCHANGED — reused by Pulse Agent as-is               │
+│  Credit system: CreditService.deduct_credit() UNCHANGED              │
+│                 + NEW platform_settings key: workspace_credit_cost_pulse │
+├──────────────────────────────────────────────────────────────────────┤
+│  SQLAlchemy Models (PostgreSQL):                                      │
+│  Existing: User, File, ChatSession, ChatMessage, UserCredit,         │
+│            CreditTransaction, PlatformSetting, ApiKey, ... UNCHANGED │
+│  NEW (v0.8): Collection, CollectionFile, Signal                      │
+└────────────────────────────┬─────────────────────────────────────────┘
+                             │ AsyncSession (SQLAlchemy 2.0 — unchanged)
+┌────────────────────────────▼─────────────────────────────────────────┐
+│                         PostgreSQL                                     │
+│  Existing tables: users, files, chat_sessions, chat_messages,        │
+│    user_credits, credit_transactions, platform_settings, api_keys,   │
+│    admin_audit_log, ... (ALL UNCHANGED)                              │
+│  NEW tables (v0.8): collections, collection_files, signals           │
+│  Local filesystem: uploads/{user_id}/ (existing, UNCHANGED)          │
+│  NEW: uploads/collections/{collection_id}/ (new path prefix)        │
+└──────────────────────────────────────────────────────────────────────┘
 ```
-
-### Component Responsibilities
-
-| Component | Responsibility | Status |
-|-----------|----------------|--------|
-| `SPECTRA_MODE=api` gate | Registers `/api/v1/*` router and `/mcp` endpoint when env is `api` | NEW |
-| `api_keys` table | Stores hashed API keys with metadata (prefix, hash, name, user_id, is_active, last_used_at) | NEW |
-| `ApiKeyService` | Create, list, revoke, validate API keys | NEW |
-| `get_authenticated_user()` dependency | Unified auth: accepts JWT Bearer OR API key Bearer, resolves to User | NEW |
-| `routers/api/v1/` | Public REST endpoints under `/api/v1/` (files, context, query) | NEW |
-| `routers/api/keys.py` | User-facing key management CRUD (under existing public routes) | NEW |
-| `routers/admin/api_keys.py` | Admin-facing key management (list all, revoke any) | NEW |
-| `mcp_server.py` | FastMCP instance with tools wrapping v1 endpoints via internal HTTP | NEW |
-| Existing `routers/files.py` | Unchanged — v1 mirrors its logic, does not import it | UNCHANGED |
-| Existing `dependencies.py` | `get_current_user` unchanged — new `get_authenticated_user` wraps it | MODIFIED (additive) |
-| `config.py` / `Settings` | Add `spectra_mode` validation for `api` value | MODIFIED (additive) |
-| `main.py` | Add `api` to mode routing block | MODIFIED (additive) |
 
 ---
 
-## Recommended Project Structure
+## Question 1: Where Do New Models Go in the Existing SQLAlchemy Structure?
+
+### Answer: Three New Model Files, Same Pattern as All Existing Models
+
+Every model in `backend/app/models/` is its own file, extends `Base` from `app.models.base`, uses SQLAlchemy 2.0 `Mapped` / `mapped_column` syntax, UUID primary keys with `uuid4`, and timezone-aware datetimes. The new models follow this exactly.
+
+**New files to create:**
 
 ```
-backend/app/
-├── models/
-│   ├── api_key.py              # NEW: ApiKey SQLAlchemy model
-│   └── api_usage_log.py        # NEW: per-request API usage log (APISEC-04)
-│
-├── schemas/
-│   ├── api_key.py              # NEW: ApiKeyCreate, ApiKeyResponse, ApiKeyListItem
-│   └── api_v1.py               # NEW: request/response schemas for v1 endpoints
-│
-├── services/
-│   └── api_keys.py             # NEW: create_key, list_keys, revoke_key, validate_key
-│
-├── routers/
-│   ├── api_keys.py             # NEW: user-facing /api-keys CRUD (public/dev modes)
-│   ├── admin/
-│   │   └── api_keys.py         # NEW: admin-facing key management
-│   └── api/
-│       └── v1/
-│           ├── __init__.py     # NEW: api_router combining all v1 sub-routers
-│           ├── files.py        # NEW: /api/v1/files/* endpoints
-│           ├── context.py      # NEW: /api/v1/files/{id}/context endpoints
-│           └── query.py        # NEW: /api/v1/query endpoint (synchronous chat)
-│
-├── mcp_server.py               # NEW: FastMCP instance, tool definitions
-│
-├── dependencies.py             # MODIFIED: add get_authenticated_user()
-├── config.py                   # MODIFIED: add 'api' to mode validator
-└── main.py                     # MODIFIED: add api-mode router registration
+backend/app/models/
+├── collection.py          # Collection — workspace container owned by a user
+├── collection_file.py     # CollectionFile — data files attached to a Collection
+└── signal.py              # Signal — individual Pulse finding within a Collection
 ```
 
-### Structure Rationale
+**`collection.py` shape:**
 
-- **`routers/api/v1/`:** Versioned from day one. If v2 is needed, `routers/api/v2/` is a clean addition.
-- **`services/api_keys.py`:** Key validation logic lives in a service (not a dependency) so the MCP server can reuse it for authenticating tool calls without importing router code.
-- **`mcp_server.py` at app root:** Keeps MCP concerns separate from the router tree. The FastMCP instance is created here and mounted in `main.py` under the `api` mode block.
-- **`models/api_usage_log.py`:** Separate model from `credit_transaction` — credit deductions happen in credits service; usage logging is orthogonal (captures endpoint, key ID, timestamp, credits used for APISEC-04).
+```python
+from sqlalchemy import String, Text, DateTime, ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from app.models.base import Base
+
+class Collection(Base):
+    __tablename__ = "collections"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(255))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="active")  # active | archived
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), ...)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), ...)
+
+    # Relationships
+    user: Mapped["User"] = relationship("User", back_populates="collections")
+    files: Mapped[list["CollectionFile"]] = relationship(
+        "CollectionFile", back_populates="collection", cascade="all, delete-orphan"
+    )
+    signals: Mapped[list["Signal"]] = relationship(
+        "Signal", back_populates="collection", cascade="all, delete-orphan"
+    )
+```
+
+**`collection_file.py` shape:**
+
+```python
+class CollectionFile(Base):
+    __tablename__ = "collection_files"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    collection_id: Mapped[UUID] = mapped_column(
+        ForeignKey("collections.id", ondelete="CASCADE"), index=True
+    )
+    original_filename: Mapped[str] = mapped_column(String(255))
+    stored_filename: Mapped[str] = mapped_column(String(255))  # UUID-based on disk
+    file_path: Mapped[str] = mapped_column(String(500))
+    file_type: Mapped[str] = mapped_column(String(50))   # csv | xlsx | xls
+    column_profile: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # populated at Pulse run
+    row_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), ...)
+
+    collection: Mapped["Collection"] = relationship("Collection", back_populates="files")
+```
+
+**`signal.py` shape:**
+
+```python
+class Signal(Base):
+    __tablename__ = "signals"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    collection_id: Mapped[UUID] = mapped_column(
+        ForeignKey("collections.id", ondelete="CASCADE"), index=True
+    )
+    title: Mapped[str] = mapped_column(String(500))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    severity: Mapped[str] = mapped_column(String(20))   # critical | warning | info
+    category: Mapped[str] = mapped_column(String(50))   # anomaly | trend | concentration | quality
+    visualization: Mapped[dict | None] = mapped_column(JSON, nullable=True)   # Recharts config
+    statistical_evidence: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), ...)
+
+    collection: Mapped["Collection"] = relationship("Collection", back_populates="signals")
+```
+
+**Registration:** The existing `backend/app/models/__init__.py` may need these imports added. Alembic auto-detects new models only when they are imported before `Base.metadata` is accessed. Check whether the existing `__init__.py` imports models explicitly or relies on the models being imported via `main.py` imports.
+
+**Migration pattern:** For completely new tables there is no backfill step needed. Use the standard `alembic revision --autogenerate` → inspect → `alembic upgrade head` flow.
+
+---
+
+## Question 2: How Should the Pulse Agent Be Structured?
+
+### Answer: Independent LangGraph Graph, Separate From the Chat Pipeline
+
+The existing chat pipeline in `backend/app/agents/graph.py` is a stateful LangGraph workflow with PostgreSQL checkpointing, built around `ChatAgentState` and designed for streaming LLM output. The Pulse Agent's requirements are fundamentally different:
+
+- **Input:** list of CollectionFile paths + metadata (not a user query)
+- **Output:** list of structured Signal dicts (not a conversational response)
+- **No conversation memory:** each Pulse run is stateless — no PostgreSQL checkpointing needed
+- **No SSE streaming:** Pulse is a request-response job, not a streaming response
+- **Multiple E2B passes:** runs 4+ distinct statistical analysis passes, not one code execution
+
+**Recommended structure:**
+
+```
+backend/app/agents/
+├── graph.py              # Existing chat pipeline — DO NOT MODIFY
+├── state.py              # Add PulseAgentState here alongside existing TypedDicts
+├── coding.py             # UNCHANGED
+├── manager.py            # UNCHANGED
+├── data_analysis.py      # UNCHANGED
+├── visualization.py      # UNCHANGED
+├── onboarding.py         # UNCHANGED
+├── code_checker.py       # UNCHANGED
+└── pulse/
+    ├── __init__.py
+    ├── agent.py          # generate_signals_node — LLM call to structure raw results into Signals
+    ├── graph.py          # pulse_graph: StateGraph assembling the Pulse pipeline
+    └── analyzers.py      # E2B-executable Python scripts for each analysis type
+```
+
+**`PulseAgentState` TypedDict (add to `state.py`):**
+
+```python
+class PulseAgentState(TypedDict):
+    collection_id: str
+    user_id: str
+    file_records: list[dict]        # [{id, path, filename, file_type, column_profile}]
+    profiled_data: dict             # column stats from profiling pass
+    analysis_results: list[dict]    # raw output dicts from each E2B analysis method
+    signals: list[dict]             # structured Signal objects (title, severity, etc.)
+    error: str
+```
+
+**The Pulse LangGraph graph — linear pipeline, no routing:**
+
+```
+profile_data_node
+    ↓
+run_analyses_node   (runs anomaly, trend, concentration, quality checks in E2B)
+    ↓
+generate_signals_node   (LLM call: structure raw analysis output into Signal objects)
+    ↓
+END
+```
+
+**Reuse existing infrastructure — no new components needed:**
+- `E2BSandboxRuntime` from `app.services.sandbox` — import and use exactly as `graph.py` does
+- `get_llm()` from `app.agents.llm_factory` — same factory; add `pulse_agent` to `prompts.yaml`
+- `get_agent_prompt()` from `app.agents.config` — same YAML config; add `pulse_agent` entry
+
+**Add to `prompts.yaml`:**
+
+```yaml
+agents:
+  pulse_agent:
+    provider: anthropic
+    model: claude-sonnet-4-6
+    temperature: 0.1
+    max_tokens: 4096
+    system: |
+      You are a statistical analysis agent. Given raw analysis results from
+      data profiling and statistical tests, structure them into Signal objects
+      with clear titles, severity levels, and evidence summaries.
+```
+
+**`pulse_service.py` as the glue layer:**
+
+```python
+# backend/app/services/pulse.py
+from app.agents.pulse.graph import pulse_graph
+from app.models.signal import Signal
+
+async def run_pulse_detection(
+    collection_id: UUID, user_id: UUID, db: AsyncSession
+) -> list[Signal]:
+    # 1. Load CollectionFile records from DB
+    file_records = await load_collection_files(db, collection_id)
+
+    # 2. Run the Pulse graph
+    result = await pulse_graph.ainvoke({
+        "collection_id": str(collection_id),
+        "user_id": str(user_id),
+        "file_records": file_records,
+        "analysis_results": [],
+        "signals": [],
+        "error": "",
+    })
+
+    # 3. Persist signals to DB
+    signal_objects = []
+    for sig_data in result["signals"]:
+        signal = Signal(collection_id=collection_id, **sig_data)
+        db.add(signal)
+        signal_objects.append(signal)
+    await db.commit()
+
+    return signal_objects
+```
+
+---
+
+## Question 3: How Should the /collections Router Integrate?
+
+### Answer: New Top-Level Router File, Registered in main.py Alongside Existing Routers
+
+Every existing router follows the same pattern: a module in `backend/app/routers/`, `router = APIRouter(prefix="/...", tags=["..."])`, `CurrentUser` and `DbSession` dependencies, registered in `main.py`.
+
+**New file:** `backend/app/routers/collections.py`
+
+**Registration in `main.py`:**
+
+```python
+# In main.py imports — additive:
+from app.routers import auth, chat, chat_sessions, files, health, search, version, collections
+
+# In router registration block:
+app.include_router(collections.router)
+```
+
+**Endpoint list for v0.8:**
+
+```python
+router = APIRouter(prefix="/collections", tags=["Collections"])
+
+@router.post("", status_code=201)               # Create collection
+@router.get("")                                  # List user's collections
+@router.get("/{id}")                             # Get collection detail with signals
+@router.patch("/{id}")                           # Update name/description
+@router.delete("/{id}")                          # Delete collection
+@router.post("/{id}/files", status_code=201)     # Upload file to collection
+@router.delete("/{id}/files/{file_id}")          # Remove file from collection
+@router.post("/{id}/pulse")                      # Trigger Pulse detection
+@router.get("/{id}/signals")                     # List signals for collection
+```
+
+**Auth pattern — same as all existing routers:**
+
+```python
+from app.dependencies import CurrentUser, DbSession
+
+@router.post("")
+async def create_collection(
+    body: CreateCollectionRequest,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> CollectionResponse:
+    ...
+```
+
+**Pulse trigger endpoint design:** `POST /collections/{id}/pulse` must:
+1. Verify collection belongs to `current_user`
+2. Check workspace access for user's tier via new `workspace_access` field in `user_classes.yaml`
+3. Check `max_active_collections` limit (count only `active` status collections)
+4. Get `workspace_credit_cost_pulse` from `platform_settings` (new key, default `"5.0"`)
+5. Call `CreditService.deduct_credit(db, user_id, cost)` — same atomic pattern as chat router
+6. Call `pulse_service.run_pulse_detection(collection_id, user_id, db)` — synchronous
+7. Return signals list on success; refund credits on failure via compensating transaction
+
+**Synchronous vs. async for Pulse:** Run synchronously on first implementation. The frontend `DetectionLoading` component animates locally and does not need real-time progress events. FastAPI's default 60-second request timeout is sufficient for a 5-15 second Pulse run. Background tasks can be added in a later milestone if execution time grows.
+
+**Tier access — use a FastAPI dependency to avoid copy-paste:**
+
+```python
+# backend/app/dependencies.py (additive)
+async def require_workspace_access(
+    current_user: CurrentUser,
+    db: DbSession,
+) -> None:
+    from app.services.user_class import get_class_config
+    config = get_class_config(current_user.user_class)
+    if not config.get("workspace_access", False):
+        raise HTTPException(status_code=403, detail="Workspace access requires a higher plan.")
+
+WorkspaceAccess = Annotated[None, Depends(require_workspace_access)]
+```
+
+Use `WorkspaceAccess` as a dependency on `POST /collections` and `POST /collections/{id}/pulse`.
+
+---
+
+## Question 4: Frontend Migration from pulse-mockup
+
+### Answer: New Route Group Under (dashboard), Components in src/components/workspace/
+
+**Current frontend route structure:**
+
+```
+frontend/src/app/
+├── (auth)/                     # login, register, invite, reset-password
+├── (dashboard)/                # protected routes with ChatSidebar layout
+│   ├── layout.tsx              # ChatSidebar + LinkedFilesPanel — MODIFIED (add nav entry)
+│   ├── dashboard/page.tsx
+│   ├── my-files/page.tsx
+│   ├── sessions/[sessionId]/page.tsx
+│   ├── sessions/new/page.tsx
+│   └── settings/page.tsx
+└── api/                        # Next.js route handler proxies
+```
+
+**v0.8 additions — new routes under (dashboard):**
+
+```
+frontend/src/app/(dashboard)/
+└── workspace/                                         # NEW — Pulse Analysis module
+    ├── page.tsx                                       # Collections list (/workspace)
+    └── collections/
+        └── [id]/
+            ├── page.tsx                               # Collection 4-tab detail
+            └── signals/
+                └── page.tsx                           # Detection Results
+```
+
+All three new pages live inside the existing `(dashboard)` route group. They inherit the `(dashboard)/layout.tsx` — which means they get the existing `SidebarProvider` + `ChatSidebar` wrapper automatically. The `LinkedFilesPanel` (right sidebar) renders only when `currentSessionId` is set in Zustand; workspace pages do not set a session ID, so the right panel will not appear on workspace routes.
+
+**New component directory:**
+
+```
+frontend/src/components/workspace/          # NEW directory — migrated from pulse-mockup
+├── collection-card.tsx
+├── collection-list.tsx
+├── create-collection-dialog.tsx
+├── data-summary-panel.tsx
+├── detection-loading.tsx
+├── empty-state.tsx
+├── file-table.tsx
+├── file-upload-zone.tsx
+├── overview-stat-cards.tsx
+├── run-detection-banner.tsx
+├── signal-card.tsx
+├── signal-chart.tsx                        # uses Recharts (verify recharts in package.json)
+├── signal-detail-panel.tsx
+├── signal-list-panel.tsx
+├── sticky-action-bar.tsx
+└── activity-feed.tsx
+```
+
+**Mockup components deferred — do NOT migrate in v0.8:**
+- `add-to-collection-modal.tsx` — v0.9 (Chat-to-Collection bridge)
+- `investigation-qa-thread.tsx` — v0.10
+- `investigation-checkpoint.tsx` — v0.10
+- `whatif-refinement-chat.tsx` — v0.11
+
+**What changes when migrating each component:**
+1. Import paths — mockup uses relative (`../lib/utils`); main frontend uses `@/` aliases
+2. Mock data arrays — replace with data from TanStack Query hooks
+3. `setTimeout` loading stubs — replace with `isLoading` / `isPending` from hook responses
+4. Static credit labels (`"5 credits"`) — wire to live `workspace_credit_cost_pulse` fetched from backend
+5. `router.push()` calls — verify routes match the new `(dashboard)/workspace/` structure
+
+**New TanStack Query hooks:**
+
+```
+frontend/src/hooks/
+├── useCollections.ts     # list collections, create, delete
+├── useCollection.ts      # single collection detail (tabs data, signals)
+└── usePulse.ts           # trigger detection run, handle loading state
+```
+
+**New API route handlers (proxy to backend):**
+
+```
+frontend/src/app/api/collections/
+├── route.ts                          # GET, POST /collections
+└── [id]/
+    ├── route.ts                      # GET, PATCH, DELETE /collections/[id]
+    ├── files/
+    │   ├── route.ts                  # POST /collections/[id]/files
+    │   └── [fileId]/route.ts         # DELETE /collections/[id]/files/[fileId]
+    ├── pulse/route.ts                # POST /collections/[id]/pulse
+    └── signals/route.ts              # GET /collections/[id]/signals
+```
+
+**Sidebar modification:** `frontend/src/components/sidebar/ChatSidebar.tsx` needs one new navigation entry added — label "Pulse Analysis", route `/workspace`. This is the only required change to existing shared components. The credit balance pill in `UserSection.tsx` may need a Zap icon added to match the mockup's header pill — verify visually against the mockup.
+
+**State management:** No new Zustand store needed for v0.8. TanStack Query cache handles Collection and Signal data. The selected Signal ID on the Detection Results page is local UI state — `useState` in the parent page component is sufficient.
+
+**Recharts dependency:** The existing `frontend/package.json` must have Recharts installed. The pulse-mockup uses it for `SignalChart`. Verify with `cat frontend/package.json | grep recharts` before migrating `signal-chart.tsx`.
+
+---
+
+## Question 5: Collection Files vs. Existing FileContext — Are They the Same?
+
+### Answer: They Are Separate Systems — Do Not Conflate Them
+
+This is the most architecturally significant decision in v0.8. The two file systems serve different purposes and must remain separate.
+
+| Dimension | Existing `files` table (user files) | New `collection_files` table |
+|-----------|--------------------------------------|------------------------------|
+| Ownership | `user_id` FK — belongs to user's library | `collection_id` FK — belongs to a workspace |
+| Purpose | Files for Chat sessions and ad-hoc analysis | Data sources for Pulse statistical analysis |
+| Profiling | `data_summary` (LLM-generated text), `query_suggestions` | `column_profile` (structured JSON), `row_count` |
+| Profiling timing | Onboarding Agent runs immediately on upload | Pulse Agent populates column_profile at detection time |
+| Storage path | `backend/uploads/{user_id}/` | `backend/uploads/collections/{collection_id}/` |
+| Lifecycle | Independent; linked to ChatSessions via M2M join | CASCADE deleted when Collection is deleted |
+| Agent use | Coding Agent + DataAnalysis Agent (chat pipeline) | Pulse Agent only |
+
+**They are physically separate files on disk.** A user cannot link their existing Chat files into a Collection in v0.8. The Chat-to-Collection bridge is v0.9 scope, and that bridge imports chat result cards, not raw files.
+
+**Design rationale:** Keeping them separate maintains clean ownership boundaries. The `File` model's schema is optimized for the Onboarding Agent output (human-readable summary, LLM query suggestions). The `CollectionFile` schema is optimized for the Pulse Agent (structured column types and distributions). Merging them would require adding nullable columns to the `files` table that are irrelevant for Chat files, and vice versa.
+
+---
+
+## Question 6: Build Order That Minimizes Risk
+
+### Answer: Data Models First, Backend CRUD Second, Agent Third, Frontend Fourth
+
+Each layer depends on the previous. The critical path runs through data models → backend CRUD → API endpoints → frontend.
+
+```
+Phase 1 — Data Foundation (blocks everything)
+  1a. SQLAlchemy models: Collection, CollectionFile, Signal
+  1b. Alembic migration: create the three new tables
+  1c. user_classes.yaml: add workspace_access (bool) + max_active_collections (int)
+  1d. platform_settings.py DEFAULTS: add workspace_credit_cost_pulse = "5.0"
+      (also add to VALID_KEYS set)
+
+Phase 2 — Backend CRUD API (enables frontend development)
+  2a. Pydantic schemas: Collection, CollectionFile, Signal (request + response shapes)
+  2b. CollectionService: create, list, get_by_id, update, delete CRUD
+  2c. Collection file upload: write to disk at uploads/collections/{id}/ + DB record
+  2d. /collections router: CRUD endpoints with CurrentUser + DbSession dependencies
+  2e. WorkspaceAccess dependency: tier check + collection limit check
+  MILESTONE: At this point the frontend can list, create, and upload files.
+             Validate with Postman or curl before starting agent work.
+
+Phase 3 — Pulse Agent (can run in parallel with Phase 2 after Phase 1)
+  3a. PulseAgentState TypedDict added to backend/app/agents/state.py
+  3b. pulse/analyzers.py: Python scripts for anomaly, trend, concentration, quality checks
+  3c. pulse/agent.py: generate_signals_node — LLM call to structure results into Signals
+  3d. pulse/graph.py: assemble the three-node pipeline
+  3e. pulse_service.py: load files from DB, call graph, persist signals, credit refund on failure
+  MILESTONE: Validate Pulse Agent produces real Signal objects from a test CSV file
+             before wiring it to the API. This is the core value proposition — test it first.
+
+Phase 4 — Wire Pulse Endpoint
+  4a. POST /collections/{id}/pulse endpoint: credit pre-check → deduct → call pulse_service
+  4b. Compensating credit transaction on failure
+  4c. Return signals list in response
+
+Phase 5 — Frontend Migration
+  5a. Next.js API route handlers for /api/collections/*
+  5b. TanStack Query hooks: useCollections, useCollection, usePulse
+  5c. /workspace page: CollectionList + CreateCollectionDialog
+  5d. /workspace/collections/[id] page: 4-tab layout
+      - Tab 2 (Files) first: FileUploadZone + FileTable + DataSummaryPanel (needs Phase 2 only)
+      - Tab 1 (Overview): stat cards + RunDetectionBanner (needs Phase 2 only)
+      - Tab 3 (Signals): signal cards + DetectionLoading flow (needs Phase 4)
+      - Tab 4 (Reports): empty state stub (v0.9 scope)
+  5e. /workspace/collections/[id]/signals page: SignalListPanel + SignalDetailPanel
+  5f. ChatSidebar: add "Pulse Analysis" nav entry (one line change)
+
+Phase 6 — Admin and Tier Gating
+  6a. Tier access enforcement: WorkspaceAccess dependency tested end-to-end
+  6b. Collection limit enforcement: max_active_collections check
+  6c. Confirm workspace_credit_cost_pulse is editable via existing Admin Settings page
+      (if the admin frontend Settings page already renders unknown platform_settings keys
+      dynamically, this may require zero new admin UI work)
+```
+
+**Critical path:** 1a → 1b → 2b → 2d → 4a → 5a → 5c
+
+**Risk checkpoint:** Complete Phase 3 fully and validate Signal generation from a real CSV before building Phase 5 signal display UI. The quality of Pulse Agent output is the entire value proposition of v0.8. Discovering a prompt engineering problem after the frontend is built wastes effort.
+
+---
+
+## Component Responsibilities
+
+| Component | Responsibility | Integration Point |
+|-----------|---------------|-------------------|
+| `Collection` model | Workspace container; owns status, user, timestamps | FK to users.id |
+| `CollectionFile` model | Workspace data file; owns column_profile, row_count | FK to collections.id |
+| `Signal` model | Pulse finding; owns severity, category, visualization JSON, evidence JSON | FK to collections.id |
+| `CollectionService` | CRUD for Collections and CollectionFiles; tier/limit enforcement | Calls CreditService, PlatformSettingsService |
+| `PulseService` | Orchestrates Pulse run; deducts credits, invokes graph, persists signals, refunds on failure | Calls pulse_graph.ainvoke(), CreditService |
+| `pulse/graph.py` | LangGraph pipeline: profile → analyze → generate signals | Calls E2BSandboxRuntime, get_llm() |
+| `pulse/analyzers.py` | Python scripts for anomaly/trend/concentration/quality checks in E2B | Called from pulse graph nodes |
+| `/collections` router | FastAPI router; auth guard on all endpoints | Uses CurrentUser, DbSession, WorkspaceAccess |
+| `WorkspaceAccess` dependency | Tier check + collection limit enforcement | Reads user_classes.yaml, counts active collections |
+| `useCollections` hook | TanStack Query: list + create + delete | Calls /api/collections route handler |
+| `useCollection` hook | TanStack Query: single collection detail with signals | Calls /api/collections/[id] |
+| `usePulse` hook | Trigger Pulse run; manage loading state | Calls /api/collections/[id]/pulse |
+| `/workspace` page | Collections list view | Renders CollectionList + CreateCollectionDialog |
+| `/workspace/collections/[id]` | 4-tab collection detail | Renders Overview, Files, Signals, Reports tabs |
+| `/workspace/collections/[id]/signals` | Detection Results | Renders SignalListPanel + SignalDetailPanel |
+| `DetectionLoading` | Full-page loading state during Pulse run | Triggered by StickyActionBar "Run Detection" |
+| `SignalChart` | Recharts chart driven by signal.visualization JSON | Inside SignalDetailPanel |
 
 ---
 
 ## Architectural Patterns
 
-### Pattern 1: Unified Auth Dependency with Fallback
+### Pattern 1: Independent LangGraph Graphs Per Workflow Type
 
-The existing `get_current_user` only accepts JWT. The v1 API routes need to accept API keys. The correct FastAPI pattern is to create a new combined dependency that tries both schemes with `auto_error=False`, falling back gracefully.
+**What:** Each distinct AI workflow (chat analysis vs. Pulse detection) has its own LangGraph `StateGraph` with its own `TypedDict` state, its own nodes, and its own invocation path. They share infrastructure (E2B sandbox, LLM factory, agent config YAML) but not state or graph structure.
 
-**What:** Single `get_authenticated_user()` dependency that extracts a Bearer token, tries JWT first, falls back to API key lookup if JWT fails.
+**When to use:** Always when the input/output contract or execution pattern differs from the existing chat graph. Pulse and Chat are fundamentally different: Pulse is batch/stateless, Chat is conversational/stateful.
 
-**When to use:** All `/api/v1/*` endpoints. Do NOT use on `/auth/*` or web frontend routes — keep JWT-only there.
+**Do not:** Extend `ChatAgentState` with Pulse fields. Do not add Pulse nodes to `graph.py`. This creates coupling that makes both pipelines harder to reason about and modify independently.
 
-**Trade-offs:** One dependency per call does a JWT decode attempt (fast, in-memory) plus possibly one DB lookup for API key validation. Negligible overhead. Keeps endpoint signatures clean.
+### Pattern 2: Service Layer Between Router and Agent
 
-**Example:**
+**What:** All router endpoints delegate immediately to a service function. Routers own HTTP concerns only (request parsing, response shaping, error codes). Services own business logic (credit checks, DB operations, file I/O, agent invocation).
 
-```python
-# backend/app/dependencies.py (additive changes)
+**When to use:** Every endpoint — this is the existing pattern without exception across all routers.
 
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi import Security
+**For v0.8:** `collections.py` router calls `CollectionService` and `PulseService`. The router never directly queries the DB, calls agent functions, or performs file I/O.
 
-http_bearer = HTTPBearer(auto_error=False)
+### Pattern 3: Credit Deduct-Before-Execute with Compensating Refund
 
-async def get_authenticated_user(
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Security(http_bearer)],
-    db: DbSession,
-    settings: Annotated[Settings, Depends(get_settings)],
-) -> User:
-    """Accept JWT Bearer token OR API key Bearer token.
+**What:** Credits are deducted atomically before any expensive operation begins. If the operation fails, a compensating credit transaction is issued to restore the balance. This ensures no credits are lost on user-visible errors.
 
-    Try JWT first (fast, in-memory). If JWT decode fails, attempt API key lookup.
-    Returns User in both cases. Raises 401 if neither works.
-    """
-    if credentials is None:
-        raise HTTPException(status_code=401, detail="Authentication required")
+**Existing implementation:** `CreditService.deduct_credit()` uses `SELECT FOR UPDATE` on `user_credits`. Follow this exactly — do not write a new credit deduction path.
 
-    token = credentials.credentials
+**New platform_settings additions:** Add to `DEFAULTS` dict and `VALID_KEYS` set in `platform_settings.py`:
+- `"workspace_credit_cost_pulse": json.dumps("5.0")`
 
-    # Try JWT first (fast path — no DB hit)
-    try:
-        user_id_str = verify_token(token, "access", settings)
-        user_id = UUID(user_id_str)
-        user = await get_user_by_id(db, user_id)
-        if user and user.is_active:
-            return user
-    except HTTPException:
-        pass  # Fall through to API key check
+### Pattern 4: Migrate Mockup Components — Replace Data, Not Structure
 
-    # Try API key (DB lookup path)
-    from app.services.api_keys import validate_api_key
-    user = await validate_api_key(db, token)
-    if user:
-        return user
+**What:** Components from `pulse-mockup/src/components/workspace/` are copied into `frontend/src/components/workspace/`. Only mock data, `setTimeout` stubs, and import paths change. Component tree, prop names, and interaction patterns are preserved.
 
-    raise HTTPException(
-        status_code=401,
-        detail="Invalid or expired credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+**When to use:** All v0.8 UI work. The mockup is the UI contract. Any deviation from its component structure requires explicit owner approval (per working rules).
 
-# New typed alias for v1 routes
-ApiUser = Annotated[User, Depends(get_authenticated_user)]
-```
-
-**Why `HTTPBearer` not `OAuth2PasswordBearer` for the combined dependency:** `OAuth2PasswordBearer` adds a Swagger UI "Authorize" button pointing to a tokenUrl, which is wrong for API key flows. `HTTPBearer` with `auto_error=False` extracts the token from `Authorization: Bearer <token>` without asserting what kind of token it is. Swagger UI shows a simpler "value" field for the bearer token, which works for both JWT and API keys during manual testing.
-
-**APISEC-01 note:** The spec says API requests use `Authorization: Bearer <api_key>`. This means API keys and JWT tokens share the same header. The unified dependency handles both correctly — JWT decode is tried first, and if the token does not parse as a valid JWT (wrong structure, wrong issuer), the DB key lookup runs.
-
----
-
-### Pattern 2: API Key Hashed Storage
-
-**What:** Store a SHA-256 hash of the key, not the key itself. Return the full key exactly once on creation. Include a short prefix in the stored record for fast lookup without full-scan.
-
-**When:** Always. Never store raw API keys in the database.
-
-**Trade-offs:** SHA-256 is appropriate here (not bcrypt/argon2) because API keys are long random strings (32+ bytes), not user-chosen passwords. Brute-forcing SHA-256 against a 32-byte random key is computationally infeasible — the key space is the bottleneck, not the hash speed. Argon2 would add ~250ms per validation, making every API request slow.
-
-**Example — key format:**
-
-```
-spc_live_<base64url_32bytes>
-         ^^^^^^^^^^^^^^^^^
-         secrets.token_urlsafe(32) = ~43 characters
-
-Full key: spc_live_Wd3kJm8XqR1pN6vYtAhBcE0fG2iHjL4oM5nS7uO9wQ=
-Prefix stored in DB: spc_live_ (for human identification in admin UI)
-Hash stored in DB: sha256(full_key)
-```
-
-**Lookup pattern:** Incoming key → SHA-256 → WHERE key_hash = ? AND is_active = true. No prefix-based lookup needed for 1-to-1 hash matching. The `prefix` column is for display/audit only.
-
----
-
-### Pattern 3: SPECTRA_MODE=api Route Gating
-
-**What:** Add `api` as a fourth valid `spectra_mode` value. The `api` block in `main.py` registers the `/api/v1/` router and mounts the MCP server.
-
-**When:** Any deployment that should expose the public REST API and MCP server. Separate Dokploy service from `public` mode.
-
-**Trade-offs:** The `api` mode intentionally does NOT include the web auth routes (`/auth/signup`, `/auth/login`, etc.) or SSE streaming chat routes — API clients authenticate via API keys and get synchronous responses. This keeps the mode focused and the attack surface minimal.
-
-**Example:**
-
-```python
-# backend/app/main.py (additions to existing mode block)
-
-# Validate mode — extend existing check
-if mode not in ("public", "admin", "dev", "api"):
-    raise ValueError(f"Invalid SPECTRA_MODE: '{mode}'. Must be 'public', 'admin', 'dev', or 'api'")
-
-# API routes (api and dev modes)
-if mode in ("api", "dev"):
-    from app.routers.api.v1 import api_v1_router
-    app.include_router(api_v1_router, prefix="/api/v1")
-
-    # User-facing key management (also available in public/dev for web UI)
-    from app.routers import api_keys
-    app.include_router(api_keys.router)
-
-    # Mount MCP server
-    from app.mcp_server import create_mcp_server
-    mcp = create_mcp_server()
-    mcp_asgi = mcp.http_app(path="/mcp")
-    app.mount("/mcp", mcp_asgi)
-```
-
-**Why `api` separate from `public`:** The `public` mode serves the web frontend — it needs SSE streaming (`/chat/sessions/{id}/stream`), JWT refresh flows, and password reset emails. The `api` mode serves programmatic clients — synchronous responses, no streaming, no email. Mixing them in one mode forces both client types onto one service with no ability to scale or secure independently.
-
-**`dev` mode includes `api`** so local development can test all routes from one process.
-
----
-
-### Pattern 4: MCP Server as a FastMCP Instance Mounted on the ASGI App
-
-**What:** Use `fastmcp` (part of the official MCP Python SDK since v1.x) to define tools as decorated functions, then mount the resulting ASGI app onto the FastAPI instance. The MCP tools call the REST API internally via httpx (not by importing router functions directly).
-
-**When:** MCP server must be co-located with the backend in `api` mode.
-
-**Trade-offs:**
-- Calling via httpx (loopback) vs importing service functions directly: httpx adds ~1ms round-trip but keeps auth consistent (MCP tools prove they have a valid API key, just like external clients). Direct import would bypass auth entirely, creating a security discrepancy between "API call" and "MCP tool call" paths.
-- `FastMCP.from_fastapi(app)` auto-generates tools from OpenAPI spec — convenient but produces many tools (all routes). For Spectra, explicit tool definitions give better tool descriptions and control over what's exposed to Claude.
-
-**Example:**
-
-```python
-# backend/app/mcp_server.py
-
-from mcp.server.fastmcp import FastMCP
-import httpx
-
-def create_mcp_server() -> FastMCP:
-    mcp = FastMCP(name="Spectra Data Analysis")
-
-    @mcp.tool()
-    async def upload_file(
-        file_content: str,   # base64-encoded
-        filename: str,
-        context: str = "",
-        api_key: str = "",   # injected via MCP client config
-    ) -> dict:
-        """Upload a CSV or Excel file and trigger AI onboarding analysis.
-        Returns file_id, data_brief, and query suggestions."""
-        async with httpx.AsyncClient() as client:
-            # POST /api/v1/files with Authorization header
-            ...
-
-    @mcp.tool()
-    async def query_file(
-        file_id: str,
-        question: str,
-        api_key: str = "",
-    ) -> dict:
-        """Ask a natural language question about an uploaded file.
-        Returns analysis text, generated code, and optional chart spec."""
-        ...
-
-    return mcp
-```
-
-**Lifespan coordination:** The FastMCP `http_app()` has its own lifespan. The existing FastAPI app already has a lifespan (`asynccontextmanager`). Use `combine_lifespans` from FastMCP to merge them:
-
-```python
-from fastmcp.utilities.asgi import combine_lifespans
-
-mcp_app = mcp.http_app(path="/mcp")
-app = FastAPI(lifespan=combine_lifespans(existing_lifespan, mcp_app.lifespan))
-app.mount("/mcp", mcp_app)
-```
-
-This ensures the MCP server starts and stops cleanly alongside the FastAPI app without either lifespan cancelling the other.
-
----
-
-### Pattern 5: Synchronous Query Endpoint (No SSE)
-
-**What:** The `/api/v1/query` endpoint runs the LangGraph agent to completion and returns the full result in a single JSON response. No Server-Sent Events.
-
-**When:** All API v1 chat/query calls. The requirements explicitly defer streaming API responses to v0.8+.
-
-**Trade-offs:** A typical analysis run takes 10-45 seconds (LLM calls + E2B sandbox). Synchronous HTTP means the client must hold the connection open for this duration. This is acceptable for programmatic API clients (scripts, AI agents) but would be unusable in a browser.
-
-**Implementation:** Use the existing LangGraph graph (same agents, same credit deduction) but collect the final state instead of streaming events. The existing `AgentState` already contains all output fields (`analysis_result`, `chart_spec`, `code`). The sync endpoint just runs `graph.ainvoke(...)` and reads the final state.
-
-**Timeout consideration:** Set a 120-second uvicorn/gunicorn request timeout for the `api` mode service. The existing `stream_timeout_seconds: int = 180` in Settings controls SSE; a new `api_query_timeout_seconds: int = 120` config field is appropriate.
+**What changes during migration:**
+- Import paths (`../lib/utils` → `@/lib/utils`)
+- Mock data arrays → TanStack Query hook data
+- `setTimeout` → `isLoading` / `isPending` from hooks
+- Static credit labels → live `workspace_credit_cost_pulse` from backend settings endpoint
+- Hardcoded route strings → verify against actual `(dashboard)/workspace/` route structure
 
 ---
 
 ## Data Flow
 
-### API Key Validation Flow (per request)
+### Pulse Detection Flow
 
 ```
-API Client
-  |
-  +-> POST /api/v1/files   (Authorization: Bearer spc_live_Wd3k...)
-  |
-  v
-FastAPI dependency resolution
-  get_authenticated_user()
-    |
-    +-> HTTPBearer extracts token from header
-    +-> verify_token(token, "access", settings)
-    |     -> jwt.decode() raises InvalidTokenError (not a JWT)
-    |
-    +-> validate_api_key(db, token)
-          -> sha256(token) = key_hash
-          -> SELECT * FROM api_keys WHERE key_hash=? AND is_active=true
-          -> UPDATE api_keys SET last_used_at=now() WHERE id=?
-          -> return User (via api_key.user_id FK)
-  |
-  v
-Endpoint handler receives User
-  -> credit deduction (existing credits service)
-  -> API usage log insert (new api_usage_log table)
-  -> business logic (file upload, query, etc.)
+User checks files in FileTable + clicks "Run Detection" in StickyActionBar
+    ↓
+Frontend: POST /api/collections/{id}/pulse (Next.js route handler proxy)
+    ↓
+Backend /collections/{id}/pulse endpoint
+    ↓ WorkspaceAccess dependency check (tier + collection limit)
+    ↓
+CreditService.deduct_credit(user_id, 5.0)  — SELECT FOR UPDATE, atomic
+    ↓
+PulseService.run_pulse_detection(collection_id, user_id, db)
+    ↓ Load CollectionFile records from DB (paths, file_type)
+    ↓
+pulse_graph.ainvoke(PulseAgentState)
+    ↓
+  [profile_data_node] — E2B sandbox: load CSVs, compute column distributions
+    ↓
+  [run_analyses_node] — E2B sandbox: anomaly detection, trend analysis,
+                        concentration analysis, data quality checks
+    ↓
+  [generate_signals_node] — LLM call (pulse_agent from prompts.yaml):
+                            structure raw analysis output into Signal dicts
+    ↓
+PulseService: INSERT Signal rows into DB
+    ↓
+Return signal list to router
+    ↓
+Router: HTTP 200 with signals JSON
+    ↓
+Frontend usePulse hook: resolve → navigate to /workspace/collections/{id}/signals
+    ↓
+useCollection hook fetches signals → SignalListPanel renders, auto-selects first critical signal
 ```
 
-### MCP Tool Call Flow
+### Collection File Upload Flow
 
 ```
-Claude Desktop / AI Agent
-  |
-  +-> MCP SSE connection to  GET /mcp
-  |     (Streamable HTTP handshake)
-  |
-  +-> tool call: query_file(file_id="...", question="...", api_key="spc_live_...")
-  |
-  v
-FastMCP tool handler (mcp_server.py)
-  |
-  +-> httpx.AsyncClient().post(
-  |     "http://localhost:8000/api/v1/query",
-  |     headers={"Authorization": f"Bearer {api_key}"},
-  |     json={"file_id": file_id, "question": question}
-  |   )
-  |
-  v
-/api/v1/query endpoint
-  -> get_authenticated_user() validates api_key
-  -> LangGraph ainvoke()
-  -> returns JSON result
-  |
-  v
-FastMCP returns tool result to MCP client
+User drops file on FileUploadZone in Files tab
+    ↓
+Frontend: POST /api/collections/{id}/files (multipart)
+    ↓
+Backend /collections/{id}/files endpoint
+    ↓
+Write file to backend/uploads/collections/{collection_id}/{uuid}.{ext}
+    ↓
+CollectionService: INSERT CollectionFile (filename, file_type, file_path)
+    Note: column_profile is NULL at this point — populated by Pulse Agent at detection
+    ↓
+Return CollectionFile metadata → FileTable re-renders with new row
 ```
 
-### Key Creation Flow
-
-```
-User (via web UI or direct API call)
-  |
-  +-> POST /api-keys  {name: "My Script Key"}
-  |   (Authorization: Bearer <jwt_token>)
-  |
-  v
-get_current_user() (JWT-only, existing dependency — key mgmt uses JWT auth)
-  |
-  v
-ApiKeyService.create_key(user_id, name)
-  -> raw_key = "spc_live_" + secrets.token_urlsafe(32)
-  -> key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
-  -> INSERT INTO api_keys (user_id, key_hash, prefix, name, is_active, created_at)
-  -> return {id, name, key: raw_key, created_at}  <- raw_key returned ONCE
-  |
-  v
-Client receives raw_key — must store it, never retrievable again
-```
-
----
-
-## New vs Modified Components
-
-### New Files
-
-| File | Purpose | Covers Requirements |
-|------|---------|---------------------|
-| `backend/app/models/api_key.py` | ApiKey ORM model | APIKEY-05 |
-| `backend/app/models/api_usage_log.py` | Per-request log model | APISEC-04 |
-| `backend/app/schemas/api_key.py` | Pydantic schemas for key CRUD | APIKEY-01..08 |
-| `backend/app/schemas/api_v1.py` | v1 endpoint request/response schemas | APIF, APIC, APIQ |
-| `backend/app/services/api_keys.py` | Create / validate / revoke logic | APIKEY-01..08, APISEC-01..02 |
-| `backend/app/routers/api_keys.py` | User-facing key management endpoints | APIKEY-01..05 |
-| `backend/app/routers/admin/api_keys.py` | Admin key management endpoints | APIKEY-06..08 |
-| `backend/app/routers/api/__init__.py` | Package init | — |
-| `backend/app/routers/api/v1/__init__.py` | Combines v1 sub-routers | APIINFRA-02 |
-| `backend/app/routers/api/v1/files.py` | /api/v1/files endpoints | APIF-01..04 |
-| `backend/app/routers/api/v1/context.py` | /api/v1/files/{id}/context endpoints | APIC-01..03 |
-| `backend/app/routers/api/v1/query.py` | /api/v1/query synchronous query | APIQ-01 |
-| `backend/app/mcp_server.py` | FastMCP server instance + tool definitions | MCP-01..05 |
-| Alembic migration | api_keys + api_usage_log tables | APIKEY-05 |
-
-### Modified Files
-
-| File | Change | Risk |
-|------|--------|------|
-| `backend/app/dependencies.py` | Add `get_authenticated_user()` + `ApiUser` type alias | Low — additive only |
-| `backend/app/config.py` | Add `api` to `spectra_mode` validator; add `api_query_timeout_seconds` field | Low — additive |
-| `backend/app/main.py` | Add `api` to mode check; register v1 router + MCP mount in `api`/`dev` block | Medium — touches routing |
-| `backend/app/routers/admin/__init__.py` | Include new admin api_keys router | Low — additive |
-| `backend/pyproject.toml` | Add `mcp[cli]` dependency (FastMCP is included in `mcp` package) | Low |
-
-### Unchanged Files
-
-All existing routers (`auth.py`, `files.py`, `chat.py`, `chat_sessions.py`, `credits.py`) are unchanged. The v1 API routes duplicate the relevant service calls rather than importing from existing routers — this keeps the public API contract independent of internal route evolution.
-
----
-
-## Data Model: api_keys Table
-
-```python
-# backend/app/models/api_key.py
-
-class ApiKey(Base):
-    __tablename__ = "api_keys"
-
-    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    name: Mapped[str] = mapped_column(String(100))
-    prefix: Mapped[str] = mapped_column(String(20))      # "spc_live_" — display only
-    key_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)  # SHA-256 hex
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), ...)
-    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-
-    user: Mapped["User"] = relationship("User", back_populates="api_keys")
-```
-
-**Why SHA-256 not Argon2:** API keys are 32 bytes of cryptographic randomness (`secrets.token_urlsafe(32)`). Their entropy (~256 bits) makes brute force infeasible regardless of hash speed. Argon2 adds ~250ms per validation, which would add 250ms to every API request. SHA-256 is ~microseconds and is the standard for this use case (used by GitHub, Stripe, Twilio). [MEDIUM confidence — consistent across multiple 2025 sources]
-
-**Key format:** `spc_live_<secrets.token_urlsafe(32)>` — total length ~50 characters. The `spc_live_` prefix lets users and admins identify Spectra keys in logs. No separate lookup index on prefix needed — `key_hash` index handles all auth lookups.
-
----
-
-## Data Model: api_usage_log Table
-
-```python
-# backend/app/models/api_usage_log.py
-
-class ApiUsageLog(Base):
-    __tablename__ = "api_usage_log"
-
-    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    api_key_id: Mapped[UUID] = mapped_column(ForeignKey("api_keys.id"), index=True)
-    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), index=True)
-    endpoint: Mapped[str] = mapped_column(String(100))    # e.g., "POST /api/v1/query"
-    credits_used: Mapped[Decimal] = mapped_column(Numeric(10, 1), default=0)
-    status_code: Mapped[int] = mapped_column()
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), ...)
-```
-
-This is append-only. Admin can query per-user or per-key. Not exposed via a v0.7 endpoint (APISEC-04 is logging only; reporting UI is future work).
-
----
-
-## Scaling Considerations
-
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| Current (1-10 API users) | Single `api` mode Dokploy service; SHA-256 key lookup is O(1) via index |
-| 100-1000 API users | Add Redis cache for validated API keys (TTL = 60s) to avoid DB hit per request; api_usage_log table will grow — add partition by month |
-| 10k+ API users | Rate limiting layer (RATELIMIT-01..03 deferred to v0.8); consider separate read replica for key validation |
-
-### Scaling Priorities
-
-1. **First bottleneck:** `api_usage_log` table becomes large quickly at high request rates. Add `created_at` index and consider TimescaleDB extension or monthly partitioning before the table exceeds 10M rows.
-2. **Second bottleneck:** API key DB lookup on every request. A 60-second in-memory or Redis TTL cache per key_hash cuts DB load by ~99% for burst traffic without stale revocation risk (60-second revocation window is acceptable for API keys).
-
----
-
-## Anti-Patterns
-
-### Anti-Pattern 1: API Keys as JWT Claims
-
-**What people do:** Generate a "long-lived JWT" and call it an API key.
-**Why it's wrong:** JWTs are self-contained — you cannot revoke them without a revocation list or waiting for expiry. API keys must be instantly revocable (APIKEY-03, APIKEY-04). A compromised key needs to stop working in seconds, not 30 minutes.
-**Do this instead:** Random opaque token stored as SHA-256 hash in DB. Revocation is a single `UPDATE api_keys SET is_active=false WHERE id=?`.
-
-### Anti-Pattern 2: Storing Raw API Keys in the Database
-
-**What people do:** Store the full key in a `key` VARCHAR column "for display".
-**Why it's wrong:** A database dump exposes all keys. The entire point of key management is that the secret is shown once and never stored.
-**Do this instead:** Store only `key_hash` (SHA-256 hex) and `prefix` (display-only). The user must copy the key at creation time. Include a clear UI warning: "This key will not be shown again."
-
-### Anti-Pattern 3: Importing Router Functions from Existing Routers into v1 Routers
-
-**What people do:** `from app.routers.files import upload_file_handler` and call it from the v1 router.
-**Why it's wrong:** Existing routers have FastAPI-specific parameter handling (Form fields, UploadFile, streaming responses) tied to the web frontend. Importing them couples the public API contract to internal router implementation details.
-**Do this instead:** Both existing routers and v1 routers call the same **service layer** functions directly. The service functions (`files_service.create_file()`, etc.) are the shared boundary, not the router handlers.
-
-### Anti-Pattern 4: Mounting MCP Server on All Modes
-
-**What people do:** Mount the MCP server in `public` mode alongside the web frontend.
-**Why it's wrong:** The MCP server exposes AI tool endpoints that should require API key auth. `public` mode also serves unauthenticated routes (`/auth/signup`). Mixing them adds complexity and a larger attack surface to the main public service.
-**Do this instead:** Mount MCP only in `api` and `dev` modes. The API service is a separate Dokploy deployment.
-
-### Anti-Pattern 5: MCP Tools Importing Service Functions Directly (Bypassing Auth)
-
-**What people do:** In `mcp_server.py`, call `await files_service.create_file(user_id, ...)` directly after extracting `api_key` from the MCP context.
-**Why it's wrong:** The credit deduction, usage logging, and user resolution logic lives in the HTTP dependency chain. Bypassing it means MCP tool calls don't deduct credits or log usage — inconsistent with APISEC-03 and APISEC-04.
-**Do this instead:** MCP tool handlers make an internal httpx call to `http://localhost:8000/api/v1/...` with the `Authorization: Bearer <api_key>` header. This runs the full middleware stack including credit deduction and logging. The loopback overhead (~1ms) is negligible.
+**Key distinction from existing file upload:** `POST /files/upload` triggers the Onboarding Agent immediately after upload (background task). Collection file upload does NOT run any agent — column profiling happens inside the Pulse Agent when detection runs. This means `DataSummaryPanel` will show empty/loading state until at least one Pulse run has completed.
 
 ---
 
 ## Integration Points
 
-### New External Dependencies
+### New Components and Their Integration with Existing Systems
 
-| Dependency | Integration | Notes |
-|------------|------------|-------|
-| `mcp[cli]` PyPI package | FastMCP server instance, `mcp.http_app()` ASGI mounting | Part of official Python MCP SDK; version 1.x stable. Includes `fastmcp` module. |
-| `httpx` | Already in project via LangChain/httpx | MCP tool handlers use it for internal API calls |
+| New Component | Integrates With | Integration Mechanism |
+|---------------|----------------|----------------------|
+| `Collection` model | `User` model | FK: user_id → users.id |
+| `CollectionFile` model | `Collection` model | FK: collection_id → collections.id |
+| `Signal` model | `Collection` model | FK: collection_id → collections.id |
+| Pulse graph | `E2BSandboxRuntime` | Direct import — zero changes to sandbox service |
+| Pulse graph | `get_llm()` factory | Add `pulse_agent` entry to `prompts.yaml` only |
+| `/collections` router | Credit system | `CreditService.deduct_credit()` — same call signature |
+| `/collections` router | Platform settings | `platform_settings.get(db, "workspace_credit_cost_pulse")` |
+| `/collections` router | Tier config | `user_classes.yaml` two new fields per tier |
+| `ChatSidebar.tsx` | `/workspace` route | One new nav item — no structural sidebar refactor |
+| `useCredits` hook | Collection header | Existing hook, no changes — same balance endpoint |
 
-### Internal Boundaries
+### What Existing Systems Are NOT Modified
 
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| v1 routers ↔ service layer | Direct Python function calls | Same pattern as existing routers |
-| MCP tool handlers ↔ v1 API | httpx over loopback | Preserves full auth/credit middleware chain |
-| `get_authenticated_user` ↔ existing `get_current_user` | `get_authenticated_user` calls `verify_token` then falls back to `validate_api_key` | `get_current_user` unchanged |
-| API key management routes ↔ `api_keys` service | Direct function calls | Same pattern as all other services |
-
-### Deployment: 5th Dokploy Service
-
-```
-spectra-api  (NEW Dokploy Application service)
-  Dockerfile: Dockerfile.backend (same image as public/admin)
-  SPECTRA_MODE=api
-  Domain: api.spectra.io (public HTTPS)
-  Environment:
-    DATABASE_URL=<shared postgres>
-    SPECTRA_MODE=api
-    SECRET_KEY=<same as public backend — needed for JWT validation>
-    ANTHROPIC_API_KEY=<same as public>
-    E2B_API_KEY=<same as public>
-    CORS_ORIGINS=["*"]  (API clients, no browser restrictions needed)
-    UPLOAD_DIR=/app/uploads
-  Volume: spectra_uploads -> /app/uploads  (same named volume as public backend)
-```
-
-**Shared volume note:** If `spectra-api` and `spectra-public` run on the same Dokploy host, both can mount the `spectra_uploads` named volume. Files uploaded via API are immediately accessible to the public web frontend and vice versa. If they run on different hosts, a shared volume strategy (NFS or S3) is needed — but that is a v0.8+ concern given current single-host deployment.
+| Existing System | Status |
+|----------------|--------|
+| `backend/app/agents/graph.py` (chat pipeline) | UNCHANGED — Pulse is a completely separate graph |
+| `ChatAgentState` TypedDict | UNCHANGED — Pulse has its own `PulseAgentState` |
+| `File` model (user Chat files) | UNCHANGED — Collection files are a separate table |
+| `E2BSandboxRuntime` | UNCHANGED — reused as-is |
+| Auth dependencies (`CurrentUser`, `DbSession`) | UNCHANGED — same dependencies on all collection endpoints |
+| `CreditService` | UNCHANGED — reused via `deduct_credit()` |
+| `platform_settings.py` | ADDITIVE ONLY — new keys added to `DEFAULTS` dict |
+| Admin portal frontend | UNCHANGED in v0.8 — admin scope is YAML config only |
+| All existing routers | UNCHANGED — `/collections` is a new addition, not a modification |
 
 ---
 
-## Build Order for Phases
+## Anti-Patterns to Avoid
 
-Dependencies between components determine implementation order:
+### Anti-Pattern 1: Adding Pulse Fields to ChatAgentState
 
+**What people do:** Extend the existing `ChatAgentState` TypedDict with `collection_id`, `signals`, etc. to "reuse" the chat graph for Pulse.
+
+**Why it's wrong:** The Pulse pipeline has a completely different state shape (batch file analysis vs. conversational query), different input contract, and no need for `messages`, `routing_decision`, or `visualization_requested`. Mixing the two pollutes both state schemas, makes both pipelines harder to reason about, and creates risk of accidental state bleed.
+
+**Do this instead:** Create `PulseAgentState` as a separate TypedDict in `state.py`. Create `pulse/graph.py` as a separate `StateGraph`. The two graphs share only infrastructure imports (E2B, LLM factory) — not state or nodes.
+
+### Anti-Pattern 2: Storing Collection Files in the Existing `files` Table
+
+**What people do:** Add a nullable `collection_id` FK to the existing `File` model to avoid a new table.
+
+**Why it's wrong:** The `File` model carries `data_summary` (Onboarding Agent text), `query_suggestions`, and `stored_filename` (opaque UUID-based). None of these fields apply to Collection files, which need `column_profile` (structured JSON schema) and `row_count`. Forcing a single table creates null columns, confused ownership semantics (user-scoped vs. collection-scoped), and makes the Onboarding Agent trigger logic ambiguous.
+
+**Do this instead:** `CollectionFile` is a separate model in `collection_file.py`. File storage paths use a separate prefix (`uploads/collections/{collection_id}/`). The systems are parallel, not merged.
+
+### Anti-Pattern 3: Rebuilding UI From Scratch Instead of Migrating
+
+**What people do:** Treat the mockup as a "design reference" and rebuild components from scratch.
+
+**Why it's wrong:** The 20 components in `pulse-mockup/src/components/workspace/` are production-ready Next.js + shadcn/ui + Recharts code. Rebuilding duplicates work, introduces divergence from the agreed UI contract, and takes significantly longer.
+
+**Do this instead:** Copy component files. Update `@/` import aliases. Replace mock data with hook data. The component tree, prop names, and interaction patterns are the contract — not optional suggestions.
+
+### Anti-Pattern 4: Streaming Pulse Progress via SSE
+
+**What people do:** Use SSE (like the chat system) to stream Pulse analysis progress to the frontend because it "feels more live."
+
+**Why it's wrong:** The Pulse Agent runs discrete E2B analysis passes, not a streaming LLM response. The frontend already has a clean solution: `DetectionLoading` is a full-page component with locally-animated steps. The backend returns when done. SSE would add significant implementation complexity (separate streaming infrastructure, connection management) for no user-visible benefit given the animated loading screen.
+
+**Do this instead:** `POST /collections/{id}/pulse` runs synchronously and returns 200 with signals when done. `DetectionLoading` animates its steps locally. If Pulse runs start exceeding 30 seconds, introduce background task + polling endpoint at that point.
+
+### Anti-Pattern 5: Copy-Pasting Tier Access Checks Into Every Endpoint
+
+**What people do:** Write the `workspace_access` and `max_active_collections` check inline in every collection endpoint handler that needs it.
+
+**Why it's wrong:** The same check is needed in at least two endpoints (`POST /collections`, `POST /collections/{id}/pulse`). Code duplication causes drift — if the check logic changes, it must be updated in multiple places.
+
+**Do this instead:** Create a `WorkspaceAccess` FastAPI dependency that encapsulates both the tier check and the collection limit check. Inject it as a parameter on any endpoint that requires workspace access:
+
+```python
+@router.post("", status_code=201)
+async def create_collection(
+    body: CreateCollectionRequest,
+    current_user: CurrentUser,
+    db: DbSession,
+    _: WorkspaceAccess,   # raises 403 if access denied
+) -> CollectionResponse:
 ```
-Phase 1: Data Model + API Key Service
-  - api_keys table + ApiKey model
-  - api_usage_log table
-  - ApiKeyService (create, list, revoke, validate)
-  - Alembic migration
-  RATIONALE: Everything else depends on being able to validate an API key.
 
-Phase 2: Auth Integration + Key Management Routes
-  - get_authenticated_user() dependency in dependencies.py
-  - /api-keys CRUD endpoints (user-facing, under public/dev modes)
-  - Admin /api/admin/api-keys endpoints
-  - config.py + main.py mode additions
-  RATIONALE: Auth layer must be solid before any v1 endpoint is written.
+---
 
-Phase 3: REST API v1 Endpoints
-  - /api/v1/files (upload, list, delete, download)
-  - /api/v1/files/{id}/context (get, update, suggestions)
-  - /api/v1/query (synchronous analysis)
-  RATIONALE: Can develop and test each endpoint independently with valid API key.
+## Scaling Considerations
 
-Phase 4: MCP Server
-  - mcp_server.py tool definitions
-  - Lifespan coordination with FastAPI
-  - Mount in main.py api/dev mode block
-  RATIONALE: MCP tools are thin wrappers over Phase 3 endpoints. Build last when endpoints are stable.
-```
+The platform is single-developer, single-instance, Dokploy-deployed. The table below identifies early risk signals, not targets for premature optimization.
+
+| Scale | Concern | Approach |
+|-------|---------|---------|
+| Current (< 100 users) | Pulse runs block the request thread for 5-15s | Acceptable — synchronous is simpler; `DetectionLoading` covers the UX |
+| 100-500 users | Multiple simultaneous Pulse runs | E2B creates isolated per-execution sandboxes; no shared state risk. Monitor E2B cold start latency (~150ms documented). |
+| 500+ users | Pulse run queue contention on the backend process | Switch `POST /collections/{id}/pulse` to return a job ID; add polling endpoint `GET /collections/{id}/pulse/status`. FastAPI `BackgroundTasks` is the simplest step before Celery. |
+| Any scale | Collection file storage in `uploads/collections/` | Same named Docker volume as existing file uploads. S3 migration deferred until storage volume justifies it. |
 
 ---
 
 ## Sources
 
-- MCP Python SDK (official): [https://github.com/modelcontextprotocol/python-sdk](https://github.com/modelcontextprotocol/python-sdk) — HIGH confidence
-- FastMCP + FastAPI integration guide: [https://gofastmcp.com/integrations/fastapi](https://gofastmcp.com/integrations/fastapi) — HIGH confidence (official FastMCP docs)
-- FastMCP running server / HTTP transport: [https://gofastmcp.com/deployment/running-server](https://gofastmcp.com/deployment/running-server) — HIGH confidence
-- FastAPI-MCP (tadata library, alternative approach): [https://github.com/tadata-org/fastapi_mcp](https://github.com/tadata-org/fastapi_mcp) — MEDIUM confidence (third-party, v0.4.0, active)
-- FastAPI combining OAuth2 + APIKeyHeader discussion: [https://github.com/fastapi/fastapi/discussions/9601](https://github.com/fastapi/fastapi/discussions/9601) — HIGH confidence (official FastAPI repo)
-- FastAPI `HTTPBearer(auto_error=False)` pattern for optional auth: [https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/](https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/) — HIGH confidence (official FastAPI docs)
-- API key best practices (SHA-256 storage, format, metadata): [https://oneuptime.com/blog/post/2026-02-20-api-key-management-best-practices/view](https://oneuptime.com/blog/post/2026-02-20-api-key-management-best-practices/view) — MEDIUM confidence (2026 article, consistent with GitHub/Stripe public documentation)
-- Practical FastAPI security guide (JWT + API key combined): [https://blog.greeden.me/en/2025/12/30/practical-fastapi-security-guide-designing-modern-apis-protected-by-jwt-auth-oauth2-scopes-and-api-keys/](https://blog.greeden.me/en/2025/12/30/practical-fastapi-security-guide-designing-modern-apis-protected-by-jwt-auth-oauth2-scopes-and-api-keys/) — MEDIUM confidence (2025, community)
-- MCP Streamable HTTP production transport recommendation: [https://medium.com/@nsaikiranvarma/building-production-ready-mcp-server-with-streamable-http-transport-in-15-minutes-ba15f350ac3c](https://medium.com/@nsaikiranvarma/building-production-ready-mcp-server-with-streamable-http-transport-in-15-minutes-ba15f350ac3c) — MEDIUM confidence (community, 2025)
-- Direct codebase analysis: `backend/app/main.py`, `backend/app/config.py`, `backend/app/dependencies.py`, `backend/app/utils/security.py`, `backend/app/models/user.py` — HIGH confidence
+All findings are HIGH confidence based on direct codebase inspection:
+
+- `backend/app/agents/graph.py` — chat pipeline architecture, LangGraph usage pattern
+- `backend/app/agents/state.py` — existing TypedDict patterns (`ChatAgentState`, `OnboardingState`)
+- `backend/app/agents/coding.py` — agent node structure, LLM factory usage
+- `backend/app/models/file.py`, `credit_transaction.py`, `user_credit.py`, `base.py` — model patterns
+- `backend/app/services/credit.py` — `SELECT FOR UPDATE` credit deduction pattern
+- `backend/app/services/platform_settings.py` — TTL cache, `DEFAULTS` dict, `VALID_KEYS` pattern
+- `backend/app/routers/files.py` — router structure, dependency pattern
+- `backend/app/main.py` — router registration, mode-based routing
+- `frontend/src/app/(dashboard)/layout.tsx` — `(dashboard)` group layout with `ChatSidebar`
+- `frontend/src/hooks/` — existing TanStack Query hook names and patterns
+- `frontend/src/stores/` — Zustand store scope (sessionStore, tabStore)
+- `pulse-mockup/src/components/workspace/` — 20 components available for migration
+- `pulse-mockup/src/app/workspace/` — complete route structure for v0.8-v0.11 pages
+- `requirements/Pulse-req-milestone-plan.md` — authoritative v0.8 scope specification
+- `requirements/Spectra-Pulse-Requirement.md` — ER diagram, data model decisions, user journey
 
 ---
 
-*Architecture research for: API key authentication, public REST API v1, SPECTRA_MODE=api, MCP server integration*
-*Researched: 2026-02-23*
+*Architecture research for: v0.8 Spectra Pulse (Detection) — Pulse Analysis module integration into existing Spectra platform*
+*Researched: 2026-03-05*
