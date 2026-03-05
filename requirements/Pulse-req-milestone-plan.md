@@ -80,29 +80,31 @@ This is the foundation milestone. It introduces the Analysis Workspace as a new 
 ### Frontend Scope
 
 **Navigation:**
-- New "Analysis Workspace" entry point in main navigation (separate from Chat)
-- Route: `/workspace` (list) and `/workspace/{collection_id}` (detail)
+- New "Analysis Workspace" sidebar entry (label: "Analysis Workspace", links to /workspace). Routes: /workspace (Collections list) and /workspace/collections/[id] (Collection detail).
+- Sidebar also includes Chat, Files, API, Settings, Admin Panel entries. Only /workspace, /chat, and /admin are live routes — others remain # placeholders.
+- Sidebar collapse toggle for desktop. Credit balance shown in the header as a Zap-icon pill.
 
-**Collection list page:**
-- View existing Collections with name, status, created date, signal count
-- "Create New Collection" action
-- Status indicators (active/archived)
+**Collections list page (/workspace):**
+- Grid of Collection cards showing: name, status badge (Active = emerald green, Archived = muted gray), created date, file count, signal count.
+- "Create Collection" button opens a dialog with a name field only.
+- Empty state shown when no collections exist.
 
-**Collection detail page:**
-- File selection area: pick from uploaded files or upload new
-- "Run Detection" button with credit cost display ("This will use ~5 credits")
-- Loading state during Pulse execution (15-30 seconds expected)
-- Credit balance indicator
+**Collection detail page (/workspace/collections/[id]) — 4-tab layout:**
+- Page header: collection name, status badge, credit usage pill ("Credits used: N" with Zap icon).
+- Tab 1 — Overview: stat cards (files count, signal count, reports count, credits used), Run Detection banner, 2-column grid of up to 4 Signal cards (non-interactive, link to Detection Results page), compact file table with "View all files in Files tab" link, activity feed.
+- Tab 2 — Files: FileUploadZone (drag/drop or click to upload). FileTable with row checkboxes. Clicking a file row opens DataSummaryPanel (slide-out sheet showing column profile). A sticky action bar appears at the bottom when files are selected: shows selected count and "Run Detection (5 credits)" button with credit estimate.
+- Tab 3 — Signals: all Signal cards (non-interactive) plus "Open Signals View" button that navigates to the Detection Results page.
+- Tab 4 — Reports: list of reports as rows (type badge, title, source line, generated date, "View Report" button).
 
-**Signal cards UI (after Pulse completes):**
-- Left panel: scrollable signal list with title, severity badge, category tag
-- Main panel: selected signal detail view
-  - Title (key finding headline)
-  - Description (detailed explanation)
-  - Severity badge (color-coded: opportunity=green, warning=amber, critical=red, info=blue)
-  - Category tag (anomaly, trend, concentration, quality)
-  - Visualization (chart rendered from Signal's visualization config)
-  - Statistical evidence summary
+**Detection loading state:**
+- Triggered by "Run Detection" in the Files tab sticky action bar. Replaces the entire page content (full-page transition — not an inline spinner or panel). Animated steps: Profiling data, Detecting anomalies, Analyzing trends, Generating signals. After completion, navigates to the Detection Results page.
+
+**Detection Results page (/workspace/collections/[id]/signals):**
+- Breadcrumb header: Collections / [Collection Name] / Detection Results.
+- Two-column layout: left = SignalListPanel, right = SignalDetailPanel.
+- SignalListPanel: scrollable list sorted by severity (critical first, then warning, then info). Each entry: severity color indicator, signal title, category tag. Auto-selects the highest severity signal on load.
+- SignalDetailPanel sections (in order): title + severity/category badges, Visualization card (Recharts chart driven by signal.chartType), Analysis text, Statistical Evidence (2x2 metric grid), Investigation section (Investigate button + What-If button + past investigation report list).
+- Severity color scheme: critical = red, warning = amber, info = blue. Note: there is no "opportunity" severity badge in the mockup — severity values are critical, warning, and info only.
 
 ### Admin Scope (Minimal for v0.8)
 
@@ -176,28 +178,23 @@ This milestone adds the output layer to the workspace: structured reports compil
 ### Frontend Scope
 
 **Collection management:**
-- Archive/unarchive actions on Collection list and detail pages
-- Status indicators (active badge vs. archived badge)
-- Collection limit usage display: "3 of 5 active collections"
-- Upgrade prompt when limit hit: "You've reached the limit for your plan. Archive a Collection or upgrade to [next tier]."
+- Archive/unarchive action buttons on Collection detail and list pages. Status badge is already shown in the v0.8 mockup (Active = emerald, Archived = muted gray), but action buttons are not yet implemented — this is COLL-01 (known mockup gap, planned for v0.9).
+- Collection limit usage display: "X of Y active collections" counter in the collection list or detail header. Not present in the v0.8 mockup — this is COLL-02 (known mockup gap, planned for v0.9).
+- Upgrade prompt when collection limit is hit: "You've reached the limit for your plan. Archive a Collection or upgrade to [next tier]."
 
-**Report viewer:**
-- Rendered markdown display within Collection detail page
-- Report list with type, title, generated date
-- In-page reading view with proper typography
-
-**Download options:**
-- "Download as Markdown" button
-- "Download as PDF" button (basic PDF rendering from markdown — no elaborate templating per Decision #5)
+**Report viewer (/workspace/collections/[id]/reports/[reportId]):**
+- Full-page layout (not embedded in the collection detail tabs). Sticky header: Back button (to collection detail), report title, type badge (Investigation Report = blue badge, What-If Scenario Report = violet badge), "Download as Markdown" button (functional), "Download as PDF" button (present but disabled, opacity-60 — planned backend feature).
+- White paper area centered on a muted background (max-w-3xl, white bg, px-16 py-12, gray-900 text). Paper header shows: type badge, h1 title, generated date.
+- Markdown rendered inline as HTML (custom converter — handles h1/h2/h3, bold, italic, hr, tables, ul, blockquotes, paragraphs).
+- Investigation Reports only: "Related Signals — Same Root Cause" section (one gray card per related signal with "View Signal" link), then "Explore What-If Scenarios" CTA (violet card, "Start What-If →" button linking to /whatif for that signal).
+- What-If Scenario Reports: no extra sections beyond the markdown content.
 
 **Chat-to-Collection bridge:**
-- "Add to Collection" action on data cards in Chat sessions
-- Collection picker modal: select which Collection to add the card to
-- Chat items appear in Collection alongside Signals
+- "Add to Collection" button on each ResultCard in Chat (table, chart placeholder, or text result card).
+- AddToCollectionModal: searches active collections only (archived collections are excluded from the picker). Shows collection name, signal count, file count. "Add" button per collection row. After adding: success state showing collection name for 1.5 seconds, then modal closes. Footer: "+ Create new collection" link.
 
 **Credit display:**
-- Running credit total in Collection header: "Credits used: 14"
-- Credit cost indicators on report compilation and export actions
+- Running credit total shown in the collection detail header: "Credits used: N" with Zap icon pill.
 
 ### Admin Scope
 
@@ -271,27 +268,24 @@ This milestone adds the second stage of the Detect -> Explain -> What-If pipelin
 
 ### Frontend Scope
 
-**Signal card enhancement:**
-- "Investigate" button on each Signal card (available after Pulse completion)
-- Investigation status indicator on Signal card if investigation exists
+**Investigation page (/workspace/collections/[id]/signals/[signalId]/investigate):**
+- Full-page dedicated route. Sticky header: "Back to Signals" button, "Guided Investigation" label, "3 credits" badge, signal title on the right.
+- Signal context block: muted card showing signal title and truncated description.
+- Q&A thread (InvestigationQAThread): renders each exchange as a question block. Spectra's question is shown with multiple-choice buttons (discrete options) plus a free-text textarea option per exchange. Answered choices are visually locked (cannot be re-selected after submission).
+- Closing question appears after ≥3 exchanges are answered with no unanswered exchange remaining: "Is there anything else you'd like to discuss about this signal before I generate the report?" Two choice buttons: "No, that covers it — proceed with report" and "Yes, I'd like to discuss something".
+- "Discuss something" path: free-text textarea input with send button (Cmd+Enter or click). Submitting appends the user's input as a discussion exchange and adds a new AI follow-up question to the thread. The closing question resets to hidden, allowing another round of discussion. Multiple discussion rounds are possible before proceeding.
+- "Proceed with report" path: InvestigationCheckpoint component is shown with "Generate Report" button. Clicking triggers a 2-second loading state, then navigates to the report viewer.
+- Note: there is no separate root cause card UI step. The investigation ends directly in report generation (no root cause card → What-If prompt sequence).
 
-**Investigation UI:**
-- Doctor-style interview flow (not a chat — structured Q&A):
-  - Spectra presents: hypothesis text + structured choices (radio/checkboxes) + free-text option
-  - User selects/types answer and submits
-  - Visual narrowing: each exchange visually narrows the scope (progress indicator, 3-5 steps)
-  - Root cause summary card when investigation completes
-- Root cause display: hypothesis statement, confidence badge, supporting evidence
-- "Done" state: investigation complete with root cause identified
+**Signal detail panel (updated for v0.10):**
+- Investigation section (in SignalDetailPanel on Detection Results page):
+  - "Investigate (3 credits)" button — always enabled, navigates to the investigation page (relaunches or starts a new investigation).
+  - "What-If (5 credits)" button shown alongside: enabled only if at least one complete investigation session exists for this signal; otherwise disabled with "(requires investigation)" text.
+  - List of past investigation reports below buttons: date, report title (truncated), Complete badge, links to report viewer.
 
 **Investigation history:**
-- View past investigations for a Signal
-- Each investigation shows: date, status, root cause (if complete), exchange count
-- Can review full Q&A trail of past investigations
-
-**Root cause visualization:**
-- Root cause card shows which Signals it explains (linked signal titles)
-- From a Signal card, show if a root cause has been identified linking it to other Signals
+- Past investigation reports listed in the SignalDetailPanel Investigation section.
+- Each entry shows: generated date, report title, Complete badge, "View Report" link.
 
 ### Admin Scope
 
@@ -364,43 +358,21 @@ This milestone adds the second stage of the Detect -> Explain -> What-If pipelin
 
 ### Frontend Scope
 
-**Phase 1 UI — Set Objective:**
-- Triggered from root cause card: "Explore What-If" button
-- Spectra presents root cause context and asks for objective
-- Presented as selection with options + free-text:
-  - Context: "Revenue declined 18% due to APAC Enterprise pricing pressure."
-  - Prompt: "What would you like to explore?"
-  - Options: 3-4 AI-suggested objectives based on root cause
-  - Free-text: "Type your own objective"
-- Credit cost display: "Generating scenarios will use ~5 credits"
+**What-If Objective page (/workspace/collections/[id]/signals/[signalId]/whatif):**
+- Accessible from two entry points: (a) SignalDetailPanel "What-If (5 credits)" button (enabled only after at least one complete investigation exists for the signal), and (b) "Start What-If →" CTA button in an Investigation Report viewer.
+- Sticky header: "Back to Signals" link, "What-If Scenarios" label, "5 credits" badge, signal title.
+- Root cause context card (muted background): investigation report title, confidence badge (e.g., "High confidence"), brief root cause description text.
+- Objective section: "Define your objective" heading plus subtext. Action search bar with Search icon, text input, and "Generate Scenarios →" button (disabled until text is non-empty, costs 5 credits). On input focus: suggestions dropdown shows 4 pre-computed objective options. Suggestion selection uses onMouseDown + preventDefault to avoid blur/click race condition.
+- After "Generate Scenarios" is clicked: inline loading state replaces the main content (the sticky header remains visible). 4 animated steps with step icons and spinner/checkmark states: Analyzing root cause, Generating scenarios, Scoring confidence, Finalizing scenarios. Progress bar below steps. Estimated time shown. Navigates to the What-If Session page after ~10 seconds.
 
-**Phase 2 UI — Scenario generation:**
-- Loading state while AI generates scenarios (15-30 seconds)
-- Progress indicator showing generation in progress
-- Scenario cards appear when ready:
-  - Scenario name (e.g., "Shift Focus to Domestic SMB")
-  - Narrative explanation (2-3 paragraphs)
-  - Estimated impact with range (e.g., "$420K-$580K over Q1")
-  - Key assumptions listed
-  - Confidence badge (high/medium/low) with rationale
-  - Data backing summary
-
-**Phase 3 UI — Explore and Refine:**
-- Per-scenario refinement chat panel
-- Scoped chat input: user asks follow-up questions about a specific scenario
-- AI responses include updated analysis and numbers (no hallucinated figures)
-- "Add Scenario" button to request additional scenarios (2 credits)
-- Refinement history visible in scenario detail
-
-**Phase 4 UI — Compare and Decide:**
-- Side-by-side comparison cards for all scenarios:
-  - Scenario name + one-line summary
-  - Estimated impact range
-  - Confidence level
-  - Time to impact
-- "Select" action on preferred scenario
-- Selected scenario comparison becomes a report section
-- Report auto-generated: objective stated, scenarios evaluated, selected approach with rationale
+**What-If Session page (/workspace/collections/[id]/signals/[signalId]/whatif/[sessionId]):**
+- Three-panel layout. Objective shown in page header (signal title + objective text on right side).
+- Scenario list panel (280px, left): vertical list of scenario buttons. Each entry shows scenario name, confidence badge (High = emerald, Medium = amber, Low = muted), estimated impact. The selected scenario has a ring highlight. Below the last scenario: a separator and "Generate What-If Report" primary button.
+- Scenario detail panel (fills remaining width, center): header with selected scenario name, confidence badge, and "Refine" toggle button. Scrollable content with 5 cards: Narrative & Recommendations, Estimated Impact (highlighted primary-color box with projected outcome), Assumptions (checklist items), Confidence (badge + rationale text), Data Backing.
+- Refine panel (320px, right overlay): slides in from the right edge via CSS translate when the "Refine" toggle button is clicked, overlaying the detail panel. Header: "Refine Scenario" label + X close button. Contains WhatIfRefinementChat scoped to the currently selected scenario. Chat history resets when switching scenarios (component remount via key={selectedScenarioId}).
+- "Generate What-If Report" button in the scenario list panel routes to the report viewer showing the What-If Scenario Report.
+- Deferred: WHAT-05 — "Add Scenario" button (user requests additional scenario generation beyond the initial set) is not in the mockup. Planned for v0.11 implementation.
+- Deferred: WHAT-06 — Side-by-side scenario comparison view is not in the mockup. The "Compare & Decide" phase from the original requirements is replaced by the scenario list + "Generate What-If Report" action. Planned for v0.11 implementation.
 
 ### Admin Scope
 
