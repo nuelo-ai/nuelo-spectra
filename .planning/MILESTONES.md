@@ -276,6 +276,20 @@
 
 **Testing:** UAT passed for all phases — Phase 39 (8 tests, 2 rounds with gap closure), Phase 40 (11 tests, 2 rounds with gap closure), Phase 41 (6 tests, 1 bug fixed during UAT)
 
+**Post-ship patches:**
+
+| Version | Date | Summary |
+|---------|------|---------|
+| v0.7.4 | 2026-02-20 | MCP server initial implementation |
+| v0.7.5 | 2026-02-20 | Fix /health/llm, /v1/keys SPECTRA_MODE=api, hardcoded version |
+| v0.7.6 | 2026-02-25 | MCP auth fix (await set_state/get_state) + loopback URL fix |
+| v0.7.7 | 2026-02-25 | MCP spectra_run_analysis: add execution_result as markdown data table |
+| v0.7.8 | 2026-02-25 | MCP: decode Plotly binary typed arrays in chart spec; API_MCP_REFERENCE.md |
+| v0.7.9 | 2026-02-25 | Admin users activity tab: fix backend GroupingError 500 + silent error swallowing |
+| v0.7.10 | 2026-02-27 | Admin credit usage display: add API query counts to activity/sessions tabs + credit transaction source attribution |
+
+**Final production state:** v0.7.10 (2026-02-27)
+
 **What's next:** v0.8 will be defined via `/gsd:new-milestone`
 
 ---
