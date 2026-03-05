@@ -10,6 +10,7 @@ import {
   Settings,
   PanelLeftClose,
   PanelLeft,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -32,6 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Files", href: "/files", icon: FolderOpen },
   { label: "API", href: "/api-keys", icon: Code },
   { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Admin Panel", href: "/admin", icon: ShieldCheck },
 ];
 
 interface SidebarProps {
@@ -89,7 +91,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           const linkContent = (
             <Link
               key={item.href}
-              href={item.href === "/workspace" || item.href === "/chat" ? item.href : "#"}
+              href={item.href === "/workspace" || item.href === "/chat" || item.href === "/admin" ? item.href : "#"}
               className={cn(
                 "group flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
                 active
