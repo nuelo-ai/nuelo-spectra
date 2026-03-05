@@ -398,6 +398,7 @@ export const MOCK_REPORTS: Report[] = [
     type: "Investigation Report",
     title: "Revenue Spike — Root Cause Investigation",
     generatedAt: "2026-02-18",
+    signalId: "sig-001",
     markdownContent: `# Investigation Report: Revenue Spike Root Cause\n\n**Generated:** February 18, 2026  \n**Signal investigated:** Revenue Anomaly Detected Q3  \n**Investigation exchanges:** 4  \n**Confidence:** High\n\n---\n\n## Root Cause\n\n> The Q3 revenue spike is attributable to a **successful enterprise tier pricing update** that triggered accelerated upgrades from mid-market accounts, combined with a seasonal enterprise budget flush in weeks 8–10.\n\n**Confidence:** High (87%)\n\n## Evidence Chain\n\n1. Enterprise tier launch date aligns exactly with spike onset (week 8)\n2. Mid-market upgrade rate increased 340% in the same period\n3. Pattern matches Q3 budget flush behavior from prior 3 years\n4. No external market event explains the magnitude independently\n\n## Supporting Data\n\n| Factor | Contribution | Confidence |\n|--------|-------------|------------|\n| Enterprise tier launch | 62% | High |\n| Budget flush timing | 28% | Medium |\n| Unknown factors | 10% | Low |\n\n## Next Steps\n\n- Model a What-If scenario: sustain enterprise pricing uplift into Q4\n- Monitor whether upgrade rate normalizes or sustains\n`,
   },
   {
@@ -433,6 +434,15 @@ export const MOCK_REPORTS: Report[] = [
     signalId: "sig-001",
     relatedSignals: [],
     markdownContent: `# Investigation Report: Seasonal Demand Hypothesis\n\n**Generated:** March 3, 2026  \n**Signal investigated:** Revenue Anomaly Detected Q3  \n**Investigation exchanges:** 2  \n**Confidence:** Medium\n\n---\n\n## Signal Summary\n\nThe Q3 revenue anomaly shows a 28% spike above the 12-month rolling baseline during weeks 8–10, with a Z-score of 3.42 and 99.94% confidence. The timing of this spike aligns with both the enterprise tier pricing launch and the historically observed Q3 enterprise budget flush window — creating two competing hypotheses for the root cause.\n\n## Signal Analysis\n\nPulse detection flagged the revenue event as statistically anomalous relative to prior quarters. The anomaly window is narrow (3 weeks), which is consistent with seasonal demand surges but also consistent with the adoption curve of a new pricing tier in its launch window. Distinguishing between the two requires analyst context.\n\n## Investigation Analysis\n\nThis investigation explored the seasonal demand hypothesis. User context identified seasonal demand increase as the primary driver, with SaaS subscriptions as the most correlated product category. This framing suggests the spike reflects a recurring Q3 enterprise budget cycle rather than a structural change driven by the pricing update.\n\nIf the seasonal hypothesis holds, the revenue uplift should partially or fully revert in Q4 as the budget flush cycle ends. The fact that SaaS subscriptions — rather than one-time professional services — drove the spike is consistent with a seasonal renewal and expansion pattern where enterprises renew annual contracts and add seats before fiscal year-end.\n\n## Supporting Evidence\n\n| Metric | Q1 2026 | Q2 2026 | Q3 2026 | YoY Q3 Change |\n|--------|---------|---------|---------|---------------|\n| SaaS Subscription Revenue | $3.8M | $3.6M | $4.7M | +38% |\n| Professional Services Revenue | $0.5M | $0.6M | $0.5M | +2% |\n| Enterprise Renewal Rate | 88% | 86% | 94% | +7pts |\n\n## Recommendations\n\n- **Compare to prior Q3 cycles:** Pull Q3 2024 and Q3 2025 SaaS revenue to test whether a similar seasonal spike appeared in those years.\n- **Separate renewal from expansion:** Isolate new ARR from renewal ARR in the Q3 data to determine whether the spike is driven by renewals (seasonal) or net new expansion (pricing change).\n- **Re-run investigation with pricing data:** If renewal data confirms seasonality, close this signal. If expansion ARR is the driver, the enterprise pricing launch hypothesis (inv-001) is more likely correct.\n`,
+  },
+  {
+    id: "rep-whatif-001",
+    collectionId: "col-001",
+    type: "What-If Scenario Report",
+    title: "What-If Scenario Report — Enterprise Revenue Q4",
+    generatedAt: "2026-03-05",
+    signalId: "sig-001",
+    markdownContent: `# What-If Scenario Report: Enterprise Revenue Q4\n\n**Generated:** March 5, 2026  \n**Signal:** Revenue Anomaly Detected Q3  \n**Investigation basis:** Enterprise Pricing Impact (inv-001)  \n**Objective:** Sustain enterprise revenue growth into Q4 without over-relying on pricing changes\n\n---\n\n## Objective\n\nFollowing the root cause investigation that confirmed the Q3 revenue spike was driven by the enterprise tier pricing update, this What-If analysis explores three scenarios for sustaining growth into Q4 without creating pricing instability.\n\n## Root Cause Context\n\nThe investigation (inv-001) found that the Q3 revenue spike was primarily attributable to the enterprise tier pricing launch, which triggered accelerated upgrades from mid-market accounts. Confidence: High (87%). The risk for Q4 is that this growth is partly structural and partly a one-time cohort effect.\n\n## Evaluated Scenarios\n\n### Scenario 1: Enterprise Expansion Play\n*Confidence: High*\n\nAccelerate enterprise account expansion by targeting the 68% of eligible accounts not yet on the analytics add-on. A structured 90-day outreach campaign would capture latent upgrade potential before Q4 budget cycles close.\n\n**Estimated impact:** +14–20% Q4 enterprise revenue growth  \n**Key assumptions:**\n- 40%+ of targeted accounts respond within 90 days\n- Average expansion ARR per account remains near $4,200\n- Sales team capacity is available in parallel with renewals\n- No major competitive pricing disruption\n\n### Scenario 2: Mid-Market Tier Bridge\n*Confidence: Medium*\n\nIntroduce a mid-market pricing tier to retain accounts that upgraded opportunistically in Q3 before they churn back to a lower tier.\n\n**Estimated impact:** +8–13% reduction in post-Q3 revenue churn risk  \n**Key assumptions:**\n- 15–25% of Q3 enterprise upgrades came from opportunistic mid-market upgrades\n- A mid-market tier at 60–70% of enterprise price retains the at-risk cohort\n- Product team delivers feature differentiation within 6 weeks\n\n### Scenario 3: Seasonal Demand Lock-In\n*Confidence: Low*\n\nPursue annual contract renewals before Q4 budget freezes to lock in the Q3 revenue floor regardless of whether seasonal reversion occurs.\n\n**Estimated impact:** +5–9% annualized ARR stabilization  \n**Key assumptions:**\n- 60%+ of Q3 expanded accounts are not yet on annual contracts\n- One-time implementation credit (~$500) is sufficient to drive lock-in\n- Q4 seasonal reversion risk is real\n\n## AI-Recommended Approach\n\n**Recommended: Scenario 1 — Enterprise Expansion Play**\n\nScenario 1 is recommended as the primary Q4 strategy. The data backing is strongest (3.2x adoption lift ratio, 142 clearly identified target accounts), the revenue upside is largest (+14–20%), and the execution path is well-defined. The 90-day timeline fits within Q4 without requiring product or pricing changes.\n\nScenario 2 should be evaluated in parallel as a risk mitigation measure if analysis of Q3 upgrade cohort data confirms opportunistic mid-market upgrades. Scenario 3 is a contingency hedge if Q4 data shows early signs of seasonal reversion.\n`,
   },
 ];
 
@@ -654,7 +664,140 @@ export const MOCK_INVESTIGATION_SESSIONS: InvestigationSession[] = [
         selectedChoice: null,
         freeTextAnswer: null,
       },
+      {
+        id: "exc-003-3",
+        question: "Which customer cohorts are churning first?",
+        choices: [
+          "Newer accounts (< 6 months)",
+          "Tenured accounts (> 2 years)",
+          "Both cohorts equally",
+          "Recent mid-market downgrades",
+        ],
+        selectedChoice: null,
+        freeTextAnswer: null,
+      },
     ],
+  },
+];
+
+// --- What-If Types ---
+
+export type WhatIfConfidence = "high" | "medium" | "low";
+
+export interface WhatIfScenario {
+  id: string;
+  name: string;
+  narrative: string;                // 2-3 sentences describing the scenario
+  estimatedImpact: string;          // e.g. "+12–18% reduction in lead time"
+  assumptions: string[];            // 3-4 bullet points
+  confidence: WhatIfConfidence;
+  confidenceRationale: string;      // why the AI assigned this confidence
+  dataBacking: string;              // what data supports this scenario
+}
+
+export interface WhatIfChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface WhatIfSession {
+  id: string;
+  signalId: string;
+  collectionId: string;
+  investigationSessionId: string;   // which investigation session prompted this
+  objective: string;                // the stated objective
+  scenarios: WhatIfScenario[];      // always 3 in mock data
+  chatHistory: Record<string, WhatIfChatMessage[]>; // keyed by scenarioId
+  reportId: string | null;          // links to a Report with type "What-If Scenario Report"
+  createdAt: string;
+}
+
+// --- Mock What-If Sessions ---
+
+export const MOCK_WHATIF_SESSIONS: WhatIfSession[] = [
+  {
+    id: "wif-001",
+    signalId: "sig-001",
+    collectionId: "col-001",
+    investigationSessionId: "inv-001",
+    objective: "Sustain enterprise revenue growth into Q4 without over-relying on pricing changes",
+    scenarios: [
+      {
+        id: "wif-sc-001",
+        name: "Enterprise Expansion Play",
+        narrative: "Accelerate enterprise account expansion by targeting the 68% of eligible accounts not yet on the analytics add-on. A structured outreach campaign with a 90-day window would capture latent upgrade potential before Q4 budget cycles close.",
+        estimatedImpact: "+14–20% Q4 enterprise revenue growth",
+        assumptions: [
+          "At least 40% of targeted accounts respond to outreach within 90 days",
+          "Average expansion ARR per account remains near current $4,200",
+          "Sales team has capacity to run structured outreach in parallel with renewals",
+          "No major competitive pricing shift disrupts upgrade decisions",
+        ],
+        confidence: "high",
+        confidenceRationale: "Strong historical data on analytics add-on adoption (3.2x lift ratio) and a clearly defined addressable pool of 142 accounts make this scenario well-supported by existing evidence.",
+        dataBacking: "Cross-sell analysis (sig-006) shows 72% adoption rate among analytics users vs. 22% baseline. 142 of 209 eligible enterprise accounts have not been targeted. Historical Q3 expansion ARR data from revenue_q3_2026.csv.",
+      },
+      {
+        id: "wif-sc-002",
+        name: "Mid-Market Tier Bridge",
+        narrative: "Introduce a mid-market pricing tier that bridges the gap between SMB and enterprise, capturing the accounts that upgraded opportunistically during Q3 before they churn back to a lower tier. A retention-focused pricing structure preserves the Q3 uplift.",
+        estimatedImpact: "+8–13% reduction in post-Q3 revenue churn risk",
+        assumptions: [
+          "15–25% of Q3 enterprise upgrades came from mid-market accounts upgrading to lock in pricing",
+          "A mid-market tier at 60–70% of enterprise price would retain the majority of at-risk accounts",
+          "Product team can deliver feature differentiation within 6 weeks",
+          "Pricing change does not cannibalize existing enterprise accounts",
+        ],
+        confidence: "medium",
+        confidenceRationale: "The scenario logic is sound but depends on segment-level data not yet isolated in the current dataset. Confidence improves if mid-market upgrade cohort data is extracted separately.",
+        dataBacking: "SMB churn spike signal (sig-002) and enterprise revenue anomaly (sig-001) together suggest pricing sensitivity. Q3 revenue breakdown from rep-001 shows enterprise growth was the primary driver.",
+      },
+      {
+        id: "wif-sc-003",
+        name: "Seasonal Demand Lock-In",
+        narrative: "Treat Q3's elevated revenue as a seasonal window and aggressively pursue annual contract renewals before Q4 budget freezes. Locking accounts into 12-month terms at current pricing preserves the revenue floor regardless of whether Q4 shows a seasonal reversion.",
+        estimatedImpact: "+5–9% annualized ARR stabilization",
+        assumptions: [
+          "At least 60% of Q3 expanded accounts are not yet on annual contracts",
+          "Annual contract incentive (e.g., 5% discount) is sufficient to drive lock-in decisions",
+          "Q4 seasonal reversion risk is real — the seasonal hypothesis from inv-002 may be partially correct",
+          "Legal and finance can process contract amendments within 45 days",
+        ],
+        confidence: "low",
+        confidenceRationale: "This scenario hedges against the seasonal reversion hypothesis (inv-002), but the data does not yet confirm whether Q3 growth was structural or seasonal. Lower confidence until renewal vs. expansion ARR is separated.",
+        dataBacking: "Competing investigation conclusions from rpt-inv-001 (pricing change) and rpt-inv-002 (seasonal demand). Enterprise renewal rate data from Q1–Q3 in rep-003.",
+      },
+    ],
+    chatHistory: {
+      "wif-sc-001": [
+        {
+          id: "chat-sc1-001",
+          role: "user",
+          content: "Can you make the timeline for this scenario more specific — how does the 90-day outreach window break down?",
+        },
+        {
+          id: "chat-sc1-002",
+          role: "assistant",
+          content: "Updated the scenario. The 90-day window now breaks into three phases: weeks 1–4 for identifying and prioritizing the 142 target accounts by expansion readiness score, weeks 5–10 for outreach and discovery calls, and weeks 11–13 for close and onboarding. The estimated impact range remains +14–20% but is now front-loaded toward the high end if the priority tier (top 40 accounts by usage signal) converts first.",
+        },
+      ],
+      "wif-sc-002": [],
+      "wif-sc-003": [
+        {
+          id: "chat-sc3-001",
+          role: "user",
+          content: "Change the discount assumption from 5% to a free implementation credit instead — we don't want to set a discount precedent.",
+        },
+        {
+          id: "chat-sc3-002",
+          role: "assistant",
+          content: "Updated assumption 2: the incentive is now a one-time implementation credit (valued at ~$500) rather than a recurring discount, avoiding pricing precedent concerns. The estimated impact range is unchanged — the credit cost is absorbed within existing customer success budget.",
+        },
+      ],
+    },
+    reportId: "rep-whatif-001",
+    createdAt: "2026-03-05T14:00:00Z",
   },
 ];
 
