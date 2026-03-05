@@ -102,7 +102,7 @@
 
 - [x] **Phase 42: Analysis Workspace & Pulse Detection** - Mockup screens for workspace entry, Collection list/detail, signal cards, and Run Detection flow (completed 2026-03-04)
 - [x] **Phase 43: Collections & Reports** - Mockup screens for report viewer, archive/unarchive, Chat-to-Collection bridge, and usage indicators (completed 2026-03-04)
-- [ ] **Phase 44: Guided Investigation (Explain)** - Mockup screens for doctor-style Q&A flow, progress tracking, root cause display, and investigation history
+- [x] **Phase 44: Guided Investigation (Explain)** - Mockup screens for doctor-style Q&A flow, progress tracking, root cause display, and investigation history (completed 2026-03-05)
 - [ ] **Phase 45: What-If Scenarios** - Mockup screens for objective selection, scenario cards, refinement chat, side-by-side comparison, and generated report section
 - [ ] **Phase 46: Admin Workspace Management** - Mockup screens for workspace activity dashboard, per-user workspace tab, credit cost settings, and alerts
 
@@ -230,6 +230,6 @@ Plans:
 | 41. MCP Server | v0.7 | 2/2 | Complete | 2026-02-24 |
 | 42. Analysis Workspace & Pulse Detection | 4/4 | Complete   | 2026-03-04 | - |
 | 43. Collections & Reports | 3/3 | Complete    | 2026-03-04 | - |
-| 44. Guided Investigation (Explain) | 3/4 | In Progress|  | - |
+| 44. Guided Investigation (Explain) | 4/4 | Complete   | 2026-03-05 | - |
 | 45. What-If Scenarios | v0.7.11 | 0/TBD | Not started | - |
 | 46. Admin Workspace Management | v0.7.11 | 0/TBD | Not started | - |
