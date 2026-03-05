@@ -52,7 +52,7 @@ Mockup screens for the full Analysis Workspace feature set (v0.8–v0.12 scope).
 - [x] **ADMIN-01**: Designer can view a Workspace Activity Dashboard with line chart (Collections over time), donut chart (active vs. archived), bar charts (Pulse/Investigation/What-If/Report activity)
 - [x] **ADMIN-02**: Designer can view a funnel chart showing Pulse → Explain → What-If adoption drop-off
 - [x] **ADMIN-03**: Designer can view workspace credit consumption charts (by activity type over time) and avg credits per Collection KPI card
-- [ ] **ADMIN-04**: Designer can view a per-user Workspace tab extension: Collections list, credit breakdown chart, activity timeline, limit usage
+- [x] **ADMIN-04**: Designer can view a per-user Workspace tab extension: Collections list, credit breakdown chart, activity timeline, limit usage
 - [x] **ADMIN-05**: Designer can view a Workspace Credit Costs settings section with editable fields for all 8 activity costs
 - [x] **ADMIN-06**: Designer can view an Alerts section with configurable thresholds and active alert list with dismiss actions
 
@@ -110,7 +110,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ADMIN-01 | Phase 46 | Complete |
 | ADMIN-02 | Phase 46 | Complete |
 | ADMIN-03 | Phase 46 | Complete |
-| ADMIN-04 | Phase 46 | Pending |
+| ADMIN-04 | Phase 46 | Complete |
 | ADMIN-05 | Phase 46 | Complete |
 | ADMIN-06 | Phase 46 | Complete |
 
