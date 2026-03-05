@@ -104,7 +104,7 @@
 - [x] **Phase 43: Collections & Reports** - Mockup screens for report viewer, archive/unarchive, Chat-to-Collection bridge, and usage indicators (completed 2026-03-04)
 - [x] **Phase 44: Guided Investigation (Explain)** - Mockup screens for doctor-style Q&A flow, progress tracking, root cause display, and investigation history (completed 2026-03-05)
 - [x] **Phase 45: What-If Scenarios** - Mockup screens for objective selection, scenario cards, refinement chat, side-by-side comparison, and generated report section (completed 2026-03-05)
-- [ ] **Phase 46: Admin Workspace Management** - Mockup screens for workspace activity dashboard, per-user workspace tab, credit cost settings, and alerts
+- [x] **Phase 46: Admin Workspace Management** - Mockup screens for workspace activity dashboard, per-user workspace tab, credit cost settings, and alerts (completed 2026-03-05)
 
 ## Phase Details
 
@@ -240,4 +240,4 @@ Plans:
 | 43. Collections & Reports | 3/3 | Complete    | 2026-03-04 | - |
 | 44. Guided Investigation (Explain) | 4/4 | Complete    | 2026-03-05 | - |
 | 45. What-If Scenarios | 3/3 | Complete    | 2026-03-05 | - |
-| 46. Admin Workspace Management | 2/3 | In Progress|  | - |
+| 46. Admin Workspace Management | 3/3 | Complete   | 2026-03-05 | - |
