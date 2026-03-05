@@ -244,30 +244,55 @@ export default function CollectionDetailPage() {
                 Reports will appear here after investigation is complete.
               </p>
             ) : (
-              reportsForCollection.map((report) => (
-                <div
-                  key={report.id}
-                  className="bg-card border border-border rounded-lg px-4 py-3 flex items-center gap-4 hover:border-border/80 transition-colors"
-                >
-                  <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <Badge variant="outline" className="shrink-0 text-xs">
-                    {report.type}
-                  </Badge>
-                  <span className="font-medium text-sm flex-1 truncate">
-                    {report.title}
-                  </span>
-                  <span className="text-xs text-muted-foreground shrink-0">
-                    {report.generatedAt}
-                  </span>
-                  <Link
-                    href={`/workspace/collections/${collectionId}/reports/${report.id}`}
+              reportsForCollection.map((report) => {
+                const sourceSignal = report.signalId
+                  ? MOCK_SIGNALS.find((s) => s.id === report.signalId)
+                  : null;
+                const sourceLabel =
+                  sourceSignal
+                    ? `Signal — ${sourceSignal.title}`
+                    : report.type === "Chat Report"
+                    ? "Chat Session"
+                    : report.type === "Detection Summary"
+                    ? "Detection Run"
+                    : null;
+
+                return (
+                  <div
+                    key={report.id}
+                    className="bg-card border border-border rounded-lg px-4 py-3 flex items-start gap-4 hover:border-border/80 transition-colors"
                   >
-                    <Button variant="ghost" size="sm">
-                      View Report
-                    </Button>
-                  </Link>
-                </div>
-              ))
+                    <FileText className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className="shrink-0 text-xs">
+                          {report.type}
+                        </Badge>
+                        <span className="font-medium text-sm truncate">
+                          {report.title}
+                        </span>
+                      </div>
+                      {sourceLabel && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Source: {sourceLabel}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-xs text-muted-foreground">
+                        {report.generatedAt}
+                      </span>
+                      <Link
+                        href={`/workspace/collections/${collectionId}/reports/${report.id}`}
+                      >
+                        <Button variant="ghost" size="sm">
+                          View Report
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
         </TabsContent>
