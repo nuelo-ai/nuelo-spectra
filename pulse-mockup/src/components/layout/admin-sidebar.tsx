@@ -91,7 +91,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
           const active = isActive(item.href, item.placeholder);
           const linkContent = (
             <Link
-              key={item.href}
+              key={item.label}
               href={item.href}
               className={cn(
                 "group flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
@@ -115,7 +115,7 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
 
           if (collapsed) {
             return (
-              <Tooltip key={item.href} delayDuration={0}>
+              <Tooltip key={item.label} delayDuration={0}>
                 <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
                 <TooltipContent side="right" sideOffset={8}>
                   {item.label}
