@@ -8,6 +8,8 @@
 
 This document breaks down the full Spectra Pulse (Analysis Workspace) implementation into versioned milestones with clear scope, deliverables, and frontend/backend/admin breakdown per milestone.
 
+> **Frontend Implementation Basis:** The `pulse-mockup/` Next.js app (v0.7.11–v0.7.12) is the authoritative frontend reference for all v0.8–v0.12 milestones. When building the actual functionality, **adopt and migrate the mockup code directly** — component structure, routing, layout, and styling are already production-ready. Do not rebuild the UI from scratch. Replace mock data and hardcoded state with real API calls and backend integration. The mockup routes, component names, and interaction patterns documented in each milestone's Frontend Scope section below correspond directly to files in `pulse-mockup/app/` and `pulse-mockup/components/`.
+
 **Confirmed milestone sequence** (Decisions Log #4):
 
 ```
@@ -487,6 +489,18 @@ Activity type enum values: `pulse_run`, `investigation_start`, `investigation_ex
 ## Cross-Cutting Concerns
 
 These patterns apply across all milestones and should be implemented consistently from v0.8 onward.
+
+### Frontend Migration from Mockup
+
+The `pulse-mockup/` app contains complete, working UI for the entire v0.8–v0.12 scope. The implementation strategy for each milestone is **migrate, not rebuild**:
+
+1. **Copy components** — move relevant components from `pulse-mockup/components/` into the main `frontend/` app. Components are already built with the correct tech stack (Next.js, shadcn/ui, Recharts, Tailwind).
+2. **Replace mock data** — each component uses local mock data arrays and constants. Replace these with API calls to the new backend endpoints defined in each milestone's Backend Scope.
+3. **Wire up routing** — the mockup uses Next.js App Router. Adapt routes to match the main frontend's routing conventions.
+4. **Remove loading stubs** — the mockup simulates delays with `setTimeout`. Replace with real async states driven by API response status.
+5. **Connect credit checks** — the mockup shows credit costs as static labels. Wire to live credit balance from the user session and enforce pre-checks per the Credit Pre-Check Pattern below.
+
+The mockup is the UI contract. Any deviation from its component structure or interaction patterns requires explicit product sign-off.
 
 ### Credit Pre-Check Pattern
 
