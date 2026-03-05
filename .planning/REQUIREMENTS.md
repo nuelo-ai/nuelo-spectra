@@ -41,10 +41,10 @@ Mockup screens for the full Analysis Workspace feature set (v0.8–v0.12 scope).
 
 - [x] **WHAT-01**: Designer can view the Objective selection screen: root cause context + selection choices + free-text option
 - [x] **WHAT-02**: Designer can view the scenario generation loading state with progress indicator
-- [ ] **WHAT-03**: Designer can view Scenario cards: name, narrative, estimated impact range, assumptions, confidence badge + rationale, data backing summary
-- [ ] **WHAT-04**: Designer can view a per-scenario refinement chat panel (scoped, not freeform)
-- [ ] **WHAT-05**: Designer can view the "Add Scenario" action (2 credits) alongside existing scenarios
-- [ ] **WHAT-06**: Designer can view the side-by-side comparison view: scenario name, impact range, confidence, time to impact, and Select action
+- [x] **WHAT-03**: Designer can view Scenario cards: name, narrative, estimated impact range, assumptions, confidence badge + rationale, data backing summary
+- [x] **WHAT-04**: Designer can view a per-scenario refinement chat panel (scoped, not freeform)
+- [x] **WHAT-05**: Designer can view the "Add Scenario" action (2 credits) alongside existing scenarios
+- [x] **WHAT-06**: Designer can view the side-by-side comparison view: scenario name, impact range, confidence, time to impact, and Select action
 - [ ] **WHAT-07**: Designer can view a generated What-If Report section showing objective + evaluated scenarios + selected approach
 
 ### Admin Workspace Management
@@ -102,10 +102,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXPL-06 | Phase 44 | Complete |
 | WHAT-01 | Phase 45 | Complete |
 | WHAT-02 | Phase 45 | Complete |
-| WHAT-03 | Phase 45 | Pending |
-| WHAT-04 | Phase 45 | Pending |
-| WHAT-05 | Phase 45 | Pending |
-| WHAT-06 | Phase 45 | Pending |
+| WHAT-03 | Phase 45 | Complete |
+| WHAT-04 | Phase 45 | Complete |
+| WHAT-05 | Phase 45 | Complete |
+| WHAT-06 | Phase 45 | Complete |
 | WHAT-07 | Phase 45 | Pending |
 | ADMIN-01 | Phase 46 | Pending |
 | ADMIN-02 | Phase 46 | Pending |

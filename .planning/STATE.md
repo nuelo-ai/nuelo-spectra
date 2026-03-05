@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: completed
-stopped_at: Completed 45-01-PLAN.md
-last_updated: "2026-03-05T15:47:04.379Z"
+stopped_at: Completed 45-02-PLAN.md
+last_updated: "2026-03-05T15:50:31.881Z"
 last_activity: 2026-03-05 — Phase 44 complete (Guided Investigation / Explain, all 6 EXPL requirements reviewer-approved)
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 14
-  completed_plans: 12
+  completed_plans: 13
 ---
 
 # Project State
@@ -68,6 +68,7 @@ Recent decisions affecting current work:
 - [Phase 44]: No code changes in plan 44-04 — verification only. All 6 EXPL checks passed as built across plans 44-01 through 44-03.
 - [Phase 45-01]: Loading component reimplemented inline in whatif/page.tsx (not imported) per plan spec
 - [Phase 45-01]: Suggestion click uses onMouseDown+preventDefault for reliable blur/click ordering in search bar
+- [Phase 45]: key={selectedScenarioId} on WhatIfRefinementChat causes React to remount on scenario switch — no useEffect reset needed
 
 ### Pending Todos
 
@@ -98,6 +99,7 @@ Recent decisions affecting current work:
 | Phase 44-guided-investigation-explain P03 | 3min | 1 tasks | 1 files |
 | Phase 44 P04 | human-verify | 1 tasks | 0 files |
 | Phase 45-what-if-scenarios P01 | 3min | 2 tasks | 2 files |
+| Phase 45-what-if-scenarios P02 | 1min | 2 tasks | 2 files |
 
 ### Quick Tasks Completed
 
@@ -114,6 +116,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-05T15:47:04.377Z
-Stopped at: Completed 45-01-PLAN.md
+Last session: 2026-03-05T15:50:31.879Z
+Stopped at: Completed 45-02-PLAN.md
 Resume with: `/gsd:execute-phase 45` to start Phase 45 (What-If Scenarios)
