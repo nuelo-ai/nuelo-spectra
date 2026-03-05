@@ -240,4 +240,4 @@ Plans:
 | 43. Collections & Reports | 3/3 | Complete    | 2026-03-04 | - |
 | 44. Guided Investigation (Explain) | 4/4 | Complete    | 2026-03-05 | - |
 | 45. What-If Scenarios | 3/3 | Complete    | 2026-03-05 | - |
-| 46. Admin Workspace Management | 1/3 | In Progress|  | - |
+| 46. Admin Workspace Management | 2/3 | In Progress|  | - |
