@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Spectra Pulse (Detection)
-status: executing
-stopped_at: Completed 47-01-PLAN.md
-last_updated: "2026-03-06T17:07:12.037Z"
-last_activity: 2026-03-05 — v0.8 roadmap created, Phases 47-52 defined
+status: completed
+stopped_at: Completed 47-02-PLAN.md
+last_updated: "2026-03-06T17:11:44.068Z"
+last_activity: 2026-03-06 — Phase 47 complete (migration + config + tests)
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 50
+  completed_plans: 2
+  percent: 100
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** v0.8 Spectra Pulse (Detection) — Phase 47 Plan 02 next
+**Current focus:** v0.8 Spectra Pulse (Detection) — Phase 47 complete, Phase 48 next
 
 ## Current Position
 
-Phase: 47 of 52 (Data Foundation)
-Plan: 2 of 2 (next: 47-02)
-Status: Executing
-Last activity: 2026-03-06 — Phase 47 Plan 01 models created
+Phase: 47 of 52 (Data Foundation) -- COMPLETE
+Plan: 2 of 2 (done)
+Status: Phase 47 complete, ready for Phase 48
+Last activity: 2026-03-06 — Phase 47 complete (migration + config + tests)
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 🚧 [█████░░░░░] 50%
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 🚧 [██████████] 100% (Phase 47)
 
 ## Performance Metrics
 
@@ -56,6 +56,8 @@ Recent decisions affecting v0.8 work:
 - Pulse credit pricing: flat cost (workspace_credit_cost_pulse default 5.0) regardless of file count — confirmed over per-file pricing
 - Phase 49 can start in parallel with Phase 48 after Phase 47 completes (Pulse Agent depends only on models, not CRUD routes)
 - [Phase 47]: Report.pulse_run_id uses ondelete SET NULL so reports persist after PulseRun deletion
+- [Phase 47-02]: Hand-written migration over autogenerate for correct FK-dependency ordering
+- [Phase 47-02]: workspace_credit_cost_pulse stored as JSON string "5.0" matching default_credit_cost pattern
 
 ### Pending Todos
 
@@ -74,6 +76,6 @@ Recent decisions affecting v0.8 work:
 
 ## Session Continuity
 
-Last session: 2026-03-06T17:07:12.035Z
-Stopped at: Completed 47-01-PLAN.md
-Resume with: Run /gsd:execute-phase 47 to execute 47-02 (migration plan)
+Last session: 2026-03-06T17:11:44.066Z
+Stopped at: Completed 47-02-PLAN.md
+Resume with: Run /gsd:execute-phase 48 for Workspace CRUD

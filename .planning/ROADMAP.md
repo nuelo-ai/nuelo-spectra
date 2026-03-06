@@ -112,7 +112,7 @@
 
 **Milestone Goal:** Users can create Collections, attach data files, run Pulse detection, and view generated Signals as severity-sorted cards with statistical findings and chart visualizations. This establishes the Detect foundation of the Detect → Explain → What-If pipeline.
 
-- [ ] **Phase 47: Data Foundation** - SQLAlchemy models (Collection, CollectionFile, Signal, Report), Alembic migration, yaml config and platform_settings keys for workspace access and credit cost
+- [x] **Phase 47: Data Foundation** - SQLAlchemy models (Collection, CollectionFile, Signal, Report), Alembic migration, yaml config and platform_settings keys for workspace access and credit cost (completed 2026-03-06)
 - [ ] **Phase 48: Backend CRUD API** - Collections router (9 endpoints), WorkspaceAccess dependency, file upload to collection, Report model + endpoints, Pydantic schemas, tier enforcement
 - [ ] **Phase 49: Pulse Agent** - Independent LangGraph pipeline (profile → analyze → generate), E2B analyzers with 300s timeout, Pydantic-validated Signal output, PulseService
 - [ ] **Phase 50: Pulse Endpoint Wire-Up** - POST /collections/{id}/pulse with credit pre-check, atomic deduction, agent invocation, refund on failure, detection loading state trigger
@@ -242,7 +242,7 @@ Plans:
 | 44. Guided Investigation (Explain) | v0.7.12 | 4/4 | Complete | 2026-03-05 |
 | 45. What-If Scenarios | v0.7.12 | 3/3 | Complete | 2026-03-05 |
 | 46. Admin Workspace Management | v0.7.12 | 3/3 | Complete | 2026-03-05 |
-| 47. Data Foundation | 1/2 | In Progress|  | - |
+| 47. Data Foundation | 2/2 | Complete   | 2026-03-06 | - |
 | 48. Backend CRUD API | v0.8 | 0/TBD | Not started | - |
 | 49. Pulse Agent | v0.8 | 0/TBD | Not started | - |
 | 50. Pulse Endpoint Wire-Up | v0.8 | 0/TBD | Not started | - |

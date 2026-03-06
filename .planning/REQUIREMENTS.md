@@ -55,7 +55,7 @@ Requirements for the Spectra Pulse (Detection) milestone. Each maps to roadmap p
 ### Admin
 
 - [x] **ADMIN-01**: Tier-based workspace access enforced on Collection creation — workspace_access (boolean) and max_active_collections (integer, -1 = unlimited) per tier in user_classes.yaml; tier defaults: free_trial=1, free=0 (no access), standard=5, premium=unlimited, internal=unlimited
-- [ ] **ADMIN-02**: workspace_credit_cost_pulse configurable via Admin Portal platform settings (runtime configurable, no redeploy required); default: 5.0 credits
+- [x] **ADMIN-02**: workspace_credit_cost_pulse configurable via Admin Portal platform settings (runtime configurable, no redeploy required); default: 5.0 credits
 
 ---
 
@@ -133,7 +133,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NAV-03 | Phase 51 | Pending |
 | NAV-04 | Phase 51 | Pending |
 | ADMIN-01 | Phase 47 | Complete |
-| ADMIN-02 | Phase 47 | Pending |
+| ADMIN-02 | Phase 47 | Complete |
 
 **Coverage:**
 - v0.8 requirements: 27 total
