@@ -107,40 +107,40 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| COLL-01 | Phase 47 | Pending |
-| COLL-02 | Phase 47 | Pending |
-| COLL-03 | Phase 47 | Pending |
-| COLL-04 | Phase 47 | Pending |
-| FILE-01 | Phase 47 | Pending |
-| FILE-02 | Phase 47 | Pending |
-| FILE-03 | Phase 47 | Pending |
-| FILE-04 | Phase 47 | Pending |
-| PULSE-01 | Phase — | Pending |
-| PULSE-02 | Phase — | Pending |
-| PULSE-03 | Phase — | Pending |
-| PULSE-04 | Phase — | Pending |
-| PULSE-05 | Phase — | Pending |
-| SIGNAL-01 | Phase — | Pending |
-| SIGNAL-02 | Phase — | Pending |
-| SIGNAL-03 | Phase — | Pending |
-| SIGNAL-04 | Phase — | Pending |
-| REPORT-01 | Phase — | Pending |
-| REPORT-02 | Phase — | Pending |
-| REPORT-03 | Phase — | Pending |
-| REPORT-04 | Phase — | Pending |
-| NAV-01 | Phase — | Pending |
-| NAV-02 | Phase — | Pending |
-| NAV-03 | Phase — | Pending |
-| NAV-04 | Phase — | Pending |
-| ADMIN-01 | Phase — | Pending |
-| ADMIN-02 | Phase — | Pending |
+| COLL-01 | Phase 48 | Pending |
+| COLL-02 | Phase 48 | Pending |
+| COLL-03 | Phase 48 | Pending |
+| COLL-04 | Phase 48 | Pending |
+| FILE-01 | Phase 48 | Pending |
+| FILE-02 | Phase 48 | Pending |
+| FILE-03 | Phase 48 | Pending |
+| FILE-04 | Phase 48 | Pending |
+| PULSE-01 | Phase 50 | Pending |
+| PULSE-02 | Phase 49 | Pending |
+| PULSE-03 | Phase 49 | Pending |
+| PULSE-04 | Phase 50 | Pending |
+| PULSE-05 | Phase 50 | Pending |
+| SIGNAL-01 | Phase 51 | Pending |
+| SIGNAL-02 | Phase 51 | Pending |
+| SIGNAL-03 | Phase 51 | Pending |
+| SIGNAL-04 | Phase 51 | Pending |
+| REPORT-01 | Phase 48 | Pending |
+| REPORT-02 | Phase 48 | Pending |
+| REPORT-03 | Phase 48 | Pending |
+| REPORT-04 | Phase 48 | Pending |
+| NAV-01 | Phase 51 | Pending |
+| NAV-02 | Phase 51 | Pending |
+| NAV-03 | Phase 51 | Pending |
+| NAV-04 | Phase 51 | Pending |
+| ADMIN-01 | Phase 47 | Pending |
+| ADMIN-02 | Phase 47 | Pending |
 
 **Coverage:**
 - v0.8 requirements: 27 total
-- Mapped to phases: — (filled by roadmapper)
-- Unmapped: — ⚠️
+- Mapped to phases: 27
+- Unmapped: 0 ✓
 
 ---
 
 *Requirements defined: 2026-03-05*
-*Last updated: 2026-03-05 after initial definition*
+*Last updated: 2026-03-05 — traceability filled after roadmap creation (Phases 47-52)*

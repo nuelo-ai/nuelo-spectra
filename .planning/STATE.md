@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Spectra Pulse (Detection)
-status: not_started
-stopped_at: —
+status: ready_to_plan
+stopped_at: Roadmap created — Phase 47 ready to plan
 last_updated: "2026-03-05T00:00:00.000Z"
-last_activity: 2026-03-05 — Milestone v0.8 started
+last_activity: 2026-03-05 — v0.8 roadmap created (Phases 47-52)
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,26 +17,26 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-03)
+See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** v0.7.12 milestone complete — planning next milestone (v0.8 Analysis Workspace implementation)
+**Current focus:** v0.8 Spectra Pulse (Detection) — Phase 47 ready to plan
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-03-05 — Milestone v0.8 started
+Phase: 47 of 52 (Data Foundation)
+Plan: — (not yet planned)
+Status: Ready to plan
+Last activity: 2026-03-05 — v0.8 roadmap created, Phases 47-52 defined
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.11 ✅
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 🚧 [░░░░░░] 0%
 
 ## Performance Metrics
 
-**Velocity (v0.7):**
-- Total plans completed: 15 (Phases 38-41)
-- Total execution time: 4 days (Feb 21-24, 2026)
-- 88 commits, 129 files changed (+14,703 / -3,002 lines)
+**Velocity (v0.7.12):**
+- Total plans completed: 17 (Phases 42-46)
+- Timeline: 3 days (2026-03-03 → 2026-03-05)
+- 91 commits, 200 files changed (+28,242 / -3,389 lines)
 
 ## Accumulated Context
 
@@ -44,43 +44,16 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7
 
 See PROJECT.md Key Decisions table for full decision log.
 
-Recent decisions affecting current work:
-- v0.7.11 is a FRONTEND MOCKUP milestone only — no backend, no live API calls
-- **Mockup lives in `pulse-mockup/` — a completely separate Next.js app at the repo root. DO NOT modify `frontend/` or `admin-frontend/`.**
-- Tech stack: Next.js + React + shadcn/ui + Recharts + Plotly.js (same as existing frontends, but in new standalone app)
-- Mockup phases group by feature milestone area (v0.8 through v0.12 screens)
-- What-If is v0.11, Admin Workspace is v0.12 (no v1.0 yet)
-- Hex.tech dark palette: #0a0e1a background, #111827 cards, #1e293b borders, #3b82f6 primary accent
-- Sidebar collapse toggle for desktop; credit balance in header with Zap icon pill
-- [Phase 42-02]: Status badge colors: emerald green for active, muted gray for archived
-- [Phase 42-03]: Sticky action bar with backdrop blur for detection controls; detection loading replaces page content (full-page transition); credit estimate uses COST_PER_FILE constant
-- [Phase 42-04]: Signal list sorted by severity (critical first) with auto-selection; chart type driven by signal's chartType field; statistical evidence in 2x2 metric grid
-- [Phase 43-01]: Pass isSelected=false/onSelect=noop to SignalCard in non-interactive link contexts (Overview/Signals tabs)
-- [Phase 43-01]: Use controlled Tabs (value+onValueChange) so Overview 'View all files' button can switch to Files tab programmatically
-- [Phase 43-02]: Used @tailwindcss/typography prose prose-slate classes (already installed) for markdown rendering rather than manual per-element Tailwind styles
-- [Phase 43-collections-reports]: Sidebar Chat href fix: whitelist /workspace and /chat as real routes; other nav items remain # placeholders
-- [Phase 43-collections-reports]: AddToCollectionModal shows only active collections — archived collections cannot receive new content
-- [Phase 44-guided-investigation-explain]: [Phase 44-01]: RelatedSignal type placed before Report interface; Investigation section fully replaces disabled Tooltip Actions block; collectionId added as required prop on SignalDetailPanel
-- [Phase 44]: InvestigationQAThread returns null when all exchanges complete — parent page owns checkpoint visibility via showCheckpoint state
-- [Phase 44]: [Phase 44-02]: useState initializer for showCheckpoint derives initial checkpoint visibility from mock sessions at mount
-- [Phase 44-03]: Light-theme styling (gray-200/gray-50) used for Related Signals inside white paper layout rather than dark card classes from plan template
-- [Phase 44-03]: Investigation Report badge + Related Signals rendered conditionally on report.type — non-investigation reports completely unaffected
-- [Phase 44]: No code changes in plan 44-04 — verification only. All 6 EXPL checks passed as built across plans 44-01 through 44-03.
-- [Phase 45-01]: Loading component reimplemented inline in whatif/page.tsx (not imported) per plan spec
-- [Phase 45-01]: Suggestion click uses onMouseDown+preventDefault for reliable blur/click ordering in search bar
-- [Phase 45]: key={selectedScenarioId} on WhatIfRefinementChat causes React to remount on scenario switch — no useEffect reset needed
-- [Phase 45-03]: What-If button enabled/disabled check uses MOCK_INVESTIGATION_SESSIONS.some() — unused MOCK_WHATIF_SESSIONS import avoided in signal-detail-panel.tsx
-- [Phase 45-03]: Violet color scheme for all What-If UI elements to distinguish from blue Investigation theme
-- [Phase 45-03]: WHAT-05 (Add Scenario) and WHAT-06 (side-by-side comparison) confirmed intentionally deferred per product scope
-- [Phase 46-01]: Admin layout has no Header component — each admin page renders its own page title inline
-- [Phase 46-01]: Funnel chart implemented as CSS/HTML proportional-width divs — no external library needed
-- [Phase 46-01]: Admin Panel link added to workspace Sidebar with /admin whitelisted as real route
-- [Phase 46-03]: Grid md:grid-cols-[1fr_auto] for clean label-left/input-right layout per credit cost row
-- [Phase 46-03]: Severity icon only (no Badge) — AlertCircle=destructive red, AlertTriangle=yellow-500
-- [Phase 46-03]: Dismiss uses setAlerts filter by id — pure client-side state, no API call
-- [Phase 46]: Workspace tab set as defaultValue so reviewers see full content immediately without extra clicks
-- [Phase 46]: Link wraps individual TableCell content to avoid nested interactive element warnings
-- [Phase 46-03]: All ADMIN requirements (ADMIN-01 through ADMIN-06) reviewer-approved — mockup complete; full backend functionality deferred to a future phase
+Recent decisions affecting v0.8 work:
+- CollectionFile model: `__tablename__ = "collection_files"` — never "files" (name collision with existing `app.models.file.File`)
+- E2B Pulse timeout: `PULSE_SANDBOX_TIMEOUT_SECONDS=300` — not the 60s default; must be set before writing any Pulse execution code
+- Pulse Signal output: `PulseAgentOutput` Pydantic schema with `Literal["critical","warning","info"]` severity and `Literal["bar","line","scatter"]` chartType — structured output is non-optional for Pulse
+- Frontend workspace: `(workspace)` route group parallel to `(dashboard)` — ChatSidebar must NOT wrap workspace pages
+- Frontend palette: `globals.css` dark mode tokens updated to Hex.tech palette BEFORE any component migration; `ThemeProvider` added to `providers.tsx` BEFORE any component migration
+- SIGNAL-03: Investigation + What-If buttons present but disabled in v0.8 — "coming soon" state; full implementation is v0.10/v0.11
+- REPORT-04: "Download as PDF" button present but disabled (opacity-60) — v0.9 backend feature
+- Pulse credit pricing: flat cost (workspace_credit_cost_pulse default 5.0) regardless of file count — confirmed over per-file pricing
+- Phase 49 can start in parallel with Phase 48 after Phase 47 completes (Pulse Agent depends only on models, not CRUD routes)
 
 ### Pending Todos
 
@@ -90,51 +63,15 @@ Recent decisions affecting current work:
 - [ ] Use Pydantic structured output for agent JSON responses (consistency)
 - [ ] Plan production environment variable cleanup and validation (deployment)
 
-### Patch History (post v0.7)
-
-| Version | Date | Summary |
-|---------|------|---------|
-| v0.7.4 | 2026-02-20 | MCP server initial implementation |
-| v0.7.5 | 2026-02-20 | Fix /health/llm, /v1/keys SPECTRA_MODE=api, hardcoded version |
-| v0.7.6 | 2026-02-25 | MCP auth fix (await set_state/get_state) + loopback URL fix |
-| v0.7.7 | 2026-02-25 | MCP spectra_run_analysis: add execution_result as markdown data table |
-| v0.7.8 | 2026-02-25 | MCP: decode Plotly binary typed arrays in chart spec; API_MCP_REFERENCE.md |
-| v0.7.9 | 2026-02-25 | Admin users activity tab: fix backend GroupingError 500 + silent error swallowing |
-| v0.7.10 | 2026-02-27 | Admin credit usage display: add API query counts to activity/sessions tabs + credit transaction source attribution |
-| v0.7.11 | 2026-03-05 | Spectra Pulse Mockup milestone — Phases 42-46 complete (Analysis, Collections, Investigation, What-If, Admin) |
-| v0.7.12 | 2026-03-05 | Mockup UI flow polish: chat centering, investigate closing-question flow, whatif overlay + back button, collections reports signal source line |
-| Phase 42 P03 | 3min | 2 tasks | 8 files |
-| Phase 42 P04 | 3min | 3 tasks | 5 files |
-| Phase 43-collections-reports P01 | 15min | 2 tasks | 5 files |
-| Phase 43-collections-reports P02 | 5 | 1 tasks | 1 files |
-| Phase 43-collections-reports P03 | continuation | 3 tasks (2 auto + 1 human-verify) | 5 files |
-| Phase 44-guided-investigation-explain P01 | 8min | 2 tasks | 4 files |
-| Phase 44 P02 | 2 | 2 tasks | 3 files |
-| Phase 44-guided-investigation-explain P03 | 3min | 1 tasks | 1 files |
-| Phase 44 P04 | human-verify | 1 tasks | 0 files |
-| Phase 45-what-if-scenarios P01 | 3min | 2 tasks | 2 files |
-| Phase 45-what-if-scenarios P02 | 1min | 2 tasks | 2 files |
-| Phase 45-what-if-scenarios P03 | continuation | 2 tasks | 2 files |
-| Phase 46-admin-workspace-management P01 | 4min | 2 tasks | 5 files |
-| Phase 46 P03 | 2 | 1 tasks | 1 files |
-| Phase 46 P02 | 2 | 2 tasks | 2 files |
-
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 1 | commit cleanup changes to non-codebase files | 2026-03-03 | 4736f51 | [1-commit-cleanup-changes-to-non-codebase-f](.planning/quick/1-commit-cleanup-changes-to-non-codebase-f/) |
-| 2 | create Spectra Pulse product requirements document | 2026-03-03 | 12a14dd | [2-create-spectra-pulse-requirement-md-summ](.planning/quick/2-create-spectra-pulse-requirement-md-summ/) |
-| 3 | create Spectra Pulse milestone implementation plan | 2026-03-03 | b187fbc | [3-create-pulse-milestone-implementation-pl](.planning/quick/3-create-pulse-milestone-implementation-pl/) |
-| 4 | update requirements docs to reflect v0.7.12 mockup UX | 2026-03-05 | 7a2930c | [4-update-requirements-docs-to-reflect-v0-7](.planning/quick/4-update-requirements-docs-to-reflect-v0-7/) |
-
 ### Blockers/Concerns
 
 - slowapi>=0.1.9 compatibility with FastAPI 0.115+ and custom key_func — verify before writing rate limiting middleware
 - Confirm spectra-api and spectra-public share same Dokploy host — spectra_uploads volume sharing is automatic only on single host
+- Detection Results cancel UX unresolved: full-page loading state blocks back navigation — decide before Phase 51 (cancel endpoint vs. "detection running in background" toast)
+- Statistical severity thresholds (Z-score >3 = critical, etc.) are starting values only — externalize to YAML from day one so they can be tuned post-launch without code changes
 
 ## Session Continuity
 
-Last session: 2026-03-05T19:34:00.000Z
-Stopped at: Quick task 4 complete — requirements docs updated to reflect v0.7.12 mockup UX
-Resume with: All 46 phases complete. v0.7.11 milestone delivered + v0.7.12 patch. Requirements docs aligned with mockup. Ready for /gsd:complete-milestone or next milestone.
+Last session: 2026-03-05T00:00:00.000Z
+Stopped at: v0.8 roadmap created — Phases 47-52 defined, all 27 requirements mapped, files written
+Resume with: Run /gsd:plan-phase 47 to plan Data Foundation (models, migration, yaml config)
