@@ -3,19 +3,29 @@ user_classes:
     display_name: "Free Trial"
     credits: 100
     reset_policy: none
+    workspace_access: true
+    max_active_collections: 1
   free:
     display_name: "Free"
     credits: 10
     reset_policy: weekly
+    workspace_access: false
+    max_active_collections: 0
   standard:
     display_name: "Standard"
     credits: 100
     reset_policy: weekly
+    workspace_access: true
+    max_active_collections: 5
   premium:
     display_name: "Premium"
     credits: 500
     reset_policy: monthly
+    workspace_access: true
+    max_active_collections: -1
   internal:
     display_name: "Internal"
     credits: 0
     reset_policy: unlimited
+    workspace_access: true
+    max_active_collections: -1

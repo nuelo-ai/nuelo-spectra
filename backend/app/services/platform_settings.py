@@ -28,6 +28,7 @@ DEFAULTS: dict[str, str] = {
     "invite_expiry_days": json.dumps(7),
     "default_credit_cost": json.dumps("1.0"),
     "max_pending_invites": json.dumps(50),
+    "workspace_credit_cost_pulse": json.dumps("5.0"),
 }
 
 VALID_KEYS = set(DEFAULTS.keys())
@@ -146,5 +147,11 @@ def validate_setting(key: str, value: Any) -> str | None:
             return "max_pending_invites must be an integer"
         if value < 1 or value > 1000:
             return "max_pending_invites must be between 1 and 1000"
+
+    elif key == "workspace_credit_cost_pulse":
+        if not isinstance(value, (int, float)) or isinstance(value, bool):
+            return "workspace_credit_cost_pulse must be a number"
+        if value <= 0:
+            return "workspace_credit_cost_pulse must be greater than 0"
 
     return None
