@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from app.models.chat_message import ChatMessage
     from app.models.chat_session import ChatSession
     from app.models.api_key import ApiKey
+    from app.models.collection import Collection
 
 
 class User(Base):
@@ -59,5 +60,10 @@ class User(Base):
         "ApiKey",
         back_populates="user",
         foreign_keys="[ApiKey.user_id]",
+        cascade="all, delete-orphan"
+    )
+    collections: Mapped[list["Collection"]] = relationship(
+        "Collection",
+        back_populates="user",
         cascade="all, delete-orphan"
     )

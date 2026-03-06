@@ -11,9 +11,14 @@ from app.models.credit_transaction import CreditTransaction
 from app.models.invitation import Invitation
 from app.models.platform_setting import PlatformSetting
 from app.models.api_usage_log import ApiUsageLog
+from app.models.collection import Collection, CollectionFile
+from app.models.signal import Signal
+from app.models.report import Report
+from app.models.pulse_run import PulseRun, pulse_run_files
 
 __all__ = [
     "Base", "User", "File", "ChatMessage", "ChatSession", "session_files",
     "SearchQuota", "PasswordResetToken", "AdminAuditLog", "UserCredit",
     "CreditTransaction", "Invitation", "PlatformSetting", "ApiUsageLog",
+    "Collection", "CollectionFile", "Signal", "Report", "PulseRun", "pulse_run_files",
 ]
