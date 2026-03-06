@@ -130,7 +130,10 @@
   2. `CollectionFile` model uses `__tablename__ = "collection_files"` with zero import collision against the existing `app.models.file.File` model
   3. `user_classes.yaml` has `workspace_access` (boolean) and `max_active_collections` (integer, -1 = unlimited) for all 5 tiers with correct defaults (free_trial=1, free=0, standard=5, premium=-1, internal=-1)
   4. `workspace_credit_cost_pulse` key exists in platform_settings DEFAULTS and VALID_KEYS with default value 5.0
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 47-01-PLAN.md — SQLAlchemy models (Collection, CollectionFile, Signal, Report, PulseRun) + registration
+- [ ] 47-02-PLAN.md — Alembic migration, user_classes.yaml config, platform settings, tests
 
 ### Phase 48: Backend CRUD API
 **Goal**: Every Collection and File endpoint is live and testable via curl; Report data is stored and retrievable; tier access is enforced at the API layer before any frontend work begins
@@ -239,7 +242,7 @@
 | 44. Guided Investigation (Explain) | v0.7.12 | 4/4 | Complete | 2026-03-05 |
 | 45. What-If Scenarios | v0.7.12 | 3/3 | Complete | 2026-03-05 |
 | 46. Admin Workspace Management | v0.7.12 | 3/3 | Complete | 2026-03-05 |
-| 47. Data Foundation | v0.8 | 0/TBD | Not started | - |
+| 47. Data Foundation | v0.8 | 0/2 | Not started | - |
 | 48. Backend CRUD API | v0.8 | 0/TBD | Not started | - |
 | 49. Pulse Agent | v0.8 | 0/TBD | Not started | - |
 | 50. Pulse Endpoint Wire-Up | v0.8 | 0/TBD | Not started | - |
