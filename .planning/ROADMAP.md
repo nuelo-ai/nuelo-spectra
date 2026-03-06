@@ -242,7 +242,7 @@ Plans:
 | 44. Guided Investigation (Explain) | v0.7.12 | 4/4 | Complete | 2026-03-05 |
 | 45. What-If Scenarios | v0.7.12 | 3/3 | Complete | 2026-03-05 |
 | 46. Admin Workspace Management | v0.7.12 | 3/3 | Complete | 2026-03-05 |
-| 47. Data Foundation | 2/2 | Complete   | 2026-03-06 | - |
+| 47. Data Foundation | 2/2 | Complete    | 2026-03-06 | - |
 | 48. Backend CRUD API | v0.8 | 0/TBD | Not started | - |
 | 49. Pulse Agent | v0.8 | 0/TBD | Not started | - |
 | 50. Pulse Endpoint Wire-Up | v0.8 | 0/TBD | Not started | - |
