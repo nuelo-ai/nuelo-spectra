@@ -57,7 +57,34 @@ class PulseRunResponse(BaseModel):
     created_at: datetime
 
 
+class SignalDetailResponse(BaseModel):
+    """Response schema for a single Signal, serialized from the Signal ORM model."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    title: str
+    severity: str
+    category: str
+    analysis: str | None
+    evidence: dict | None
+    chart_data: dict | None
+    chart_type: str | None
+    created_at: datetime
+
+
+class PulseRunTriggerResponse(BaseModel):
+    """202 response body returned when a Pulse detection run is triggered."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    pulse_run_id: UUID
+    status: str
+    credit_cost: float
+
+
 class PulseRunDetailResponse(PulseRunResponse):
-    """Extended response with signal count."""
+    """Extended response with signal count and full signal list."""
 
     signal_count: int
+    signals: list[SignalDetailResponse] = []

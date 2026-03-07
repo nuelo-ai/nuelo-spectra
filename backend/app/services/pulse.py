@@ -18,6 +18,7 @@ from sqlalchemy.orm import selectinload
 from app.agents.pulse import build_pulse_graph
 from app.database import async_session_maker
 from app.models import File, PulseRun, Report, Signal
+from app.models.user_credit import UserCredit
 from app.services import platform_settings
 from app.services.credit import CreditService
 
@@ -65,12 +66,22 @@ class PulseService:
             str(await platform_settings.get(db, "workspace_credit_cost_pulse"))
         )
 
-        # 2. Atomic credit deduction
+        # 2. Pre-fetch balance for 402 body, then attempt deduction
+        credit_record = await db.execute(
+            select(UserCredit).where(UserCredit.user_id == user_id)
+        )
+        user_credit = credit_record.scalars().first()
+        available_balance = float(user_credit.balance) if user_credit else 0.0
+
         result = await CreditService.deduct_credit(db, user_id, cost)
         if not result.success:
             raise HTTPException(
                 status_code=402,
-                detail=result.error_message or "Insufficient credits",
+                detail={
+                    "detail": "Insufficient credits",
+                    "required": float(cost),
+                    "available": available_balance,
+                },
             )
 
         # 3. Check for active run on this collection
@@ -91,7 +102,10 @@ class PulseService:
             )
             raise HTTPException(
                 status_code=409,
-                detail="A detection run is already in progress for this collection",
+                detail={
+                    "detail": "A detection run is already in progress for this collection",
+                    "active_run_id": str(existing_run.id),
+                },
             )
 
         # 4. Create PulseRun

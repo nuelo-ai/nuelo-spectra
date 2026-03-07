@@ -29,17 +29,28 @@ def _make_credit_result(success=True, balance=Decimal("100"), error_message=None
     return result
 
 
-def _mock_db_for_run_detection(db, active_run=None, files=None):
+def _mock_db_for_run_detection(db, active_run=None, files=None, credit_balance=Decimal("100")):
     """Configure mock db.execute for run_detection calls.
 
-    Call 1: active run check (returns active_run or None)
-    Call 2: file query (returns files list)
+    Call 1: UserCredit pre-fetch for 402 body
+    Call 2: active run check (returns active_run or None)
+    Call 3: file query (returns files list)
     """
+    # Call 1: UserCredit query
+    mock_user_credit = MagicMock()
+    mock_user_credit.balance = credit_balance
+    mock_uc_scalars = MagicMock()
+    mock_uc_scalars.first.return_value = mock_user_credit
+    mock_result_uc = MagicMock()
+    mock_result_uc.scalars.return_value = mock_uc_scalars
+
+    # Call 2: active run check
     mock_scalars_run = MagicMock()
     mock_scalars_run.first.return_value = active_run
     mock_result_run = MagicMock()
     mock_result_run.scalars.return_value = mock_scalars_run
 
+    # Call 3: file query
     mock_file_scalars = MagicMock()
     mock_file_scalars.all.return_value = files or []
     mock_result_files = MagicMock()
@@ -50,6 +61,8 @@ def _mock_db_for_run_detection(db, active_run=None, files=None):
         nonlocal call_count
         call_count += 1
         if call_count == 1:
+            return mock_result_uc
+        elif call_count == 2:
             return mock_result_run
         else:
             return mock_result_files
@@ -101,6 +114,9 @@ class TestCreditPrecheck:
         credit_result = _make_credit_result(
             success=False, balance=Decimal("2"), error_message="Insufficient credits"
         )
+
+        # Configure db.execute to return a mock UserCredit for the pre-fetch
+        _mock_db_for_run_detection(db, active_run=None, files=[], credit_balance=Decimal("2"))
 
         with patch("app.services.pulse.platform_settings") as mock_ps, \
              patch("app.services.pulse.CreditService") as mock_cs:
