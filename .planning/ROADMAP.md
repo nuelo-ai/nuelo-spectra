@@ -176,8 +176,8 @@ Plans:
   4. APScheduler orphan-refund job is configured and will scan for credit deductions with no matching Signal rows after a configurable timeout, preventing silent credit loss on long-running failures
 **Plans**: 2 plans
 Plans:
-- [ ] 48-01-PLAN.md — Pydantic schemas, WorkspaceAccess dependency, CollectionService
-- [ ] 48-02-PLAN.md — Collections router (all endpoints), router registration, unit tests
+- [ ] 50-01-PLAN.md — Schema extensions, service 402/409 enhancements, config, test stubs
+- [ ] 50-02-PLAN.md — Pulse trigger + polling endpoints, orphan-refund scheduler job, integration tests
 
 ### Phase 51: Frontend Migration
 **Goal**: Every Pulse workspace screen from the pulse-mockup is live in the main frontend app, connected to real API data, with the correct Hex.tech palette and its own route group that does not inherit the Chat sidebar layout
