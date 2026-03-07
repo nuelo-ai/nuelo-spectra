@@ -5,26 +5,18 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { UnifiedSidebar } from "@/components/sidebar/UnifiedSidebar";
-import { LinkedFilesPanel } from "@/components/session/LinkedFilesPanel";
-import { useSessionStore } from "@/stores/sessionStore";
-import { useSessionDetail } from "@/hooks/useChatSessions";
 
 /**
- * Dashboard layout - protected route that requires authentication.
- * Shows loading spinner while checking auth state.
- * Redirects to login if not authenticated.
- * Layout: SidebarProvider wrapping ChatSidebar (left) + main content (center) + LinkedFilesPanel (right).
- * No top nav header - user menu is in the sidebar UserSection.
+ * Workspace layout - protected route for workspace pages.
+ * Uses UnifiedSidebar without ChatSidebar or LinkedFilesPanel.
  */
-export default function DashboardLayout({
+export default function WorkspaceLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
-  const currentSessionId = useSessionStore((s) => s.currentSessionId);
-  const { data: sessionDetail } = useSessionDetail(currentSessionId);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -32,7 +24,6 @@ export default function DashboardLayout({
     }
   }, [isAuthenticated, isLoading, router]);
 
-  // Show loading spinner while checking auth state
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -41,7 +32,6 @@ export default function DashboardLayout({
     );
   }
 
-  // Show nothing if not authenticated (redirecting)
   if (!isAuthenticated) {
     return null;
   }
@@ -53,12 +43,6 @@ export default function DashboardLayout({
         <main className="flex-1 overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out">
           {children}
         </main>
-        {currentSessionId && (
-          <LinkedFilesPanel
-            sessionId={currentSessionId}
-            files={sessionDetail?.files ?? []}
-          />
-        )}
       </div>
     </SidebarProvider>
   );
