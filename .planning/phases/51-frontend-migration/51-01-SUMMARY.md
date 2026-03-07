@@ -57,24 +57,25 @@ patterns-established:
 
 requirements-completed: [SIGNAL-04]
 
-duration: 3min
+duration: 7min
 completed: 2026-03-07
 ---
 
 # Phase 51 Plan 01: Foundation Layer Summary
 
-**Hex.tech dark palette applied, 17 UI components refreshed from mockup, workspace data layer (types + TanStack Query hooks + Zustand store) created**
+**Hex.tech palette (light + dark) applied, 17 UI components refreshed from mockup, workspace data layer (types + TanStack Query hooks + Zustand store) created**
 
 ## Performance
 
-- **Duration:** 3 min
+- **Duration:** 7 min
 - **Started:** 2026-03-07T18:03:13Z
-- **Completed:** 2026-03-07T18:06:42Z
-- **Tasks:** 2 of 3 (checkpoint pending)
+- **Completed:** 2026-03-07T18:10:00Z
+- **Tasks:** 3 of 3
 - **Files modified:** 21
 
 ## Accomplishments
-- Replaced Nord palette with Hex.tech dark theme (#0a0e1a background, #3b82f6 accent, severity tokens)
+- Replaced oklch light theme with mockup hex palette (#3b82f6 primary, #f1f5f9 secondary, #e2e8f0 borders)
+- Replaced Nord dark theme with Hex.tech palette (#0a0e1a background, #3b82f6 accent, severity tokens)
 - Replaced all 17 shared UI components with pulse-mockup versions; added tabs.tsx
 - Created workspace TypeScript types matching backend collection/pulse/signal/report schemas
 - Created 11 TanStack Query hooks for workspace API (collections, files, signals, reports, pulse)
@@ -86,10 +87,10 @@ Each task was committed atomically:
 
 1. **Task 1: Palette swap + UI component replacement** - `51fc456` (feat)
 2. **Task 2: Workspace types, TanStack Query hooks, and Zustand store** - `a85073a` (feat)
-3. **Task 3: Checkpoint human-verify** - pending
+3. **Task 3: Light theme update (checkpoint feedback)** - `8900889` (feat)
 
 ## Files Created/Modified
-- `frontend/src/app/globals.css` - Hex.tech dark palette tokens, severity tokens, updated gradients
+- `frontend/src/app/globals.css` - Hex.tech light + dark palette tokens, severity tokens, updated gradients/scrollbars
 - `frontend/src/components/ui/*.tsx` - 17 components replaced with mockup versions
 - `frontend/src/components/ui/tabs.tsx` - New tabs component from mockup
 - `frontend/src/types/workspace.ts` - TypeScript interfaces matching backend API schemas
@@ -98,12 +99,13 @@ Each task was committed atomically:
 
 ## Decisions Made
 - Dark gradient utilities updated to use Hex.tech palette colors instead of Nord
+- Light theme updated from oklch to hex values matching mockup (user feedback at checkpoint)
 - Tabs component added from mockup (was not in frontend previously, no existing imports affected)
 - All 17 UI component exports preserved identically during swap (no backward compat issues)
 
 ## Deviations from Plan
 
-None - plan executed exactly as written.
+Light theme was initially left unchanged per plan ("Keep :root (light mode) unchanged"). User feedback at checkpoint requested light theme also be updated to match mockup. Applied mockup light palette.
 
 ## Issues Encountered
 None
@@ -112,7 +114,7 @@ None
 None - no external service configuration required.
 
 ## Next Phase Readiness
-- Palette and components ready for visual verification (checkpoint pending)
+- Both light and dark themes match mockup design
 - Workspace data layer ready for consumption by plans 02-04
 - Existing pages build successfully with new components
 
