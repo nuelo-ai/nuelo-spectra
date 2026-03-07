@@ -137,40 +137,43 @@
 }
 
 .dark {
-  /* Nord Polar Night — surface layers */
-  --background: #2E3440;
-  --foreground: #ECEFF4;
-  --card: #3B4252;
-  --card-foreground: #ECEFF4;
-  --popover: #3B4252;
-  --popover-foreground: #ECEFF4;
-  --primary: #D8DEE9;
-  --primary-foreground: #2E3440;
-  --secondary: #434C5E;
-  --secondary-foreground: #D8DEE9;
-  --muted: #3B4252;
-  --muted-foreground: #8892A4;
-  --accent: #434C5E;
-  --accent-foreground: #D8DEE9;
-  --destructive: #BF616A;
-  --border: #434C5E;
-  --input: #434C5E;
-  --ring: #4C566A;
-  /* Nord Aurora — data visualization */
-  --chart-1: #88C0D0;
-  --chart-2: #A3BE8C;
-  --chart-3: #EBCB8B;
-  --chart-4: #B48EAD;
-  --chart-5: #BF616A;
+  /* Hex.tech dark palette */
+  --background: #0a0e1a;
+  --foreground: #f8fafc;
+  --card: #111827;
+  --card-foreground: #f8fafc;
+  --popover: #111827;
+  --popover-foreground: #f8fafc;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #1e293b;
+  --secondary-foreground: #f8fafc;
+  --muted: #1e293b;
+  --muted-foreground: #64748b;
+  --accent: #1e293b;
+  --accent-foreground: #f8fafc;
+  --destructive: #ef4444;
+  --border: #1e293b;
+  --input: #1e293b;
+  --ring: #3b82f6;
+  --chart-1: #3b82f6;
+  --chart-2: #22c55e;
+  --chart-3: #f59e0b;
+  --chart-4: #8b5cf6;
+  --chart-5: #ef4444;
   /* Sidebar — deepest layer */
-  --sidebar: #2E3440;
-  --sidebar-foreground: #D8DEE9;
-  --sidebar-primary: #D8DEE9;
-  --sidebar-primary-foreground: #2E3440;
-  --sidebar-accent: #3B4252;
-  --sidebar-accent-foreground: #D8DEE9;
-  --sidebar-border: #3B4252;
-  --sidebar-ring: #4C566A;
+  --sidebar: #070b14;
+  --sidebar-foreground: #f8fafc;
+  --sidebar-primary: #3b82f6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #111827;
+  --sidebar-accent-foreground: #f8fafc;
+  --sidebar-border: #1e293b;
+  --sidebar-ring: #3b82f6;
+  /* Severity tokens */
+  --severity-critical: #ef4444;
+  --severity-warning: #f59e0b;
+  --severity-info: #22c55e;
 }
 
 @layer base {
@@ -199,7 +202,7 @@
   }
 
   .dark .gradient-primary {
-    background: linear-gradient(135deg, #4C566A 0%, #3B4252 100%);
+    background: linear-gradient(135deg, #1e293b 0%, #111827 100%);
   }
 
   .gradient-bg {
@@ -207,7 +210,7 @@
   }
 
   .dark .gradient-bg {
-    background: linear-gradient(180deg, #2E3440 0%, #2B3039 100%);
+    background: linear-gradient(180deg, #0a0e1a 0%, #080c17 100%);
   }
 
   .gradient-accent {
@@ -215,7 +218,7 @@
   }
 
   .dark .gradient-accent {
-    background: linear-gradient(135deg, #4C566A 0%, #434C5E 50%, #3B4252 100%);
+    background: linear-gradient(135deg, #1e293b 0%, #172033 50%, #111827 100%);
   }
 
   /* Skeleton loading with shimmer effect */
@@ -233,9 +236,9 @@
   .dark .skeleton {
     background: linear-gradient(
       90deg,
-      #3B4252 0%,
-      #434C5E 50%,
-      #3B4252 100%
+      #111827 0%,
+      #1e293b 50%,
+      #111827 100%
     );
     background-size: 200% 100%;
   }
