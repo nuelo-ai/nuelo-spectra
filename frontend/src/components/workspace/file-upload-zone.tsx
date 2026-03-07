@@ -14,16 +14,17 @@ export function FileUploadZone({ collectionId }: FileUploadZoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const uploadMutation = useUploadFile(collectionId);
 
-  const handleFiles = useCallback(
-    (fileList: FileList) => {
-      Array.from(fileList).forEach((file) => {
-        const formData = new FormData();
-        formData.append("file", file);
-        uploadMutation.mutate(formData);
-      });
-    },
-    [uploadMutation]
-  );
+  // Use a ref to always have latest mutate function without re-creating callbacks
+  const mutateRef = useRef(uploadMutation.mutate);
+  mutateRef.current = uploadMutation.mutate;
+
+  const handleFiles = useCallback((fileList: FileList) => {
+    Array.from(fileList).forEach((file) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      mutateRef.current(formData);
+    });
+  }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();

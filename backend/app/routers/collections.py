@@ -19,7 +19,7 @@ from app.schemas.collection import (
     ReportDetailResponse,
     ReportListItem,
 )
-from app.schemas.pulse import PulseRunCreate, PulseRunDetailResponse, PulseRunTriggerResponse
+from app.schemas.pulse import PulseRunCreate, PulseRunDetailResponse, PulseRunTriggerResponse, SignalDetailResponse
 from app.services import agent_service
 from app.services.collection import CollectionService
 from app.services.file import FileService
@@ -317,6 +317,22 @@ async def remove_file_from_collection(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="File not found in collection",
         )
+
+
+# --- Signal endpoints ---
+
+
+@router.get("/{collection_id}/signals", response_model=list[SignalDetailResponse])
+async def list_collection_signals(
+    collection_id: UUID,
+    current_user: WorkspaceUser,
+    db: DbSession,
+) -> list[SignalDetailResponse]:
+    """List all signals for a collection."""
+    signals = await CollectionService.list_collection_signals(
+        db, collection_id, current_user.id
+    )
+    return [SignalDetailResponse.model_validate(s) for s in signals]
 
 
 # --- Report endpoints ---

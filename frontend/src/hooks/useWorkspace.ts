@@ -17,10 +17,11 @@ export function useCollections() {
   return useQuery<CollectionListItem[]>({
     queryKey: ["collections"],
     queryFn: async () => {
-      const response = await apiClient.get("/collections/");
+      const response = await apiClient.get("/collections");
       if (!response.ok) throw new Error(`Failed: ${response.status}`);
       return response.json();
     },
+    refetchOnMount: "always",
   });
 }
 
@@ -124,7 +125,7 @@ export function useCreateCollection() {
   const queryClient = useQueryClient();
   return useMutation<CollectionDetail, Error, { name: string; description?: string }>({
     mutationFn: async (body) => {
-      const response = await apiClient.post("/collections/", body);
+      const response = await apiClient.post("/collections", body);
       if (!response.ok) throw new Error(`Failed: ${response.status}`);
       return response.json();
     },

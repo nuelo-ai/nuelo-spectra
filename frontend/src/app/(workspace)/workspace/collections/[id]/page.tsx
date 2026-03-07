@@ -223,7 +223,18 @@ export default function CollectionDetailPage() {
           )}
 
           {/* Signal previews (up to 4) */}
-          {sortedSignals.length > 0 && (
+          {loadingSignals ? (
+            <div>
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3">
+                Recent Signals
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <Skeleton key={i} className="h-20 rounded-lg" />
+                ))}
+              </div>
+            </div>
+          ) : sortedSignals.length > 0 ? (
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground mb-3">
                 Recent Signals
@@ -234,7 +245,7 @@ export default function CollectionDetailPage() {
                 ))}
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Compact file table (3 rows) */}
           {files.length > 0 && (

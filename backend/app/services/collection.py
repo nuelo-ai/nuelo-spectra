@@ -277,6 +277,35 @@ class CollectionService:
         await db.flush()
         return True
 
+    # --- Signals ---
+
+    @staticmethod
+    async def list_collection_signals(
+        db: AsyncSession,
+        collection_id: UUID,
+        user_id: UUID,
+    ) -> list[Signal]:
+        """List all signals for a collection, verifying ownership.
+
+        Ordered by created_at DESC.
+        """
+        # Verify ownership
+        ownership_stmt = select(Collection.id).where(
+            Collection.id == collection_id,
+            Collection.user_id == user_id,
+        )
+        ownership_result = await db.execute(ownership_stmt)
+        if ownership_result.scalar_one_or_none() is None:
+            return []
+
+        stmt = (
+            select(Signal)
+            .where(Signal.collection_id == collection_id)
+            .order_by(Signal.created_at.desc())
+        )
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
     # --- Reports ---
 
     @staticmethod
