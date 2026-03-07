@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Spectra Pulse (Detection)
 status: completed
-stopped_at: Completed 50-01-PLAN.md
-last_updated: "2026-03-07T15:30:29.984Z"
-last_activity: 2026-03-07 — Phase 50 Plan 01 complete (pulse schemas + service wire-up wave 1)
+stopped_at: Completed 50-02-PLAN.md
+last_updated: "2026-03-07T15:36:08.669Z"
+last_activity: 2026-03-07 — Phase 50 Plan 02 complete (pulse endpoints, orphan refund scheduler, 10 tests)
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 8
-  completed_plans: 7
-  percent: 50
+  completed_plans: 8
+  percent: 60
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 ## Current Position
 
 Phase: 50 of 52 (Pulse Endpoint Wire-up)
-Plan: 1 of 2
-Status: Phase 50 Plan 01 complete — schemas, service errors, config, test stubs
-Last activity: 2026-03-07 — Phase 50 Plan 01 complete (pulse schemas + service wire-up wave 1)
+Plan: 2 of 2 — COMPLETE
+Status: Phase 50 complete — pulse HTTP endpoints live, orphan-refund scheduler registered, 10 tests passing
+Last activity: 2026-03-07 — Phase 50 Plan 02 complete (pulse endpoints, orphan refund scheduler, integration tests)
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 🚧 [██████░░░░] 60% (Phase 50)
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 🚧 [██████████] 100% (Phase 50 complete)
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Recent decisions affecting v0.8 work:
 - [Phase 49]: Stateless LangGraph pipeline: each ainvoke() starts fresh, no message history between Pulse runs
 - [Phase 49]: Credit deduction before background task, refund in except block within _run_pipeline
 - [Phase 50]: UserCredit pre-fetch before CreditService.deduct_credit for accurate available_balance in 402 body
+- [Phase 50-pulse-endpoint-wire-up]: Pulse endpoints added to collections.py (not new router) matching existing file/report pattern
 
 ### Pending Todos
 
@@ -83,6 +84,6 @@ Recent decisions affecting v0.8 work:
 
 ## Session Continuity
 
-Last session: 2026-03-07T15:30:29.982Z
-Stopped at: Completed 50-01-PLAN.md
+Last session: 2026-03-07T15:36:08.667Z
+Stopped at: Completed 50-02-PLAN.md
 Resume with: Continue with Phase 50 (Pulse API routes)
