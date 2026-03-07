@@ -33,8 +33,8 @@ Requirements for the Spectra Pulse (Detection) milestone. Each maps to roadmap p
 
 ### Signals
 
-- [ ] **SIGNAL-01**: User can view Signal list sorted by severity (critical → warning → info) on Detection Results page (/workspace/collections/[id]/signals)
-- [ ] **SIGNAL-02**: Highest-severity Signal is auto-selected on Detection Results page load
+- [x] **SIGNAL-01**: User can view Signal list sorted by severity (critical → warning → info) on Detection Results page (/workspace/collections/[id]/signals)
+- [x] **SIGNAL-02**: Highest-severity Signal is auto-selected on Detection Results page load
 - [ ] **SIGNAL-03**: User can view Signal detail panel with: title + severity/category badges, Recharts chart visualization, analysis text, 2x2 statistical evidence grid, Investigation section (Investigate + What-If buttons — buttons present but disabled with "coming soon" or disabled state)
 - [x] **SIGNAL-04**: Signal chart type is driven by signal's chartType field (bar → BarChart, line → AreaChart, scatter → ScatterChart via Recharts)
 
@@ -48,9 +48,9 @@ Requirements for the Spectra Pulse (Detection) milestone. Each maps to roadmap p
 ### Navigation & Overview
 
 - [x] **NAV-01**: User can access Pulse Analysis from sidebar ("Pulse Analysis" entry → /workspace); sidebar also shows Chat, Files, API, Settings, Admin Panel (only /workspace, /chat, /admin are live routes)
-- [ ] **NAV-02**: Collection Overview tab shows stat cards (files count, signal count, reports count, credits used), Run Detection banner, 2-column grid of up to 4 Signal card previews (non-interactive), compact file table with "View all files" link, activity feed
-- [ ] **NAV-03**: Collection Signals tab shows all Signal cards (non-interactive) and "Open Signals View" button navigating to Detection Results page
-- [ ] **NAV-04**: Collection detail header shows running credit usage pill ("Credits used: N" with Zap icon)
+- [x] **NAV-02**: Collection Overview tab shows stat cards (files count, signal count, reports count, credits used), Run Detection banner, 2-column grid of up to 4 Signal card previews (non-interactive), compact file table with "View all files" link, activity feed
+- [x] **NAV-03**: Collection Signals tab shows all Signal cards (non-interactive) and "Open Signals View" button navigating to Detection Results page
+- [x] **NAV-04**: Collection detail header shows running credit usage pill ("Credits used: N" with Zap icon)
 
 ### Admin
 
@@ -120,8 +120,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PULSE-03 | Phase 49 | Complete |
 | PULSE-04 | Phase 50 | Complete |
 | PULSE-05 | Phase 50 | Complete |
-| SIGNAL-01 | Phase 51 | Pending |
-| SIGNAL-02 | Phase 51 | Pending |
+| SIGNAL-01 | Phase 51 | Complete |
+| SIGNAL-02 | Phase 51 | Complete |
 | SIGNAL-03 | Phase 51 | Pending |
 | SIGNAL-04 | Phase 51 | Complete |
 | REPORT-01 | Phase 48 | Complete |
@@ -129,9 +129,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REPORT-03 | Phase 48 | Complete |
 | REPORT-04 | Phase 48 | Complete |
 | NAV-01 | Phase 51 | Complete |
-| NAV-02 | Phase 51 | Pending |
-| NAV-03 | Phase 51 | Pending |
-| NAV-04 | Phase 51 | Pending |
+| NAV-02 | Phase 51 | Complete |
+| NAV-03 | Phase 51 | Complete |
+| NAV-04 | Phase 51 | Complete |
 | ADMIN-01 | Phase 47 | Complete |
 | ADMIN-02 | Phase 47 | Complete |
 
