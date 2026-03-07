@@ -1,35 +1,44 @@
 "use client";
 
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import type { CollectionFile } from "@/types/workspace";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Loader2 } from "lucide-react";
+import { useFileSummary } from "@/hooks/useFileManager";
 
-interface DataSummaryPanelProps {
-  file: CollectionFile | null;
+interface DataSummaryModalProps {
+  fileId: string | null;
+  filename: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function DataSummaryPanel({
-  file,
+export function DataSummaryModal({
+  fileId,
+  filename,
   open,
   onOpenChange,
-}: DataSummaryPanelProps) {
-  const summary = file?.data_summary;
+}: DataSummaryModalProps) {
+  const { data: summaryData, isLoading } = useFileSummary(open ? fileId : null);
+  const summary = summaryData?.data_summary;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-lg overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>{file?.filename || "File Information"}</SheetTitle>
-        </SheetHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{filename || "File Information"}</DialogTitle>
+        </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {summary ? (
+        <div className="space-y-4 py-2">
+          {isLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-8 justify-center">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading summary...
+            </div>
+          ) : summary ? (
             <div>
               <h3 className="font-semibold text-sm mb-2 text-muted-foreground">
                 Data Summary
@@ -41,13 +50,14 @@ export function DataSummaryPanel({
               </div>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              No data summary available for this file.
-            </p>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-8 justify-center">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Processing file... summary will appear shortly.
+            </div>
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
 

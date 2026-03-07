@@ -1,24 +1,20 @@
 "use client";
 
-import { Zap } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface StickyActionBarProps {
   selectedCount: number;
-  creditCost: number;
-  onRunDetection: () => void;
+  onAddToCollection: () => void;
   isLoading?: boolean;
 }
 
 export function StickyActionBar({
   selectedCount,
-  creditCost,
-  onRunDetection,
+  onAddToCollection,
   isLoading = false,
 }: StickyActionBarProps) {
-  const hasSelection = selectedCount > 0;
-
   return (
     <div
       className={cn(
@@ -28,32 +24,21 @@ export function StickyActionBar({
       )}
     >
       <span className="text-sm text-muted-foreground whitespace-nowrap">
-        {hasSelection ? (
-          <>
-            <span className="font-semibold text-foreground">
-              {selectedCount}
-            </span>{" "}
-            {selectedCount === 1 ? "file" : "files"} selected
-          </>
-        ) : (
-          "No files selected"
-        )}
+        <span className="font-semibold text-foreground">{selectedCount}</span>{" "}
+        {selectedCount === 1 ? "file" : "files"} selected
       </span>
 
-      {hasSelection && (
-        <span className="text-sm text-muted-foreground whitespace-nowrap">
-          ~<span className="font-semibold text-primary">{creditCost}</span>{" "}
-          credits
-        </span>
-      )}
-
       <Button
-        onClick={onRunDetection}
-        disabled={!hasSelection || isLoading}
+        onClick={onAddToCollection}
+        disabled={isLoading}
         className="gap-2"
       >
-        <Zap className="h-4 w-4" />
-        Run Detection ({creditCost} credits)
+        {isLoading ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Plus className="h-4 w-4" />
+        )}
+        Add to Collection
       </Button>
     </div>
   );

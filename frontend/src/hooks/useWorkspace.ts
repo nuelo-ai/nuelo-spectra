@@ -157,6 +157,39 @@ export function useUploadFile(collectionId: string) {
   });
 }
 
+export function useLinkFilesToCollection(collectionId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string[]>({
+    mutationFn: async (fileIds) => {
+      const results = await Promise.allSettled(
+        fileIds.map(async (fileId) => {
+          const response = await apiClient.post(
+            `/collections/${collectionId}/files/link`,
+            { file_id: fileId }
+          );
+          if (!response.ok) {
+            // 409 = already linked, treat as success
+            if (response.status === 409) return;
+            throw new Error(`Failed: ${response.status}`);
+          }
+        })
+      );
+      const failures = results.filter((r) => r.status === "rejected");
+      if (failures.length > 0) {
+        throw new Error(`Failed to link ${failures.length} file(s)`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["collections", collectionId, "files"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["collections", collectionId],
+      });
+    },
+  });
+}
+
 export function useRemoveFile(collectionId: string) {
   const queryClient = useQueryClient();
   return useMutation<void, Error, string>({
