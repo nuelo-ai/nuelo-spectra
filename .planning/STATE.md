@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Spectra Pulse (Detection)
 status: completed
-stopped_at: Phase 50 context gathered
-last_updated: "2026-03-07T15:09:46.152Z"
-last_activity: 2026-03-07 — Phase 49 Plan 02 complete (pulse pipeline + service)
+stopped_at: Completed 50-01-PLAN.md
+last_updated: "2026-03-07T15:30:29.984Z"
+last_activity: 2026-03-07 — Phase 50 Plan 01 complete (pulse schemas + service wire-up wave 1)
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 8
+  completed_plans: 7
   percent: 50
 ---
 
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 
 ## Current Position
 
-Phase: 49 of 52 (Pulse Agent)
-Plan: 2 of 2
-Status: Phase 49 complete — pipeline + service (all plans done)
-Last activity: 2026-03-07 — Phase 49 Plan 02 complete (pulse pipeline + service)
+Phase: 50 of 52 (Pulse Endpoint Wire-up)
+Plan: 1 of 2
+Status: Phase 50 Plan 01 complete — schemas, service errors, config, test stubs
+Last activity: 2026-03-07 — Phase 50 Plan 01 complete (pulse schemas + service wire-up wave 1)
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 🚧 [█████░░░░░] 50% (Phase 49)
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 🚧 [██████░░░░] 60% (Phase 50)
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Recent decisions affecting v0.8 work:
 - [Phase 48]: [Phase 48-02]: Report download returns text/markdown with Content-Disposition attachment
 - [Phase 49]: Stateless LangGraph pipeline: each ainvoke() starts fresh, no message history between Pulse runs
 - [Phase 49]: Credit deduction before background task, refund in except block within _run_pipeline
+- [Phase 50]: UserCredit pre-fetch before CreditService.deduct_credit for accurate available_balance in 402 body
 
 ### Pending Todos
 
@@ -82,6 +83,6 @@ Recent decisions affecting v0.8 work:
 
 ## Session Continuity
 
-Last session: 2026-03-07T15:09:46.149Z
-Stopped at: Phase 50 context gathered
+Last session: 2026-03-07T15:30:29.982Z
+Stopped at: Completed 50-01-PLAN.md
 Resume with: Continue with Phase 50 (Pulse API routes)
