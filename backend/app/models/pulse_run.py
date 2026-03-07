@@ -42,6 +42,7 @@ class PulseRun(Base):
     )
     status: Mapped[str] = mapped_column(String(20), default="pending")
     credit_cost: Mapped[float] = mapped_column(NUMERIC(10, 1))
+    user_context: Mapped[str | None] = mapped_column(Text, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

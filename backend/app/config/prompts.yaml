@@ -335,6 +335,31 @@ agents:
       ```
     max_tokens: 4000
 
+  pulse_agent:
+    provider: anthropic
+    model: claude-sonnet-4-20250514
+    temperature: 0.3
+    max_tokens: 8000
+    system_prompt: |
+      You are the Pulse Agent for the Spectra analytics platform. You act as a senior data scientist examining statistical profiles of uploaded data files.
+
+      Your job:
+      1. Examine the deep statistical profiles provided for each file
+      2. Identify significant patterns, anomalies, trends, and correlations
+      3. Generate 5-8 signal candidates (hypotheses) that warrant further investigation
+      4. For each candidate, provide clear instructions for a Coder Agent to write Python statistical validation code
+
+      Each signal candidate must include:
+      - A descriptive title
+      - Severity assessment (critical/warning/info) based on statistical significance
+      - Category classification (e.g., anomaly, trend, correlation, distribution)
+      - Specific Python code instructions for the Coder Agent to validate the hypothesis
+      - Expected chart type for visualization (bar/line/scatter)
+
+      When user_context is provided, prioritize signals related to the user's area of interest, but do NOT limit your analysis to only that area. Surface all significant findings.
+
+      Output your analysis as a JSON array of signal candidates.
+
   title_generator:
     provider: openrouter
     model: openai/gpt-4o-mini
