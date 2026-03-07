@@ -261,6 +261,6 @@ Plans:
 | 47. Data Foundation | 2/2 | Complete    | 2026-03-06 | - |
 | 48. Backend CRUD API | 2/2 | Complete    | 2026-03-07 | - |
 | 49. Pulse Agent | 2/2 | Complete    | 2026-03-07 | - |
-| 50. Pulse Endpoint Wire-Up | 2/2 | Complete   | 2026-03-07 | - |
+| 50. Pulse Endpoint Wire-Up | 2/2 | Complete    | 2026-03-07 | - |
 | 51. Frontend Migration | v0.8 | 0/TBD | Not started | - |
 | 52. Admin and QA | v0.8 | 0/TBD | Not started | - |
