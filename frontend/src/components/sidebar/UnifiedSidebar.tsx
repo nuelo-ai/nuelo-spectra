@@ -6,8 +6,8 @@ import {
   Sparkles,
   MessageSquare,
   FolderOpen,
-  Settings,
   Shield,
+  Activity,
 } from "lucide-react";
 import {
   Sidebar,
@@ -37,14 +37,13 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Pulse Analysis", href: "/workspace", icon: Sparkles },
   { label: "Chat", href: "/sessions/new", icon: MessageSquare },
   { label: "Files", href: "/my-files", icon: FolderOpen },
-  { label: "Settings", href: "/settings", icon: Settings },
   { label: "Admin Panel", href: "/admin", icon: Shield, adminOnly: true, external: true },
 ];
 
 /**
  * Unified sidebar component shared across all authenticated pages.
- * Shows navigation items, conditional chat history on chat routes,
- * and user section at the bottom.
+ * Shows logo at top, navigation items, conditional chat history on chat routes,
+ * and user section pinned to the bottom.
  */
 export function UnifiedSidebar() {
   const pathname = usePathname();
@@ -75,7 +74,30 @@ export function UnifiedSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-[#1e293b] bg-[#070b14]">
+      {/* Logo */}
       <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" asChild tooltip="Spectra">
+              <Link href="/workspace" className="flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary shrink-0">
+                  <Activity className="h-4 w-4 text-primary-foreground" />
+                </div>
+                {isExpanded && (
+                  <span className="text-lg font-semibold tracking-tight">
+                    Spectra
+                  </span>
+                )}
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+
+      <SidebarSeparator />
+
+      {/* Navigation */}
+      <SidebarContent>
         <SidebarMenu>
           {NAV_ITEMS.map((item) => {
             if (item.adminOnly && !user?.is_admin) return null;
@@ -125,16 +147,14 @@ export function UnifiedSidebar() {
             );
           })}
         </SidebarMenu>
-      </SidebarHeader>
 
-      {showChatHistory && (
-        <>
-          <SidebarSeparator />
-          <SidebarContent>
+        {showChatHistory && (
+          <>
+            <SidebarSeparator />
             <ChatList />
-          </SidebarContent>
-        </>
-      )}
+          </>
+        )}
+      </SidebarContent>
 
       <SidebarSeparator />
 
