@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Spectra Pulse (Detection)
 status: in_progress
-stopped_at: Phase 49 Plan 01 complete
-last_updated: "2026-03-07T01:56:27.885Z"
-last_activity: 2026-03-07 — Phase 48 Plan 02 complete (router + tests)
+stopped_at: Phase 49 Plan 02 complete
+last_updated: "2026-03-07T02:51:14.125Z"
+last_activity: 2026-03-07 — Phase 49 Plan 02 complete (pulse pipeline + service)
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 5
+  completed_phases: 3
+  total_plans: 6
+  completed_plans: 6
   percent: 50
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 ## Current Position
 
 Phase: 49 of 52 (Pulse Agent)
-Plan: 1 of 2
-Status: Plan 01 complete — foundation (config, schemas, migration, profiling)
-Last activity: 2026-03-07 — Phase 49 Plan 01 complete (pulse foundation)
+Plan: 2 of 2
+Status: Phase 49 complete — pipeline + service (all plans done)
+Last activity: 2026-03-07 — Phase 49 Plan 02 complete (pulse pipeline + service)
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 🚧 [█████░░░░░] 50% (Phase 49)
 
@@ -62,6 +62,8 @@ Recent decisions affecting v0.8 work:
 - [Phase 48-01]: Ownership verification inside CollectionService methods for granular per-query control
 - [Phase 48]: [Phase 48-02]: All collection endpoints use WorkspaceUser for uniform tier gating
 - [Phase 48]: [Phase 48-02]: Report download returns text/markdown with Content-Disposition attachment
+- [Phase 49]: Stateless LangGraph pipeline: each ainvoke() starts fresh, no message history between Pulse runs
+- [Phase 49]: Credit deduction before background task, refund in except block within _run_pipeline
 
 ### Pending Todos
 
@@ -80,6 +82,6 @@ Recent decisions affecting v0.8 work:
 
 ## Session Continuity
 
-Last session: 2026-03-07T02:39:00Z
-Stopped at: Phase 49 Plan 01 complete
-Resume with: Continue with Phase 49 Plan 02 (Pulse pipeline)
+Last session: 2026-03-07T02:51:14.123Z
+Stopped at: Phase 49 Plan 02 complete
+Resume with: Continue with Phase 50 (Pulse API routes)
