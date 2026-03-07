@@ -264,5 +264,5 @@ Plans:
 | 48. Backend CRUD API | 2/2 | Complete    | 2026-03-07 | - |
 | 49. Pulse Agent | 2/2 | Complete    | 2026-03-07 | - |
 | 50. Pulse Endpoint Wire-Up | 2/2 | Complete    | 2026-03-07 | - |
-| 51. Frontend Migration | 1/4 | In Progress|  | - |
+| 51. Frontend Migration | 2/4 | In Progress|  | - |
 | 52. Admin and QA | v0.8 | 0/TBD | Not started | - |

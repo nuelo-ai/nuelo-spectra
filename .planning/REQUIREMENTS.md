@@ -47,7 +47,7 @@ Requirements for the Spectra Pulse (Detection) milestone. Each maps to roadmap p
 
 ### Navigation & Overview
 
-- [ ] **NAV-01**: User can access Pulse Analysis from sidebar ("Pulse Analysis" entry → /workspace); sidebar also shows Chat, Files, API, Settings, Admin Panel (only /workspace, /chat, /admin are live routes)
+- [x] **NAV-01**: User can access Pulse Analysis from sidebar ("Pulse Analysis" entry → /workspace); sidebar also shows Chat, Files, API, Settings, Admin Panel (only /workspace, /chat, /admin are live routes)
 - [ ] **NAV-02**: Collection Overview tab shows stat cards (files count, signal count, reports count, credits used), Run Detection banner, 2-column grid of up to 4 Signal card previews (non-interactive), compact file table with "View all files" link, activity feed
 - [ ] **NAV-03**: Collection Signals tab shows all Signal cards (non-interactive) and "Open Signals View" button navigating to Detection Results page
 - [ ] **NAV-04**: Collection detail header shows running credit usage pill ("Credits used: N" with Zap icon)
@@ -128,7 +128,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REPORT-02 | Phase 48 | Complete |
 | REPORT-03 | Phase 48 | Complete |
 | REPORT-04 | Phase 48 | Complete |
-| NAV-01 | Phase 51 | Pending |
+| NAV-01 | Phase 51 | Complete |
 | NAV-02 | Phase 51 | Pending |
 | NAV-03 | Phase 51 | Pending |
 | NAV-04 | Phase 51 | Pending |

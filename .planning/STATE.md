@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Spectra Pulse (Detection)
 status: completed
-stopped_at: Phase 51 context gathered
-last_updated: "2026-03-07T17:32:34.273Z"
-last_activity: 2026-03-07 — Phase 50 Plan 02 complete (pulse endpoints, orphan refund scheduler, integration tests)
+stopped_at: Completed 51-02-PLAN.md
+last_updated: "2026-03-07T19:25:30.211Z"
+last_activity: 2026-03-07 — Phase 51 Plan 01 complete (palette swap, UI components, types/hooks/store)
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 12
+  completed_plans: 10
   percent: 100
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 ## Current Position
 
 Phase: 51 of 52 (Frontend Migration)
-Plan: 1 of 4 — COMPLETE
-Status: Phase 51 Plan 01 complete — Hex.tech palette (light+dark), 17 UI components, workspace data layer
-Last activity: 2026-03-07 — Phase 51 Plan 01 complete (palette swap, UI components, types/hooks/store)
+Plan: 2 of 4 — COMPLETE
+Status: Phase 51 Plan 02 complete — UnifiedSidebar, (workspace) route group, dashboard layout refactor
+Last activity: 2026-03-07 — Phase 51 Plan 02 complete (unified sidebar, workspace route group)
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 🚧 [██████████] 100% (Phase 50 complete)
 
@@ -66,6 +66,9 @@ Recent decisions affecting v0.8 work:
 - [Phase 49]: Credit deduction before background task, refund in except block within _run_pipeline
 - [Phase 50]: UserCredit pre-fetch before CreditService.deduct_credit for accurate available_balance in 402 body
 - [Phase 50-pulse-endpoint-wire-up]: Pulse endpoints added to collections.py (not new router) matching existing file/report pattern
+- [Phase 51]: Settings removed from sidebar nav — accessible only via profile dropdown
+- [Phase 51]: Spectra logo at top of sidebar matching mockup design
+- [Phase 51]: is_admin added to UserResponse for admin-only nav visibility
 
 ### Pending Todos
 
@@ -84,6 +87,6 @@ Recent decisions affecting v0.8 work:
 
 ## Session Continuity
 
-Last session: 2026-03-07T17:32:34.270Z
-Stopped at: Completed 51-01-PLAN.md
+Last session: 2026-03-07T19:25:30.209Z
+Stopped at: Completed 51-02-PLAN.md
 Resume with: Continue with Phase 51 Plan 02 (Unified Sidebar)
