@@ -11,17 +11,17 @@ Requirements for the Spectra Pulse (Detection) milestone. Each maps to roadmap p
 
 ### Collections
 
-- [ ] **COLL-01**: User can create a new Collection (name-only dialog via "Create Collection" button)
-- [ ] **COLL-02**: User can view their Collections as a grid of cards (name, status badge, created date, file count, signal count)
-- [ ] **COLL-03**: User can view a Collection detail page with 4-tab layout (Overview, Files, Signals, Reports)
-- [ ] **COLL-04**: User can update a Collection's name/description
+- [x] **COLL-01**: User can create a new Collection (name-only dialog via "Create Collection" button)
+- [x] **COLL-02**: User can view their Collections as a grid of cards (name, status badge, created date, file count, signal count)
+- [x] **COLL-03**: User can view a Collection detail page with 4-tab layout (Overview, Files, Signals, Reports)
+- [x] **COLL-04**: User can update a Collection's name/description
 
 ### Files
 
-- [ ] **FILE-01**: User can upload CSV/Excel files to a Collection via drag-drop or click (FileUploadZone)
-- [ ] **FILE-02**: User can view column profile of a file in a slide-out DataSummaryPanel (clicking a file row)
-- [ ] **FILE-03**: User can select files via checkboxes to activate the sticky action bar (shows selected count + Run Detection button)
-- [ ] **FILE-04**: User can remove a file from a Collection
+- [x] **FILE-01**: User can upload CSV/Excel files to a Collection via drag-drop or click (FileUploadZone)
+- [x] **FILE-02**: User can view column profile of a file in a slide-out DataSummaryPanel (clicking a file row)
+- [x] **FILE-03**: User can select files via checkboxes to activate the sticky action bar (shows selected count + Run Detection button)
+- [x] **FILE-04**: User can remove a file from a Collection
 
 ### Pulse Detection
 
@@ -40,9 +40,9 @@ Requirements for the Spectra Pulse (Detection) milestone. Each maps to roadmap p
 
 ### Reports
 
-- [ ] **REPORT-01**: User can view Reports tab listing all collection reports as rows (type badge, title, source line, generated date, "View Report" button)
-- [ ] **REPORT-02**: User can open a full-page report viewer (/workspace/collections/[id]/reports/[reportId]) with sticky header (back button, report title, type badge), white paper area, markdown-rendered content
-- [ ] **REPORT-03**: User can download a report as Markdown (functional download)
+- [x] **REPORT-01**: User can view Reports tab listing all collection reports as rows (type badge, title, source line, generated date, "View Report" button)
+- [x] **REPORT-02**: User can open a full-page report viewer (/workspace/collections/[id]/reports/[reportId]) with sticky header (back button, report title, type badge), white paper area, markdown-rendered content
+- [x] **REPORT-03**: User can download a report as Markdown (functional download)
 - [ ] **REPORT-04**: "Download as PDF" button is present but disabled (opacity-60 — planned v0.9 backend feature)
 
 ### Navigation & Overview
@@ -107,14 +107,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| COLL-01 | Phase 48 | Pending |
-| COLL-02 | Phase 48 | Pending |
-| COLL-03 | Phase 48 | Pending |
-| COLL-04 | Phase 48 | Pending |
-| FILE-01 | Phase 48 | Pending |
-| FILE-02 | Phase 48 | Pending |
-| FILE-03 | Phase 48 | Pending |
-| FILE-04 | Phase 48 | Pending |
+| COLL-01 | Phase 48 | Complete |
+| COLL-02 | Phase 48 | Complete |
+| COLL-03 | Phase 48 | Complete |
+| COLL-04 | Phase 48 | Complete |
+| FILE-01 | Phase 48 | Complete |
+| FILE-02 | Phase 48 | Complete |
+| FILE-03 | Phase 48 | Complete |
+| FILE-04 | Phase 48 | Complete |
 | PULSE-01 | Phase 50 | Pending |
 | PULSE-02 | Phase 49 | Pending |
 | PULSE-03 | Phase 49 | Pending |
@@ -124,9 +124,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SIGNAL-02 | Phase 51 | Pending |
 | SIGNAL-03 | Phase 51 | Pending |
 | SIGNAL-04 | Phase 51 | Pending |
-| REPORT-01 | Phase 48 | Pending |
-| REPORT-02 | Phase 48 | Pending |
-| REPORT-03 | Phase 48 | Pending |
+| REPORT-01 | Phase 48 | Complete |
+| REPORT-02 | Phase 48 | Complete |
+| REPORT-03 | Phase 48 | Complete |
 | REPORT-04 | Phase 48 | Pending |
 | NAV-01 | Phase 51 | Pending |
 | NAV-02 | Phase 51 | Pending |
