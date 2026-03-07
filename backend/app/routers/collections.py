@@ -19,9 +19,11 @@ from app.schemas.collection import (
     ReportDetailResponse,
     ReportListItem,
 )
+from app.schemas.pulse import PulseRunCreate, PulseRunDetailResponse, PulseRunTriggerResponse
 from app.services import agent_service
 from app.services.collection import CollectionService
 from app.services.file import FileService
+from app.services.pulse import PulseService
 from app.services.user_class import get_class_config
 
 router = APIRouter(prefix="/collections", tags=["Collections"])
@@ -393,3 +395,81 @@ async def download_report(
         media_type="text/markdown",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# --- Pulse endpoints ---
+
+
+@router.post(
+    "/{collection_id}/pulse",
+    response_model=PulseRunTriggerResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def trigger_pulse(
+    collection_id: UUID,
+    body: PulseRunCreate,
+    current_user: WorkspaceUser,
+    db: DbSession,
+) -> PulseRunTriggerResponse:
+    """Trigger Pulse detection on selected files in a collection.
+
+    Returns 202 Accepted immediately; frontend polls GET pulse-runs/{run_id} for status.
+    Returns 402 if insufficient credits (with required/available balance).
+    Returns 409 if a detection run is already active (with active_run_id for resumption).
+    """
+    # Ownership verification
+    collection = await CollectionService.get_user_collection(db, collection_id, current_user.id)
+    if collection is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Collection not found")
+
+    # Delegate to PulseService (handles 402/409 raises, credit deduction, background task)
+    pulse_run = await PulseService.run_detection(
+        db,
+        collection_id=collection_id,
+        user_id=current_user.id,
+        file_ids=body.file_ids,
+        user_context=body.user_context,
+    )
+
+    return PulseRunTriggerResponse(
+        pulse_run_id=pulse_run.id,
+        status=pulse_run.status,
+        credit_cost=pulse_run.credit_cost,
+    )
+
+
+@router.get(
+    "/{collection_id}/pulse-runs/{run_id}",
+    response_model=PulseRunDetailResponse,
+)
+async def get_pulse_run(
+    collection_id: UUID,
+    run_id: UUID,
+    current_user: WorkspaceUser,
+    db: DbSession,
+) -> PulseRunDetailResponse:
+    """Poll a Pulse detection run for status and results.
+
+    Returns full Signal objects in the signals list when status='completed'.
+    Returns error_message when status='failed'.
+    Verifies collection ownership to prevent cross-user PulseRun access.
+    """
+    # Ownership verification on the collection
+    collection = await CollectionService.get_user_collection(db, collection_id, current_user.id)
+    if collection is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Collection not found")
+
+    pulse_run = await PulseService.get_pulse_run(db, run_id)
+    if pulse_run is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pulse run not found")
+
+    # Cross-check: ensure run belongs to this collection (prevents ownership bypass)
+    if pulse_run.collection_id != collection_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pulse run not found")
+
+    data = {
+        **pulse_run.__dict__,
+        "signal_count": len(pulse_run.signals),
+        "signals": pulse_run.signals,
+    }
+    return PulseRunDetailResponse.model_validate(data)
