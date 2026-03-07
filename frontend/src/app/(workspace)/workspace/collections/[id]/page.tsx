@@ -16,6 +16,7 @@ import {
   useTriggerPulse,
   usePulseStatus,
   useLinkFilesToCollection,
+  useRemoveFile,
 } from "@/hooks/useWorkspace";
 import { useFiles } from "@/hooks/useFileManager";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
@@ -80,6 +81,7 @@ export default function CollectionDetailPage() {
   // Mutations
   const triggerPulse = useTriggerPulse(collectionId);
   const linkFiles = useLinkFilesToCollection(collectionId);
+  const removeFile = useRemoveFile(collectionId);
   const { data: pulseRun } = usePulseStatus(collectionId, pulseRunId);
 
   // Local state
@@ -161,6 +163,18 @@ export default function CollectionDetailPage() {
       // Error handled by TanStack Query
     }
   }, [selectedFileIds, linkFiles, clearFileSelection]);
+
+  // Remove file from collection
+  const handleRemoveFile = useCallback(
+    async (fileId: string) => {
+      try {
+        await removeFile.mutateAsync(fileId);
+      } catch {
+        // Error handled by TanStack Query
+      }
+    },
+    [removeFile]
+  );
 
   // Detection loading overlay
   if (detectionStatus === "running") {
@@ -298,6 +312,7 @@ export default function CollectionDetailPage() {
                 onSelectedChange={() => {}}
                 onFileClick={handleCollectionFileClick}
                 selectable={false}
+                onRemoveFile={handleRemoveFile}
               />
             </div>
           ) : null}

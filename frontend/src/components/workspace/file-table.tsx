@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback } from "react";
-import { FileSpreadsheet, FileText } from "lucide-react";
+import { FileSpreadsheet, FileText, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -46,6 +47,8 @@ interface FileTableProps {
   selectable?: boolean;
   /** Limit rows displayed (for compact overview mode) */
   maxRows?: number;
+  /** Show remove button per row */
+  onRemoveFile?: (fileId: string) => void;
 }
 
 export function FileTable({
@@ -55,6 +58,7 @@ export function FileTable({
   onFileClick,
   selectable = true,
   maxRows,
+  onRemoveFile,
 }: FileTableProps) {
   const displayFiles = maxRows ? files.slice(0, maxRows) : files;
 
@@ -107,6 +111,7 @@ export function FileTable({
             <TableHead>File Name</TableHead>
             <TableHead className="w-[100px]">Size</TableHead>
             <TableHead className="w-[120px]">Added</TableHead>
+            {onRemoveFile && <TableHead className="w-[50px]" />}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -146,6 +151,22 @@ export function FileTable({
                 <TableCell className="text-muted-foreground">
                   {formatDate(file.added_at)}
                 </TableCell>
+                {onRemoveFile && (
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveFile(file.file_id);
+                      }}
+                      aria-label={`Remove ${file.filename} from collection`}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </TableCell>
+                )}
               </TableRow>
             );
           })}
