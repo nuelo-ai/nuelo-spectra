@@ -29,6 +29,62 @@ def _make_credit_result(success=True, balance=Decimal("100"), error_message=None
     return result
 
 
+def _mock_db_for_run_detection(db, active_run=None, files=None):
+    """Configure mock db.execute for run_detection calls.
+
+    Call 1: active run check (returns active_run or None)
+    Call 2: file query (returns files list)
+    """
+    mock_scalars_run = MagicMock()
+    mock_scalars_run.first.return_value = active_run
+    mock_result_run = MagicMock()
+    mock_result_run.scalars.return_value = mock_scalars_run
+
+    mock_file_scalars = MagicMock()
+    mock_file_scalars.all.return_value = files or []
+    mock_result_files = MagicMock()
+    mock_result_files.scalars.return_value = mock_file_scalars
+
+    call_count = 0
+    async def mock_execute(stmt):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return mock_result_run
+        else:
+            return mock_result_files
+
+    db.execute = AsyncMock(side_effect=mock_execute)
+
+
+def _mock_db_for_pipeline(db, pulse_run, files):
+    """Configure mock db.execute for _run_pipeline calls.
+
+    Call 1: PulseRun load (returns pulse_run)
+    Call 2: file query (returns files)
+    """
+    mock_scalars_run = MagicMock()
+    mock_scalars_run.first.return_value = pulse_run
+    mock_result_run = MagicMock()
+    mock_result_run.scalars.return_value = mock_scalars_run
+
+    mock_file_scalars = MagicMock()
+    mock_file_scalars.all.return_value = files
+    mock_result_files = MagicMock()
+    mock_result_files.scalars.return_value = mock_file_scalars
+
+    call_count = 0
+    async def mock_execute(stmt):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return mock_result_run
+        else:
+            return mock_result_files
+
+    db.execute = AsyncMock(side_effect=mock_execute)
+
+
 class TestCreditPrecheck:
     """Verify credit pre-check blocks insufficient balance."""
 
@@ -69,48 +125,18 @@ class TestCreditPrecheck:
 
         credit_result = _make_credit_result(success=True, balance=Decimal("95"))
 
-        # Mock the active run check (no existing runs)
-        mock_scalars = MagicMock()
-        mock_scalars.first.return_value = None
-        mock_result = MagicMock()
-        mock_result.scalars.return_value = mock_scalars
-        db.execute.return_value = mock_result
-
-        # Mock file query
         mock_file = MagicMock()
-        mock_file_scalars = MagicMock()
-        mock_file_scalars.all.return_value = [mock_file]
-
-        # Different responses for different db.execute calls
-        call_count = 0
-        async def mock_execute(stmt):
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                # Active run check
-                return mock_result
-            else:
-                # File query
-                r = MagicMock()
-                r.scalars.return_value = mock_file_scalars
-                return r
-
-        db.execute = AsyncMock(side_effect=mock_execute)
+        _mock_db_for_run_detection(db, active_run=None, files=[mock_file])
 
         with patch("app.services.pulse.platform_settings") as mock_ps, \
              patch("app.services.pulse.CreditService") as mock_cs, \
-             patch("app.services.pulse.PulseRun") as mock_pr_cls, \
-             patch("app.services.pulse.asyncio") as mock_asyncio:
+             patch("app.services.pulse.asyncio") as mock_asyncio, \
+             patch("app.services.pulse.select") as mock_select:
             mock_ps.get = AsyncMock(return_value="5.0")
             mock_cs.deduct_credit = AsyncMock(return_value=credit_result)
-
-            mock_pulse_run = MagicMock()
-            mock_pulse_run.id = uuid4()
-            mock_pulse_run.status = "pending"
-            mock_pulse_run.files = []
-            mock_pr_cls.return_value = mock_pulse_run
-
             mock_asyncio.create_task = MagicMock()
+            # select() returns a mock that chains .where() etc
+            mock_select.return_value = MagicMock()
 
             result = asyncio.get_event_loop().run_until_complete(
                 PulseService.run_detection(db, collection_id, user_id, file_ids)
@@ -134,42 +160,17 @@ class TestCreditDeduction:
 
         credit_result = _make_credit_result(success=True, balance=Decimal("95"))
 
-        # Mock active run check
-        mock_scalars = MagicMock()
-        mock_scalars.first.return_value = None
-        mock_result = MagicMock()
-        mock_result.scalars.return_value = mock_scalars
-
         mock_file = MagicMock()
-        mock_file_scalars = MagicMock()
-        mock_file_scalars.all.return_value = [mock_file]
-
-        call_count = 0
-        async def mock_execute(stmt):
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                return mock_result
-            else:
-                r = MagicMock()
-                r.scalars.return_value = mock_file_scalars
-                return r
-
-        db.execute = AsyncMock(side_effect=mock_execute)
+        _mock_db_for_run_detection(db, active_run=None, files=[mock_file])
 
         with patch("app.services.pulse.platform_settings") as mock_ps, \
              patch("app.services.pulse.CreditService") as mock_cs, \
-             patch("app.services.pulse.PulseRun") as mock_pr_cls, \
-             patch("app.services.pulse.asyncio") as mock_asyncio:
+             patch("app.services.pulse.asyncio") as mock_asyncio, \
+             patch("app.services.pulse.select") as mock_select:
             mock_ps.get = AsyncMock(return_value="5.0")
             mock_cs.deduct_credit = AsyncMock(return_value=credit_result)
-
-            mock_pulse_run = MagicMock()
-            mock_pulse_run.id = uuid4()
-            mock_pulse_run.status = "pending"
-            mock_pulse_run.files = []
-            mock_pr_cls.return_value = mock_pulse_run
             mock_asyncio.create_task = MagicMock()
+            mock_select.return_value = MagicMock()
 
             asyncio.get_event_loop().run_until_complete(
                 PulseService.run_detection(db, collection_id, user_id, file_ids)
@@ -196,20 +197,17 @@ class TestActiveRunConflict:
 
         credit_result = _make_credit_result(success=True, balance=Decimal("95"))
 
-        # Mock active run exists
         existing_run = MagicMock()
         existing_run.status = "analyzing"
-        mock_scalars = MagicMock()
-        mock_scalars.first.return_value = existing_run
-        mock_result = MagicMock()
-        mock_result.scalars.return_value = mock_scalars
-        db.execute.return_value = mock_result
+        _mock_db_for_run_detection(db, active_run=existing_run, files=[])
 
         with patch("app.services.pulse.platform_settings") as mock_ps, \
-             patch("app.services.pulse.CreditService") as mock_cs:
+             patch("app.services.pulse.CreditService") as mock_cs, \
+             patch("app.services.pulse.select") as mock_select:
             mock_ps.get = AsyncMock(return_value="5.0")
             mock_cs.deduct_credit = AsyncMock(return_value=credit_result)
             mock_cs.refund = AsyncMock()
+            mock_select.return_value = MagicMock()
 
             with pytest.raises(HTTPException) as exc_info:
                 asyncio.get_event_loop().run_until_complete(
@@ -234,16 +232,10 @@ class TestPipelineRefundOnFailure:
         cost = Decimal("5.0")
         file_ids = [uuid4()]
 
-        # Mock DB session
         mock_db = _make_mock_db()
 
-        # Mock PulseRun load
         mock_pulse_run = MagicMock()
         mock_pulse_run.status = "pending"
-        mock_pulse_run.files = []
-
-        mock_scalars = MagicMock()
-        mock_scalars.first.return_value = mock_pulse_run
 
         mock_file = MagicMock()
         mock_file.id = file_ids[0]
@@ -252,21 +244,8 @@ class TestPipelineRefundOnFailure:
         mock_file.file_type = "csv"
         mock_file.data_summary = "test data"
         mock_file.deep_profile = None
-        mock_file_scalars = MagicMock()
-        mock_file_scalars.all.return_value = [mock_file]
 
-        call_count = 0
-        async def mock_execute(stmt):
-            nonlocal call_count
-            call_count += 1
-            r = MagicMock()
-            if call_count == 1:
-                r.scalars.return_value = mock_scalars
-            else:
-                r.scalars.return_value = mock_file_scalars
-            return r
-
-        mock_db.execute = AsyncMock(side_effect=mock_execute)
+        _mock_db_for_pipeline(mock_db, mock_pulse_run, [mock_file])
 
         # Mock build_pulse_graph to raise an error
         mock_graph = MagicMock()
@@ -275,13 +254,14 @@ class TestPipelineRefundOnFailure:
         with patch("app.services.pulse.async_session_maker") as mock_session_maker, \
              patch("app.services.pulse.CreditService") as mock_cs, \
              patch("app.services.pulse.build_pulse_graph", return_value=mock_graph), \
+             patch("app.services.pulse.select") as mock_select, \
              patch("builtins.open", MagicMock(return_value=MagicMock(
                  __enter__=MagicMock(return_value=MagicMock(read=MagicMock(return_value=b"data"))),
                  __exit__=MagicMock(return_value=False),
              ))):
             mock_cs.refund = AsyncMock()
+            mock_select.return_value = MagicMock()
 
-            # Set up async context manager for session
             mock_session_maker.return_value.__aenter__ = AsyncMock(return_value=mock_db)
             mock_session_maker.return_value.__aexit__ = AsyncMock(return_value=False)
 
@@ -313,14 +293,10 @@ class TestPipelinePersistsSignals:
 
         mock_db = _make_mock_db()
 
-        # Mock PulseRun
         mock_pulse_run = MagicMock()
         mock_pulse_run.status = "pending"
         mock_pulse_run.collection = MagicMock()
         mock_pulse_run.collection.name = "Test Collection"
-
-        mock_scalars = MagicMock()
-        mock_scalars.first.return_value = mock_pulse_run
 
         mock_file = MagicMock()
         mock_file.id = file_ids[0]
@@ -329,23 +305,9 @@ class TestPipelinePersistsSignals:
         mock_file.file_type = "csv"
         mock_file.data_summary = "test data"
         mock_file.deep_profile = None
-        mock_file_scalars = MagicMock()
-        mock_file_scalars.all.return_value = [mock_file]
 
-        call_count = 0
-        async def mock_execute(stmt):
-            nonlocal call_count
-            call_count += 1
-            r = MagicMock()
-            if call_count == 1:
-                r.scalars.return_value = mock_scalars
-            else:
-                r.scalars.return_value = mock_file_scalars
-            return r
+        _mock_db_for_pipeline(mock_db, mock_pulse_run, [mock_file])
 
-        mock_db.execute = AsyncMock(side_effect=mock_execute)
-
-        # Mock successful pipeline result
         pipeline_result = {
             "signals_output": [
                 {
@@ -375,12 +337,14 @@ class TestPipelinePersistsSignals:
              patch("app.services.pulse.build_pulse_graph", return_value=mock_graph), \
              patch("app.services.pulse.Signal") as mock_signal_cls, \
              patch("app.services.pulse.Report") as mock_report_cls, \
+             patch("app.services.pulse.select") as mock_select, \
              patch("builtins.open", MagicMock(return_value=MagicMock(
                  __enter__=MagicMock(return_value=MagicMock(read=MagicMock(return_value=b"data"))),
                  __exit__=MagicMock(return_value=False),
              ))):
             mock_session_maker.return_value.__aenter__ = AsyncMock(return_value=mock_db)
             mock_session_maker.return_value.__aexit__ = AsyncMock(return_value=False)
+            mock_select.return_value = MagicMock()
 
             asyncio.get_event_loop().run_until_complete(
                 PulseService._run_pipeline(
@@ -420,9 +384,6 @@ class TestPipelinePersistsReport:
         mock_pulse_run.collection = MagicMock()
         mock_pulse_run.collection.name = "Test Collection"
 
-        mock_scalars = MagicMock()
-        mock_scalars.first.return_value = mock_pulse_run
-
         mock_file = MagicMock()
         mock_file.id = file_ids[0]
         mock_file.file_path = "/tmp/test.csv"
@@ -430,21 +391,8 @@ class TestPipelinePersistsReport:
         mock_file.file_type = "csv"
         mock_file.data_summary = "data"
         mock_file.deep_profile = None
-        mock_file_scalars = MagicMock()
-        mock_file_scalars.all.return_value = [mock_file]
 
-        call_count = 0
-        async def mock_execute(stmt):
-            nonlocal call_count
-            call_count += 1
-            r = MagicMock()
-            if call_count == 1:
-                r.scalars.return_value = mock_scalars
-            else:
-                r.scalars.return_value = mock_file_scalars
-            return r
-
-        mock_db.execute = AsyncMock(side_effect=mock_execute)
+        _mock_db_for_pipeline(mock_db, mock_pulse_run, [mock_file])
 
         pipeline_result = {
             "signals_output": [{
@@ -467,12 +415,14 @@ class TestPipelinePersistsReport:
              patch("app.services.pulse.build_pulse_graph", return_value=mock_graph), \
              patch("app.services.pulse.Signal"), \
              patch("app.services.pulse.Report") as mock_report_cls, \
+             patch("app.services.pulse.select") as mock_select, \
              patch("builtins.open", MagicMock(return_value=MagicMock(
                  __enter__=MagicMock(return_value=MagicMock(read=MagicMock(return_value=b"data"))),
                  __exit__=MagicMock(return_value=False),
              ))):
             mock_session_maker.return_value.__aenter__ = AsyncMock(return_value=mock_db)
             mock_session_maker.return_value.__aexit__ = AsyncMock(return_value=False)
+            mock_select.return_value = MagicMock()
 
             asyncio.get_event_loop().run_until_complete(
                 PulseService._run_pipeline(
@@ -502,25 +452,32 @@ class TestPipelineStatusTransitions:
 
         mock_db = _make_mock_db()
 
+        # Use a simple class to track status transitions
+        class StatusTracker:
+            def __init__(self):
+                self.log = []
+                self._status = "pending"
+
+            @property
+            def status(self):
+                return self._status
+
+            @status.setter
+            def status(self, val):
+                self.log.append(val)
+                self._status = val
+
+        tracker = StatusTracker()
+
+        # Build a MagicMock that delegates status to tracker
         mock_pulse_run = MagicMock()
-        mock_pulse_run.status = "pending"
         mock_pulse_run.collection = MagicMock()
         mock_pulse_run.collection.name = "Test Collection"
-
-        # Track status transitions
-        status_log = []
-        original_status = mock_pulse_run.status
-
-        def track_status(val):
-            status_log.append(val)
-
-        type(mock_pulse_run).status = PropertyMock(
-            side_effect=lambda *a: status_log[-1] if status_log else "pending",
-            fset=lambda self, val: track_status(val),
+        # Wire up status property
+        type(mock_pulse_run).status = property(
+            lambda self: tracker.status,
+            lambda self, val: setattr(tracker, 'status', val),
         )
-
-        mock_scalars = MagicMock()
-        mock_scalars.first.return_value = mock_pulse_run
 
         mock_file = MagicMock()
         mock_file.id = file_ids[0]
@@ -529,21 +486,8 @@ class TestPipelineStatusTransitions:
         mock_file.file_type = "csv"
         mock_file.data_summary = "data"
         mock_file.deep_profile = None
-        mock_file_scalars = MagicMock()
-        mock_file_scalars.all.return_value = [mock_file]
 
-        call_count = 0
-        async def mock_execute(stmt):
-            nonlocal call_count
-            call_count += 1
-            r = MagicMock()
-            if call_count == 1:
-                r.scalars.return_value = mock_scalars
-            else:
-                r.scalars.return_value = mock_file_scalars
-            return r
-
-        mock_db.execute = AsyncMock(side_effect=mock_execute)
+        _mock_db_for_pipeline(mock_db, mock_pulse_run, [mock_file])
 
         pipeline_result = {
             "signals_output": [{
@@ -566,12 +510,14 @@ class TestPipelineStatusTransitions:
              patch("app.services.pulse.build_pulse_graph", return_value=mock_graph), \
              patch("app.services.pulse.Signal"), \
              patch("app.services.pulse.Report"), \
+             patch("app.services.pulse.select") as mock_select, \
              patch("builtins.open", MagicMock(return_value=MagicMock(
                  __enter__=MagicMock(return_value=MagicMock(read=MagicMock(return_value=b"data"))),
                  __exit__=MagicMock(return_value=False),
              ))):
             mock_session_maker.return_value.__aenter__ = AsyncMock(return_value=mock_db)
             mock_session_maker.return_value.__aexit__ = AsyncMock(return_value=False)
+            mock_select.return_value = MagicMock()
 
             asyncio.get_event_loop().run_until_complete(
                 PulseService._run_pipeline(
@@ -580,9 +526,9 @@ class TestPipelineStatusTransitions:
             )
 
         # Verify transitions: profiling -> analyzing -> completed
-        assert "profiling" in status_log
-        assert "analyzing" in status_log
-        assert "completed" in status_log
+        assert "profiling" in tracker.log
+        assert "analyzing" in tracker.log
+        assert "completed" in tracker.log
         # profiling must come before analyzing, analyzing before completed
-        assert status_log.index("profiling") < status_log.index("analyzing")
-        assert status_log.index("analyzing") < status_log.index("completed")
+        assert tracker.log.index("profiling") < tracker.log.index("analyzing")
+        assert tracker.log.index("analyzing") < tracker.log.index("completed")
