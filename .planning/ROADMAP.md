@@ -145,7 +145,10 @@ Plans:
   3. User can remove a file from a Collection (DELETE /collections/{id}/files/{file_id}) and the file row is deleted from `collection_files`
   4. A free-tier user attempting to create a Collection receives a 403 with a "workspace access not available on your plan" message
   5. Report rows are retrievable via GET /collections/{id}/reports and GET /collections/{id}/reports/{report_id}; markdown content is returned; functional Markdown download endpoint responds with correct Content-Disposition header
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 48-01-PLAN.md — Pydantic schemas, WorkspaceAccess dependency, CollectionService
+- [ ] 48-02-PLAN.md — Collections router (all endpoints), router registration, unit tests
 
 ### Phase 49: Pulse Agent
 **Goal**: The Pulse Agent produces schema-validated Signal JSON from a real CSV input, independently verified before any frontend Signal display is built — eliminating the risk of discovering output quality issues after the UI exists
@@ -156,7 +159,10 @@ Plans:
   2. Every emitted Signal passes `PulseAgentOutput` Pydantic validation — severity is a `Literal["critical", "warning", "info"]`, chartType is a `Literal["bar", "line", "scatter"]`, and no required field is None
   3. E2B sandbox is instantiated with `PULSE_SANDBOX_TIMEOUT_SECONDS=300` (not the 60s default) and the config value is confirmed in `backend/app/config.py`
   4. Credit pre-check logic (`workspace_credit_cost_pulse` read from platform_settings) and atomic deduction via CreditService are implemented in `PulseService.run_detection()` with a try/finally refund path on any exception
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 48-01-PLAN.md — Pydantic schemas, WorkspaceAccess dependency, CollectionService
+- [ ] 48-02-PLAN.md — Collections router (all endpoints), router registration, unit tests
 
 ### Phase 50: Pulse Endpoint Wire-Up
 **Goal**: The complete Pulse execution cycle is accessible via a single API endpoint — a user with sufficient credits can POST to trigger detection and receives Signals in the response; a user with insufficient credits receives a 402 before any credits are spent
@@ -167,7 +173,10 @@ Plans:
   2. `POST /collections/{id}/pulse` when user has fewer credits than `workspace_credit_cost_pulse` returns HTTP 402 with a body indicating insufficient credits — no credits are deducted
   3. On any agent or sandbox failure after credit deduction, the user's credit balance is restored to its pre-deduction value (refund confirmed by querying balance before and after a forced failure)
   4. APScheduler orphan-refund job is configured and will scan for credit deductions with no matching Signal rows after a configurable timeout, preventing silent credit loss on long-running failures
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 48-01-PLAN.md — Pydantic schemas, WorkspaceAccess dependency, CollectionService
+- [ ] 48-02-PLAN.md — Collections router (all endpoints), router registration, unit tests
 
 ### Phase 51: Frontend Migration
 **Goal**: Every Pulse workspace screen from the pulse-mockup is live in the main frontend app, connected to real API data, with the correct Hex.tech palette and its own route group that does not inherit the Chat sidebar layout
@@ -179,7 +188,10 @@ Plans:
   3. The sidebar "Pulse Analysis" nav entry navigates to `/workspace`; the Collections list page shows collection cards with name, status badge, created date, file count, and signal count populated from the live API
   4. Collection detail page renders all 4 tabs (Overview, Files, Signals, Reports) with live data; Files tab shows uploaded file rows with column profile slide-out; Overview tab shows stat cards and credit usage pill in the header
   5. Detection Results page (`/workspace/collections/[id]/signals`) shows Signal list sorted by severity with the highest-severity Signal auto-selected; SignalDetailPanel shows the correct Recharts chart type per Signal's `chartType` field; Investigation and What-If buttons are present but disabled
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 48-01-PLAN.md — Pydantic schemas, WorkspaceAccess dependency, CollectionService
+- [ ] 48-02-PLAN.md — Collections router (all endpoints), router registration, unit tests
 
 ### Phase 52: Admin and QA
 **Goal**: Tier gating, collection limits, and credit cost configuration are all verified end-to-end with every tier tested — confirmed working before v0.8 is released
@@ -190,7 +202,10 @@ Plans:
   2. A free_trial-tier user can create up to 1 active Collection and is blocked (403) on the second creation attempt
   3. `workspace_credit_cost_pulse` is editable via the Admin Portal platform settings page and the new value takes effect on the next Pulse trigger without a backend restart
   4. Pulse run credit cost displayed in the "Run Detection (N credits)" button matches the live `workspace_credit_cost_pulse` platform setting value
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 48-01-PLAN.md — Pydantic schemas, WorkspaceAccess dependency, CollectionService
+- [ ] 48-02-PLAN.md — Collections router (all endpoints), router registration, unit tests
 
 ## Progress
 
@@ -243,7 +258,7 @@ Plans:
 | 45. What-If Scenarios | v0.7.12 | 3/3 | Complete | 2026-03-05 |
 | 46. Admin Workspace Management | v0.7.12 | 3/3 | Complete | 2026-03-05 |
 | 47. Data Foundation | 2/2 | Complete    | 2026-03-06 | - |
-| 48. Backend CRUD API | v0.8 | 0/TBD | Not started | - |
+| 48. Backend CRUD API | v0.8 | 0/2 | Not started | - |
 | 49. Pulse Agent | v0.8 | 0/TBD | Not started | - |
 | 50. Pulse Endpoint Wire-Up | v0.8 | 0/TBD | Not started | - |
 | 51. Frontend Migration | v0.8 | 0/TBD | Not started | - |
