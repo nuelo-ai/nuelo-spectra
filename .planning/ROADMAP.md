@@ -161,8 +161,9 @@ Plans:
   4. Credit pre-check logic (`workspace_credit_cost_pulse` read from platform_settings) and atomic deduction via CreditService are implemented in `PulseService.run_detection()` with a try/finally refund path on any exception
 **Plans**: 2 plans
 Plans:
-- [ ] 48-01-PLAN.md — Pydantic schemas, WorkspaceAccess dependency, CollectionService
-- [ ] 48-02-PLAN.md — Collections router (all endpoints), router registration, unit tests
+- [ ] 49-01-PLAN.md — Config, schemas, migration, profiling script, prompts.yaml pulse_agent entry
+- [ ] 49-02-PLAN.md — LangGraph Pulse Agent pipeline, PulseService lifecycle, credit logic, unit tests
+
 
 ### Phase 50: Pulse Endpoint Wire-Up
 **Goal**: The complete Pulse execution cycle is accessible via a single API endpoint — a user with sufficient credits can POST to trigger detection and receives Signals in the response; a user with insufficient credits receives a 402 before any credits are spent
