@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Spectra Pulse (Detection)
-status: in-progress
-stopped_at: Completed 48-01-PLAN.md
-last_updated: "2026-03-07T00:11:15.882Z"
-last_activity: 2026-03-07 — Phase 48 Plan 01 complete (schemas + deps + service)
+status: completed
+stopped_at: Completed 48-02-PLAN.md
+last_updated: "2026-03-07T00:16:34.653Z"
+last_activity: 2026-03-07 — Phase 48 Plan 02 complete (router + tests)
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
-  percent: 75
+  completed_plans: 4
+  percent: 100
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 ## Current Position
 
 Phase: 48 of 52 (Backend CRUD API)
-Plan: 1 of 2 (complete)
-Status: Phase 48 Plan 01 complete, Plan 02 next
-Last activity: 2026-03-07 — Phase 48 Plan 01 complete (schemas + deps + service)
+Plan: 2 of 2 (complete)
+Status: Phase 48 complete — all plans done
+Last activity: 2026-03-07 — Phase 48 Plan 02 complete (router + tests)
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 🚧 [██████░░░░] 75% (Phase 48)
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 🚧 [██████████] 100% (Phase 48)
 
 ## Performance Metrics
 
@@ -60,6 +60,8 @@ Recent decisions affecting v0.8 work:
 - [Phase 47-02]: workspace_credit_cost_pulse stored as JSON string "5.0" matching default_credit_cost pattern
 - [Phase 48-01]: CollectionFileResponse.data_summary typed as str | None (not dict) to match File model Text column
 - [Phase 48-01]: Ownership verification inside CollectionService methods for granular per-query control
+- [Phase 48]: [Phase 48-02]: All collection endpoints use WorkspaceUser for uniform tier gating
+- [Phase 48]: [Phase 48-02]: Report download returns text/markdown with Content-Disposition attachment
 
 ### Pending Todos
 
@@ -78,6 +80,6 @@ Recent decisions affecting v0.8 work:
 
 ## Session Continuity
 
-Last session: 2026-03-07T00:10:00Z
-Stopped at: Completed 48-01-PLAN.md
-Resume with: Run /gsd:execute-phase 48 to continue with Plan 02 (router)
+Last session: 2026-03-07T00:16:34.651Z
+Stopped at: Completed 48-02-PLAN.md
+Resume with: Phase 48 complete. Continue with Phase 49 (Pulse Agent)

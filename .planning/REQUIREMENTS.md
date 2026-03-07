@@ -43,7 +43,7 @@ Requirements for the Spectra Pulse (Detection) milestone. Each maps to roadmap p
 - [x] **REPORT-01**: User can view Reports tab listing all collection reports as rows (type badge, title, source line, generated date, "View Report" button)
 - [x] **REPORT-02**: User can open a full-page report viewer (/workspace/collections/[id]/reports/[reportId]) with sticky header (back button, report title, type badge), white paper area, markdown-rendered content
 - [x] **REPORT-03**: User can download a report as Markdown (functional download)
-- [ ] **REPORT-04**: "Download as PDF" button is present but disabled (opacity-60 — planned v0.9 backend feature)
+- [x] **REPORT-04**: "Download as PDF" button is present but disabled (opacity-60 — planned v0.9 backend feature)
 
 ### Navigation & Overview
 
@@ -127,7 +127,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REPORT-01 | Phase 48 | Complete |
 | REPORT-02 | Phase 48 | Complete |
 | REPORT-03 | Phase 48 | Complete |
-| REPORT-04 | Phase 48 | Pending |
+| REPORT-04 | Phase 48 | Complete |
 | NAV-01 | Phase 51 | Pending |
 | NAV-02 | Phase 51 | Pending |
 | NAV-03 | Phase 51 | Pending |
