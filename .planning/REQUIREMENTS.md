@@ -36,7 +36,7 @@ Requirements for the Spectra Pulse (Detection) milestone. Each maps to roadmap p
 - [ ] **SIGNAL-01**: User can view Signal list sorted by severity (critical → warning → info) on Detection Results page (/workspace/collections/[id]/signals)
 - [ ] **SIGNAL-02**: Highest-severity Signal is auto-selected on Detection Results page load
 - [ ] **SIGNAL-03**: User can view Signal detail panel with: title + severity/category badges, Recharts chart visualization, analysis text, 2x2 statistical evidence grid, Investigation section (Investigate + What-If buttons — buttons present but disabled with "coming soon" or disabled state)
-- [ ] **SIGNAL-04**: Signal chart type is driven by signal's chartType field (bar → BarChart, line → AreaChart, scatter → ScatterChart via Recharts)
+- [x] **SIGNAL-04**: Signal chart type is driven by signal's chartType field (bar → BarChart, line → AreaChart, scatter → ScatterChart via Recharts)
 
 ### Reports
 
@@ -123,7 +123,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SIGNAL-01 | Phase 51 | Pending |
 | SIGNAL-02 | Phase 51 | Pending |
 | SIGNAL-03 | Phase 51 | Pending |
-| SIGNAL-04 | Phase 51 | Pending |
+| SIGNAL-04 | Phase 51 | Complete |
 | REPORT-01 | Phase 48 | Complete |
 | REPORT-02 | Phase 48 | Complete |
 | REPORT-03 | Phase 48 | Complete |
