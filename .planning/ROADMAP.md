@@ -188,11 +188,13 @@ Plans:
   2. `/workspace` and `/workspace/collections/[id]` render inside a `(workspace)` route group layout that does NOT wrap pages in `ChatSidebar` — the workspace layout has its own sidebar
   3. The sidebar "Pulse Analysis" nav entry navigates to `/workspace`; the Collections list page shows collection cards with name, status badge, created date, file count, and signal count populated from the live API
   4. Collection detail page renders all 4 tabs (Overview, Files, Signals, Reports) with live data; Files tab shows uploaded file rows with column profile slide-out; Overview tab shows stat cards and credit usage pill in the header
-  5. Detection Results page (`/workspace/collections/[id]/signals`) shows Signal list sorted by severity with the highest-severity Signal auto-selected; SignalDetailPanel shows the correct Recharts chart type per Signal's `chartType` field; Investigation and What-If buttons are present but disabled
-**Plans**: 2 plans
+  5. Detection Results page (`/workspace/collections/[id]/signals`) shows Signal list sorted by severity with the highest-severity Signal auto-selected; SignalDetailPanel shows the correct Plotly chart type per Signal's `chartType` field; Investigation and What-If buttons are present but disabled
+**Plans**: 4 plans
 Plans:
-- [ ] 48-01-PLAN.md — Pydantic schemas, WorkspaceAccess dependency, CollectionService
-- [ ] 48-02-PLAN.md — Collections router (all endpoints), router registration, unit tests
+- [ ] 51-01-PLAN.md — Hex.tech palette, UI component swap, workspace types + hooks + store
+- [ ] 51-02-PLAN.md — Unified sidebar, (workspace) route group layout
+- [ ] 51-03-PLAN.md — Collection list + collection detail pages (4 tabs) with live API data
+- [ ] 51-04-PLAN.md — Detection Results page (signal split-panel + Plotly charts)
 
 ### Phase 52: Admin and QA
 **Goal**: Tier gating, collection limits, and credit cost configuration are all verified end-to-end with every tier tested — confirmed working before v0.8 is released
@@ -262,5 +264,5 @@ Plans:
 | 48. Backend CRUD API | 2/2 | Complete    | 2026-03-07 | - |
 | 49. Pulse Agent | 2/2 | Complete    | 2026-03-07 | - |
 | 50. Pulse Endpoint Wire-Up | 2/2 | Complete    | 2026-03-07 | - |
-| 51. Frontend Migration | v0.8 | 0/TBD | Not started | - |
+| 51. Frontend Migration | v0.8 | 0/4 | Not started | - |
 | 52. Admin and QA | v0.8 | 0/TBD | Not started | - |
