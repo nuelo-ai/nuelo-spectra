@@ -16,6 +16,7 @@ from app.database import get_db
 from app.models.user import User
 from app.services.api_key import ApiKeyService
 from app.services.auth import get_user_by_id
+from app.services.user_class import get_class_config
 from app.utils.security import verify_token
 
 # OAuth2 scheme for token extraction (tokenUrl points to login endpoint)
@@ -244,8 +245,22 @@ async def get_current_admin_user(
     return user
 
 
+async def require_workspace_access(
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> User:
+    """Verify user's tier has workspace_access=True. Raises 403 if not."""
+    config = get_class_config(current_user.user_class)
+    if not config or not config.get("workspace_access", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="workspace access not available on your plan",
+        )
+    return current_user
+
+
 # Typed dependencies for cleaner endpoint signatures
 CurrentUser = Annotated[User, Depends(get_current_user)]
 CurrentAdmin = Annotated[User, Depends(get_current_admin_user)]
 ApiAuthUser = Annotated[User, Depends(get_authenticated_user)]
+WorkspaceUser = Annotated[User, Depends(require_workspace_access)]
 DbSession = Annotated[AsyncSession, Depends(get_db)]
