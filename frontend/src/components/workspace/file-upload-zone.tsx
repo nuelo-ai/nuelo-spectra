@@ -107,8 +107,15 @@ export function FileUploadZone({ collectionId }: FileUploadZoneProps) {
         <p className="text-sm font-medium text-foreground">
           {uploadMutation.isPending
             ? "Uploading..."
-            : "Drop files here or click to upload"}
+            : uploadMutation.isError
+              ? "Upload failed — click to retry"
+              : "Drop files here or click to upload"}
         </p>
+        {uploadMutation.isError && (
+          <p className="mt-1 text-xs text-red-400">
+            {uploadMutation.error?.message || "Unknown error"}
+          </p>
+        )}
         <p className="mt-1 text-xs text-muted-foreground">
           Supported: CSV, Excel, JSON
         </p>

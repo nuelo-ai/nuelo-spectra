@@ -61,6 +61,7 @@ async def create_collection(
     collection = await CollectionService.create_collection(
         db, current_user.id, body.name, body.description
     )
+    await db.commit()
     return CollectionDetailResponse(
         id=collection.id,
         name=collection.name,
@@ -131,6 +132,7 @@ async def update_collection(
     updated = await CollectionService.update_collection(
         db, collection_id, current_user.id, body.name, body.description
     )
+    await db.commit()
     if updated is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -206,6 +208,7 @@ async def upload_file_to_collection(
     collection_file = await CollectionService.add_file_to_collection(
         db, collection_id, file_record.id
     )
+    await db.commit()
 
     # Trigger background onboarding
     async def _run_onboarding_background(file_id: UUID, user_id: UUID):
@@ -267,6 +270,7 @@ async def link_file_to_collection(
     collection_file = await CollectionService.add_file_to_collection(
         db, collection_id, body.file_id
     )
+    await db.commit()
 
     return CollectionFileResponse(
         id=collection_file.id,
@@ -312,6 +316,7 @@ async def remove_file_from_collection(
     removed = await CollectionService.remove_file_from_collection(
         db, collection_id, file_id, current_user.id
     )
+    await db.commit()
     if not removed:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -446,6 +451,7 @@ async def trigger_pulse(
         file_ids=body.file_ids,
         user_context=body.user_context,
     )
+    await db.commit()
 
     return PulseRunTriggerResponse(
         pulse_run_id=pulse_run.id,
