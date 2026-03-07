@@ -26,8 +26,8 @@ Requirements for the Spectra Pulse (Detection) milestone. Each maps to roadmap p
 ### Pulse Detection
 
 - [ ] **PULSE-01**: User can trigger Pulse detection on selected files via "Run Detection (N credits)" button showing the configured flat credit cost
-- [ ] **PULSE-02**: System pre-checks credit balance before execution and blocks run if insufficient (shows upgrade/add credits prompt)
-- [ ] **PULSE-03**: System deducts flat credit cost (workspace_credit_cost_pulse) before execution and refunds on failure
+- [x] **PULSE-02**: System pre-checks credit balance before execution and blocks run if insufficient (shows upgrade/add credits prompt)
+- [x] **PULSE-03**: System deducts flat credit cost (workspace_credit_cost_pulse) before execution and refunds on failure
 - [ ] **PULSE-04**: User sees full-page detection loading state with 4 animated steps replacing entire page content (Profiling data → Detecting anomalies → Analyzing trends → Generating signals)
 - [ ] **PULSE-05**: After detection completes, user is navigated to Detection Results page with generated Signals
 
@@ -116,8 +116,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FILE-03 | Phase 48 | Complete |
 | FILE-04 | Phase 48 | Complete |
 | PULSE-01 | Phase 50 | Pending |
-| PULSE-02 | Phase 49 | Pending |
-| PULSE-03 | Phase 49 | Pending |
+| PULSE-02 | Phase 49 | Complete |
+| PULSE-03 | Phase 49 | Complete |
 | PULSE-04 | Phase 50 | Pending |
 | PULSE-05 | Phase 50 | Pending |
 | SIGNAL-01 | Phase 51 | Pending |

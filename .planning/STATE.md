@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Spectra Pulse (Detection)
-status: completed
-stopped_at: Phase 49 context gathered
+status: in_progress
+stopped_at: Phase 49 Plan 01 complete
 last_updated: "2026-03-07T01:56:27.885Z"
 last_activity: 2026-03-07 — Phase 48 Plan 02 complete (router + tests)
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 4
-  completed_plans: 4
-  percent: 100
+  completed_plans: 5
+  percent: 50
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 
 ## Current Position
 
-Phase: 48 of 52 (Backend CRUD API)
-Plan: 2 of 2 (complete)
-Status: Phase 48 complete — all plans done
-Last activity: 2026-03-07 — Phase 48 Plan 02 complete (router + tests)
+Phase: 49 of 52 (Pulse Agent)
+Plan: 1 of 2
+Status: Plan 01 complete — foundation (config, schemas, migration, profiling)
+Last activity: 2026-03-07 — Phase 49 Plan 01 complete (pulse foundation)
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 🚧 [██████████] 100% (Phase 48)
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 🚧 [█████░░░░░] 50% (Phase 49)
 
 ## Performance Metrics
 
@@ -80,6 +80,6 @@ Recent decisions affecting v0.8 work:
 
 ## Session Continuity
 
-Last session: 2026-03-07T01:56:27.882Z
-Stopped at: Phase 49 context gathered
-Resume with: Phase 48 complete. Continue with Phase 49 (Pulse Agent)
+Last session: 2026-03-07T02:39:00Z
+Stopped at: Phase 49 Plan 01 complete
+Resume with: Continue with Phase 49 Plan 02 (Pulse pipeline)
