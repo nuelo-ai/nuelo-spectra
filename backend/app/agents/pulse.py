@@ -42,6 +42,81 @@ from app.schemas.pulse import (
 logger = logging.getLogger(__name__)
 
 
+def _compact_profile_for_coder(profile: dict, filename: str) -> str:
+    """Build a compact profile string for the Coder agent.
+
+    Includes column names, dtypes, key numeric stats, top categorical values,
+    and strong correlations. Avoids passing the full profile JSON (~1-5k tokens)
+    by distilling only what's needed to write correct analysis code (~200-500 tokens).
+    """
+    row_count = profile.get("row_count", "unknown")
+    col_profiles = profile.get("column_profiles", {})
+    correlations = profile.get("correlations", {})
+    missing = profile.get("missing_patterns", [])
+
+    lines = [f"File: {filename} ({row_count} rows)"]
+    lines.append("Columns:")
+    for col, cp in col_profiles.items():
+        dtype = cp.get("dtype", "?")
+        null_pct = cp.get("null_pct", 0)
+        unique = cp.get("unique_count", "?")
+        line = f"  {col} ({dtype})"
+        if null_pct > 0:
+            line += f", {null_pct}% null"
+        # Numeric stats
+        if "mean" in cp:
+            line += f", min={cp['min']:.4g} max={cp['max']:.4g} mean={cp['mean']:.4g}"
+        # Categorical top values
+        elif cp.get("top_values") and unique <= 50:
+            top = list(cp["top_values"].keys())[:5]
+            line += f", values: {top}"
+        # Datetime range
+        elif "min_date" in cp:
+            line += f", {cp['min_date']} → {cp['max_date']}"
+        lines.append(line)
+
+    # Strong correlations only (|r| >= 0.5)
+    strong = []
+    seen = set()
+    for c1, row in correlations.items():
+        for c2, val in row.items():
+            if c1 != c2 and val is not None and abs(val) >= 0.5:
+                pair = tuple(sorted([c1, c2]))
+                if pair not in seen:
+                    seen.add(pair)
+                    strong.append(f"  {c1} ↔ {c2}: r={val:.2f}")
+    if strong:
+        lines.append("Strong correlations (|r|≥0.5):")
+        lines.extend(strong)
+
+    # Missing patterns
+    if missing:
+        lines.append("Missing data:")
+        for m in missing:
+            lines.append(f"  {m['column']}: {m['null_pct']}% null")
+
+    return "\n".join(lines)
+
+
+def _compact_profile_for_viz(profile: dict, filename: str) -> str:
+    """Build a minimal profile string for the Viz agent.
+
+    Only column names + dtypes are needed to avoid hallucinating column names
+    in Plotly code. Cuts ~1-5k tokens down to ~100-200 tokens.
+    """
+    col_profiles = profile.get("column_profiles", {})
+    row_count = profile.get("row_count", "unknown")
+    lines = [f"File: {filename} ({row_count} rows)", "Columns:"]
+    for col, cp in col_profiles.items():
+        dtype = cp.get("dtype", "?")
+        top = list(cp.get("top_values", {}).keys())[:3]
+        line = f"  {col} ({dtype})"
+        if top and cp.get("unique_count", 999) <= 50:
+            line += f" — sample values: {top}"
+        lines.append(line)
+    return "\n".join(lines)
+
+
 class PulseAgentState(TypedDict):
     """State for the LangGraph Pulse Agent pipeline."""
 
@@ -184,9 +259,10 @@ async def _process_single_signal(
         code_instructions = hypothesis.get("code_instructions", "")
         chart_hint = hypothesis.get("chart_hint", "")
 
-        # Build file list and deep_profile context for coder
+        # Build file list and compact profile context for coder + viz
         file_lines = []
-        deep_profiles_for_coder = []
+        coder_profiles = []
+        viz_profiles = []
         for fd in file_data:
             fn = fd.get("filename", "data.csv")
             ft = fd.get("file_type", "csv")
@@ -194,9 +270,11 @@ async def _process_single_signal(
             file_lines.append(f"  - /home/user/{fn} (use {read_func})")
             dp = fd.get("deep_profile")
             if dp:
-                deep_profiles_for_coder.append(f"File: {fn}\n{json.dumps(dp, indent=2)}")
+                coder_profiles.append(_compact_profile_for_coder(dp, fn))
+                viz_profiles.append(_compact_profile_for_viz(dp, fn))
         files_str = "\n".join(file_lines)
-        deep_profile_str = "\n\n".join(deep_profiles_for_coder) if deep_profiles_for_coder else "No deep profiles available"
+        coder_profile_str = "\n\n".join(coder_profiles) if coder_profiles else "No deep profiles available"
+        viz_profile_str = "\n\n".join(viz_profiles) if viz_profiles else "No column info available"
 
         code_gen_template = get_agent_config_field("pulse_coder", "code_gen_prompt")
         code_gen_prompt = code_gen_template.format(
@@ -205,8 +283,8 @@ async def _process_single_signal(
             files_str=files_str,
         )
 
-        # Append deep profile context so coder knows data schema
-        code_gen_prompt += f"\n\n## Data Schema (Deep Profile)\n{deep_profile_str}"
+        # Append compact schema so coder knows column names, types, and key stats
+        code_gen_prompt += f"\n\n## Data Schema\n{coder_profile_str}"
 
         response = await coder_llm.ainvoke([
             SystemMessage(content=coder_prompt),
@@ -295,15 +373,20 @@ async def _process_single_signal(
             viz_system_prompt = get_agent_prompt("pulse_viz")
 
             viz_prompt_template = get_agent_config_field("pulse_viz", "viz_prompt")
-            viz_message = viz_prompt_template.format(
-                finding_title=finding.title,
-                finding_text=finding.finding,
-                chart_hint=chart_hint,
-                files_str=files_str,
-                deep_profile=deep_profile_str,
-                statistical_evidence=json.dumps(sandbox_result.get("statistical_evidence", {})),
-                analysis_text=sandbox_result.get("analysis_text", ""),
-            )
+
+            def _build_viz_message(error_context: str = "") -> str:
+                base = viz_prompt_template.format(
+                    finding_title=finding.title,
+                    finding_text=finding.finding,
+                    chart_hint=chart_hint,
+                    files_str=files_str,
+                    deep_profile=viz_profile_str,
+                    statistical_evidence=json.dumps(sandbox_result.get("statistical_evidence", {})),
+                    analysis_text=sandbox_result.get("analysis_text", ""),
+                )
+                return base + error_context if error_context else base
+
+            viz_message = _build_viz_message()
 
             for viz_attempt in range(2):
                 viz_response = await viz_llm.ainvoke([
@@ -317,7 +400,9 @@ async def _process_single_signal(
                 if not viz_validation.is_valid:
                     logger.warning("  [%s] Viz code validation failed (attempt %d): %s", title, viz_attempt + 1, viz_validation.errors)
                     if viz_attempt == 0:
-                        viz_message += f"\n\nPREVIOUS ATTEMPT FAILED code validation: {viz_validation.errors}\nFix the issues and try again."
+                        viz_message = _build_viz_message(
+                            f"\n\nPREVIOUS ATTEMPT FAILED code validation: {viz_validation.errors}\nFix the issues and try again."
+                        )
                     continue
 
                 viz_runtime = E2BSandboxRuntime(
@@ -345,7 +430,9 @@ async def _process_single_signal(
                         title, viz_attempt + 1, error_info,
                     )
                     if viz_attempt == 0:
-                        viz_message += f"\n\nPREVIOUS ATTEMPT FAILED with sandbox error:\n{error_info}\nFix the error and try again."
+                        viz_message = _build_viz_message(
+                            f"\n\nPREVIOUS ATTEMPT FAILED with sandbox error:\n{error_info}\nFix the error and try again."
+                        )
 
         except Exception as viz_err:
             logger.warning("  [%s] Visualization failed (signal still valid): %s", title, str(viz_err))
@@ -450,9 +537,9 @@ async def write_report_node(state: PulseAgentState) -> dict:
         structured_report = report_llm.with_structured_output(ReportOutput)
         report_prompt = get_agent_prompt("pulse_report_writer")
 
-        # Strip large fields not needed for report generation
+        # Pass only business-language fields to report writer — strip raw technical output
         report_signals = [
-            {k: v for k, v in s.items() if k not in ("chart_data", "generated_code")}
+            {k: v for k, v in s.items() if k not in ("chart_data", "generated_code", "analysis_text")}
             for s in signal_results
         ]
         signals_summary = json.dumps(report_signals, indent=2)
