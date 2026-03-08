@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import ChartRenderer from "@/components/chart/ChartRenderer";
 import type { SignalDetail } from "@/types/workspace";
 
@@ -340,16 +341,15 @@ interface SignalChartRendererProps {
 }
 
 export function SignalChartRenderer({ signal }: SignalChartRendererProps) {
-  if (!signal.chart_data || !signal.chart_type) {
-    return (
-      <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">
-        No chart data available
-      </div>
-    );
-  }
+  // Memoize the 7-step transform — avoids recomputing on parent re-renders
+  // (theme changes, store updates) when chart_data hasn't changed.
+  const plotlyJSON = useMemo(
+    () => buildSignalPlotlyJSON(signal),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [signal.id, signal.chart_data, signal.chart_type, signal.severity]
+  );
 
-  const plotlyJSON = buildSignalPlotlyJSON(signal);
-  if (!plotlyJSON) {
+  if (!signal.chart_data || !signal.chart_type || !plotlyJSON) {
     return (
       <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">
         No chart data available
