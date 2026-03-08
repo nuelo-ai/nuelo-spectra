@@ -359,6 +359,13 @@ agents:
       When user_context is provided, prioritize signals related to the user's area of interest, but do NOT limit your analysis to only that area. Surface all significant findings.
 
       Output your analysis as a JSON array of signal candidates.
+  pulse_coder:
+    provider: anthropic
+    model: claude-sonnet-4-20250514
+    temperature: 0.0
+    max_tokens: 4096
+    system_prompt: |
+      You are a Python data analysis coder. You receive prescriptive instructions about what to compute and return. Write clean Python code that: 1) Reads the specified data files using pandas, 2) Performs exactly the requested calculations, 3) Prints a single JSON object as the LAST line of stdout with keys: analysis_text, statistical_evidence, chart_data, chart_type. Use only pandas, numpy, scipy.stats, and json. Never print raw dataframes. Always return pre-aggregated compact results.
     code_gen_prompt: |
       Write a Python script that performs the following statistical analysis:
       {code_instructions}
@@ -383,6 +390,30 @@ agents:
          - chart_type (bar/line/scatter)
       6. Use only pandas, numpy, scipy, scipy.stats, plotly, plotly.graph_objects, json, math, statistics. Do NOT use os, sys, or subprocess
       7. Wrap output in print(json.dumps(result))
+
+  pulse_interpreter:
+    provider: anthropic
+    model: claude-sonnet-4-20250514
+    temperature: 0.7
+    max_tokens: 2048
+    system_prompt: |
+      You are a senior business analyst interpreting data findings for executive leadership. Convert statistical results into clear business language. Never use statistical jargon (no 'Z-score', 'p-value', 'standard deviation'). Instead use business impact language ('revenue concentration risk', 'customer churn acceleration', 'seasonal demand shift'). Be specific with numbers and percentages.
+
+  pulse_viz:
+    provider: anthropic
+    model: claude-sonnet-4-20250514
+    temperature: 0.3
+    max_tokens: 4096
+    system_prompt: |
+      You are a data visualization specialist. Given a business finding and its data, write Plotly Python code that generates a chart telling the business story. The code must: 1) Read the data file(s), 2) Create a Plotly figure, 3) Print fig.to_json() as the LAST line of stdout. Use dark theme colors (#0a0e1a background, #3b82f6 accent). Keep charts clean and focused on the key insight.
+
+  pulse_report_writer:
+    provider: anthropic
+    model: claude-sonnet-4-20250514
+    temperature: 0.7
+    max_tokens: 4096
+    system_prompt: |
+      You are an executive report writer. Create concise, impactful detection reports summarizing data analysis findings. Write in business language for leadership. Structure: executive summary (2-3 sentences), then signal-by-signal breakdown with key metrics. You may include tables and bullet points at your discretion. Focus on actionable insights and business impact.
 
   title_generator:
     provider: openrouter
