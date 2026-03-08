@@ -15,7 +15,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.agents.pulse import build_pulse_graph
+from app.agents.pulse import build_pulse_graph, _pulse_file_bytes
 from app.database import async_session_maker
 from app.models import File, PulseRun, Report, Signal
 from app.models.user_credit import UserCredit
@@ -214,13 +214,26 @@ class PulseService:
                     })
 
                 # Build and invoke pipeline
+                # Strip file_bytes from state — LangSmith serializes the full state
+                # on every node transition, causing 34MB+ payloads that exceed limits.
+                # Bytes are stashed in a ContextVar; nodes rehydrate when needed.
+                file_bytes_map = {
+                    fd["file_id"]: fd["file_bytes"]
+                    for fd in file_data
+                    if fd.get("file_bytes")
+                }
+                file_data_for_state = [
+                    {k: v for k, v in fd.items() if k != "file_bytes"}
+                    for fd in file_data
+                ]
+
                 graph = build_pulse_graph()
                 initial_state = {
                     "collection_id": str(collection_id),
                     "user_id": str(user_id),
                     "pulse_run_id": str(pulse_run_id),
                     "user_context": user_context or "",
-                    "file_data": file_data,
+                    "file_data": file_data_for_state,
                     "file_profiles": [],
                     "hypotheses": [],
                     "signal_results": [],
@@ -228,7 +241,11 @@ class PulseService:
                     "error": "",
                 }
 
-                result = await graph.ainvoke(initial_state)
+                token = _pulse_file_bytes.set(file_bytes_map)
+                try:
+                    result = await graph.ainvoke(initial_state)
+                finally:
+                    _pulse_file_bytes.reset(token)
 
                 # Check for pipeline error
                 if result.get("error"):

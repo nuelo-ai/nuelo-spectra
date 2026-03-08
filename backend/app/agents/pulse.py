@@ -14,6 +14,7 @@ Nodes:
 """
 
 import asyncio
+import contextvars
 import json
 import logging
 from typing import TypedDict
@@ -40,6 +41,13 @@ from app.schemas.pulse import (
 )
 
 logger = logging.getLogger(__name__)
+
+# File bytes stored outside LangGraph state to avoid LangSmith payload bloat.
+# Set by the service layer before graph.ainvoke(); inherited by all sub-tasks
+# via Python's contextvars async propagation.
+_pulse_file_bytes: contextvars.ContextVar[dict[str, bytes]] = contextvars.ContextVar(
+    "_pulse_file_bytes", default={}
+)
 
 
 def _compact_profile_for_coder(profile: dict, filename: str) -> str:
@@ -124,7 +132,7 @@ class PulseAgentState(TypedDict):
     user_id: str
     pulse_run_id: str
     user_context: str  # Optional user guidance
-    file_data: list[dict]  # [{file_id, filename, file_bytes, file_type, data_summary, deep_profile}]
+    file_data: list[dict]  # [{file_id, filename, file_type, data_summary, deep_profile}] — no file_bytes (stored in _pulse_file_bytes ContextVar)
     file_profiles: list[dict]  # Deep profile JSON per file (from profiling node)
     hypotheses: list[dict]  # From hypothesis node
     signal_results: list[dict]  # Merged results per signal
@@ -165,7 +173,13 @@ async def profile_data_node(state: PulseAgentState) -> dict:
     """
     try:
         settings = get_settings()
-        profiles = await profile_files_in_sandbox(state["file_data"], settings)
+        # Rehydrate file_bytes from context var (stripped from state to avoid LangSmith bloat)
+        file_bytes_map = _pulse_file_bytes.get()
+        file_data_with_bytes = [
+            {**fd, "file_bytes": file_bytes_map.get(fd["file_id"], b"")}
+            for fd in state["file_data"]
+        ]
+        profiles = await profile_files_in_sandbox(file_data_with_bytes, settings)
         # profiles is list of (file_id, profile_dict) tuples
         file_profiles = [profile for _, profile in profiles]
         return {"file_profiles": file_profiles}
@@ -307,10 +321,12 @@ async def _process_single_signal(
             timeout_seconds=settings.pulse_sandbox_timeout_seconds
         )
 
+        # Look up file bytes from context var (not in state to avoid LangSmith bloat)
+        file_bytes_map = _pulse_file_bytes.get()
         data_files = []
         for fd in file_data:
-            fb = fd.get("file_bytes")
             fn = fd.get("filename", "data.csv")
+            fb = file_bytes_map.get(fd.get("file_id", ""), b"")
             if fb:
                 data_files.append((fb, fn))
 
