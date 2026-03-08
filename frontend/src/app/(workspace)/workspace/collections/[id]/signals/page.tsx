@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,9 @@ const severityOrder: Record<SignalDetail["severity"], number> = {
 
 export default function DetectionResultsPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const id = params.id as string;
+  const selectedFromUrl = searchParams.get("selected");
 
   const { data: collection } = useCollectionDetail(id);
   const {
@@ -43,12 +45,16 @@ export default function DetectionResultsPage() {
       )
     : [];
 
-  // Auto-select highest severity signal on initial load
+  // Select signal from URL param, or auto-select highest severity
   useEffect(() => {
-    if (sortedSignals.length > 0 && !selectedSignalId) {
-      setSelectedSignalId(sortedSignals[0].id);
+    if (sortedSignals.length > 0) {
+      if (selectedFromUrl && sortedSignals.some((s) => s.id === selectedFromUrl)) {
+        setSelectedSignalId(selectedFromUrl);
+      } else if (!selectedSignalId) {
+        setSelectedSignalId(sortedSignals[0].id);
+      }
     }
-  }, [sortedSignals.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sortedSignals.length, selectedFromUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const selectedSignal =
     sortedSignals.find((s) => s.id === selectedSignalId) ?? null;

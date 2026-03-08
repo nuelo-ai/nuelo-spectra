@@ -86,6 +86,7 @@ Recent decisions affecting v0.8 work:
 - [ ] Show suggestions in Data Summary sidebar panel (ui)
 - [ ] Use Pydantic structured output for agent JSON responses (consistency)
 - [ ] Plan production environment variable cleanup and validation (deployment)
+- [ ] Disable "Run Detection" button while Pulse is running, show tooltip "Pulse analysis is currently running" (ui)
 
 ### Roadmap Evolution
 
