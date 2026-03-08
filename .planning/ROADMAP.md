@@ -108,15 +108,16 @@
 
 </details>
 
-### 🚧 v0.8 Spectra Pulse (Detection) (In Progress)
+### v0.8 Spectra Pulse (Detection) (In Progress)
 
-**Milestone Goal:** Users can create Collections, attach data files, run Pulse detection, and view generated Signals as severity-sorted cards with statistical findings and chart visualizations. This establishes the Detect foundation of the Detect → Explain → What-If pipeline.
+**Milestone Goal:** Users can create Collections, attach data files, run Pulse detection, and view generated Signals as severity-sorted cards with statistical findings and chart visualizations. This establishes the Detect foundation of the Detect -> Explain -> What-If pipeline.
 
 - [x] **Phase 47: Data Foundation** - SQLAlchemy models (Collection, CollectionFile, Signal, Report), Alembic migration, yaml config and platform_settings keys for workspace access and credit cost (completed 2026-03-06)
 - [x] **Phase 48: Backend CRUD API** - Collections router (9 endpoints), WorkspaceAccess dependency, file upload to collection, Report model + endpoints, Pydantic schemas, tier enforcement (completed 2026-03-07)
-- [x] **Phase 49: Pulse Agent** - Independent LangGraph pipeline (profile → analyze → generate), E2B analyzers with 300s timeout, Pydantic-validated Signal output, PulseService (completed 2026-03-07)
+- [x] **Phase 49: Pulse Agent** - Independent LangGraph pipeline (profile -> analyze -> generate), E2B analyzers with 300s timeout, Pydantic-validated Signal output, PulseService (completed 2026-03-07)
 - [x] **Phase 50: Pulse Endpoint Wire-Up** - POST /collections/{id}/pulse with credit pre-check, atomic deduction, agent invocation, refund on failure, detection loading state trigger (completed 2026-03-07)
 - [x] **Phase 51: Frontend Migration** - globals.css Hex.tech palette + ThemeProvider, (workspace) route group, all workspace pages, workspace components migrated from pulse-mockup (completed 2026-03-08)
+- [ ] **Phase 51.1: Pipeline Refactor** - Multi-agent orchestrator pattern, Pydantic structured output, business language enforcement, inline progress UX, re-run confirmation
 - [ ] **Phase 52: Admin and QA** - End-to-end tier gating verification, collection limit enforcement, credit cost config via admin settings, full system smoke test
 
 ## Phase Details
@@ -155,7 +156,7 @@ Plans:
 **Depends on**: Phase 47
 **Requirements**: PULSE-02, PULSE-03
 **Success Criteria** (what must be TRUE):
-  1. Pulse Agent pipeline runs end-to-end (`profile_data_node` → `run_analyses_node` → `generate_signals_node`) on a test CSV and produces at least one Signal with all required fields populated (id, title, severity, category, chartType, analysis_text, statistical_evidence)
+  1. Pulse Agent pipeline runs end-to-end (`profile_data_node` -> `run_analyses_node` -> `generate_signals_node`) on a test CSV and produces at least one Signal with all required fields populated (id, title, severity, category, chartType, analysis_text, statistical_evidence)
   2. Every emitted Signal passes `PulseAgentOutput` Pydantic validation — severity is a `Literal["critical", "warning", "info"]`, chartType is a `Literal["bar", "line", "scatter"]`, and no required field is None
   3. E2B sandbox is instantiated with `PULSE_SANDBOX_TIMEOUT_SECONDS=300` (not the 60s default) and the config value is confirmed in `backend/app/config.py`
   4. Credit pre-check logic (`workspace_credit_cost_pulse` read from platform_settings) and atomic deduction via CreditService are implemented in `PulseService.run_detection()` with a try/finally refund path on any exception
@@ -195,6 +196,18 @@ Plans:
 - [ ] 51-02-PLAN.md — Unified sidebar, (workspace) route group layout
 - [ ] 51-03-PLAN.md — Collection list + collection detail pages (4 tabs) with live API data
 - [ ] 51-04-PLAN.md — Detection Results page (signal split-panel + Plotly charts)
+
+### Phase 51.1: Pipeline Refactor (INSERTED)
+
+**Goal:** Refactor the Pulse Agent from a monolithic 3-node pipeline into a multi-agent orchestrator pattern with Pydantic structured output on all LLM calls, business-language enforcement, and improved async detection UX (inline progress, toast notifications, re-run confirmation)
+**Requirements**: PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06, PIPE-07, PIPE-08
+**Depends on:** Phase 51
+**Plans:** 3 plans
+
+Plans:
+- [ ] 51.1-01-PLAN.md — Pydantic structured output models, Signal.generated_code field, prompts.yaml sub-agent entries
+- [ ] 51.1-02-PLAN.md — Pipeline rewrite (orchestrator pattern), PulseService re-run overwrite, Alembic migration
+- [ ] 51.1-03-PLAN.md — Frontend UX: inline progress banner, toast notifications, re-run dialog, signal navigation
 
 ### Phase 52: Admin and QA
 **Goal**: Tier gating, collection limits, and credit cost configuration are all verified end-to-end with every tier tested — confirmed working before v0.8 is released
@@ -265,4 +278,5 @@ Plans:
 | 49. Pulse Agent | 2/2 | Complete    | 2026-03-07 | - |
 | 50. Pulse Endpoint Wire-Up | 2/2 | Complete    | 2026-03-07 | - |
 | 51. Frontend Migration | 4/4 | Complete | 2026-03-08 | - |
+| 51.1. Pipeline Refactor | v0.8 | 0/3 | Not started | - |
 | 52. Admin and QA | v0.8 | 0/TBD | Not started | - |
