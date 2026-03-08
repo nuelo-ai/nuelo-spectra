@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Spectra Pulse (Detection)
 status: completed
-stopped_at: Phase 51.1 context gathered
-last_updated: "2026-03-08T18:16:12.886Z"
+stopped_at: Completed 51.1-01-PLAN.md
+last_updated: "2026-03-08T19:01:36.397Z"
 last_activity: 2026-03-08 — Phase 51 Plan 04 complete (Detection Results page, 22 bug fixes, debug logging cleanup)
 progress:
   total_phases: 7
   completed_phases: 5
-  total_plans: 12
-  completed_plans: 12
+  total_plans: 15
+  completed_plans: 13
   percent: 92
 ---
 
@@ -73,6 +73,7 @@ Recent decisions affecting v0.8 work:
 - [Phase 51-03]: DataSummaryPanel uses Sheet (slide-out) instead of Dialog for non-blocking file inspection
 - [Phase 51-04]: Signal chart_data is Plotly fig.to_json() output rendered by existing ChartRenderer
 - [Phase 51-04]: Pipeline refactor (_validate_single_candidate → reuse Coding Agent) deferred to separate phase
+- [Phase 51.1]: Moved code_gen_prompt from pulse_agent to pulse_coder for ownership clarity
 
 ### Pending Todos
 
@@ -95,6 +96,6 @@ Recent decisions affecting v0.8 work:
 
 ## Session Continuity
 
-Last session: 2026-03-08T18:16:12.883Z
-Stopped at: Phase 51.1 context gathered
+Last session: 2026-03-08T19:01:36.395Z
+Stopped at: Completed 51.1-01-PLAN.md
 Resume with: Phase 52 (Admin and QA) or insert pipeline refactor phase

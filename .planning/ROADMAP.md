@@ -202,7 +202,7 @@ Plans:
 **Goal:** Refactor the Pulse Agent from a monolithic 3-node pipeline into a multi-agent orchestrator pattern with Pydantic structured output on all LLM calls, business-language enforcement, and improved async detection UX (inline progress, toast notifications, re-run confirmation)
 **Requirements**: PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06, PIPE-07, PIPE-08
 **Depends on:** Phase 51
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 - [ ] 51.1-01-PLAN.md — Pydantic structured output models, Signal.generated_code field, prompts.yaml sub-agent entries
@@ -278,5 +278,5 @@ Plans:
 | 49. Pulse Agent | 2/2 | Complete    | 2026-03-07 | - |
 | 50. Pulse Endpoint Wire-Up | 2/2 | Complete    | 2026-03-07 | - |
 | 51. Frontend Migration | 4/4 | Complete | 2026-03-08 | - |
-| 51.1. Pipeline Refactor | v0.8 | 0/3 | Not started | - |
+| 51.1. Pipeline Refactor | 1/3 | In Progress|  | - |
 | 52. Admin and QA | v0.8 | 0/TBD | Not started | - |
