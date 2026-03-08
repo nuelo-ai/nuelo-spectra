@@ -365,7 +365,7 @@ agents:
     temperature: 0.0
     max_tokens: 4096
     system_prompt: |
-      You are a Python data analysis coder. You receive prescriptive instructions about what to compute and return. Write clean Python code that: 1) Reads the specified data files using pandas, 2) Performs exactly the requested calculations, 3) Prints a single JSON object as the LAST line of stdout with keys: analysis_text, statistical_evidence, chart_type. Use only pandas, numpy, scipy.stats, and json. Never print raw dataframes. Always return pre-aggregated compact results. NEVER import plotly or any visualization library — chart generation is handled by a separate Visualization Agent.
+      You are a Python data analysis coder. You receive prescriptive instructions about what to compute and return. Write clean Python code that: 1) Reads the specified data files using pandas, 2) Performs exactly the requested calculations, 3) Prints a single JSON object as the LAST line of stdout with keys: analysis_text, statistical_evidence, chart_type. Use only pandas, numpy, scipy.stats, and json. Never print raw dataframes. Always return pre-aggregated compact results. NEVER import plotly or any visualization library — chart generation is handled by a separate Visualization Agent. Return ONLY raw Python code — no markdown fences, no explanations.
     code_gen_prompt: |
       Write a Python script that performs the following statistical analysis:
       {code_instructions}
@@ -399,7 +399,7 @@ agents:
     temperature: 0.3
     max_tokens: 4096
     system_prompt: |
-      You are a data visualization specialist. Given a business finding and its data, write Plotly Python code that generates a chart telling the business story. The code must: 1) Read the data file(s), 2) Create a Plotly figure, 3) Print fig.to_json() as the LAST line of stdout. Use dark theme colors (#0a0e1a background, #3b82f6 accent). Keep charts clean and focused on the key insight. CRITICAL: Use ONLY the exact column names from the data schema provided — never guess or invent column names. CRITICAL: Never use deprecated Plotly properties — use title_font (not titlefont), tick_font (not tickfont), title_text (not title as dict). Use fig.update_layout() and fig.update_xaxes()/fig.update_yaxes() for styling.
+      You are a data visualization specialist. Given a business finding and its data, write Plotly Python code that generates a chart telling the business story. The code must: 1) Read the data file(s) using pandas, 2) Create a Plotly figure, 3) End with: chart_json = json.loads(fig.to_json()) then print(json.dumps({"chart": chart_json})). Use dark theme colors (#0a0e1a background, #3b82f6 accent). Keep charts clean and focused on the key insight. CRITICAL: Use ONLY the exact column names from the data schema provided — never guess or invent column names. CRITICAL: Never use deprecated Plotly properties — use title_font (not titlefont), tick_font (not tickfont), title_text (not title as dict). Use fig.update_layout() and fig.update_xaxes()/fig.update_yaxes() for styling. Return ONLY raw Python code — no markdown fences, no explanations.
     viz_prompt: |
       Generate a Plotly chart for this business finding.
 
@@ -422,13 +422,13 @@ agents:
       {analysis_text}
 
       Write Python code that reads the data file(s), creates a Plotly figure,
-      and prints fig.to_json() as the last line of stdout.
+      and prints the chart JSON as the LAST line of stdout.
       Set paper_bgcolor='rgba(0,0,0,0)' and plot_bgcolor='rgba(0,0,0,0)'.
       Set height=300. Do NOT set width. Do NOT use fig.show().
 
-      End with:
-      import json as _json
-      print(_json.dumps(json.loads(fig.to_json())))
+      Your code MUST end with exactly these 2 lines:
+      chart_json = json.loads(fig.to_json())
+      print(json.dumps({{"chart": chart_json}}))
 
   pulse_report_writer:
     provider: anthropic

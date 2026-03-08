@@ -286,7 +286,7 @@ async def _process_single_signal(
 
         logger.info("  [%s] Interpretation complete: %s", title, finding.title)
 
-        # --- Step E: Visualization ---
+        # --- Step E: Visualization (with 1 retry) ---
         chart_data = None
         chart_type = sandbox_result.get("chart_type")
 
@@ -305,15 +305,21 @@ async def _process_single_signal(
                 analysis_text=sandbox_result.get("analysis_text", ""),
             )
 
-            viz_response = await viz_llm.ainvoke([
-                SystemMessage(content=viz_system_prompt),
-                HumanMessage(content=viz_message),
-            ])
+            for viz_attempt in range(2):
+                viz_response = await viz_llm.ainvoke([
+                    SystemMessage(content=viz_system_prompt),
+                    HumanMessage(content=viz_message),
+                ])
 
-            viz_code = extract_code_block(viz_response.content)
-            viz_validation = validate_code(viz_code)
+                viz_code = extract_code_block(viz_response.content)
+                viz_validation = validate_code(viz_code)
 
-            if viz_validation.is_valid:
+                if not viz_validation.is_valid:
+                    logger.warning("  [%s] Viz code validation failed (attempt %d): %s", title, viz_attempt + 1, viz_validation.errors)
+                    if viz_attempt == 0:
+                        viz_message += f"\n\nPREVIOUS ATTEMPT FAILED code validation: {viz_validation.errors}\nFix the issues and try again."
+                    continue
+
                 viz_runtime = E2BSandboxRuntime(
                     timeout_seconds=settings.pulse_sandbox_timeout_seconds
                 )
@@ -330,17 +336,16 @@ async def _process_single_signal(
                     # Handle wrapped chart JSON
                     if isinstance(chart_data, dict) and "chart" in chart_data:
                         chart_data = chart_data["chart"]
-                    logger.info("  [%s] Visualization generated", title)
+                    logger.info("  [%s] Visualization generated (attempt %d)", title, viz_attempt + 1)
+                    break
                 else:
+                    error_info = str(viz_result.error)[:300] if viz_result.error else "unknown"
                     logger.warning(
-                        "  [%s] Viz sandbox failed: success=%s stdout_lines=%d error=%s stderr=%s",
-                        title, viz_result.success,
-                        len(viz_result.stdout) if viz_result.stdout else 0,
-                        viz_result.error,
-                        viz_result.stderr[:500] if viz_result.stderr else None,
+                        "  [%s] Viz sandbox failed (attempt %d): error=%s",
+                        title, viz_attempt + 1, error_info,
                     )
-            else:
-                logger.warning("  [%s] Viz code validation failed: %s", title, viz_validation.errors)
+                    if viz_attempt == 0:
+                        viz_message += f"\n\nPREVIOUS ATTEMPT FAILED with sandbox error:\n{error_info}\nFix the error and try again."
 
         except Exception as viz_err:
             logger.warning("  [%s] Visualization failed (signal still valid): %s", title, str(viz_err))
