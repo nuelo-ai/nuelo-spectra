@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Spectra Pulse (Detection)
 status: completed
-stopped_at: Completed 51.1-03-PLAN.md
-last_updated: "2026-03-08T19:01:36.397Z"
+stopped_at: Completed 51.1-02-PLAN.md
+last_updated: "2026-03-08T19:09:20.129Z"
 last_activity: 2026-03-08 — Phase 51 Plan 04 complete (Detection Results page, 22 bug fixes, debug logging cleanup)
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 15
-  completed_plans: 14
+  completed_plans: 15
   percent: 92
 ---
 
@@ -76,6 +76,8 @@ Recent decisions affecting v0.8 work:
 - [Phase 51.1]: Moved code_gen_prompt from pulse_agent to pulse_coder for ownership clarity
 - [Phase 51.1-03]: RerunDetectionDialog uses controlled mode (open/onOpenChange) since RunDetectionBanner has its own internal button
 - [Phase 51.1-03]: Toast replaces auto-navigation to signals tab on detection completion
+- [Phase 51.1]: Coder/Viz agents use raw LLM invocation (not with_structured_output) since they produce code
+- [Phase 51.1]: Re-run deletes both signals AND reports before persisting new results
 
 ### Pending Todos
 
@@ -97,6 +99,6 @@ Recent decisions affecting v0.8 work:
 
 ## Session Continuity
 
-Last session: 2026-03-08T19:03:04Z
-Stopped at: Completed 51.1-01-PLAN.md
+Last session: 2026-03-08T19:09:20.127Z
+Stopped at: Completed 51.1-02-PLAN.md
 Resume with: Phase 52 (Admin and QA) or insert pipeline refactor phase

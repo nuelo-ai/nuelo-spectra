@@ -117,7 +117,7 @@
 - [x] **Phase 49: Pulse Agent** - Independent LangGraph pipeline (profile -> analyze -> generate), E2B analyzers with 300s timeout, Pydantic-validated Signal output, PulseService (completed 2026-03-07)
 - [x] **Phase 50: Pulse Endpoint Wire-Up** - POST /collections/{id}/pulse with credit pre-check, atomic deduction, agent invocation, refund on failure, detection loading state trigger (completed 2026-03-07)
 - [x] **Phase 51: Frontend Migration** - globals.css Hex.tech palette + ThemeProvider, (workspace) route group, all workspace pages, workspace components migrated from pulse-mockup (completed 2026-03-08)
-- [ ] **Phase 51.1: Pipeline Refactor** - Multi-agent orchestrator pattern, Pydantic structured output, business language enforcement, inline progress UX, re-run confirmation
+- [x] **Phase 51.1: Pipeline Refactor** - Multi-agent orchestrator pattern, Pydantic structured output, business language enforcement, inline progress UX, re-run confirmation (completed 2026-03-08)
 - [ ] **Phase 52: Admin and QA** - End-to-end tier gating verification, collection limit enforcement, credit cost config via admin settings, full system smoke test
 
 ## Phase Details
@@ -202,7 +202,7 @@ Plans:
 **Goal:** Refactor the Pulse Agent from a monolithic 3-node pipeline into a multi-agent orchestrator pattern with Pydantic structured output on all LLM calls, business-language enforcement, and improved async detection UX (inline progress, toast notifications, re-run confirmation)
 **Requirements**: PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06, PIPE-07, PIPE-08
 **Depends on:** Phase 51
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 51.1-01-PLAN.md — Pydantic structured output models, Signal.generated_code field, prompts.yaml sub-agent entries
@@ -278,5 +278,5 @@ Plans:
 | 49. Pulse Agent | 2/2 | Complete    | 2026-03-07 | - |
 | 50. Pulse Endpoint Wire-Up | 2/2 | Complete    | 2026-03-07 | - |
 | 51. Frontend Migration | 4/4 | Complete | 2026-03-08 | - |
-| 51.1. Pipeline Refactor | 2/3 | In Progress|  | - |
+| 51.1. Pipeline Refactor | 3/3 | Complete   | 2026-03-08 | - |
 | 52. Admin and QA | v0.8 | 0/TBD | Not started | - |

@@ -61,9 +61,9 @@ Requirements for the Spectra Pulse (Detection) milestone. Each maps to roadmap p
 
 - [x] **PIPE-01**: Pydantic structured output models exist for each Pulse agent step (hypothesis, coder result, business finding, chart instruction, report)
 - [x] **PIPE-02**: Signal model has `generated_code` Text field for audit trail; prompts.yaml has entries for pulse_coder, pulse_interpreter, pulse_viz, pulse_report_writer sub-agents
-- [ ] **PIPE-03**: Pulse Agent uses orchestrator pattern — brain/orchestrator calling independent tool agent functions with `with_structured_output()` on all non-code-generating LLM calls
-- [ ] **PIPE-04**: Per-signal validation loop executes Coder -> Validator -> Sandbox -> Interpreter -> Viz for each hypothesis; Report Writer generates final report as separate agent step
-- [ ] **PIPE-05**: Re-run detection deletes existing signals/reports before persisting new ones (PulseRun audit records kept); Alembic migration exists for generated_code column
+- [x] **PIPE-03**: Pulse Agent uses orchestrator pattern — brain/orchestrator calling independent tool agent functions with `with_structured_output()` on all non-code-generating LLM calls
+- [x] **PIPE-04**: Per-signal validation loop executes Coder -> Validator -> Sandbox -> Interpreter -> Viz for each hypothesis; Report Writer generates final report as separate agent step
+- [x] **PIPE-05**: Re-run detection deletes existing signals/reports before persisting new ones (PulseRun audit records kept); Alembic migration exists for generated_code column
 - [x] **PIPE-06**: Detection shows inline progress banner on Overview tab (not full-page takeover); Run Detection button + user_context text input always visible
 - [x] **PIPE-07**: Global toast notification appears on any page when detection completes with link to signals; re-run shows confirmation dialog with credit cost warning
 - [x] **PIPE-08**: "Recent Signals" renamed to "Signals Identified"; "View Signal Report" button above Files section; signal cards on Overview navigate to Detection Results page
@@ -147,9 +147,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ADMIN-02 | Phase 47 | Complete |
 | PIPE-01 | Phase 51.1 | Complete |
 | PIPE-02 | Phase 51.1 | Complete |
-| PIPE-03 | Phase 51.1 | Pending |
-| PIPE-04 | Phase 51.1 | Pending |
-| PIPE-05 | Phase 51.1 | Pending |
+| PIPE-03 | Phase 51.1 | Complete |
+| PIPE-04 | Phase 51.1 | Complete |
+| PIPE-05 | Phase 51.1 | Complete |
 | PIPE-06 | Phase 51.1 | Complete |
 | PIPE-07 | Phase 51.1 | Complete |
 | PIPE-08 | Phase 51.1 | Complete |
