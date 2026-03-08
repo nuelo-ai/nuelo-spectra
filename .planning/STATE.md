@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Spectra Pulse (Detection)
-status: in_progress
-stopped_at: Completed Phase 51 (all 4 plans)
-last_updated: "2026-03-08T05:00:00.000Z"
-last_activity: 2026-03-08 — Phase 51 complete (Detection Results page, 22 pipeline/frontend fixes)
+status: completed
+stopped_at: Phase 51.1 context gathered
+last_updated: "2026-03-08T18:16:12.886Z"
+last_activity: 2026-03-08 — Phase 51 Plan 04 complete (Detection Results page, 22 bug fixes, debug logging cleanup)
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 5
   total_plans: 12
   completed_plans: 12
@@ -82,6 +82,10 @@ Recent decisions affecting v0.8 work:
 - [ ] Use Pydantic structured output for agent JSON responses (consistency)
 - [ ] Plan production environment variable cleanup and validation (deployment)
 
+### Roadmap Evolution
+
+- Phase 51.1 inserted after Phase 51: Pipeline Refactor (URGENT)
+
 ### Blockers/Concerns
 
 - slowapi>=0.1.9 compatibility with FastAPI 0.115+ and custom key_func — verify before writing rate limiting middleware
@@ -91,6 +95,6 @@ Recent decisions affecting v0.8 work:
 
 ## Session Continuity
 
-Last session: 2026-03-08T05:00:00.000Z
-Stopped at: Phase 51 complete, committing all work
+Last session: 2026-03-08T18:16:12.883Z
+Stopped at: Phase 51.1 context gathered
 Resume with: Phase 52 (Admin and QA) or insert pipeline refactor phase
