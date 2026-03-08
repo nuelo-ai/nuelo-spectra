@@ -292,25 +292,21 @@ async def _process_single_signal(
 
         try:
             viz_llm = _get_llm_for_agent("pulse_viz")
-            viz_prompt = get_agent_prompt("pulse_viz")
+            viz_system_prompt = get_agent_prompt("pulse_viz")
 
-            viz_message = (
-                f"Generate a Plotly chart for this business finding.\n\n"
-                f"## Finding\n{finding.title}: {finding.finding}\n\n"
-                f"## Chart Hint\n{chart_hint}\n\n"
-                f"## Available Data Files\n{files_str}\n\n"
-                f"## Analysis Results\n{json.dumps(sandbox_result.get('statistical_evidence', {}))}\n\n"
-                f"Write Python code that reads the data file(s), creates a Plotly figure, "
-                f"and prints fig.to_json() as the last line of stdout. "
-                f"Set paper_bgcolor='rgba(0,0,0,0)' and plot_bgcolor='rgba(0,0,0,0)'. "
-                f"Set height=300. Do NOT set width. Do NOT use fig.show().\n\n"
-                f"End with:\n"
-                f"import json as _json\n"
-                f"print(_json.dumps(json.loads(fig.to_json())))"
+            viz_prompt_template = get_agent_config_field("pulse_viz", "viz_prompt")
+            viz_message = viz_prompt_template.format(
+                finding_title=finding.title,
+                finding_text=finding.finding,
+                chart_hint=chart_hint,
+                files_str=files_str,
+                deep_profile=deep_profile_str,
+                statistical_evidence=json.dumps(sandbox_result.get("statistical_evidence", {})),
+                analysis_text=sandbox_result.get("analysis_text", ""),
             )
 
             viz_response = await viz_llm.ainvoke([
-                SystemMessage(content=viz_prompt),
+                SystemMessage(content=viz_system_prompt),
                 HumanMessage(content=viz_message),
             ])
 
@@ -336,7 +332,13 @@ async def _process_single_signal(
                         chart_data = chart_data["chart"]
                     logger.info("  [%s] Visualization generated", title)
                 else:
-                    logger.warning("  [%s] Viz sandbox failed, signal still valid", title)
+                    logger.warning(
+                        "  [%s] Viz sandbox failed: success=%s stdout_lines=%d error=%s stderr=%s",
+                        title, viz_result.success,
+                        len(viz_result.stdout) if viz_result.stdout else 0,
+                        viz_result.error,
+                        viz_result.stderr[:500] if viz_result.stderr else None,
+                    )
             else:
                 logger.warning("  [%s] Viz code validation failed: %s", title, viz_validation.errors)
 
