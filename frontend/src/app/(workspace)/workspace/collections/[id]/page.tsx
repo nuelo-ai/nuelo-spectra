@@ -319,15 +319,17 @@ export default function CollectionDetailPage() {
           ) : null}
 
           {/* View Signal Report button */}
-          {reportCount > 0 && (
+          {reports.length > 0 && (
             <div>
               <Button
                 variant="default"
                 className="gap-2"
-                onClick={() => setActiveTab("reports")}
+                asChild
               >
-                <FileText className="h-4 w-4" />
-                View Signal Report
+                <Link href={`/workspace/collections/${collectionId}/reports/${reports[0].id}`}>
+                  <FileText className="h-4 w-4" />
+                  View Signal Report
+                </Link>
               </Button>
             </div>
           )}
