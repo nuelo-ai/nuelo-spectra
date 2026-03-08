@@ -15,17 +15,22 @@ import {
 interface RerunDetectionDialogProps {
   creditCost: number;
   onConfirm: () => void;
-  children: React.ReactNode;
+  /** Controlled mode — omit children when using open/onOpenChange */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  children?: React.ReactNode;
 }
 
 export function RerunDetectionDialog({
   creditCost,
   onConfirm,
+  open,
+  onOpenChange,
   children,
 }: RerunDetectionDialogProps) {
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      {children && <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>}
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Re-run Detection?</AlertDialogTitle>

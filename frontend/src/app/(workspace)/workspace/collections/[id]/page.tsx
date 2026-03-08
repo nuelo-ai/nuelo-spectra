@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Zap, FileText, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,7 +25,8 @@ import { OverviewStatCards } from "@/components/workspace/overview-stat-cards";
 import { RunDetectionBanner } from "@/components/workspace/run-detection-banner";
 import { SignalCard } from "@/components/workspace/signal-card";
 import { ActivityFeed } from "@/components/workspace/activity-feed";
-import { DetectionLoading } from "@/components/workspace/detection-loading";
+import { DetectionProgressBanner } from "@/components/workspace/detection-progress-banner";
+import { RerunDetectionDialog } from "@/components/workspace/rerun-detection-dialog";
 import { FileTable } from "@/components/workspace/file-table";
 import { FileUploadZone } from "@/components/workspace/file-upload-zone";
 import { DataSummaryModal } from "@/components/workspace/data-summary-panel";
@@ -89,6 +91,8 @@ export default function CollectionDetailPage() {
   const [summaryFileId, setSummaryFileId] = useState<string | null>(null);
   const [summaryFilename, setSummaryFilename] = useState<string | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const [showRerunDialog, setShowRerunDialog] = useState(false);
+  const [pendingUserContext, setPendingUserContext] = useState<string | undefined>();
 
   // Sort signals by severity (SIGNAL-01)
   const sortedSignals = useMemo(() => sortBySeverity(signals), [signals]);
@@ -114,7 +118,13 @@ export default function CollectionDetailPage() {
       setDetectionStatus("complete");
       setPulseRunId(null);
       refetchSignals();
-      setActiveTab("signals");
+      toast.success("Detection complete", {
+        description: `${pulseRun.signal_count ?? 0} signals identified`,
+        action: {
+          label: "View Signals",
+          onClick: () => router.push(`/workspace/collections/${collectionId}/signals`),
+        },
+      });
     } else if (pulseRun.status === "failed") {
       setDetectionStatus("failed");
       setPulseRunId(null);
@@ -187,17 +197,10 @@ export default function CollectionDetailPage() {
     [removeFile]
   );
 
-  // Detection loading overlay
-  if (detectionStatus === "running") {
-    return (
-      <div className="p-8 max-w-5xl mx-auto">
-        <DetectionLoading />
-      </div>
-    );
-  }
-
-  const hasFilesNoSignals =
-    !loadingCollectionFiles && collectionFiles.length > 0 && (collection?.signal_count ?? 0) === 0;
+  const isDetectionRunning = detectionStatus === "running";
+  const signalCount = collection?.signal_count ?? 0;
+  const reportCount = collection?.report_count ?? 0;
+  const hasFiles = !loadingCollectionFiles && collectionFiles.length > 0;
   const hasNoFiles = !loadingCollectionFiles && collectionFiles.length === 0;
 
   return (
@@ -252,19 +255,33 @@ export default function CollectionDetailPage() {
             />
           )}
 
-          {hasFilesNoSignals && (
-            <RunDetectionBanner
-              fileCount={collection?.file_count ?? 0}
-              onRunDetection={handleRunDetection}
-            />
+          {/* Inline progress banner (replaces full-page takeover) */}
+          {isDetectionRunning && pulseRun && (
+            <DetectionProgressBanner status={pulseRun.status} />
+          )}
+          {isDetectionRunning && !pulseRun && (
+            <DetectionProgressBanner status="pending" />
           )}
 
-          {hasNoFiles && (
+          {/* Run Detection — always visible */}
+          {hasFiles ? (
+            <RunDetectionBanner
+              fileCount={collection?.file_count ?? 0}
+              onRunDetection={(ctx) => {
+                if (signalCount > 0) {
+                  setPendingUserContext(ctx);
+                  setShowRerunDialog(true);
+                } else {
+                  handleRunDetection(ctx);
+                }
+              }}
+            />
+          ) : hasNoFiles ? (
             <RunDetectionBanner
               fileCount={0}
               onRunDetection={() => setActiveTab("files")}
             />
-          )}
+          ) : null}
 
           {/* Signal previews (up to 4) */}
           {loadingSignals ? (
@@ -462,6 +479,17 @@ export default function CollectionDetailPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Re-run confirmation dialog (controlled) */}
+      <RerunDetectionDialog
+        creditCost={CREDIT_COST}
+        open={showRerunDialog}
+        onOpenChange={setShowRerunDialog}
+        onConfirm={() => {
+          setShowRerunDialog(false);
+          handleRunDetection(pendingUserContext);
+        }}
+      />
 
       {/* Data summary modal (shared across tabs) */}
       <DataSummaryModal
