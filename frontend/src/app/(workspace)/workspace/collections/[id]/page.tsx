@@ -168,8 +168,12 @@ export default function CollectionDetailPage() {
       });
       setPulseRunId(result.pulse_run_id);
       setDetectionStatus("running");
-    } catch {
-      // Error handled by TanStack Query
+    } catch (err: unknown) {
+      // Handle 409 conflict (detection already running)
+      if (err instanceof Error && err.message.includes("409")) {
+        toast.error("A detection run is already in progress");
+      }
+      // Other errors handled by TanStack Query
     }
   }, [collectionFiles, loadingCollectionFiles, triggerPulse, setPulseRunId, setDetectionStatus]);
 
@@ -287,7 +291,7 @@ export default function CollectionDetailPage() {
           {loadingSignals ? (
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground mb-3">
-                Recent Signals
+                Signals Identified
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {Array.from({ length: 2 }).map((_, i) => (
@@ -298,15 +302,35 @@ export default function CollectionDetailPage() {
           ) : sortedSignals.length > 0 ? (
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground mb-3">
-                Recent Signals
+                Signals Identified
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {sortedSignals.slice(0, 4).map((signal) => (
-                  <SignalCard key={signal.id} signal={signal} preview />
+                  <div
+                    key={signal.id}
+                    className="cursor-pointer hover:border-primary/50 rounded-lg transition-colors"
+                    onClick={() => router.push(`/workspace/collections/${collectionId}/signals?selected=${signal.id}`)}
+                  >
+                    <SignalCard signal={signal} preview />
+                  </div>
                 ))}
               </div>
             </div>
           ) : null}
+
+          {/* View Signal Report button */}
+          {reportCount > 0 && (
+            <div>
+              <Button
+                variant="default"
+                className="gap-2"
+                onClick={() => setActiveTab("reports")}
+              >
+                <FileText className="h-4 w-4" />
+                View Signal Report
+              </Button>
+            </div>
+          )}
 
           {/* Collection files table */}
           {loadingCollectionFiles ? (
