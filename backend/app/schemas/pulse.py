@@ -4,7 +4,72 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class SignalHypothesis(BaseModel):
+    """Output from Pulse brain's hypothesis generation step."""
+
+    title: str = Field(description="Business-language title, no statistical jargon")
+    severity_hint: Literal["critical", "warning", "info"]
+    category: str = Field(description="anomaly, trend, correlation, distribution")
+    code_instructions: str = Field(
+        description="Prescriptive: 'Calculate X, aggregate by Y, return Z as JSON'"
+    )
+    chart_hint: str = Field(description="What business story the chart should tell")
+
+
+class HypothesisOutput(BaseModel):
+    """Wrapper for structured output from hypothesis LLM call."""
+
+    hypotheses: list[SignalHypothesis]
+
+
+class CoderResult(BaseModel):
+    """Expected JSON structure from sandbox stdout."""
+
+    analysis_text: str = Field(description="Summary of what the code computed")
+    statistical_evidence: dict = Field(
+        description="Metrics dict with metric, context, benchmark, impact keys"
+    )
+    chart_data: dict | None = None
+    chart_type: str | None = None
+
+
+class BusinessFinding(BaseModel):
+    """Output from interpretation LLM call."""
+
+    title: str = Field(description="Business-language finding title")
+    finding: str = Field(
+        description="Business-language finding for leadership audience"
+    )
+    severity: Literal["critical", "warning", "info"]
+    category: str
+    evidence: "SignalEvidence"
+
+
+class FindingsOutput(BaseModel):
+    """Wrapper for batch interpretation."""
+
+    findings: list[BusinessFinding]
+
+
+class ChartInstruction(BaseModel):
+    """Output from visualization LLM call."""
+
+    chart_type: Literal["bar", "line", "scatter"]
+    title: str
+    description: str = Field(description="What business story the chart tells")
+    code_instructions: str = Field(
+        description="Prescriptive Plotly code generation instructions"
+    )
+
+
+class ReportOutput(BaseModel):
+    """Output from report writer LLM call."""
+
+    executive_summary: str
+    content: str = Field(description="Full markdown report")
 
 
 class SignalEvidence(BaseModel):
