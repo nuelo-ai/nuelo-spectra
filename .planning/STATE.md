@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Spectra Pulse (Detection)
 status: completed
-stopped_at: Completed 51.1-01-PLAN.md
+stopped_at: Completed 51.1-03-PLAN.md
 last_updated: "2026-03-08T19:01:36.397Z"
 last_activity: 2026-03-08 — Phase 51 Plan 04 complete (Detection Results page, 22 bug fixes, debug logging cleanup)
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 15
-  completed_plans: 13
+  completed_plans: 14
   percent: 92
 ---
 
@@ -74,6 +74,8 @@ Recent decisions affecting v0.8 work:
 - [Phase 51-04]: Signal chart_data is Plotly fig.to_json() output rendered by existing ChartRenderer
 - [Phase 51-04]: Pipeline refactor (_validate_single_candidate → reuse Coding Agent) deferred to separate phase
 - [Phase 51.1]: Moved code_gen_prompt from pulse_agent to pulse_coder for ownership clarity
+- [Phase 51.1-03]: RerunDetectionDialog uses controlled mode (open/onOpenChange) since RunDetectionBanner has its own internal button
+- [Phase 51.1-03]: Toast replaces auto-navigation to signals tab on detection completion
 
 ### Pending Todos
 
@@ -91,11 +93,10 @@ Recent decisions affecting v0.8 work:
 
 - slowapi>=0.1.9 compatibility with FastAPI 0.115+ and custom key_func — verify before writing rate limiting middleware
 - Confirm spectra-api and spectra-public share same Dokploy host — spectra_uploads volume sharing is automatic only on single host
-- Detection Results cancel UX unresolved: full-page loading state blocks back navigation — decide before Phase 51 (cancel endpoint vs. "detection running in background" toast)
 - Statistical severity thresholds (Z-score >3 = critical, etc.) are starting values only — externalize to YAML from day one so they can be tuned post-launch without code changes
 
 ## Session Continuity
 
-Last session: 2026-03-08T19:01:36.395Z
+Last session: 2026-03-08T19:03:04Z
 Stopped at: Completed 51.1-01-PLAN.md
 Resume with: Phase 52 (Admin and QA) or insert pipeline refactor phase
