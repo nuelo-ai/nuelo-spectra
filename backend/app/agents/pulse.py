@@ -1,18 +1,21 @@
-"""LangGraph Pulse Agent pipeline: profile -> analyze -> generate.
+"""LangGraph Pulse Agent pipeline: orchestrator pattern with structured output.
 
 Stateless pipeline -- each invocation starts with fresh PulseAgentState.
 No message history between runs. Every LLM call is a one-shot request.
 
+Architecture: Pulse Agent acts as brain/orchestrator calling independent tool agents.
+All LLM calls (except code-generating ones) use with_structured_output() with Pydantic models.
+
 Nodes:
   1. profile_data_node: Deep-profile files via E2B sandbox
-  2. run_analyses_node: LLM generates signal candidates, fan-out validation
-  3. generate_signals_node: Validate signals through PulseAgentOutput, generate report
+  2. generate_hypotheses_node: Pulse brain generates signal candidates (structured output)
+  3. validate_signals_node: Fan-out per-signal validation loop (Coder -> Validator -> Sandbox -> Interpret -> Viz)
+  4. write_report_node: Report Writer agent generates final report (structured output)
 """
 
 import asyncio
 import json
 import logging
-import uuid
 from typing import TypedDict
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -30,7 +33,11 @@ from app.agents.config import (
 from app.agents.llm_factory import get_llm
 from app.agents.pulse_profiler import profile_files_in_sandbox
 from app.config import get_settings
-from app.schemas.pulse import PulseAgentOutput, SignalOutput
+from app.schemas.pulse import (
+    BusinessFinding,
+    HypothesisOutput,
+    ReportOutput,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -44,21 +51,27 @@ class PulseAgentState(TypedDict):
     user_context: str  # Optional user guidance
     file_data: list[dict]  # [{file_id, filename, file_bytes, file_type, data_summary, deep_profile}]
     file_profiles: list[dict]  # Deep profile JSON per file (from profiling node)
-    signal_candidates: list[dict]  # Hypotheses from Pulse Agent brain
-    validated_signals: list[dict]  # Confirmed signals after Coder pipeline
-    signals_output: list[dict]  # Final PulseAgentOutput-validated dicts
-    report_content: str  # Generated markdown report
+    hypotheses: list[dict]  # From hypothesis node
+    signal_results: list[dict]  # Merged results per signal
+    report: dict  # From report writer node (executive_summary, content)
     error: str  # Error message if failed
 
 
-def _get_pulse_llm():
-    """Create LLM instance configured for the pulse_agent."""
+def _get_llm_for_agent(agent_name: str):
+    """Create LLM instance configured for a specific agent.
+
+    Args:
+        agent_name: Agent config key (e.g., 'pulse_agent', 'pulse_coder').
+
+    Returns:
+        Configured LLM instance.
+    """
     settings = get_settings()
-    provider = get_agent_provider("pulse_agent")
-    model = get_agent_model("pulse_agent")
-    temperature = get_agent_temperature("pulse_agent")
+    provider = get_agent_provider(agent_name)
+    model = get_agent_model(agent_name)
+    temperature = get_agent_temperature(agent_name)
     api_key = get_api_key_for_provider(provider, settings)
-    max_tokens = get_agent_max_tokens("pulse_agent")
+    max_tokens = get_agent_max_tokens(agent_name)
 
     return get_llm(
         provider=provider,
@@ -67,121 +80,6 @@ def _get_pulse_llm():
         max_tokens=max_tokens,
         temperature=temperature,
     )
-
-
-async def _validate_single_candidate(
-    candidate: dict,
-    file_data: list[dict],
-    settings,
-) -> dict | None:
-    """Validate a single signal candidate through Coder -> Checker -> E2B pipeline.
-
-    Args:
-        candidate: Signal candidate dict with code_instructions, title, etc.
-        file_data: List of file data dicts for sandbox execution.
-        settings: App settings instance.
-
-    Returns:
-        Validated result dict with analysis_text, statistical_evidence,
-        chart_data, chart_type. None on failure.
-    """
-    from app.agents.code_checker import validate_code
-    from app.agents.coding import extract_code_block
-    from app.services.sandbox.e2b_runtime import E2BSandboxRuntime
-
-    try:
-        # Step 1: Generate analysis code via Coding Agent LLM
-        pulse_prompt = get_agent_prompt("pulse_agent")
-        llm = _get_pulse_llm()
-
-        code_instructions = candidate.get("code_instructions", "")
-        chart_hint = candidate.get("chart_hint", "")
-
-        # Build file list for the prompt
-        file_lines = []
-        for fd in file_data:
-            fn = fd.get("filename", "data.csv")
-            ft = fd.get("file_type", "csv")
-            read_func = "pd.read_excel" if ft in ("xlsx", "xls") or fn.endswith((".xlsx", ".xls")) else "pd.read_csv"
-            file_lines.append(f"  - /home/user/{fn} (use {read_func})")
-        files_str = "\n".join(file_lines)
-
-        code_gen_template = get_agent_config_field("pulse_agent", "code_gen_prompt")
-        code_gen_prompt = code_gen_template.format(
-            code_instructions=code_instructions,
-            chart_hint=chart_hint,
-            files_str=files_str,
-        )
-
-        response = await llm.ainvoke([
-            SystemMessage(content=pulse_prompt),
-            HumanMessage(content=code_gen_prompt),
-        ])
-
-        code = extract_code_block(response.content)
-        logger.info("  [%s] Code generated (%d chars)", candidate.get("title", "?"), len(code) if code else 0)
-
-        # Step 2: Validate code safety
-        validation = validate_code(code)
-        if not validation.is_valid:
-            logger.warning(
-                "  [%s] Code validation FAILED: %s",
-                candidate.get("title", "unknown"),
-                validation.errors,
-            )
-            return None
-
-        logger.info("  [%s] Code validation passed", candidate.get("title", "?"))
-
-        # Step 3: Execute in E2B sandbox
-        runtime = E2BSandboxRuntime(
-            timeout_seconds=settings.pulse_sandbox_timeout_seconds
-        )
-
-        # Prepare data files for sandbox
-        data_files = []
-        for fd in file_data:
-            fb = fd.get("file_bytes")
-            fn = fd.get("filename", "data.csv")
-            if fb:
-                data_files.append((fb, fn))
-
-        execution_result = await asyncio.to_thread(
-            runtime.execute,
-            code=code,
-            timeout=float(settings.pulse_sandbox_timeout_seconds),
-            data_files=data_files if data_files else None,
-        )
-
-        if not execution_result.success or not execution_result.stdout:
-            logger.warning(
-                "  [%s] Sandbox execution FAILED: error=%s stderr=%s",
-                candidate.get("title", "unknown"),
-                execution_result.error,
-                execution_result.stderr[:500] if execution_result.stderr else None,
-            )
-            return None
-
-        logger.info("  [%s] Sandbox execution OK, stdout lines: %d", candidate.get("title", "?"), len(execution_result.stdout))
-
-        # Parse result JSON from stdout
-        last_line = execution_result.stdout[-1].strip()
-        result = json.loads(last_line)
-
-        # Validate required keys
-        if "analysis_text" not in result:
-            return None
-
-        return result
-
-    except Exception as e:
-        logger.warning(
-            "Pulse candidate '%s' exception: %s: %s",
-            candidate.get("title", "unknown"),
-            type(e).__name__,
-            str(e)[:500],
-        )
-        return None
 
 
 async def profile_data_node(state: PulseAgentState) -> dict:
@@ -201,24 +99,24 @@ async def profile_data_node(state: PulseAgentState) -> dict:
         return {"error": str(e), "file_profiles": []}
 
 
-async def run_analyses_node(state: PulseAgentState) -> dict:
-    """Run Pulse Agent brain + fan-out validation.
+async def generate_hypotheses_node(state: PulseAgentState) -> dict:
+    """Pulse brain generates signal candidates using structured output.
 
-    Step A: LLM generates signal candidates from file profiles.
-    Step B: Fan-out validation of each candidate via Coder pipeline.
-
-    Stateless: No message history. One-shot LLM call with current run data.
+    Uses with_structured_output(HypothesisOutput) -- no manual JSON parsing.
+    Only the Pulse Agent (brain) receives data_summary.
     """
     if state.get("error"):
-        return {"validated_signals": [], "signal_candidates": []}
+        return {"hypotheses": []}
 
     try:
-        # Step A: Pulse Agent brain -- generate signal candidates
-        llm = _get_pulse_llm()
+        llm = _get_llm_for_agent("pulse_agent")
+        structured_llm = llm.with_structured_output(HypothesisOutput)
         system_prompt = get_agent_prompt("pulse_agent")
 
-        # Build analysis request
+        # Build deep profile context
         file_profiles_str = json.dumps(state.get("file_profiles", []), indent=2)
+
+        # Build data summaries (only Pulse Agent gets this)
         data_summaries = []
         for fd in state.get("file_data", []):
             summary = fd.get("data_summary", "")
@@ -233,224 +131,361 @@ async def run_analyses_node(state: PulseAgentState) -> dict:
             f"## Data Summaries\n{data_summaries_str}\n\n"
             f"## Deep Profiles\n{file_profiles_str}\n\n"
             f"## User Context\n{user_context}\n\n"
-            f"Return a JSON array of signal candidates. Each candidate must have:\n"
-            f"- title (str): Brief signal title\n"
-            f"- severity_hint (str): critical, warning, or info\n"
-            f"- category (str): e.g., anomaly, trend, correlation, distribution\n"
-            f"- code_instructions (str): What Python code should do to validate this signal\n"
-            f"- chart_hint (str): Suggested chart type and what to show\n\n"
-            f"Return ONLY the JSON array, no markdown formatting."
+            f"Generate 5-8 signal candidates as hypotheses for investigation. "
+            f"Each hypothesis must have a business-language title, severity assessment, "
+            f"category, specific prescriptive code_instructions for validation, "
+            f"and a chart_hint describing what the visualization should show."
         )
 
-        response = await llm.ainvoke([
+        result = await structured_llm.ainvoke([
             SystemMessage(content=system_prompt),
             HumanMessage(content=analysis_prompt),
         ])
 
-        # Parse candidates from LLM response
-        content = response.content.strip()
-        # Handle markdown code blocks
-        if content.startswith("```"):
-            lines = content.split("\n")
-            content = "\n".join(lines[1:-1])
-        candidates = json.loads(content)
-
-        if not isinstance(candidates, list):
-            candidates = [candidates]
-
-        # Step B: Fan-out validation
-        settings = get_settings()
-        tasks = [
-            _validate_single_candidate(candidate, state.get("file_data", []), settings)
-            for candidate in candidates
-        ]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        # Filter out exceptions and None results
-        validated_signals = []
-        for i, r in enumerate(results):
-            if isinstance(r, Exception):
-                logger.warning(
-                    "Pulse candidate [%d] '%s' validation exception: %s",
-                    i, candidates[i].get("title", "?"), str(r)
-                )
-                continue
-            if r is None:
-                logger.warning(
-                    "Pulse candidate [%d] '%s' rejected (None)",
-                    i, candidates[i].get("title", "?")
-                )
-                continue
-            logger.info(
-                "Pulse candidate [%d] '%s' validated",
-                i, candidates[i].get("title", "?")
-            )
-            # Merge candidate metadata into validated result
-            r["title"] = candidates[i].get("title", f"Signal {i + 1}")
-            r["severity_hint"] = candidates[i].get("severity_hint", "info")
-            r["category"] = candidates[i].get("category", "general")
-            validated_signals.append(r)
-
         logger.info(
-            "Pulse fan-out complete: %d candidates, %d validated",
-            len(candidates), len(validated_signals)
+            "Pulse hypotheses generated: %d candidates",
+            len(result.hypotheses),
         )
 
-        if len(validated_signals) == 0:
-            return {
-                "signal_candidates": candidates,
-                "validated_signals": [],
-                "error": "No signals could be validated from the analysis",
-            }
+        return {"hypotheses": [h.model_dump() for h in result.hypotheses]}
 
+    except Exception as e:
+        logger.error("Hypothesis generation failed: %s", str(e))
+        return {"hypotheses": [], "error": f"Hypothesis generation failed: {str(e)}"}
+
+
+async def _process_single_signal(
+    hypothesis: dict,
+    file_data: list[dict],
+    settings,
+) -> dict | None:
+    """Process a single signal through Coder -> Validator -> Sandbox -> Interpret -> Viz.
+
+    Args:
+        hypothesis: Signal hypothesis dict from generate_hypotheses_node.
+        file_data: List of file data dicts for sandbox execution.
+        settings: App settings instance.
+
+    Returns:
+        Merged signal result dict, or None on failure.
+    """
+    from app.agents.code_checker import validate_code
+    from app.agents.coding import extract_code_block
+    from app.services.sandbox.e2b_runtime import E2BSandboxRuntime
+
+    title = hypothesis.get("title", "Unknown")
+
+    try:
+        # --- Step A: Coder ---
+        # Coder gets deep_profile + code_instructions + file paths (NOT data_summary)
+        coder_llm = _get_llm_for_agent("pulse_coder")
+        coder_prompt = get_agent_prompt("pulse_coder")
+
+        code_instructions = hypothesis.get("code_instructions", "")
+        chart_hint = hypothesis.get("chart_hint", "")
+
+        # Build file list and deep_profile context for coder
+        file_lines = []
+        deep_profiles_for_coder = []
+        for fd in file_data:
+            fn = fd.get("filename", "data.csv")
+            ft = fd.get("file_type", "csv")
+            read_func = "pd.read_excel" if ft in ("xlsx", "xls") or fn.endswith((".xlsx", ".xls")) else "pd.read_csv"
+            file_lines.append(f"  - /home/user/{fn} (use {read_func})")
+            dp = fd.get("deep_profile")
+            if dp:
+                deep_profiles_for_coder.append(f"File: {fn}\n{json.dumps(dp, indent=2)}")
+        files_str = "\n".join(file_lines)
+        deep_profile_str = "\n\n".join(deep_profiles_for_coder) if deep_profiles_for_coder else "No deep profiles available"
+
+        code_gen_template = get_agent_config_field("pulse_coder", "code_gen_prompt")
+        code_gen_prompt = code_gen_template.format(
+            code_instructions=code_instructions,
+            chart_hint=chart_hint,
+            files_str=files_str,
+        )
+
+        # Append deep profile context so coder knows data schema
+        code_gen_prompt += f"\n\n## Data Schema (Deep Profile)\n{deep_profile_str}"
+
+        response = await coder_llm.ainvoke([
+            SystemMessage(content=coder_prompt),
+            HumanMessage(content=code_gen_prompt),
+        ])
+
+        code = extract_code_block(response.content)
+        logger.info("  [%s] Code generated (%d chars)", title, len(code) if code else 0)
+
+        # --- Step B: Validator ---
+        validation = validate_code(code)
+        if not validation.is_valid:
+            logger.warning("  [%s] Code validation FAILED: %s", title, validation.errors)
+            return None
+
+        logger.info("  [%s] Code validation passed", title)
+
+        # --- Step C: Sandbox ---
+        runtime = E2BSandboxRuntime(
+            timeout_seconds=settings.pulse_sandbox_timeout_seconds
+        )
+
+        data_files = []
+        for fd in file_data:
+            fb = fd.get("file_bytes")
+            fn = fd.get("filename", "data.csv")
+            if fb:
+                data_files.append((fb, fn))
+
+        execution_result = await asyncio.to_thread(
+            runtime.execute,
+            code=code,
+            timeout=float(settings.pulse_sandbox_timeout_seconds),
+            data_files=data_files if data_files else None,
+        )
+
+        if not execution_result.success or not execution_result.stdout:
+            logger.warning(
+                "  [%s] Sandbox execution FAILED: error=%s stderr=%s",
+                title,
+                execution_result.error,
+                execution_result.stderr[:500] if execution_result.stderr else None,
+            )
+            return None
+
+        logger.info("  [%s] Sandbox execution OK, stdout lines: %d", title, len(execution_result.stdout))
+
+        # Parse result JSON from last stdout line
+        last_line = execution_result.stdout[-1].strip()
+        sandbox_result = json.loads(last_line)
+
+        if "analysis_text" not in sandbox_result:
+            logger.warning("  [%s] Missing analysis_text in sandbox output", title)
+            return None
+
+        # --- Step D: Interpreter ---
+        interpreter_llm = _get_llm_for_agent("pulse_interpreter")
+        structured_interpreter = interpreter_llm.with_structured_output(BusinessFinding)
+        interpreter_prompt = get_agent_prompt("pulse_interpreter")
+
+        # Pass compact sandbox output + hypothesis context (NOT raw data or profiles)
+        interpret_message = (
+            f"Interpret the following statistical finding for executive leadership.\n\n"
+            f"## Hypothesis\n"
+            f"Title: {title}\n"
+            f"Original instructions: {code_instructions}\n\n"
+            f"## Statistical Results\n"
+            f"Analysis: {sandbox_result.get('analysis_text', '')}\n"
+            f"Evidence: {json.dumps(sandbox_result.get('statistical_evidence', {}))}\n\n"
+            f"Convert this into a business-language finding. No statistical jargon."
+        )
+
+        finding = await structured_interpreter.ainvoke([
+            SystemMessage(content=interpreter_prompt),
+            HumanMessage(content=interpret_message),
+        ])
+
+        logger.info("  [%s] Interpretation complete: %s", title, finding.title)
+
+        # --- Step E: Visualization ---
+        chart_data = None
+        chart_type = sandbox_result.get("chart_type")
+
+        try:
+            viz_llm = _get_llm_for_agent("pulse_viz")
+            viz_prompt = get_agent_prompt("pulse_viz")
+
+            viz_message = (
+                f"Generate a Plotly chart for this business finding.\n\n"
+                f"## Finding\n{finding.title}: {finding.finding}\n\n"
+                f"## Chart Hint\n{chart_hint}\n\n"
+                f"## Available Data Files\n{files_str}\n\n"
+                f"## Analysis Results\n{json.dumps(sandbox_result.get('statistical_evidence', {}))}\n\n"
+                f"Write Python code that reads the data file(s), creates a Plotly figure, "
+                f"and prints fig.to_json() as the last line of stdout. "
+                f"Set paper_bgcolor='rgba(0,0,0,0)' and plot_bgcolor='rgba(0,0,0,0)'. "
+                f"Set height=300. Do NOT set width. Do NOT use fig.show().\n\n"
+                f"End with:\n"
+                f"import json as _json\n"
+                f"print(_json.dumps(json.loads(fig.to_json())))"
+            )
+
+            viz_response = await viz_llm.ainvoke([
+                SystemMessage(content=viz_prompt),
+                HumanMessage(content=viz_message),
+            ])
+
+            viz_code = extract_code_block(viz_response.content)
+            viz_validation = validate_code(viz_code)
+
+            if viz_validation.is_valid:
+                viz_runtime = E2BSandboxRuntime(
+                    timeout_seconds=settings.pulse_sandbox_timeout_seconds
+                )
+                viz_result = await asyncio.to_thread(
+                    viz_runtime.execute,
+                    code=viz_code,
+                    timeout=float(settings.pulse_sandbox_timeout_seconds),
+                    data_files=data_files if data_files else None,
+                )
+
+                if viz_result.success and viz_result.stdout:
+                    viz_last_line = viz_result.stdout[-1].strip()
+                    chart_data = json.loads(viz_last_line)
+                    # Handle wrapped chart JSON
+                    if isinstance(chart_data, dict) and "chart" in chart_data:
+                        chart_data = chart_data["chart"]
+                    logger.info("  [%s] Visualization generated", title)
+                else:
+                    logger.warning("  [%s] Viz sandbox failed, signal still valid", title)
+            else:
+                logger.warning("  [%s] Viz code validation failed: %s", title, viz_validation.errors)
+
+        except Exception as viz_err:
+            logger.warning("  [%s] Visualization failed (signal still valid): %s", title, str(viz_err))
+
+        # --- Merge result ---
         return {
-            "signal_candidates": candidates,
-            "validated_signals": validated_signals,
+            "title": finding.title,
+            "finding": finding.finding,
+            "severity": finding.severity,
+            "category": finding.category,
+            "evidence": finding.evidence.model_dump(),
+            "chart_data": chart_data,
+            "chart_type": chart_type,
+            "generated_code": code,
+            "analysis_text": sandbox_result.get("analysis_text", ""),
         }
 
     except Exception as e:
-        logger.error("Analysis node failed: %s", str(e))
-        return {
-            "signal_candidates": [],
-            "validated_signals": [],
-            "error": f"Analysis failed: {str(e)}",
-        }
+        logger.warning(
+            "Pulse signal '%s' exception: %s: %s",
+            title,
+            type(e).__name__,
+            str(e)[:500],
+        )
+        return None
 
 
-async def generate_signals_node(state: PulseAgentState) -> dict:
-    """Validate signals through PulseAgentOutput and generate report.
+async def validate_signals_node(state: PulseAgentState) -> dict:
+    """Fan-out per-signal validation loop.
 
-    For each validated signal, constructs a SignalOutput dict with normalized
-    severity/chartType. Validates all through PulseAgentOutput Pydantic model.
-    Generates markdown detection summary report via LLM.
+    For each hypothesis, runs the full sub-pipeline:
+    Coder -> Validator -> Sandbox -> Interpret -> Viz
+
+    Uses asyncio.gather() for parallelism across signals.
     """
     if state.get("error"):
-        return {"signals_output": [], "report_content": ""}
+        return {"signal_results": []}
 
-    validated_signals = state.get("validated_signals", [])
-    if not validated_signals:
+    hypotheses = state.get("hypotheses", [])
+    if not hypotheses:
         return {
-            "signals_output": [],
-            "report_content": "",
-            "error": "No validated signals to generate output from",
+            "signal_results": [],
+            "error": "No hypotheses to validate",
         }
 
-    # Build SignalOutput dicts
-    signal_dicts = []
-    for i, vs in enumerate(validated_signals):
-        try:
-            # Extract evidence, ensuring all required fields
-            evidence = vs.get("statistical_evidence", {})
-            if not isinstance(evidence, dict):
-                evidence = {"metric": str(evidence), "context": "", "benchmark": "", "impact": ""}
+    settings = get_settings()
+    tasks = [
+        _process_single_signal(h, state.get("file_data", []), settings)
+        for h in hypotheses
+    ]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            # Ensure all evidence fields exist
-            evidence.setdefault("metric", "N/A")
-            evidence.setdefault("context", "N/A")
-            evidence.setdefault("benchmark", "N/A")
-            evidence.setdefault("impact", "N/A")
-
-            # Get severity from candidate or evidence, normalize to lowercase
-            severity_raw = vs.get("severity_hint", vs.get("severity", "info"))
-            severity = severity_raw.lower() if isinstance(severity_raw, str) else "info"
-            if severity not in ("critical", "warning", "info"):
-                severity = "info"
-
-            # Get chart type, normalize
-            chart_type_raw = vs.get("chart_type", vs.get("chartType", "bar"))
-            chart_type = chart_type_raw.lower() if isinstance(chart_type_raw, str) else "bar"
-            if chart_type not in ("bar", "line", "scatter"):
-                chart_type = "bar"
-
-            signal_dict = {
-                "id": f"sig-{uuid.uuid4().hex[:8]}",
-                "title": vs.get("title", f"Signal {i + 1}"),
-                "severity": severity,
-                "category": vs.get("category", "general"),
-                "chartType": chart_type,
-                "analysis_text": vs.get("analysis_text", ""),
-                "statistical_evidence": evidence,
-                "chart_data": vs.get("chart_data"),
-            }
-            signal_dicts.append(signal_dict)
-        except Exception as e:
-            logger.warning("Failed to build signal dict for index %d: %s", i, str(e))
+    signal_results = []
+    for i, r in enumerate(results):
+        if isinstance(r, Exception):
+            logger.warning(
+                "Pulse hypothesis [%d] '%s' exception: %s",
+                i, hypotheses[i].get("title", "?"), str(r)
+            )
             continue
-
-    # Validate through PulseAgentOutput
-    valid_signals = []
-    for sd in signal_dicts:
-        try:
-            signal = SignalOutput(**sd)
-            valid_signals.append(signal)
-        except Exception as e:
-            logger.warning("Signal validation failed: %s -- %s", sd.get("title", "?"), str(e))
+        if r is None:
+            logger.warning(
+                "Pulse hypothesis [%d] '%s' rejected (None)",
+                i, hypotheses[i].get("title", "?")
+            )
             continue
-
-    if not valid_signals:
-        return {
-            "signals_output": [],
-            "report_content": "",
-            "error": "All signals failed PulseAgentOutput validation",
-        }
-
-    # Validate as a batch through PulseAgentOutput
-    try:
-        output = PulseAgentOutput(signals=valid_signals)
-    except Exception as e:
-        logger.error("PulseAgentOutput batch validation failed: %s", str(e))
-        return {
-            "signals_output": [],
-            "report_content": "",
-            "error": f"PulseAgentOutput validation failed: {str(e)}",
-        }
-
-    # Generate report via LLM
-    try:
-        llm = _get_pulse_llm()
-        system_prompt = get_agent_prompt("pulse_agent")
-
-        signals_summary = json.dumps(
-            [s.model_dump() for s in output.signals], indent=2
+        logger.info(
+            "Pulse hypothesis [%d] '%s' validated",
+            i, hypotheses[i].get("title", "?")
         )
+        signal_results.append(r)
 
-        report_prompt = (
-            f"Generate a detection summary report in markdown format.\n\n"
-            f"## Detected Signals\n{signals_summary}\n\n"
-            f"The report should include:\n"
+    logger.info(
+        "Pulse fan-out complete: %d hypotheses, %d validated",
+        len(hypotheses), len(signal_results)
+    )
+
+    if len(signal_results) == 0:
+        return {
+            "signal_results": [],
+            "error": "No signals could be validated from the hypotheses",
+        }
+
+    return {"signal_results": signal_results}
+
+
+async def write_report_node(state: PulseAgentState) -> dict:
+    """Report Writer agent generates the final report using structured output.
+
+    Uses with_structured_output(ReportOutput).
+    Receives only signal results as context.
+    """
+    if state.get("error"):
+        return {"report": {"executive_summary": "", "content": ""}}
+
+    signal_results = state.get("signal_results", [])
+    if not signal_results:
+        return {"report": {"executive_summary": "", "content": "No signals detected."}}
+
+    try:
+        report_llm = _get_llm_for_agent("pulse_report_writer")
+        structured_report = report_llm.with_structured_output(ReportOutput)
+        report_prompt = get_agent_prompt("pulse_report_writer")
+
+        # Pass only signal results to report writer (no raw data or profiles)
+        signals_summary = json.dumps(signal_results, indent=2)
+
+        report_message = (
+            f"Generate a detection report based on these findings.\n\n"
+            f"## Detected Signals ({len(signal_results)} total)\n{signals_summary}\n\n"
+            f"Write an executive-friendly report with:\n"
             f"1. Executive summary (2-3 sentences)\n"
-            f"2. Signal-by-signal breakdown\n"
-            f"3. Methodology notes\n\n"
-            f"Write in professional analytical tone."
+            f"2. Signal-by-signal breakdown with key metrics\n"
+            f"3. Actionable insights\n\n"
+            f"Write in professional business language for leadership."
         )
 
-        report_response = await llm.ainvoke([
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=report_prompt),
+        result = await structured_report.ainvoke([
+            SystemMessage(content=report_prompt),
+            HumanMessage(content=report_message),
         ])
-        report_content = report_response.content
-    except Exception as e:
-        logger.warning("Report generation failed: %s", str(e))
-        report_content = "Report generation failed."
 
-    return {
-        "signals_output": [s.model_dump() for s in output.signals],
-        "report_content": report_content,
-    }
+        logger.info("Report generated: %d chars", len(result.content))
+        return {"report": result.model_dump()}
+
+    except Exception as e:
+        logger.error("Report generation failed: %s", str(e))
+        return {"report": {"executive_summary": "", "content": "Report generation failed."}}
 
 
 def build_pulse_graph():
     """Build and compile the Pulse Agent LangGraph pipeline.
+
+    4 nodes in sequence:
+    profile_data -> generate_hypotheses -> validate_signals -> write_report
 
     Returns:
         CompiledGraph: Compiled LangGraph ready for ainvoke().
     """
     graph = StateGraph(PulseAgentState)
     graph.add_node("profile_data", profile_data_node)
-    graph.add_node("run_analyses", run_analyses_node)
-    graph.add_node("generate_signals", generate_signals_node)
+    graph.add_node("generate_hypotheses", generate_hypotheses_node)
+    graph.add_node("validate_signals", validate_signals_node)
+    graph.add_node("write_report", write_report_node)
     graph.set_entry_point("profile_data")
-    graph.add_edge("profile_data", "run_analyses")
-    graph.add_edge("run_analyses", "generate_signals")
-    graph.set_finish_point("generate_signals")
+    graph.add_edge("profile_data", "generate_hypotheses")
+    graph.add_edge("generate_hypotheses", "validate_signals")
+    graph.add_edge("validate_signals", "write_report")
+    graph.set_finish_point("write_report")
     return graph.compile()
