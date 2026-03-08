@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/tooltip";
 import { SignalChartRenderer } from "@/components/workspace/signal-chart-renderer";
 import { Microscope, Wand2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { SignalDetail } from "@/types/workspace";
 
 const severityConfig = {
@@ -91,9 +93,11 @@ export function SignalDetailPanel({ signal }: SignalDetailPanelProps) {
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               Analysis
             </h3>
-            <p className="text-sm leading-relaxed text-foreground/90">
-              {signal.analysis}
-            </p>
+            <div className="prose prose-sm dark:prose-invert max-w-none text-foreground/90">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {signal.analysis}
+              </ReactMarkdown>
+            </div>
           </div>
         )}
 

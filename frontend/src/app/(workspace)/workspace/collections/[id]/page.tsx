@@ -93,6 +93,13 @@ export default function CollectionDetailPage() {
   // Sort signals by severity (SIGNAL-01)
   const sortedSignals = useMemo(() => sortBySeverity(signals), [signals]);
 
+  // Reset detection state on mount if no active pulse run
+  useEffect(() => {
+    if (!pulseRunId) {
+      setDetectionStatus("idle");
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Auto-select highest severity signal (SIGNAL-02)
   useEffect(() => {
     if (sortedSignals.length > 0) {
@@ -103,7 +110,7 @@ export default function CollectionDetailPage() {
   // Monitor pulse status
   useEffect(() => {
     if (!pulseRun) return;
-    if (pulseRun.status === "complete") {
+    if (pulseRun.status === "completed") {
       setDetectionStatus("complete");
       setPulseRunId(null);
       refetchSignals();
@@ -137,20 +144,24 @@ export default function CollectionDetailPage() {
   }, []);
 
   // Run detection against ALL collection files
-  const handleRunDetection = useCallback(async () => {
+  const handleRunDetection = useCallback(async (userContext?: string) => {
+    if (loadingCollectionFiles) return; // Wait for data to load
     const fileIds = collectionFiles.map((f) => f.file_id);
     if (fileIds.length === 0) {
       setActiveTab("files");
       return;
     }
     try {
-      const result = await triggerPulse.mutateAsync({ file_ids: fileIds });
+      const result = await triggerPulse.mutateAsync({
+        file_ids: fileIds,
+        user_context: userContext,
+      });
       setPulseRunId(result.pulse_run_id);
       setDetectionStatus("running");
     } catch {
       // Error handled by TanStack Query
     }
-  }, [collectionFiles, triggerPulse, setPulseRunId, setDetectionStatus]);
+  }, [collectionFiles, loadingCollectionFiles, triggerPulse, setPulseRunId, setDetectionStatus]);
 
   // Add selected files to collection, then go back to overview
   const handleAddToCollection = useCallback(async () => {
@@ -186,8 +197,8 @@ export default function CollectionDetailPage() {
   }
 
   const hasFilesNoSignals =
-    (collection?.file_count ?? 0) > 0 && (collection?.signal_count ?? 0) === 0;
-  const hasNoFiles = (collection?.file_count ?? 0) === 0;
+    !loadingCollectionFiles && collectionFiles.length > 0 && (collection?.signal_count ?? 0) === 0;
+  const hasNoFiles = !loadingCollectionFiles && collectionFiles.length === 0;
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -376,7 +387,7 @@ export default function CollectionDetailPage() {
               <p className="text-sm text-muted-foreground mb-4">
                 No signals detected yet
               </p>
-              <Button variant="outline" onClick={handleRunDetection}>
+              <Button variant="outline" onClick={() => handleRunDetection()}>
                 Run Detection
               </Button>
             </div>

@@ -87,7 +87,7 @@ export function usePulseStatus(
     queryKey: ["collections", collectionId, "pulse", pulseRunId],
     queryFn: async () => {
       const response = await apiClient.get(
-        `/collections/${collectionId}/pulse/${pulseRunId}`
+        `/collections/${collectionId}/pulse-runs/${pulseRunId}`
       );
       if (!response.ok) throw new Error(`Failed: ${response.status}`);
       return response.json();
@@ -95,7 +95,7 @@ export function usePulseStatus(
     enabled: !!pulseRunId,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
-      return status === "complete" || status === "failed" ? false : 3000;
+      return status === "completed" || status === "failed" ? false : 3000;
     },
   });
 }

@@ -95,6 +95,23 @@ def get_agent_prompt(agent_name: str) -> str:
     return prompts["agents"][agent_name]["system_prompt"]
 
 
+def get_agent_config_field(agent_name: str, field: str) -> str:
+    """Get an arbitrary config field for a specific agent.
+
+    Args:
+        agent_name: Name of the agent.
+        field: Field name to retrieve.
+
+    Returns:
+        str: Field value.
+
+    Raises:
+        KeyError: If agent_name or field doesn't exist.
+    """
+    prompts = load_prompts()
+    return prompts["agents"][agent_name][field]
+
+
 def get_agent_max_tokens(agent_name: str) -> int:
     """Get max tokens configuration for a specific agent.
 

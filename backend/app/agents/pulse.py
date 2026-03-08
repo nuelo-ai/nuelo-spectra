@@ -19,6 +19,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import StateGraph
 
 from app.agents.config import (
+    get_agent_config_field,
     get_agent_max_tokens,
     get_agent_model,
     get_agent_prompt,
@@ -96,18 +97,20 @@ async def _validate_single_candidate(
         code_instructions = candidate.get("code_instructions", "")
         chart_hint = candidate.get("chart_hint", "")
 
-        code_gen_prompt = (
-            f"Write a Python script that performs the following statistical analysis:\n"
-            f"{code_instructions}\n\n"
-            f"Chart suggestion: {chart_hint}\n\n"
-            f"The script should:\n"
-            f"1. Read the CSV file from /home/user/ directory\n"
-            f"2. Perform the analysis\n"
-            f"3. Print a JSON result with keys: analysis_text (str), "
-            f"statistical_evidence (dict with metric, context, benchmark, impact), "
-            f"chart_data (dict or null), chart_type (bar/line/scatter)\n"
-            f"4. Use only pandas, numpy, scipy, json\n"
-            f"5. Wrap output in print(json.dumps(result))\n"
+        # Build file list for the prompt
+        file_lines = []
+        for fd in file_data:
+            fn = fd.get("filename", "data.csv")
+            ft = fd.get("file_type", "csv")
+            read_func = "pd.read_excel" if ft in ("xlsx", "xls") or fn.endswith((".xlsx", ".xls")) else "pd.read_csv"
+            file_lines.append(f"  - /home/user/{fn} (use {read_func})")
+        files_str = "\n".join(file_lines)
+
+        code_gen_template = get_agent_config_field("pulse_agent", "code_gen_prompt")
+        code_gen_prompt = code_gen_template.format(
+            code_instructions=code_instructions,
+            chart_hint=chart_hint,
+            files_str=files_str,
         )
 
         response = await llm.ainvoke([
@@ -116,16 +119,19 @@ async def _validate_single_candidate(
         ])
 
         code = extract_code_block(response.content)
+        logger.info("  [%s] Code generated (%d chars)", candidate.get("title", "?"), len(code) if code else 0)
 
         # Step 2: Validate code safety
         validation = validate_code(code)
         if not validation.is_valid:
             logger.warning(
-                "Code validation failed for candidate '%s': %s",
+                "  [%s] Code validation FAILED: %s",
                 candidate.get("title", "unknown"),
                 validation.errors,
             )
             return None
+
+        logger.info("  [%s] Code validation passed", candidate.get("title", "?"))
 
         # Step 3: Execute in E2B sandbox
         runtime = E2BSandboxRuntime(
@@ -149,11 +155,14 @@ async def _validate_single_candidate(
 
         if not execution_result.success or not execution_result.stdout:
             logger.warning(
-                "Sandbox execution failed for candidate '%s': %s",
+                "  [%s] Sandbox execution FAILED: error=%s stderr=%s",
                 candidate.get("title", "unknown"),
                 execution_result.error,
+                execution_result.stderr[:500] if execution_result.stderr else None,
             )
             return None
+
+        logger.info("  [%s] Sandbox execution OK, stdout lines: %d", candidate.get("title", "?"), len(execution_result.stdout))
 
         # Parse result JSON from stdout
         last_line = execution_result.stdout[-1].strip()
@@ -167,9 +176,10 @@ async def _validate_single_candidate(
 
     except Exception as e:
         logger.warning(
-            "Candidate validation failed for '%s': %s",
+            "Pulse candidate '%s' exception: %s: %s",
             candidate.get("title", "unknown"),
-            str(e),
+            type(e).__name__,
+            str(e)[:500],
         )
         return None
 
@@ -258,12 +268,33 @@ async def run_analyses_node(state: PulseAgentState) -> dict:
 
         # Filter out exceptions and None results
         validated_signals = []
-        for r in results:
+        for i, r in enumerate(results):
             if isinstance(r, Exception):
-                logger.warning("Fan-out validation exception: %s", str(r))
+                logger.warning(
+                    "Pulse candidate [%d] '%s' validation exception: %s",
+                    i, candidates[i].get("title", "?"), str(r)
+                )
                 continue
-            if r is not None:
-                validated_signals.append(r)
+            if r is None:
+                logger.warning(
+                    "Pulse candidate [%d] '%s' rejected (None)",
+                    i, candidates[i].get("title", "?")
+                )
+                continue
+            logger.info(
+                "Pulse candidate [%d] '%s' validated",
+                i, candidates[i].get("title", "?")
+            )
+            # Merge candidate metadata into validated result
+            r["title"] = candidates[i].get("title", f"Signal {i + 1}")
+            r["severity_hint"] = candidates[i].get("severity_hint", "info")
+            r["category"] = candidates[i].get("category", "general")
+            validated_signals.append(r)
+
+        logger.info(
+            "Pulse fan-out complete: %d candidates, %d validated",
+            len(candidates), len(validated_signals)
+        )
 
         if len(validated_signals) == 0:
             return {

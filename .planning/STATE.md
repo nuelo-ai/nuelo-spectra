@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Spectra Pulse (Detection)
-status: completed
-stopped_at: Completed 51-03-PLAN.md
-last_updated: "2026-03-07T19:25:30.211Z"
-last_activity: 2026-03-07 — Phase 51 Plan 01 complete (palette swap, UI components, types/hooks/store)
+status: in_progress
+stopped_at: Completed Phase 51 (all 4 plans)
+last_updated: "2026-03-08T05:00:00.000Z"
+last_activity: 2026-03-08 — Phase 51 complete (Detection Results page, 22 pipeline/frontend fixes)
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 12
-  completed_plans: 10
-  percent: 100
+  completed_plans: 12
+  percent: 92
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** v0.8 Spectra Pulse (Detection) — Phase 48 in progress
+**Current focus:** v0.8 Spectra Pulse (Detection) — Phase 51 complete, Phase 52 next
 
 ## Current Position
 
-Phase: 51 of 52 (Frontend Migration)
-Plan: 3 of 4 — COMPLETE
-Status: Phase 51 Plan 03 complete — Workspace pages (collection list + detail with 4 tabs)
-Last activity: 2026-03-07 — Phase 51 Plan 03 complete (workspace pages, file upload, detection trigger)
+Phase: 51 of 52 (Frontend Migration) — COMPLETE
+Plan: 4 of 4 — COMPLETE
+Status: Phase 51 complete — all workspace pages live with real API data
+Last activity: 2026-03-08 — Phase 51 Plan 04 complete (Detection Results page, 22 bug fixes, debug logging cleanup)
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 🚧 [██████████] 100% (Phase 50 complete)
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 🚧 [█████████░] 92% (Phase 51 complete)
 
 ## Performance Metrics
 
@@ -71,6 +71,8 @@ Recent decisions affecting v0.8 work:
 - [Phase 51]: is_admin added to UserResponse for admin-only nav visibility
 - [Phase 51-03]: GET /collections/{id}/signals endpoint added -- was missing from Phase 48; signals queried by collection_id directly
 - [Phase 51-03]: DataSummaryPanel uses Sheet (slide-out) instead of Dialog for non-blocking file inspection
+- [Phase 51-04]: Signal chart_data is Plotly fig.to_json() output rendered by existing ChartRenderer
+- [Phase 51-04]: Pipeline refactor (_validate_single_candidate → reuse Coding Agent) deferred to separate phase
 
 ### Pending Todos
 
@@ -89,6 +91,6 @@ Recent decisions affecting v0.8 work:
 
 ## Session Continuity
 
-Last session: 2026-03-07T19:25:30.209Z
-Stopped at: Completed 51-03-PLAN.md
-Resume with: Continue with Phase 51 Plan 04 (Signal Detail + Report Pages)
+Last session: 2026-03-08T05:00:00.000Z
+Stopped at: Phase 51 complete, committing all work
+Resume with: Phase 52 (Admin and QA) or insert pipeline refactor phase

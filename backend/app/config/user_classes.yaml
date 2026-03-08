@@ -4,7 +4,7 @@ user_classes:
     credits: 100
     reset_policy: none
     workspace_access: true
-    max_active_collections: 1
+    max_active_collections: 6
   free:
     display_name: "Free"
     credits: 10

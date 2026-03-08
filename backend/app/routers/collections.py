@@ -451,7 +451,6 @@ async def trigger_pulse(
         file_ids=body.file_ids,
         user_context=body.user_context,
     )
-    await db.commit()
 
     return PulseRunTriggerResponse(
         pulse_run_id=pulse_run.id,

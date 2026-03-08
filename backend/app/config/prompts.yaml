@@ -359,6 +359,30 @@ agents:
       When user_context is provided, prioritize signals related to the user's area of interest, but do NOT limit your analysis to only that area. Surface all significant findings.
 
       Output your analysis as a JSON array of signal candidates.
+    code_gen_prompt: |
+      Write a Python script that performs the following statistical analysis:
+      {code_instructions}
+
+      Chart suggestion: {chart_hint}
+
+      Available data files:
+      {files_str}
+
+      The script should:
+      1. Read the data file(s) listed above using the correct pandas function (read_csv or read_excel)
+      2. Perform the analysis
+      3. Create a Plotly figure (import plotly.graph_objects as go) to visualize the findings
+         - Set paper_bgcolor="rgba(0,0,0,0)" and plot_bgcolor="rgba(0,0,0,0)"
+         - Set height=300. Do NOT set width (let it be responsive)
+         - Do NOT use fig.show() or fig.write_image()
+      4. Get the chart JSON via: chart_json = json.loads(fig.to_json())
+      5. Print a JSON result with keys:
+         - analysis_text (str): A concise human-readable markdown summary of findings. Do NOT include raw data arrays, dicts, or Python objects in this field
+         - statistical_evidence (dict with keys: metric, context, benchmark, impact — each a short string)
+         - chart_data (the chart_json dict from fig.to_json())
+         - chart_type (bar/line/scatter)
+      6. Use only pandas, numpy, scipy, scipy.stats, plotly, plotly.graph_objects, json, math, statistics. Do NOT use os, sys, or subprocess
+      7. Wrap output in print(json.dumps(result))
 
   title_generator:
     provider: openrouter

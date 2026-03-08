@@ -116,7 +116,7 @@
 - [x] **Phase 48: Backend CRUD API** - Collections router (9 endpoints), WorkspaceAccess dependency, file upload to collection, Report model + endpoints, Pydantic schemas, tier enforcement (completed 2026-03-07)
 - [x] **Phase 49: Pulse Agent** - Independent LangGraph pipeline (profile → analyze → generate), E2B analyzers with 300s timeout, Pydantic-validated Signal output, PulseService (completed 2026-03-07)
 - [x] **Phase 50: Pulse Endpoint Wire-Up** - POST /collections/{id}/pulse with credit pre-check, atomic deduction, agent invocation, refund on failure, detection loading state trigger (completed 2026-03-07)
-- [ ] **Phase 51: Frontend Migration** - globals.css Hex.tech palette + ThemeProvider, (workspace) route group, all workspace pages, workspace components migrated from pulse-mockup
+- [x] **Phase 51: Frontend Migration** - globals.css Hex.tech palette + ThemeProvider, (workspace) route group, all workspace pages, workspace components migrated from pulse-mockup (completed 2026-03-08)
 - [ ] **Phase 52: Admin and QA** - End-to-end tier gating verification, collection limit enforcement, credit cost config via admin settings, full system smoke test
 
 ## Phase Details
@@ -264,5 +264,5 @@ Plans:
 | 48. Backend CRUD API | 2/2 | Complete    | 2026-03-07 | - |
 | 49. Pulse Agent | 2/2 | Complete    | 2026-03-07 | - |
 | 50. Pulse Endpoint Wire-Up | 2/2 | Complete    | 2026-03-07 | - |
-| 51. Frontend Migration | 3/4 | In Progress|  | - |
+| 51. Frontend Migration | 4/4 | Complete | 2026-03-08 | - |
 | 52. Admin and QA | v0.8 | 0/TBD | Not started | - |

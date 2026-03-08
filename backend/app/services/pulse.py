@@ -116,15 +116,24 @@ class PulseService:
             user_context=user_context,
         )
         db.add(pulse_run)
+        await db.flush()
 
-        # Associate files
-        file_result = await db.execute(
-            select(File).where(File.id.in_(file_ids))
-        )
-        files = file_result.scalars().all()
-        pulse_run.files = list(files)
+        # Associate files via the association table directly (avoids lazy-load trigger)
+        from app.models.pulse_run import pulse_run_files
+        from sqlalchemy import insert
+
+        if file_ids:
+            await db.execute(
+                insert(pulse_run_files),
+                [{"pulse_run_id": pulse_run.id, "file_id": fid} for fid in file_ids],
+            )
 
         await db.commit()
+
+        logger.info(
+            "Pulse run created: id=%s collection=%s files=%d",
+            pulse_run.id, collection_id, len(file_ids)
+        )
 
         # 5. Launch background pipeline
         asyncio.create_task(
@@ -177,6 +186,7 @@ class PulseService:
                 pulse_run.status = "profiling"
                 pulse_run.started_at = datetime.now(timezone.utc)
                 await db.commit()
+                logger.info("Pulse [%s] status -> profiling", pulse_run_id)
 
                 # Load files
                 file_result = await db.execute(
@@ -225,25 +235,43 @@ class PulseService:
                 if result.get("error"):
                     raise RuntimeError(result["error"])
 
-                # Update status: analyzing
+                logger.info(
+                    "Pulse [%s] pipeline complete: %d signals, %d chars report",
+                    pulse_run_id,
+                    len(result.get("signals_output", [])),
+                    len(result.get("report_content", "")),
+                )
+
+                # Re-fetch pulse_run to avoid stale session after long pipeline
+                pr_refresh = await db.execute(
+                    select(PulseRun).where(PulseRun.id == pulse_run_id)
+                )
+                pulse_run = pr_refresh.scalars().first()
+
+                # Update status: analyzing (persisting results)
                 pulse_run.status = "analyzing"
                 await db.commit()
 
                 # Persist signals
-                for signal_data in result.get("signals_output", []):
-                    evidence = signal_data.get("statistical_evidence", {})
-                    signal = Signal(
-                        collection_id=collection_id,
-                        pulse_run_id=pulse_run_id,
-                        title=signal_data.get("title", ""),
-                        severity=signal_data.get("severity", "info"),
-                        category=signal_data.get("category", "general"),
-                        analysis=signal_data.get("analysis_text", ""),
-                        evidence=evidence if isinstance(evidence, dict) else None,
-                        chart_data=signal_data.get("chart_data"),
-                        chart_type=signal_data.get("chartType", "bar"),
-                    )
-                    db.add(signal)
+                signals_output = result.get("signals_output", [])
+                for idx, signal_data in enumerate(signals_output):
+                    try:
+                        evidence = signal_data.get("statistical_evidence", {})
+                        signal = Signal(
+                            collection_id=collection_id,
+                            pulse_run_id=pulse_run_id,
+                            title=signal_data.get("title", "")[:255],
+                            severity=signal_data.get("severity", "info"),
+                            category=signal_data.get("category", "general")[:50],
+                            analysis=signal_data.get("analysis_text", ""),
+                            evidence=evidence if isinstance(evidence, dict) else None,
+                            chart_data=signal_data.get("chart_data"),
+                            chart_type=signal_data.get("chartType", "bar"),
+                        )
+                        db.add(signal)
+                        logger.info("  Signal [%d] added: %s", idx, signal_data.get("title", "?"))
+                    except Exception as sig_err:
+                        logger.error("  Signal [%d] FAILED: %s -- data: %s", idx, str(sig_err), str(signal_data)[:300])
 
                 # Persist deep profiles for uncached files
                 file_profiles = result.get("file_profiles", [])
@@ -254,15 +282,11 @@ class PulseService:
                             f.deep_profile = profile
 
                 # Generate report
-                collection_name = "Collection"
-                if hasattr(pulse_run, "collection") and pulse_run.collection:
-                    collection_name = pulse_run.collection.name or "Collection"
-
                 report = Report(
                     collection_id=collection_id,
                     pulse_run_id=pulse_run_id,
                     report_type="pulse_detection",
-                    title=f"Detection Report - {collection_name}",
+                    title=f"Detection Report",
                     content=result.get("report_content", ""),
                 )
                 db.add(report)
@@ -273,14 +297,16 @@ class PulseService:
                 await db.commit()
 
                 logger.info(
-                    "Pulse pipeline completed for run %s: %d signals",
+                    "Pulse [%s] status -> completed (%d signals persisted)",
                     pulse_run_id,
                     len(result.get("signals_output", [])),
                 )
 
             except Exception as e:
+                import traceback
                 logger.error(
-                    "Pulse pipeline failed for run %s: %s", pulse_run_id, str(e)
+                    "Pulse [%s] failed: %s\n%s",
+                    pulse_run_id, str(e), traceback.format_exc()
                 )
                 try:
                     # Refund credits
