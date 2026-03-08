@@ -450,8 +450,12 @@ async def write_report_node(state: PulseAgentState) -> dict:
         structured_report = report_llm.with_structured_output(ReportOutput)
         report_prompt = get_agent_prompt("pulse_report_writer")
 
-        # Pass only signal results to report writer (no raw data or profiles)
-        signals_summary = json.dumps(signal_results, indent=2)
+        # Strip large fields not needed for report generation
+        report_signals = [
+            {k: v for k, v in s.items() if k not in ("chart_data", "generated_code")}
+            for s in signal_results
+        ]
+        signals_summary = json.dumps(report_signals, indent=2)
 
         report_message = (
             f"Generate a detection report based on these findings.\n\n"
