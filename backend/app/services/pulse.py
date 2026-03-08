@@ -11,7 +11,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -222,10 +222,9 @@ class PulseService:
                     "user_context": user_context or "",
                     "file_data": file_data,
                     "file_profiles": [],
-                    "signal_candidates": [],
-                    "validated_signals": [],
-                    "signals_output": [],
-                    "report_content": "",
+                    "hypotheses": [],
+                    "signal_results": [],
+                    "report": {},
                     "error": "",
                 }
 
@@ -235,11 +234,14 @@ class PulseService:
                 if result.get("error"):
                     raise RuntimeError(result["error"])
 
+                signal_results = result.get("signal_results", [])
+                report_data = result.get("report", {})
+
                 logger.info(
                     "Pulse [%s] pipeline complete: %d signals, %d chars report",
                     pulse_run_id,
-                    len(result.get("signals_output", [])),
-                    len(result.get("report_content", "")),
+                    len(signal_results),
+                    len(report_data.get("content", "")),
                 )
 
                 # Re-fetch pulse_run to avoid stale session after long pipeline
@@ -252,21 +254,29 @@ class PulseService:
                 pulse_run.status = "analyzing"
                 await db.commit()
 
-                # Persist signals
-                signals_output = result.get("signals_output", [])
-                for idx, signal_data in enumerate(signals_output):
+                # Delete existing signals and reports for re-run overwrite
+                await db.execute(
+                    delete(Signal).where(Signal.collection_id == collection_id)
+                )
+                await db.execute(
+                    delete(Report).where(Report.collection_id == collection_id)
+                )
+
+                # Persist signals from new pipeline output shape
+                for idx, signal_data in enumerate(signal_results):
                     try:
-                        evidence = signal_data.get("statistical_evidence", {})
+                        evidence = signal_data.get("evidence", {})
                         signal = Signal(
                             collection_id=collection_id,
                             pulse_run_id=pulse_run_id,
                             title=signal_data.get("title", "")[:255],
                             severity=signal_data.get("severity", "info"),
                             category=signal_data.get("category", "general")[:50],
-                            analysis=signal_data.get("analysis_text", ""),
+                            analysis=signal_data.get("finding", signal_data.get("analysis_text", "")),
                             evidence=evidence if isinstance(evidence, dict) else None,
                             chart_data=signal_data.get("chart_data"),
-                            chart_type=signal_data.get("chartType", "bar"),
+                            chart_type=signal_data.get("chart_type", "bar"),
+                            generated_code=signal_data.get("generated_code"),
                         )
                         db.add(signal)
                         logger.info("  Signal [%d] added: %s", idx, signal_data.get("title", "?"))
@@ -281,13 +291,15 @@ class PulseService:
                         if isinstance(profile, dict) and "error" not in profile:
                             f.deep_profile = profile
 
-                # Generate report
+                # Persist report from new pipeline output
+                exec_summary = report_data.get("executive_summary", "")
+                report_content = report_data.get("content", "")
                 report = Report(
                     collection_id=collection_id,
                     pulse_run_id=pulse_run_id,
                     report_type="pulse_detection",
-                    title=f"Detection Report",
-                    content=result.get("report_content", ""),
+                    title="Detection Report",
+                    content=report_content,
                 )
                 db.add(report)
 
@@ -299,7 +311,7 @@ class PulseService:
                 logger.info(
                     "Pulse [%s] status -> completed (%d signals persisted)",
                     pulse_run_id,
-                    len(result.get("signals_output", [])),
+                    len(signal_results),
                 )
 
             except Exception as e:
