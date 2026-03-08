@@ -14,6 +14,8 @@ interface ChartRendererProps {
   data: string;
   /** Optional height override */
   height?: number;
+  /** Called after Plotly finishes rendering */
+  onReady?: () => void;
 }
 
 /**
@@ -43,7 +45,7 @@ function calculateChartHeight(chartData: Plotly.PlotData[]): number {
 }
 
 const ChartRenderer = forwardRef<ChartRendererHandle, ChartRendererProps>(
-  function ChartRenderer({ data, height }, ref) {
+  function ChartRenderer({ data, height, onReady }, ref) {
     const chartRef = useRef<HTMLDivElement>(null);
     const [error, setError] = useState<string | null>(null);
     const { resolvedTheme } = useTheme();
@@ -115,8 +117,10 @@ const ChartRenderer = forwardRef<ChartRendererHandle, ChartRendererProps>(
         modeBarButtonsToRemove: ["sendDataToCloud"] as Plotly.ModeBarDefaultButtons[],
       };
 
-      Plotly.react(chartRef.current, themedTraces, layout, config);
-      setError(null);
+      Plotly.react(chartRef.current, themedTraces, layout, config).then(() => {
+        setError(null);
+        onReady?.();
+      });
 
       // Set up ResizeObserver for responsive resizing
       resizeObserver = new ResizeObserver(() => {

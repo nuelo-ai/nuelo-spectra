@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import ChartRenderer from "@/components/chart/ChartRenderer";
 import type { SignalDetail } from "@/types/workspace";
 
@@ -341,8 +342,14 @@ interface SignalChartRendererProps {
 }
 
 export function SignalChartRenderer({ signal }: SignalChartRendererProps) {
+  const [chartReady, setChartReady] = useState(false);
+
+  // Reset to loading state whenever the signal changes
+  useEffect(() => {
+    setChartReady(false);
+  }, [signal.id]);
+
   // Memoize the 7-step transform — avoids recomputing on parent re-renders
-  // (theme changes, store updates) when chart_data hasn't changed.
   const plotlyJSON = useMemo(
     () => buildSignalPlotlyJSON(signal),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -357,5 +364,17 @@ export function SignalChartRenderer({ signal }: SignalChartRendererProps) {
     );
   }
 
-  return <ChartRenderer data={plotlyJSON} height={300} />;
+  return (
+    <div className="relative">
+      {!chartReady && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center h-[300px] gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <span>Generating chart</span>
+        </div>
+      )}
+      <div className={chartReady ? "opacity-100" : "opacity-0"}>
+        <ChartRenderer data={plotlyJSON} height={300} onReady={() => setChartReady(true)} />
+      </div>
+    </div>
+  );
 }

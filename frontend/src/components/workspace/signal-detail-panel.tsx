@@ -1,6 +1,5 @@
 "use client";
 
-import { useDeferredValue } from "react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,11 +40,6 @@ interface SignalDetailPanelProps {
 }
 
 export function SignalDetailPanel({ signal }: SignalDetailPanelProps) {
-  // Defer chart signal so priority content (title, badges, analysis, evidence)
-  // paints immediately on signal switch, chart updates in a subsequent commit.
-  const deferredSignal = useDeferredValue(signal);
-  const isChartStale = deferredSignal?.id !== signal?.id;
-
   if (!signal) {
     return (
       <div className="flex-1 flex items-center justify-center h-full">
@@ -81,7 +75,7 @@ export function SignalDetailPanel({ signal }: SignalDetailPanelProps) {
           </div>
         </div>
 
-        {/* Chart — uses deferred signal to avoid blocking priority content */}
+        {/* Chart */}
         <Card className="py-0 gap-0">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -89,9 +83,7 @@ export function SignalDetailPanel({ signal }: SignalDetailPanelProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="pb-4">
-            <div className={cn("transition-opacity duration-150", isChartStale ? "opacity-40" : "opacity-100")}>
-              {deferredSignal && <SignalChartRenderer signal={deferredSignal} />}
-            </div>
+            <SignalChartRenderer signal={signal} />
           </CardContent>
         </Card>
 
