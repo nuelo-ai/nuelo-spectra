@@ -118,7 +118,7 @@
 - [x] **Phase 50: Pulse Endpoint Wire-Up** - POST /collections/{id}/pulse with credit pre-check, atomic deduction, agent invocation, refund on failure, detection loading state trigger (completed 2026-03-07)
 - [x] **Phase 51: Frontend Migration** - globals.css Hex.tech palette + ThemeProvider, (workspace) route group, all workspace pages, workspace components migrated from pulse-mockup (completed 2026-03-08)
 - [x] **Phase 51.1: Pipeline Refactor** - Multi-agent orchestrator pattern, Pydantic structured output, business language enforcement, inline progress UX, re-run confirmation (completed 2026-03-08)
-- [ ] **Phase 52: Admin and QA** - End-to-end tier gating verification, collection limit enforcement, credit cost config via admin settings, full system smoke test
+- [x] **Phase 52: Admin and QA** - End-to-end tier gating verification, collection limit enforcement, credit cost config via admin settings, full system smoke test (completed 2026-03-09)
 
 ## Phase Details
 
@@ -279,4 +279,4 @@ Plans:
 | 50. Pulse Endpoint Wire-Up | 2/2 | Complete    | 2026-03-07 | - |
 | 51. Frontend Migration | 4/4 | Complete | 2026-03-08 | - |
 | 51.1. Pipeline Refactor | 3/3 | Complete    | 2026-03-08 | - |
-| 52. Admin and QA | 1/2 | In Progress|  | - |
+| 52. Admin and QA | 2/2 | Complete   | 2026-03-09 | - |
