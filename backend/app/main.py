@@ -397,6 +397,9 @@ if mode in ("public", "dev"):
     from app.routers import credits
     app.include_router(credits.router)
 
+    from app.routers import credit_costs
+    app.include_router(credit_costs.router)
+
 # Admin routes (admin and dev modes) -- lazy import to avoid loading admin code in public mode
 if mode in ("admin", "dev"):
     from app.routers.admin import admin_router
