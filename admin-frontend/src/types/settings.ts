@@ -9,6 +9,7 @@ export interface PlatformSettings {
   invite_expiry_days: number;
   default_credit_cost: number;
   max_pending_invites: number;
+  workspace_credit_cost_pulse: number;
 }
 
 export type PlatformSettingsUpdate = Partial<PlatformSettings>;
