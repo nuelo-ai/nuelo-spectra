@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Zap, FileText, ExternalLink } from "lucide-react";
+import { ArrowLeft, Zap, FileText, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,8 +34,7 @@ import { StickyActionBar } from "@/components/workspace/sticky-action-bar";
 import type { CollectionFile } from "@/types/workspace";
 import type { FileListItem } from "@/types/file";
 import type { SignalDetail } from "@/types/workspace";
-
-const CREDIT_COST = 5;
+import { useCreditCosts } from "@/hooks/useCreditCosts";
 const severityOrder: Record<string, number> = {
   critical: 0,
   warning: 1,
@@ -55,6 +54,7 @@ export default function CollectionDetailPage() {
   const collectionId = params.id as string;
 
   // Data hooks
+  const { data: creditCosts, isLoading: isLoadingCreditCosts } = useCreditCosts();
   const { data: collection, isLoading: loadingCollection } =
     useCollectionDetail(collectionId);
   const { data: collectionFiles = [], isLoading: loadingCollectionFiles } =
@@ -229,7 +229,11 @@ export default function CollectionDetailPage() {
           className="gap-1.5 px-3 py-1 text-sm font-medium"
         >
           <Zap className="h-3.5 w-3.5 text-amber-400" />
-          {CREDIT_COST} credits / run
+          {isLoadingCreditCosts ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <>{creditCosts?.pulse_run} credits / run</>
+          )}
         </Badge>
       </div>
 
@@ -255,7 +259,7 @@ export default function CollectionDetailPage() {
               filesCount={collection?.file_count ?? 0}
               signalCount={collection?.signal_count ?? 0}
               reportsCount={collection?.report_count ?? 0}
-              creditsUsed={CREDIT_COST}
+              creditsUsed={creditCosts?.pulse_run ?? 0}
             />
           )}
 
@@ -508,7 +512,7 @@ export default function CollectionDetailPage() {
 
       {/* Re-run confirmation dialog (controlled) */}
       <RerunDetectionDialog
-        creditCost={CREDIT_COST}
+        creditCost={creditCosts?.pulse_run ?? 0}
         open={showRerunDialog}
         onOpenChange={setShowRerunDialog}
         onConfirm={() => {
