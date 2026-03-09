@@ -143,7 +143,7 @@ export default function DetectionResultsPage() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-screen">
       {/* Header */}
       <div className="px-6 py-4 border-b border-border flex items-center gap-3">
         <Link

@@ -414,7 +414,10 @@ async def _process_single_signal(
                 viz_validation = validate_code(viz_code)
 
                 if not viz_validation.is_valid:
-                    logger.warning("  [%s] Viz code validation failed (attempt %d): %s", title, viz_attempt + 1, viz_validation.errors)
+                    logger.warning(
+                        "  [%s] Viz code validation failed (attempt %d): %s\nCode snippet: %s",
+                        title, viz_attempt + 1, viz_validation.errors, (viz_code or "")[:300],
+                    )
                     if viz_attempt == 0:
                         viz_message = _build_viz_message(
                             f"\n\nPREVIOUS ATTEMPT FAILED code validation: {viz_validation.errors}\nFix the issues and try again."
@@ -441,9 +444,13 @@ async def _process_single_signal(
                     break
                 else:
                     error_info = str(viz_result.error)[:300] if viz_result.error else "unknown"
+                    traceback_info = ""
+                    if isinstance(viz_result.error, dict):
+                        traceback_info = (viz_result.error.get("traceback") or "")[:800]
+                    stderr_info = " | ".join(viz_result.stderr[:5]) if viz_result.stderr else ""
                     logger.warning(
-                        "  [%s] Viz sandbox failed (attempt %d): error=%s",
-                        title, viz_attempt + 1, error_info,
+                        "  [%s] Viz sandbox failed (attempt %d): error=%s | traceback=%s | stderr=%s",
+                        title, viz_attempt + 1, error_info, traceback_info, stderr_info,
                     )
                     if viz_attempt == 0:
                         viz_message = _build_viz_message(

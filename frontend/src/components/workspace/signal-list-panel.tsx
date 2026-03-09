@@ -1,7 +1,6 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import type { SignalDetail } from "@/types/workspace";
 
@@ -73,7 +72,7 @@ export function SignalListPanel({
       </div>
 
       {/* Signal List */}
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-y-auto min-h-0">
         <div className="p-2 space-y-1.5">
           {sorted.map((signal) => {
             const severity = severityConfig[signal.severity];
@@ -117,7 +116,7 @@ export function SignalListPanel({
             );
           })}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }

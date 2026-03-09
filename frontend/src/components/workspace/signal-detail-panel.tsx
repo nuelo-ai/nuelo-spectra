@@ -83,7 +83,7 @@ export function SignalDetailPanel({ signal }: SignalDetailPanelProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="pb-4">
-            <SignalChartRenderer signal={signal} />
+            <SignalChartRenderer key={signal.id} signal={signal} />
           </CardContent>
         </Card>
 

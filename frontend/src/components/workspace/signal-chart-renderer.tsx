@@ -326,7 +326,6 @@ function buildSignalPlotlyJSON(signal: SignalDetail): string {
     },
     margin: { l: 50, r: 20, t: 30, b: 50 },
     showlegend: traces.length > 1,
-    height: 300,
     ...Object.fromEntries(
       Object.entries(extraLayout).filter(
         ([k]) => k !== "xaxis" && k !== "yaxis"
@@ -365,15 +364,15 @@ export function SignalChartRenderer({ signal }: SignalChartRendererProps) {
   }
 
   return (
-    <div className="relative">
+    <div className="relative min-h-[380px]">
       {!chartReady && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center h-[300px] gap-2 text-sm text-muted-foreground">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
           <span>Generating chart</span>
         </div>
       )}
       <div className={chartReady ? "opacity-100" : "opacity-0"}>
-        <ChartRenderer data={plotlyJSON} height={300} onReady={() => setChartReady(true)} />
+        <ChartRenderer data={plotlyJSON} onReady={() => setChartReady(true)} />
       </div>
     </div>
   );

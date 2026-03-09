@@ -208,7 +208,7 @@ export default function CollectionDetailPage() {
   const hasNoFiles = !loadingCollectionFiles && collectionFiles.length === 0;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-8">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="icon" asChild>
