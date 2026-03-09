@@ -220,8 +220,8 @@ Plans:
   4. Pulse run credit cost displayed in the "Run Detection (N credits)" button matches the live `workspace_credit_cost_pulse` platform setting value
 **Plans**: 2 plans
 Plans:
-- [ ] 48-01-PLAN.md — Pydantic schemas, WorkspaceAccess dependency, CollectionService
-- [ ] 48-02-PLAN.md — Collections router (all endpoints), router registration, unit tests
+- [ ] 52-01-PLAN.md — Backend: platform settings schema extension, credit_costs router, tier gating tests, smoke test doc
+- [ ] 52-02-PLAN.md — Frontend: admin settings form field, useCreditCosts hook, replace CREDIT_COST constant
 
 ## Progress
 
@@ -279,4 +279,4 @@ Plans:
 | 50. Pulse Endpoint Wire-Up | 2/2 | Complete    | 2026-03-07 | - |
 | 51. Frontend Migration | 4/4 | Complete | 2026-03-08 | - |
 | 51.1. Pipeline Refactor | 3/3 | Complete    | 2026-03-08 | - |
-| 52. Admin and QA | v0.8 | 0/TBD | Not started | - |
+| 52. Admin and QA | v0.8 | 0/2 | Not started | - |
