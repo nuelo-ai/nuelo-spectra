@@ -279,4 +279,4 @@ Plans:
 | 50. Pulse Endpoint Wire-Up | 2/2 | Complete    | 2026-03-07 | - |
 | 51. Frontend Migration | 4/4 | Complete | 2026-03-08 | - |
 | 51.1. Pipeline Refactor | 3/3 | Complete    | 2026-03-08 | - |
-| 52. Admin and QA | v0.8 | 0/2 | Not started | - |
+| 52. Admin and QA | 1/2 | In Progress|  | - |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Spectra Pulse (Detection)
 status: completed
-stopped_at: Phase 52 context gathered
-last_updated: "2026-03-09T16:51:14.216Z"
+stopped_at: Phase 52-01 complete (admin settings schemas + credit costs endpoint + tier gating tests)
+last_updated: "2026-03-09T17:17:17.950Z"
 last_activity: 2026-03-08 — Phase 51 Plan 04 complete (Detection Results page, 22 bug fixes, debug logging cleanup)
 progress:
   total_phases: 7
   completed_phases: 6
-  total_plans: 15
-  completed_plans: 15
+  total_plans: 17
+  completed_plans: 16
   percent: 92
 ---
 
@@ -78,6 +78,8 @@ Recent decisions affecting v0.8 work:
 - [Phase 51.1-03]: Toast replaces auto-navigation to signals tab on detection completion
 - [Phase 51.1]: Coder/Viz agents use raw LLM invocation (not with_structured_output) since they produce code
 - [Phase 51.1]: Re-run deletes both signals AND reports before persisting new results
+- [Phase 52-admin-and-qa]: CreditCostsResponse uses chat/pulse_run keys for frontend-friendly naming and v0.9 extensibility
+- [Phase 52-admin-and-qa]: [Phase 52-01]: GET /credit-costs uses json.loads() for JSON-encoded string settings, never float() directly
 
 ### Pending Todos
 
@@ -100,6 +102,6 @@ Recent decisions affecting v0.8 work:
 
 ## Session Continuity
 
-Last session: 2026-03-09T16:51:14.211Z
-Stopped at: Phase 52 context gathered
+Last session: 2026-03-09T17:17:17.948Z
+Stopped at: Phase 52-01 complete (admin settings schemas + credit costs endpoint + tier gating tests)
 Resume with: Phase 52 (Admin and QA) or insert pipeline refactor phase
