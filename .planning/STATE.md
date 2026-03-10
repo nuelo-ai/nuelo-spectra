@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Spectra Pulse (Detection)
 status: completed
-stopped_at: Completed Phase 52.1 Plan 01 — backend DELETE collection
-last_updated: "2026-03-10T02:01:51.336Z"
+stopped_at: Completed 52.1-02-PLAN.md
+last_updated: "2026-03-10T02:02:46.207Z"
 last_activity: 2026-03-08 — Phase 51 Plan 04 complete (Detection Results page, 22 bug fixes, debug logging cleanup)
 progress:
   total_phases: 8
   completed_phases: 7
   total_plans: 20
-  completed_plans: 18
+  completed_plans: 19
   percent: 92
 ---
 
@@ -82,6 +82,9 @@ Recent decisions affecting v0.8 work:
 - [Phase 52-admin-and-qa]: [Phase 52-01]: GET /credit-costs uses json.loads() for JSON-encoded string settings, never float() directly
 - [Phase 52-admin-and-qa]: useCreditCosts path is /credit-costs (apiClient auto-prepends /api); loading fallback: spinner in header badge, ?? 0 for number-typed props
 - [Phase 52.1]: delete_collection placed after remove_file_from_collection in service; DB cascade handles all child row removal
+- [Phase 52.1-delete-and-rename-collection]: useUpdateCollection invalidates both list and detail caches; useDeleteCollection invalidates list only
+- [Phase 52.1-delete-and-rename-collection]: CreateCollectionDialog edit mode: useEffect on [open, collection] syncs state to handle switching between different collections
+- [Phase 52.1-delete-and-rename-collection]: DeleteCollectionDialog onSuccess callback optional: detail page passes router.push, list page omits (cache invalidation handles removal)
 
 ### Pending Todos
 
@@ -105,6 +108,6 @@ Recent decisions affecting v0.8 work:
 
 ## Session Continuity
 
-Last session: 2026-03-10T02:01:51.334Z
-Stopped at: Completed Phase 52.1 Plan 01 — backend DELETE collection
+Last session: 2026-03-10T02:02:46.205Z
+Stopped at: Completed 52.1-02-PLAN.md
 Resume with: Phase 52 (Admin and QA) or insert pipeline refactor phase

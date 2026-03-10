@@ -228,7 +228,7 @@ Plans:
 **Goal:** Users can delete or rename any collection from both the collection list page (card kebab menu) and the collection detail page (header kebab menu), with cascade warning on delete and query cache invalidation for seamless UI updates
 **Requirements**: (no formal IDs — behavioral: DELETE-collection-backend, DELETE-collection-surfaces, RENAME-collection-dialog-edit-mode, RENAME-collection-surfaces)
 **Depends on:** Phase 52
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 - [ ] 52.1-01-PLAN.md — Backend: delete_collection() service method + DELETE /{collection_id} endpoint (204)
@@ -292,4 +292,4 @@ Plans:
 | 51. Frontend Migration | 4/4 | Complete | 2026-03-08 | - |
 | 51.1. Pipeline Refactor | 3/3 | Complete    | 2026-03-08 | - |
 | 52. Admin and QA | 2/2 | Complete    | 2026-03-10 | - |
-| 52.1. Delete and Rename Collection | 1/3 | In Progress|  |
+| 52.1. Delete and Rename Collection | 2/3 | In Progress|  |
