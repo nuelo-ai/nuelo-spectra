@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SignalListPanel } from "@/components/workspace/signal-list-panel";
 import { SignalDetailPanel } from "@/components/workspace/signal-detail-panel";
@@ -64,6 +65,7 @@ export default function DetectionResultsPage() {
     return (
       <div className="flex flex-col h-full">
         <div className="px-6 py-4 border-b border-border flex items-center gap-3">
+          <SidebarTrigger className="-ml-1" />
           <Skeleton className="h-5 w-5" />
           <Skeleton className="h-5 w-48" />
         </div>
@@ -87,7 +89,8 @@ export default function DetectionResultsPage() {
   if (isError) {
     return (
       <div className="flex flex-col h-full">
-        <div className="px-6 py-4 border-b border-border">
+        <div className="px-6 py-4 border-b border-border flex items-center gap-3">
+          <SidebarTrigger className="-ml-1" />
           <Link
             href={`/workspace/collections/${id}`}
             className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-2"
@@ -116,7 +119,8 @@ export default function DetectionResultsPage() {
   if (sortedSignals.length === 0) {
     return (
       <div className="flex flex-col h-full">
-        <div className="px-6 py-4 border-b border-border">
+        <div className="px-6 py-4 border-b border-border flex items-center gap-3">
+          <SidebarTrigger className="-ml-1" />
           <Link
             href={`/workspace/collections/${id}`}
             className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-2"
@@ -146,6 +150,7 @@ export default function DetectionResultsPage() {
     <div className="flex flex-col h-screen">
       {/* Header */}
       <div className="px-6 py-4 border-b border-border flex items-center gap-3">
+        <SidebarTrigger className="-ml-1" />
         <Link
           href={`/workspace/collections/${id}`}
           className="text-muted-foreground hover:text-foreground transition-colors"

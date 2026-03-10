@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Download, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import ReactMarkdown from "react-markdown";
@@ -75,6 +76,7 @@ export default function ReportDetailPage() {
     return (
       <div className="relative min-h-screen">
         <div className="sticky top-0 z-30 flex items-center px-6 py-3 bg-background border-b border-border">
+          <SidebarTrigger className="-ml-1 mr-3" />
           <Skeleton className="h-8 w-32" />
           <div className="h-4 w-px bg-border mx-3" />
           <Skeleton className="h-5 w-48" />
@@ -94,6 +96,7 @@ export default function ReportDetailPage() {
     return (
       <div className="relative min-h-screen">
         <div className="sticky top-0 z-30 flex items-center px-6 py-3 bg-background border-b border-border">
+          <SidebarTrigger className="-ml-1 mr-3" />
           <Link href={`/workspace/collections/${collectionId}`}>
             <Button variant="ghost" size="sm" className="gap-1.5">
               <ArrowLeft className="h-4 w-4" /> Back
@@ -116,6 +119,7 @@ export default function ReportDetailPage() {
       {/* Sticky header bar */}
       <div className="sticky top-0 z-30 flex items-center justify-between px-6 py-3 bg-background border-b border-border backdrop-blur-md">
         <div className="flex items-center gap-3">
+          <SidebarTrigger className="-ml-1" />
           <Link href={`/workspace/collections/${collectionId}`}>
             <Button variant="ghost" size="sm" className="gap-1.5">
               <ArrowLeft className="h-4 w-4" /> Back
