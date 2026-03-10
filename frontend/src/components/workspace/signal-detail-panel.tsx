@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,10 +14,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { SignalChartRenderer } from "@/components/workspace/signal-chart-renderer";
-import { Microscope, Wand2 } from "lucide-react";
+import { Microscope, Wand2, MessageSquare, Loader2, ArrowLeft } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import type { SignalDetail } from "@/types/workspace";
+import { toast } from "sonner";
+import { useCreateSession, useLinkFile } from "@/hooks/useSessionMutations";
+import type { SignalDetail, CollectionFile } from "@/types/workspace";
 
 const severityConfig = {
   critical: {
@@ -37,9 +41,12 @@ const severityConfig = {
 
 interface SignalDetailPanelProps {
   signal: SignalDetail | null;
+  onBack?: () => void;
+  collectionFiles?: CollectionFile[];
+  collectionId?: string;
 }
 
-export function SignalDetailPanel({ signal }: SignalDetailPanelProps) {
+export function SignalDetailPanel({ signal, onBack, collectionFiles = [], collectionId }: SignalDetailPanelProps) {
   if (!signal) {
     return (
       <div className="flex-1 flex items-center justify-center h-full">
@@ -52,9 +59,43 @@ export function SignalDetailPanel({ signal }: SignalDetailPanelProps) {
 
   const severity = severityConfig[signal.severity];
 
+  const router = useRouter();
+  const createSession = useCreateSession();
+  const { mutateAsync: linkFileAsync } = useLinkFile();
+  const [isBridging, setIsBridging] = useState(false);
+
+  const handleChatBridge = async () => {
+    setIsBridging(true);
+    try {
+      const session = await createSession.mutateAsync("New Chat");
+      await Promise.all(
+        collectionFiles.map((f) =>
+          linkFileAsync({ sessionId: session.id, fileId: f.file_id })
+        )
+      );
+      router.push(`/sessions/${session.id}`);
+    } catch {
+      toast.error("Failed to open Chat. Please try again.");
+    } finally {
+      setIsBridging(false);
+    }
+  };
+
   return (
     <ScrollArea className="h-full flex-1">
       <div className="p-6 space-y-6 max-w-4xl">
+        {/* Mobile back button — only visible below sm breakpoint */}
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors sm:hidden"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Signals
+          </button>
+        )}
+
         {/* Header */}
         <div>
           <div className="flex items-start justify-between gap-4 mb-3">
@@ -100,6 +141,24 @@ export function SignalDetailPanel({ signal }: SignalDetailPanelProps) {
             </div>
           </div>
         )}
+
+        {/* Chat bridge */}
+        <div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-2 w-full"
+            onClick={handleChatBridge}
+            disabled={isBridging || collectionFiles.length === 0}
+          >
+            {isBridging ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <MessageSquare className="h-4 w-4" />
+            )}
+            Chat with Spectra
+          </Button>
+        </div>
 
         {/* Evidence Grid */}
         {signal.evidence && (
