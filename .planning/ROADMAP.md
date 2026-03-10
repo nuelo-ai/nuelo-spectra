@@ -144,7 +144,13 @@
   3. Selecting the Chat section shows no Spectra logo in the top left of the Chat main panel
   4. Selecting the Files section shows no Spectra logo in the top left of the Files main panel, and the leftbar collapse toggle is at the top of the main screen next to the leftbar
   5. The Chat rightbar expand toggle is visible at the top right of the chat area after the rightbar is collapsed, and the collapse/expand toggle on an existing chat is positioned at the top right (not top middle)
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 53-01-PLAN.md — Fix WorkspacePage leftbar toggle (LBAR-01) + UnifiedSidebar nav padding (LBAR-02)
+- [ ] 53-02-PLAN.md — Remove Chat logo, add rightbar expand button on WelcomeScreen (CHAT-01, CHAT-02), pin toggle in ChatInterface (CHAT-03)
+- [ ] 53-03-PLAN.md — Remove Files logo, fix SidebarTrigger position in MyFilesPage (FILES-01, FILES-02)
+- [ ] 53-04-PLAN.md — Human visual verification of all 7 requirements
 
 ### Phase 54: Pulse Analysis Fixes
 **Goal**: Pulse Analysis shows accurate data and provides a complete user experience — credits reflect actual usage, Signal View works on mobile, users can bridge to Chat from a Signal, and timestamps show both date and time throughout
@@ -156,7 +162,13 @@
   3. A "Chat with Spectra" button appears between the Analysis and Statistical Evidence sections on Signal View, and clicking it opens a new Chat session with the collection's files pre-linked
   4. Each entry in the Activity history list displays both the date and the time of the activity
   5. Each entry in the Files added list displays both the date and the time the file was added
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 53-01-PLAN.md — Fix WorkspacePage leftbar toggle (LBAR-01) + UnifiedSidebar nav padding (LBAR-02)
+- [ ] 53-02-PLAN.md — Remove Chat logo, add rightbar expand button on WelcomeScreen (CHAT-01, CHAT-02), pin toggle in ChatInterface (CHAT-03)
+- [ ] 53-03-PLAN.md — Remove Files logo, fix SidebarTrigger position in MyFilesPage (FILES-01, FILES-02)
+- [ ] 53-04-PLAN.md — Human visual verification of all 7 requirements
 
 ## Progress
 
