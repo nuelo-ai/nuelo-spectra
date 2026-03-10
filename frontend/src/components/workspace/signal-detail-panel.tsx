@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -59,7 +58,6 @@ export function SignalDetailPanel({ signal, onBack, collectionFiles = [], collec
 
   const severity = severityConfig[signal.severity];
 
-  const router = useRouter();
   const createSession = useCreateSession();
   const { mutateAsync: linkFileAsync } = useLinkFile();
   const [isBridging, setIsBridging] = useState(false);
@@ -73,7 +71,7 @@ export function SignalDetailPanel({ signal, onBack, collectionFiles = [], collec
           linkFileAsync({ sessionId: session.id, fileId: f.file_id })
         )
       );
-      router.push(`/sessions/${session.id}`);
+      window.open(`/sessions/${session.id}`, '_blank');
     } catch {
       toast.error("Failed to open Chat. Please try again.");
     } finally {
@@ -145,9 +143,8 @@ export function SignalDetailPanel({ signal, onBack, collectionFiles = [], collec
         {/* Chat bridge */}
         <div>
           <Button
-            size="sm"
-            variant="outline"
-            className="gap-2 w-full"
+            variant="default"
+            className="gap-2 bg-green-600 hover:bg-green-700 text-white"
             onClick={handleChatBridge}
             disabled={isBridging || collectionFiles.length === 0}
           >
