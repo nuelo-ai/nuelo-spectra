@@ -1,5 +1,32 @@
 # Project Milestones: Spectra
 
+## v0.8 Spectra Pulse (Detection) (Shipped: 2026-03-10)
+
+**Delivered:** Full Pulse Analysis module — users can create Collections, attach CSV/Excel files, run AI-powered Pulse detection, and view severity-sorted Signals with Plotly chart visualizations and statistical evidence. Establishes the Detect foundation of the Detect → Explain → What-If pipeline.
+
+**Phases completed:** 47–52.1 (8 phases, 20 plans)
+
+**Stats:**
+- 8 phases (47–52.1, including 2 inserted decimal phases: 51.1, 52.1)
+- 20 plans executed
+- 168 files changed (+23,418 / -345 lines)
+- Timeline: 4 days (2026-03-06 → 2026-03-09)
+- Git range: `d6fe76d` → `7b4bb19` (144 commits)
+
+**Key accomplishments:**
+- Built 5 new SQLAlchemy models (Collection, CollectionFile, Signal, Report, PulseRun) with Alembic migration, tier config (workspace_access, max_active_collections), and runtime-configurable workspace_credit_cost_pulse platform setting
+- Shipped 11 collection endpoints with WorkspaceAccess tier gating (403 for non-workspace plans), file upload/profile, and report storage with Markdown download
+- Built LangGraph Pulse Agent pipeline with E2B sandbox (300s timeout), Pydantic-validated Signal output (severity/chartType Literals), credit pre-check (402) + atomic deduction + automatic refund on failure
+- Migrated all pulse-mockup workspace screens to main Next.js app: Hex.tech dark palette, (workspace) route group with own sidebar layout, Collection list/detail 4-tab, Detection Results split-panel with Plotly charts
+- Refactored Pulse pipeline from monolith to multi-agent orchestrator pattern with Pydantic structured output on all LLM calls, inline progress banner, sonner toast on detection completion, and re-run confirmation dialog
+- Delivered tier gating E2E verification across all 5 tiers, admin settings for Pulse credit cost (runtime configurable), and delete/rename collection with cascade handling and query cache invalidation
+
+**Requirements:** 35/35 satisfied (100%)
+
+**Git range:** `d6fe76d` → `7b4bb19`
+
+---
+
 ## v0.7.12 Spectra Pulse Mockup (Shipped: 2026-03-05)
 
 **Delivered:** Standalone Next.js UI/UX mockup covering the full Analysis Workspace feature set — Pulse detection through Explain, What-If Scenarios, and Admin Workspace Management — as static design reference for v0.8–v0.12 implementation milestones

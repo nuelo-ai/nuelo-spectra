@@ -95,6 +95,50 @@
 
 ---
 
+## Milestone: v0.8 — Spectra Pulse (Detection)
+
+**Shipped:** 2026-03-10
+**Phases:** 8 (47–52.1, including 2 inserted decimal phases) | **Plans:** 20
+
+### What Was Built
+- Data Foundation: 5 SQLAlchemy models with Alembic migration and tier config
+- Backend CRUD API: 11 collection endpoints with WorkspaceAccess tier gating and Pydantic schemas
+- Pulse Agent: LangGraph pipeline with E2B sandbox (300s), Pydantic-validated Signal output, credit pre-check/deduction/refund
+- Frontend Migration: All workspace screens in main Next.js app with Hex.tech palette, (workspace) route group, and Plotly charts
+- Pipeline Refactor (Phase 51.1): Monolith → multi-agent orchestrator with structured output, inline progress, toast, re-run dialog
+- Admin & QA + Collection Management: Tier gating verified E2E, Pulse credit cost in admin settings, delete/rename collection
+
+### What Worked
+- **Mockup-first reference** (v0.7.12) made Phase 51 migration very efficient — every screen had a pixel-perfect reference to match
+- **Phased E2B work** (Phase 49 before frontend) caught Pulse Agent schema issues early, before any UI existed
+- **Decimal phase insertions** (51.1, 52.1) are the right pattern for urgent mid-milestone additions — no renumbering disruption
+- **Pydantic structured output** on all reasoning LLM calls eliminated JSON parsing failures that plagued the old pipeline
+- **Inline progress banner** (not full-page overlay) was the correct UX decision — users can navigate freely during long-running detection
+
+### What Was Inefficient
+- SIGNAL-03 was shipped but not checked off in REQUIREMENTS.md — requirement tracking lagged behind implementation
+- The Pipeline Refactor (Phase 51.1) was inserted mid-milestone after the monolith showed quality issues in testing; ideally would have been planned from the start
+- Several post-execution fixes after Phase 52.1 (kebab nav, per-collection Zustand state, 402 toast) — these should have been caught in Phase 52 QA
+
+### Patterns Established
+- **Workspace route group pattern**: `(workspace)` parallel to `(dashboard)` — prevents sidebar layout inheritance across feature areas
+- **Per-collectionId Zustand state**: Scoping detection state by collectionId via `collectionDetection[id]` map, with reactive selectors (not getter functions)
+- **Pulse orchestrator architecture**: Brain node → per-hypothesis sub-agent loop (Coder → Validator → Sandbox → Interpreter → Viz) → Report Writer
+- **CollectionFile naming convention**: `__tablename__ = "collection_files"` to avoid collision with `app.models.file.File`
+
+### Key Lessons
+1. **Schema-validate Pulse output before building UI** — Phase 49 (Pulse Agent first) was the right call; late schema discovery would have required UI rework
+2. **Structured Pydantic output is non-negotiable for multi-step pipelines** — Raw LLM JSON parsing fails silently; structured output fails loudly and is debuggable
+3. **DropdownMenu inside Link requires e.preventDefault() on trigger** — React's event propagation through Link elements is a recurring frontend gotcha worth documenting
+4. **Reactive Zustand selectors required for per-ID state** — Getter functions are not subscriptions; `useStore(s => s.map[id]?.field)` is the correct pattern
+
+### Cost Observations
+- Model mix: quality profile (claude-sonnet-4-6) throughout
+- Sessions: 8+ sessions across 4 days
+- Notable: Phase 51.1 pipeline refactor was the most expensive phase (full rewrite of pulse.py + frontend UX); Phase 47 data foundation was the cheapest (schema-only, no LLM calls in execution)
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -109,6 +153,7 @@
 | v0.6 | 5 | 10 | 3 days | Docker multi-stage; all modes tested in containers |
 | v0.7 | 4 | 15 | 4 days (+3 patches) | MCP loopback arch; 7 hotfixes post-ship |
 | v0.7.12 | 5 | 17 | 3 days (+1 polish patch) | Mockup-first milestone pattern; separate Next.js app |
+| v0.8 | 8 | 20 | 4 days | Decimal phase insertions for mid-milestone urgents; Pydantic structured output on all pipelines |
 
 ### Cumulative Quality
 
@@ -122,6 +167,7 @@
 | v0.6 | 28 | 100% | 0 |
 | v0.7 | 30 | 100% | 0 |
 | v0.7.12 | 34 | 94% | 2 (COLL-01, COLL-02) |
+| v0.8 | 35 | 100% | 0 |
 
 ### Top Lessons (Verified Across Milestones)
 

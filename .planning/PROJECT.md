@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Spectra is an AI-powered data analytics platform that transforms how users interact with their data. Users upload datasets (Excel/CSV), create chat sessions, link multiple files, and ask questions in natural language — receiving instant insights as interactive Data Cards with AI-generated Plotly charts. A ChatGPT-style session-centric UX with sidebar navigation enables multi-file conversations and cross-file analysis. A 6-agent AI system with intelligent query routing generates validated Python code in a secure sandbox, automatically creating visualizations when analysis benefits from charts. Multi-turn conversation memory, web search integration, smart query suggestions, 7 chart types with PNG/SVG export, and theme-aware Nord palette across 5 LLM providers. Fully deployable via Docker Compose (local) or Dokploy (production) with automatic admin seeding and fail-fast startup validation. Now exposes a public REST API and MCP server for programmatic access and AI agent integrations, with API key management, credit deduction, and usage logging.
+Spectra is an AI-powered data analytics platform that transforms how users interact with their data. Users upload datasets (Excel/CSV), create chat sessions, link multiple files, and ask questions in natural language — receiving instant insights as interactive Data Cards with AI-generated Plotly charts. A ChatGPT-style session-centric UX with sidebar navigation enables multi-file conversations and cross-file analysis. A 6-agent AI system with intelligent query routing generates validated Python code in a secure sandbox, automatically creating visualizations when analysis benefits from charts. Multi-turn conversation memory, web search integration, smart query suggestions, 7 chart types with PNG/SVG export, and theme-aware Nord palette across 5 LLM providers. Fully deployable via Docker Compose (local) or Dokploy (production) with automatic admin seeding and fail-fast startup validation. Exposes a public REST API and MCP server for programmatic access and AI agent integrations. Now includes Spectra Pulse: users create Collections, attach CSV/Excel files, and run AI-powered anomaly detection that generates severity-sorted Signal cards with Plotly chart visualizations, statistical evidence, and downloadable Markdown reports — the foundation of the Detect → Explain → What-If analysis pipeline.
 
 ## Core Value
 
@@ -13,9 +13,11 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 **GitHub:** https://github.com/marwazihs/nuelo-spectra.git (private)
 **Remote:** origin
 **Branch:** master
-**Latest Tag:** v0.7 (2026-02-25)
+**Latest Tag:** v0.8 (2026-03-10)
 
 ## Previous Milestones
+
+**v0.8 Spectra Pulse (Detection) (Shipped 2026-03-10):** Full Pulse Analysis module — Collections, file upload, AI-powered anomaly detection pipeline (multi-agent orchestrator + E2B sandbox), Signal cards with Plotly visualizations and statistical evidence, Markdown reports, tier-based workspace access gating, and delete/rename collection management. Establishes the Detect foundation of the Detect → Explain → What-If pipeline.
 
 **v0.7.12 Spectra Pulse Mockup (Shipped 2026-03-05):** Standalone Next.js mockup (`pulse-mockup/`) covering full Analysis Workspace — Pulse detection, Collections, Guided Investigation, What-If Scenarios, and Admin Workspace Management. Design reference for v0.8–v0.12 implementation milestones.
 
@@ -23,10 +25,10 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 ## Current State
 
-**Shipped:** v0.7.12 Spectra Pulse Mockup (2026-03-05)
-**Status:** Milestone complete — planning next milestone (v0.8 implementation)
-**Codebase:** ~73,000 LOC (Python app + TypeScript/TSX across public frontend + admin frontend + pulse-mockup + Docker/shell infra)
-**Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily + Plotly + APScheduler (backend), Next.js 16 + React 19 + TanStack + Zustand + shadcn/ui + next-themes + Plotly.js + Recharts (frontend + admin frontend), Docker + Dokploy + Tailscale (deployment), Next.js + shadcn/ui + Recharts (pulse-mockup)
+**Shipped:** v0.8 Spectra Pulse (Detection) (2026-03-10)
+**Status:** Milestone complete — planning next milestone (v0.9)
+**Codebase:** ~96,000 LOC (Python app + TypeScript/TSX across public frontend + admin frontend + pulse-mockup + Docker/shell infra)
+**Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily + Plotly + APScheduler (backend), Next.js 16 + React 19 + TanStack + Zustand + shadcn/ui + next-themes + Plotly.js + Recharts + Sonner (frontend + admin frontend), Docker + Dokploy + Tailscale (deployment), Next.js + shadcn/ui + Recharts (pulse-mockup)
 
 **What works:**
 - ✅ Complete authentication system with JWT, refresh tokens, and SMTP password reset
@@ -70,6 +72,12 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 - ✅ `SPECTRA_MODE=api` as 5th deployment mode with Bearer token auth and wildcard CORS
 - ✅ MCP server with 6 curated `spectra_` tools via FastMCP 3.0.2, mounted at `/mcp/`
 - ✅ MCP Bearer token auth middleware with per-request validation on tool calls and tool listing
+- ✅ Spectra Pulse: Collection and file management (create/list/detail/rename/delete, CSV/Excel upload with column profiling)
+- ✅ Spectra Pulse: AI-powered anomaly detection pipeline — multi-agent orchestrator (brain/orchestrator + coder/validator/interpreter/viz sub-agents) with E2B sandbox (300s timeout), Pydantic structured output on all LLM calls
+- ✅ Spectra Pulse: Signal output with severity tiers (critical/warning/info), Plotly chart visualizations, 2x2 statistical evidence grid, and Markdown reports with download
+- ✅ Spectra Pulse: Inline detection progress banner, sonner toast on completion with signal count, re-run confirmation dialog, credit cost pre-check (402) + atomic deduction + automatic refund
+- ✅ Spectra Pulse: Tier-based workspace access gating (workspace_access + max_active_collections per tier in user_classes.yaml), runtime-configurable credit cost via Admin Portal
+- ✅ Spectra Pulse: (workspace) route group with own sidebar layout and Hex.tech dark palette (independent of chat interface)
 
 **Known limitations:**
 - E2B sandboxes created per-execution (no warm pools - ~150ms cold start per query)
@@ -462,33 +470,44 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **v0.7.12 Total: 32/34 requirements satisfied (94%)**
 
-## Current Milestone: v0.8 Spectra Pulse (Detection)
+**✅ v0.8 Spectra Pulse (Detection) — Shipped 2026-03-10**
 
-**Goal:** Build the Pulse Analysis module — users can create Collections, attach data files, run Pulse detection, and view Signals as cards with statistical findings and visualizations. This is the foundation milestone establishing the Detect → Explain → What-If pipeline.
+- ✓ COLL-01: User can create a Collection with a name — v0.8
+- ✓ COLL-02: User can view list of their Collections — v0.8
+- ✓ COLL-03: User can view Collection detail with 4-tab layout (Overview, Files, Signals, Reports) — v0.8
+- ✓ COLL-04: User can update (rename) a Collection — v0.8
+- ✓ COLL-DELETE: User can delete a Collection with cascade — v0.8
+- ✓ FILE-01: User can upload CSV/Excel files to a Collection — v0.8
+- ✓ FILE-02: User can view column profile of an uploaded file (DataSummaryPanel slide-out) — v0.8
+- ✓ FILE-03: User can select files via checkboxes to activate Run Detection — v0.8
+- ✓ FILE-04: User can remove a file from a Collection — v0.8
+- ✓ PULSE-01: User can trigger Pulse detection on selected files (Run Detection button with credit cost) — v0.8
+- ✓ PULSE-02: System pre-checks credit balance, blocks run if insufficient (402) — v0.8
+- ✓ PULSE-03: System deducts flat credit cost before execution and refunds on failure — v0.8
+- ✓ PULSE-04: Inline detection progress banner with animated steps on Overview tab — v0.8
+- ✓ PULSE-05: After detection, user navigated to Detection Results page with Signals — v0.8
+- ✓ SIGNAL-01: Signal list sorted by severity (critical → warning → info) on Detection Results page — v0.8
+- ✓ SIGNAL-02: Highest-severity Signal auto-selected on Detection Results load — v0.8
+- ✓ SIGNAL-03: Signal detail panel with severity/category badges, Plotly chart, analysis text, statistical evidence grid, Investigation + What-If buttons (disabled) — v0.8
+- ✓ SIGNAL-04: Signal chart type driven by chartType field (bar/line/scatter via Plotly) — v0.8
+- ✓ REPORT-01: Reports tab listing all reports with type badge, title, source, date, View Report button — v0.8
+- ✓ REPORT-02: Full-page report viewer with sticky header, markdown-rendered content — v0.8
+- ✓ REPORT-03: Markdown report download — v0.8
+- ✓ REPORT-04: PDF download button present but disabled (v0.9) — v0.8
+- ✓ NAV-01 through NAV-04: Workspace sidebar nav, Overview stat cards, Signals tab, credit usage pill — v0.8
+- ✓ ADMIN-01: Tier-based workspace access (workspace_access + max_active_collections in user_classes.yaml) — v0.8
+- ✓ ADMIN-02: workspace_credit_cost_pulse configurable via Admin Portal (runtime, no redeploy) — v0.8
+- ✓ PIPE-01–08: Multi-agent orchestrator pipeline with Pydantic structured output, inline UX, toast notifications, re-run dialog — v0.8
 
-**Target features:**
-- Collection, File, Signal data models + full CRUD API
-- Pulse Agent (data profiling + statistical analysis in E2B sandbox + Signal generation)
-- Frontend: migrate pulse-mockup UI into main app (Collections list, Collection detail 4-tab, Detection loading state, Detection Results page with SignalListPanel + SignalDetailPanel)
-- Tier-based workspace access gating + credit cost infrastructure for Pulse
+**v0.8 Total: 35/35 requirements satisfied (100%)**
+
+## Next Milestone
+
+<!-- Requirements for next milestone defined in .planning/REQUIREMENTS.md after /gsd:new-milestone -->
 
 ### Active
 
-<!-- Current scope: v0.8 Spectra Pulse (Detection) — requirements defined in .planning/REQUIREMENTS.md -->
-
-- [ ] COLL-01: User can create a Collection with a name
-- [ ] COLL-02: User can view list of their Collections
-- [ ] COLL-03: User can view Collection detail with 4-tab layout (Overview, Files, Signals, Reports)
-- [ ] FILE-01: User can upload files (CSV/Excel) to a Collection
-- [ ] FILE-02: User can view column profile of an uploaded file (DataSummaryPanel)
-- [ ] FILE-03: User can remove a file from a Collection
-- [ ] PULSE-01: User can select files and trigger Pulse detection (Run Detection button)
-- [ ] PULSE-02: User sees full-page detection loading state with animated steps
-- [ ] PULSE-03: User can view Signal cards on Detection Results page (sorted by severity)
-- [ ] PULSE-04: User can view Signal detail (visualization, analysis text, statistical evidence)
-- [ ] PULSE-05: Credit cost pre-check and deduction before Pulse run (5 credits default)
-- [ ] ADMIN-01: Admin can configure workspace access per tier in user_classes.yaml
-- [ ] ADMIN-02: Admin can configure Pulse credit cost via platform_settings
+*(No active requirements — start next milestone with `/gsd:new-milestone`)*
 
 ### Out of Scope
 
@@ -607,6 +626,20 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | CSS funnel chart (proportional divs) | No external library needed for funnel approximation | ✓ Good — zero dependency, adequate fidelity for mockup |
 | key={selectedScenarioId} for WhatIfRefinementChat | React remount on scenario switch — no useEffect reset needed | ✓ Good — clean state isolation without manual cleanup |
 | Violet color scheme for What-If UI | Distinguishes from blue Investigation theme | ✓ Good — clear visual hierarchy across feature areas |
+| CollectionFile `__tablename__ = "collection_files"` | Avoid import collision with existing `app.models.file.File` | ✓ Good — zero collision, naming convention established |
+| E2B Pulse sandbox timeout 300s | Pulse analysis is CPU/IO intensive; 60s default would time out all runs | ✓ Good — all runs complete reliably |
+| Stateless LangGraph Pulse pipeline | Each ainvoke() starts fresh, no message history between runs | ✓ Good — clean slate per detection, no state bleed |
+| Flat credit cost for Pulse (workspace_credit_cost_pulse) | Per-file pricing creates unpredictable costs for multi-file collections | ✓ Good — predictable billing, confirmed over per-file |
+| Pulse endpoints in collections.py (not new router) | Consistent with existing file/report pattern in same router | ✓ Good — uniform namespace, no extra router registration |
+| Multi-agent orchestrator over monolithic pipeline | Monolith: hard to test, hard to add per-signal retry; orchestrator: composable sub-agents | ✓ Good — each sub-agent independently testable; rerunnable per signal |
+| with_structured_output() on reasoning LLM calls only | Coder/Viz agents produce code, not JSON — structured output incompatible | ✓ Good — Pydantic validation where possible, raw invocation where needed |
+| (workspace) route group parallel to (dashboard) | Workspace sidebar must not inherit ChatSidebar layout | ✓ Good — clean routing isolation, no layout bleed |
+| Inline progress banner (not full-page overlay) | Full-page overlay blocks user from navigating away; inline is non-blocking | ✓ Good — users can browse other collections while detection runs |
+| Sonner toast on detection completion | User may navigate away during long-running detection; needs notification regardless of page | ✓ Good — global notification works on any workspace page |
+| Re-run deletes signals and reports before persisting new ones | Stale signals from previous run would confuse results; clean slate required | ✓ Good — PulseRun audit records kept; signals/reports always reflect latest run |
+| Signal chart_data is Plotly fig.to_json() | Reuses existing ChartRenderer infrastructure from chat analysis | ✓ Good — consistent rendering across chat and workspace |
+| DropdownMenu trigger uses e.preventDefault() on collection cards | CollectionCard is wrapped in Link; clicking kebab menu triggered navigation | ✓ Good — reliable prevention without losing event bubbling |
+| Zustand detection state scoped per collectionId | Global store caused all collection pages to show running state simultaneously | ✓ Good — reactive selectors required (not getter functions) for re-render triggers |
 
 ---
-*Last updated: 2026-03-05 after v0.8 Spectra Pulse (Detection) milestone start*
+*Last updated: 2026-03-10 after v0.8 milestone*

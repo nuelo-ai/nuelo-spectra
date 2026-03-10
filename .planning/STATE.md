@@ -2,35 +2,33 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Spectra Pulse (Detection)
-status: completed
-stopped_at: Completed 52.1-03-PLAN.md
-last_updated: "2026-03-10T02:09:01.370Z"
-last_activity: 2026-03-09 — Phase 52.1 complete (delete/rename collection) + post-execution bug fixes (kebab nav, per-collection detection state, 402 error toast)
+status: archived
+stopped_at: v0.8 milestone archived 2026-03-10
+last_updated: "2026-03-10"
+last_activity: 2026-03-10 — v0.8 milestone archived, ROADMAP.md and REQUIREMENTS.md updated, git tag v0.8 pending
 progress:
   total_phases: 8
   completed_phases: 8
   total_plans: 20
   completed_plans: 20
-  percent: 92
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-05)
+See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** v0.8 Spectra Pulse (Detection) — Phase 51 complete, Phase 52 next
+**Current focus:** v0.8 archived — planning next milestone (v0.9)
 
 ## Current Position
 
-Phase: 51 of 52 (Frontend Migration) — COMPLETE
-Plan: 4 of 4 — COMPLETE
-Status: Phase 51 complete — all workspace pages live with real API data
-Last activity: 2026-03-08 — Phase 51 Plan 04 complete (Detection Results page, 22 bug fixes, debug logging cleanup)
+Milestone v0.8 ARCHIVED — all 8 phases, 20 plans complete
+Status: v0.8 complete — Spectra Pulse (Detection) shipped
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 🚧 [█████████░] 92% (Phase 51 complete)
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 ✅ [██████████] 100%
 
 ## Performance Metrics
 
