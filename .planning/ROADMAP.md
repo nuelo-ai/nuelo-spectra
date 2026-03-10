@@ -228,5 +228,5 @@ Plans:
 | 51.1. Pipeline Refactor (INSERTED) | v0.8 | 3/3 | Complete | 2026-03-08 |
 | 52. Admin and QA | v0.8 | 2/2 | Complete | 2026-03-09 |
 | 52.1. Delete and Rename Collection (INSERTED) | v0.8 | 3/3 | Complete | 2026-03-09 |
-| 53. Shell & Navigation Fixes | v0.8.1 | 0/TBD | Not started | - |
+| 53. Shell & Navigation Fixes | 1/4 | In Progress|  | - |
 | 54. Pulse Analysis Fixes | v0.8.1 | 0/TBD | Not started | - |
