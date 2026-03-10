@@ -51,6 +51,7 @@ export function QuerySuggestions({
 }: QuerySuggestionsProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const [visible, setVisible] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   if (!visible) return null;
 
@@ -63,13 +64,17 @@ export function QuerySuggestions({
     }, 300);
   };
 
+  const VISIBLE_COLS = 3;
+  const hasMore = categories.length > VISIBLE_COLS;
+  const visibleCategories = expanded ? categories : categories.slice(0, VISIBLE_COLS);
+
   return (
     <div style={{ animation: "var(--animate-fadeIn)" }}>
       <div
         className="grid gap-4 w-full max-w-6xl mx-auto"
         style={{ gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))" }}
       >
-        {categories.map((category) => {
+        {visibleCategories.map((category) => {
           const Icon = getCategoryIcon(category.name);
 
           return (
@@ -120,6 +125,19 @@ export function QuerySuggestions({
           );
         })}
       </div>
+
+      {hasMore && !expanded && (
+        <div className="flex justify-center mt-3">
+          <button
+            onClick={() => setExpanded(true)}
+            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors"
+          >
+            <span>View more</span>
+            <span className="text-muted-foreground/60">({categories.length - VISIBLE_COLS} more)</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
