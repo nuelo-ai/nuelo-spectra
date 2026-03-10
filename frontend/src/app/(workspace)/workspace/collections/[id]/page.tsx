@@ -307,7 +307,7 @@ export default function CollectionDetailPage() {
               filesCount={collection?.file_count ?? 0}
               signalCount={collection?.signal_count ?? 0}
               reportsCount={collection?.report_count ?? 0}
-              creditsUsed={creditCosts?.pulse_run ?? 0}
+              creditsUsed={collection?.credits_used ?? 0}
             />
           )}
 

@@ -246,6 +246,7 @@ class TestCollectionCRUD:
                 "file_count": 2,
                 "signal_count": 7,
                 "report_count": 1,
+                "credits_used": 0.0,
             },
         ):
             result = await get_collection(coll.id, user, mock_db)
@@ -292,6 +293,7 @@ class TestCollectionCRUD:
                 "file_count": 2,
                 "signal_count": 3,
                 "report_count": 0,
+                "credits_used": 0.0,
             },
         ):
             body = CollectionUpdate(name="Updated Name")
