@@ -184,11 +184,13 @@ export default function CollectionDetailPage() {
       setPulseRunId(collectionId, result.pulse_run_id);
       setDetectionStatus(collectionId, "running");
     } catch (err: unknown) {
-      // Handle 409 conflict (detection already running)
       if (err instanceof Error && err.message.includes("409")) {
         toast.error("A detection run is already in progress");
+      } else if (err instanceof Error && err.message.includes("402")) {
+        toast.error("Insufficient credits", {
+          description: "You don't have enough credits to run detection. Contact your admin to top up.",
+        });
       }
-      // Other errors handled by TanStack Query
     }
   }, [collectionFiles, loadingCollectionFiles, triggerPulse, setPulseRunId, setDetectionStatus]);
 
