@@ -81,12 +81,15 @@ export default function CollectionDetailPage() {
     selectedFileIds,
     toggleFileSelection,
     clearFileSelection,
-    detectionStatus,
+    getDetectionStatus,
     setDetectionStatus,
-    pulseRunId,
+    getPulseRunId,
     setPulseRunId,
     setSelectedSignalId,
   } = useWorkspaceStore();
+
+  const detectionStatus = getDetectionStatus(collectionId);
+  const pulseRunId = getPulseRunId(collectionId);
 
   // Mutations
   const triggerPulse = useTriggerPulse(collectionId);
@@ -110,7 +113,7 @@ export default function CollectionDetailPage() {
   // Reset detection state on mount if no active pulse run
   useEffect(() => {
     if (!pulseRunId) {
-      setDetectionStatus("idle");
+      setDetectionStatus(collectionId, "idle");
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -125,8 +128,8 @@ export default function CollectionDetailPage() {
   useEffect(() => {
     if (!pulseRun) return;
     if (pulseRun.status === "completed") {
-      setDetectionStatus("complete");
-      setPulseRunId(null);
+      setDetectionStatus(collectionId, "complete");
+      setPulseRunId(collectionId, null);
       refetchSignals();
       toast.success("Detection complete", {
         description: `${pulseRun.signal_count ?? 0} signals identified`,
@@ -136,8 +139,8 @@ export default function CollectionDetailPage() {
         },
       });
     } else if (pulseRun.status === "failed") {
-      setDetectionStatus("failed");
-      setPulseRunId(null);
+      setDetectionStatus(collectionId, "failed");
+      setPulseRunId(collectionId, null);
     }
   }, [pulseRun, setDetectionStatus, setPulseRunId, refetchSignals]);
 
@@ -176,8 +179,8 @@ export default function CollectionDetailPage() {
         file_ids: fileIds,
         user_context: userContext,
       });
-      setPulseRunId(result.pulse_run_id);
-      setDetectionStatus("running");
+      setPulseRunId(collectionId, result.pulse_run_id);
+      setDetectionStatus(collectionId, "running");
     } catch (err: unknown) {
       // Handle 409 conflict (detection already running)
       if (err instanceof Error && err.message.includes("409")) {
