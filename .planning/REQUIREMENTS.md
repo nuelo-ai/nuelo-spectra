@@ -51,16 +51,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | LBAR-01 | Phase 53 | Pending |
 | LBAR-02 | Phase 53 | Pending |
-| PULSE-01 | Phase 53 | Pending |
-| PULSE-02 | Phase 53 | Pending |
-| PULSE-03 | Phase 53 | Pending |
-| PULSE-04 | Phase 53 | Pending |
-| PULSE-05 | Phase 53 | Pending |
 | CHAT-01 | Phase 53 | Pending |
 | CHAT-02 | Phase 53 | Pending |
 | CHAT-03 | Phase 53 | Pending |
 | FILES-01 | Phase 53 | Pending |
 | FILES-02 | Phase 53 | Pending |
+| PULSE-01 | Phase 54 | Pending |
+| PULSE-02 | Phase 54 | Pending |
+| PULSE-03 | Phase 54 | Pending |
+| PULSE-04 | Phase 54 | Pending |
+| PULSE-05 | Phase 54 | Pending |
 
 **Coverage:**
 - v0.8.1 requirements: 12 total
@@ -69,4 +69,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-10*
-*Last updated: 2026-03-10 after initial definition*
+*Last updated: 2026-03-10 — traceability updated after roadmap creation (phases 53-54)*
