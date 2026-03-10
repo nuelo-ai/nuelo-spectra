@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, AlertTriangle, RefreshCw } from "lucide-react";
@@ -12,8 +12,10 @@ import { SignalDetailPanel } from "@/components/workspace/signal-detail-panel";
 import {
   useCollectionSignals,
   useCollectionDetail,
+  useCollectionFiles,
 } from "@/hooks/useWorkspace";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
+import { cn } from "@/lib/utils";
 import type { SignalDetail } from "@/types/workspace";
 
 const severityOrder: Record<SignalDetail["severity"], number> = {
@@ -59,6 +61,9 @@ export default function DetectionResultsPage() {
 
   const selectedSignal =
     sortedSignals.find((s) => s.id === selectedSignalId) ?? null;
+
+  const [showDetail, setShowDetail] = useState(false);
+  const { data: collectionFiles = [] } = useCollectionFiles(id);
 
   // Loading state
   if (isLoading) {
@@ -167,12 +172,32 @@ export default function DetectionResultsPage() {
 
       {/* Split Panel */}
       <div className="flex flex-1 overflow-hidden">
-        <SignalListPanel
-          signals={sortedSignals}
-          selectedId={selectedSignalId}
-          onSelect={setSelectedSignalId}
-        />
-        <SignalDetailPanel signal={selectedSignal} />
+        {/* List panel: hidden on mobile when detail is shown */}
+        <div className={cn(
+          "w-[350px] shrink-0 border-r border-border flex flex-col h-full",
+          showDetail ? "hidden sm:flex" : "flex"
+        )}>
+          <SignalListPanel
+            signals={sortedSignals}
+            selectedId={selectedSignalId}
+            onSelect={(id) => {
+              setSelectedSignalId(id);
+              setShowDetail(true);
+            }}
+          />
+        </div>
+        {/* Detail panel: hidden on mobile when list is shown */}
+        <div className={cn(
+          "flex-1 overflow-hidden",
+          showDetail ? "flex" : "hidden sm:flex"
+        )}>
+          <SignalDetailPanel
+            signal={selectedSignal}
+            onBack={() => setShowDetail(false)}
+            collectionFiles={collectionFiles}
+            collectionId={id}
+          />
+        </div>
       </div>
     </div>
   );
