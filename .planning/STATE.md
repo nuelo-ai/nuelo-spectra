@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: executing
-stopped_at: Completed 53-04-PLAN.md
-last_updated: "2026-03-10T14:11:54.443Z"
-last_activity: "2026-03-10 — Phase 53 planned: 4 plans across 2 waves"
+stopped_at: Completed 53-05-PLAN.md
+last_updated: "2026-03-10T14:37:04.869Z"
+last_activity: 2026-03-10 — Phase 53 verification complete; gaps recorded for follow-up
 progress:
   total_phases: 2
-  completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
+  completed_phases: 0
+  total_plans: 6
+  completed_plans: 5
   percent: 96
 ---
 
@@ -56,6 +56,8 @@ Recent decisions affecting v0.8.1 work:
 - [Phase 53]: 53-04: LBAR-01 requires broader fix — SidebarTrigger header needed in Collection details, Signal detail, and Report views (not just WorkspacePage)
 - [Phase 53]: 53-04: LBAR-02 padding incomplete — pl-1 fix insufficient; icon centering in collapsed sidebar also misaligned
 - [Phase 53]: 53-04: New gap identified — 'Chat with Spectra' button missing from Signal detail view (not in original scope)
+- [Phase 53-shell-and-navigation-fixes]: LBAR-01 gap closed: SidebarTrigger added to all workspace sub-view pages (collection detail, signal view, report view) across all render states
+- [Phase 53-shell-and-navigation-fixes]: LBAR-02 gap closed: pl-1 removed from UnifiedSidebar nav asChild children — shadcn p-2 default is the sole padding source for correct icon alignment
 
 ### Pending Todos
 
@@ -73,6 +75,6 @@ Recent decisions affecting v0.8.1 work:
 
 ## Session Continuity
 
-Last session: 2026-03-10T14:11:49.124Z
-Stopped at: Completed 53-04-PLAN.md
+Last session: 2026-03-10T14:37:04.866Z
+Stopped at: Completed 53-05-PLAN.md
 Resume with: /gsd:execute-phase 53
