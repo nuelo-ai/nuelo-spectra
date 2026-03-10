@@ -22,14 +22,14 @@ Requirements for v0.8.1 UI Fixes & Enhancement. Phases continue from v0.8 (last 
 
 ### Chat
 
-- [ ] **CHAT-01**: Spectra logo is not shown in the top left of the Chat main panel when Chat section is selected
-- [ ] **CHAT-02**: Chat dashboard (new chat) rightbar expand toggle is visible after the rightbar is collapsed (positioned at top right of the chat area)
-- [ ] **CHAT-03**: Chat screen (existing chat) rightbar collapse/expand toggle is positioned at top right of the chat area (not top middle)
+- [x] **CHAT-01**: Spectra logo is not shown in the top left of the Chat main panel when Chat section is selected
+- [x] **CHAT-02**: Chat dashboard (new chat) rightbar expand toggle is visible after the rightbar is collapsed (positioned at top right of the chat area)
+- [x] **CHAT-03**: Chat screen (existing chat) rightbar collapse/expand toggle is positioned at top right of the chat area (not top middle)
 
 ### Files
 
-- [ ] **FILES-01**: Spectra logo is not shown in the top left of the Files main panel when Files section is selected
-- [ ] **FILES-02**: Leftbar collapse toggle is in the correct position in Files section (at top of main screen next to leftbar)
+- [x] **FILES-01**: Spectra logo is not shown in the top left of the Files main panel when Files section is selected
+- [x] **FILES-02**: Leftbar collapse toggle is in the correct position in Files section (at top of main screen next to leftbar)
 
 ## Future Requirements
 
@@ -51,11 +51,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | LBAR-01 | Phase 53 | Pending |
 | LBAR-02 | Phase 53 | Pending |
-| CHAT-01 | Phase 53 | Pending |
-| CHAT-02 | Phase 53 | Pending |
-| CHAT-03 | Phase 53 | Pending |
-| FILES-01 | Phase 53 | Pending |
-| FILES-02 | Phase 53 | Pending |
+| CHAT-01 | Phase 53 | Complete |
+| CHAT-02 | Phase 53 | Complete |
+| CHAT-03 | Phase 53 | Complete |
+| FILES-01 | Phase 53 | Complete |
+| FILES-02 | Phase 53 | Complete |
 | PULSE-01 | Phase 54 | Pending |
 | PULSE-02 | Phase 54 | Pending |
 | PULSE-03 | Phase 54 | Pending |
