@@ -79,8 +79,8 @@ export function QuerySuggestions({
 
           return (
             <div key={category.name} className="flex flex-col">
-              {/* Column header */}
-              <div className="flex flex-col items-center gap-2 mb-4 pb-3 border-b border-border">
+              {/* Column header — fixed min-height keeps all columns aligned */}
+              <div className="flex flex-col items-center gap-2 mb-4 pb-3 border-b border-border min-h-[4.5rem]">
                 <Icon className="h-5 w-5 text-foreground" />
                 <span className="text-xs font-bold uppercase tracking-widest text-foreground text-center">
                   {category.name}
