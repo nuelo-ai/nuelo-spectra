@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Spectra Pulse (Detection)
 status: completed
-stopped_at: Completed 52-02-PLAN.md — Phase 52 Admin and QA complete
-last_updated: "2026-03-10T00:49:54.278Z"
+stopped_at: Phase 52.1 context gathered
+last_updated: "2026-03-10T01:43:01.362Z"
 last_activity: 2026-03-08 — Phase 51 Plan 04 complete (Detection Results page, 22 bug fixes, debug logging cleanup)
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 7
   total_plans: 17
   completed_plans: 17
@@ -94,6 +94,7 @@ Recent decisions affecting v0.8 work:
 ### Roadmap Evolution
 
 - Phase 51.1 inserted after Phase 51: Pipeline Refactor (URGENT)
+- Phase 52.1 inserted after Phase 52: delete and rename Collection (URGENT)
 
 ### Blockers/Concerns
 
@@ -103,6 +104,6 @@ Recent decisions affecting v0.8 work:
 
 ## Session Continuity
 
-Last session: 2026-03-09T17:36:00.532Z
-Stopped at: Completed 52-02-PLAN.md — Phase 52 Admin and QA complete
+Last session: 2026-03-10T01:43:01.356Z
+Stopped at: Phase 52.1 context gathered
 Resume with: Phase 52 (Admin and QA) or insert pipeline refactor phase
