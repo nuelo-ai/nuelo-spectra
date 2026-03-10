@@ -277,6 +277,30 @@ class CollectionService:
         await db.flush()
         return True
 
+    @staticmethod
+    async def delete_collection(
+        db: AsyncSession,
+        collection_id: UUID,
+        user_id: UUID,
+    ) -> bool:
+        """Delete a collection owned by user_id. Returns True if deleted, False if not found or not owned.
+
+        DB cascade removes child rows (signals, collection_files, pulse_runs, reports).
+        """
+        stmt = select(Collection).where(
+            Collection.id == collection_id,
+            Collection.user_id == user_id,
+        )
+        result = await db.execute(stmt)
+        collection = result.scalar_one_or_none()
+
+        if collection is None:
+            return False
+
+        await db.delete(collection)
+        await db.flush()
+        return True
+
     # --- Signals ---
 
     @staticmethod
