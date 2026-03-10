@@ -153,6 +153,22 @@ async def update_collection(
     )
 
 
+@router.delete("/{collection_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_collection(
+    collection_id: UUID,
+    current_user: WorkspaceUser,
+    db: DbSession,
+) -> None:
+    """Delete a collection and all cascade children (signals, reports, collection_files, pulse_runs)."""
+    deleted = await CollectionService.delete_collection(db, collection_id, current_user.id)
+    await db.commit()
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Collection not found",
+        )
+
+
 # --- File endpoints ---
 
 
