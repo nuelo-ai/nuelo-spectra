@@ -292,4 +292,4 @@ Plans:
 | 51. Frontend Migration | 4/4 | Complete | 2026-03-08 | - |
 | 51.1. Pipeline Refactor | 3/3 | Complete    | 2026-03-08 | - |
 | 52. Admin and QA | 2/2 | Complete    | 2026-03-10 | - |
-| 52.1. Delete and Rename Collection | 3/3 | Complete   | 2026-03-10 |
+| 52.1. Delete and Rename Collection | 3/3 | Complete    | 2026-03-10 |
