@@ -71,7 +71,7 @@ export function QuerySuggestions({
   return (
     <div style={{ animation: "var(--animate-fadeIn)" }}>
       <div
-        className="grid gap-4 w-full max-w-6xl mx-auto"
+        className="grid gap-4 w-full"
         style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}
       >
         {visibleCategories.map((category) => {
