@@ -81,15 +81,17 @@ export default function CollectionDetailPage() {
     selectedFileIds,
     toggleFileSelection,
     clearFileSelection,
-    getDetectionStatus,
     setDetectionStatus,
-    getPulseRunId,
     setPulseRunId,
     setSelectedSignalId,
   } = useWorkspaceStore();
 
-  const detectionStatus = getDetectionStatus(collectionId);
-  const pulseRunId = getPulseRunId(collectionId);
+  const detectionStatus = useWorkspaceStore(
+    (s) => s.collectionDetection[collectionId]?.detectionStatus ?? "idle"
+  );
+  const pulseRunId = useWorkspaceStore(
+    (s) => s.collectionDetection[collectionId]?.pulseRunId ?? null
+  );
 
   // Mutations
   const triggerPulse = useTriggerPulse(collectionId);
