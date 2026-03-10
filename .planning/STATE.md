@@ -5,7 +5,7 @@ milestone_name: Spectra Pulse (Detection)
 status: completed
 stopped_at: Completed 52.1-03-PLAN.md
 last_updated: "2026-03-10T02:09:01.370Z"
-last_activity: 2026-03-08 — Phase 51 Plan 04 complete (Detection Results page, 22 bug fixes, debug logging cleanup)
+last_activity: 2026-03-09 — Phase 52.1 complete (delete/rename collection) + post-execution bug fixes (kebab nav, per-collection detection state, 402 error toast)
 progress:
   total_phases: 8
   completed_phases: 8
@@ -88,6 +88,10 @@ Recent decisions affecting v0.8 work:
 - [Phase 52.1-delete-and-rename-collection]: DropdownMenuTrigger Button uses e.preventDefault() to block Link navigation without losing event bubbling
 - [Phase 52.1-delete-and-rename-collection]: Kebab menu on detail page hidden while loadingCollection to prevent null collection prop in dialogs
 - [Phase 52.1-delete-and-rename-collection]: CollectionDetail extends CollectionListItem so no type cast needed when passing to dialog collection props
+- [Phase 52.1-post-fix]: CollectionCard Link wrapper replaced with router.push on Card onClick — nested interactive element + Link causes navigation even with stopPropagation; router.push is reliable
+- [Phase 52.1-post-fix]: Zustand detectionStatus/pulseRunId scoped per collectionId in collectionDetection map — global store caused all collection pages to show running state simultaneously
+- [Phase 52.1-post-fix]: Per-collection Zustand state requires reactive selectors (useWorkspaceStore(s => s.collectionDetection[id]?.field)) not getter functions — getters are not subscriptions and don't trigger re-renders
+- [Phase 52.1-post-fix]: Pulse 402 insufficient_credits error was silently swallowed — catch block now handles 402 with toast alongside existing 409 handler
 
 ### Pending Todos
 
@@ -96,7 +100,7 @@ Recent decisions affecting v0.8 work:
 - [ ] Show suggestions in Data Summary sidebar panel (ui)
 - [ ] Use Pydantic structured output for agent JSON responses (consistency)
 - [ ] Plan production environment variable cleanup and validation (deployment)
-- [ ] Disable "Run Detection" button while Pulse is running, show tooltip "Pulse analysis is currently running" (ui)
+- [x] Disable "Run Detection" button while Pulse is running, show tooltip "Pulse analysis is currently running" (ui)
 
 ### Roadmap Evolution
 
@@ -111,6 +115,6 @@ Recent decisions affecting v0.8 work:
 
 ## Session Continuity
 
-Last session: 2026-03-10T02:06:23.301Z
-Stopped at: Completed 52.1-03-PLAN.md
-Resume with: Phase 52 (Admin and QA) or insert pipeline refactor phase
+Last session: 2026-03-09
+Stopped at: Phase 52.1 fully complete — all plans executed, verified, and post-execution bugs resolved
+Resume with: Phase 52 complete (all 4 plans done) — milestone v0.8 is complete; consider /gsd:complete-milestone or adding any remaining polish phases
