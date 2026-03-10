@@ -259,7 +259,7 @@ export default function CollectionDetailPage() {
         {/* Credit usage pill (NAV-04) */}
         <Badge
           variant="secondary"
-          className="gap-1.5 px-3 py-1 text-sm font-medium"
+          className="ml-auto gap-1.5 px-3 py-1 text-sm font-medium"
         >
           <Zap className="h-3.5 w-3.5 text-amber-400" />
           {isLoadingCreditCosts ? (
