@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Phase: 54 of 54 (Pulse Analysis Fixes) — ARCHIVED
-Status: v0.8.1 complete and archived — tagged v0.8.1 on master
-Last activity: 2026-03-10 - Completed quick task 5: update query suggestion chat dashboard card layout
+Status: v0.8.2 complete — tagged v0.8.2 on master
+Last activity: 2026-03-10 - Released v0.8.2: Chat query suggestions redesign (card layout, column grouping)
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 ✅ | v0.8.1 ✅ [██████████] 100%
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 ✅ | v0.8.1 ✅ | v0.8.2 ✅ [██████████] 100%
 
 ## Performance Metrics
 

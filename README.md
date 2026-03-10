@@ -364,7 +364,17 @@ allowed_libraries:
 
 Changes to YAML configs require server restart.
 
-## Current Status (v0.8.1)
+## Current Status (v0.8.2)
+
+### v0.8.2 Chat Query Suggestions Redesign (March 2026)
+- **Query suggestion cards** — redesigned from pill chips to Signal-card-style bordered cards with icon, bold category title, and per-suggestion cards
+- **Column layout** — grouped by category in a responsive multi-column grid (3 columns default); expands to show more via "View more" toggle when categories exceed 3
+- **Upgrading from v0.8.1:** No migrations required — UI-only changes. Pull and rebuild frontend.
+
+```bash
+git pull origin master
+cd frontend && npm install
+```
 
 ### v0.8.1 UI Fixes & Enhancement (March 2026)
 - **Leftbar toggle visibility** — SidebarTrigger added to all Pulse workspace sub-views (Collection Detail, Signal View, Report pages); toggle always accessible regardless of active sub-view
@@ -501,4 +511,4 @@ MIT License - See LICENSE file for details.
 
 - **GitHub**: [github.com/marwazihs/nuelo-spectra](https://github.com/marwazihs/nuelo-spectra)
 - **Issues**: Report bugs or request features via GitHub Issues
-- **Version**: v0.8.1 (March 2026)
+- **Version**: v0.8.2 (March 2026)
