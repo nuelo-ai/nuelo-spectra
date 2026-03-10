@@ -65,7 +65,10 @@ export function QuerySuggestions({
 
   return (
     <div style={{ animation: "var(--animate-fadeIn)" }}>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full max-w-4xl mx-auto">
+      <div
+        className="grid gap-4 w-full max-w-6xl mx-auto"
+        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))" }}
+      >
         {categories.map((category) => {
           const Icon = getCategoryIcon(category.name);
 
