@@ -325,8 +325,8 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
       )}
 
       {/* Main content area — centered greeting, scrollable when suggestions overflow */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-6 flex flex-col">
-        <div className="max-w-2xl w-full space-y-8 text-center py-8 mx-auto my-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto px-6 flex flex-col items-center">
+        <div className="max-w-2xl w-full space-y-8 text-center py-8">
           {/* Subtle decorative element */}
           <div className="flex justify-center">
             <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-gray-200/60 to-gray-300/40 dark:from-[#434C5E]/40 dark:to-[#3B4252]/40 border border-gray-300/50 dark:border-[#4C566A]/50 flex items-center justify-center">
@@ -369,16 +369,18 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
               ))}
             </div>
           )}
+        </div>
 
-          {/* Query suggestions when files are linked */}
-          {hasLinkedFiles && sessionId && sessionDetail && fileSummary?.query_suggestions?.categories && (
+        {/* Query suggestions — full available width, outside the narrow greeting wrapper */}
+        {hasLinkedFiles && sessionId && sessionDetail && fileSummary?.query_suggestions?.categories && (
+          <div className="w-full max-w-5xl pb-8 mt-6">
             <QuerySuggestions
               categories={fileSummary.query_suggestions.categories}
               onSelect={(suggestion) => handleSend(suggestion)}
               autoSend={true}
             />
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Chat input — fixed at bottom */}
