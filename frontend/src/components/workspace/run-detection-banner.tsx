@@ -4,15 +4,23 @@ import { useState } from "react";
 import { AlertCircle, FolderPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface RunDetectionBannerProps {
   fileCount: number;
   onRunDetection: (userContext?: string) => void;
+  isRunning?: boolean;
 }
 
 export function RunDetectionBanner({
   fileCount,
   onRunDetection,
+  isRunning = false,
 }: RunDetectionBannerProps) {
   const noFiles = fileCount === 0;
   const [userContext, setUserContext] = useState("");
@@ -32,13 +40,27 @@ export function RunDetectionBanner({
               : `You have ${fileCount} ${fileCount === 1 ? "file" : "files"} — Run Detection to discover signals`}
           </p>
         </div>
-        <Button
-          variant="default"
-          size="sm"
-          onClick={() => onRunDetection(userContext.trim() || undefined)}
-        >
-          {noFiles ? "Add Files" : "Run Detection"}
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span tabIndex={isRunning ? 0 : undefined}>
+                <Button
+                  variant="default"
+                  size="sm"
+                  disabled={isRunning}
+                  onClick={() => onRunDetection(userContext.trim() || undefined)}
+                >
+                  {noFiles ? "Add Files" : "Run Detection"}
+                </Button>
+              </span>
+            </TooltipTrigger>
+            {isRunning && (
+              <TooltipContent>
+                <p>Detection is running — please wait until it finishes</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
       </div>
       {!noFiles && (
         <Textarea

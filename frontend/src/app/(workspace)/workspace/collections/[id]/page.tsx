@@ -308,6 +308,7 @@ export default function CollectionDetailPage() {
           {hasFiles ? (
             <RunDetectionBanner
               fileCount={collection?.file_count ?? 0}
+              isRunning={isDetectionRunning}
               onRunDetection={(ctx) => {
                 if (signalCount > 0) {
                   setPendingUserContext(ctx);
