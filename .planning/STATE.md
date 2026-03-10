@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 
 Phase: 54 of 54 (Pulse Analysis Fixes) — ARCHIVED
 Status: v0.8.1 complete and archived — tagged v0.8.1 on master
-Last activity: 2026-03-10 — v0.8.1 milestone archived; all 12 requirements satisfied
+Last activity: 2026-03-10 - Completed quick task 5: update query suggestion chat dashboard card layout
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 ✅ | v0.8.1 ✅ [██████████] 100%
 
@@ -77,6 +77,12 @@ Recent decisions affecting v0.8.1 work:
 - slowapi>=0.1.9 compatibility with FastAPI 0.115+ and custom key_func — verify before writing rate limiting middleware
 - Confirm spectra-api and spectra-public share same Dokploy host — spectra_uploads volume sharing is automatic only on single host
 - Statistical severity thresholds (Z-score >3 = critical, etc.) are starting values only — externalize to YAML from day one
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 5 | update the query suggestion on the chat dashboard design and style to make it beautiful. use a nice card (Similar to Signal card item on the Signal view). Sort it as multiple columns grouped by the Category. | 2026-03-10 | 43343e9 | [5-update-the-query-suggestion-on-the-chat-](./quick/5-update-the-query-suggestion-on-the-chat-/) |
 
 ## Session Continuity
 
