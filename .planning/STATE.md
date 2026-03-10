@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: executing
-stopped_at: Completed 53-02-PLAN.md
-last_updated: "2026-03-10T13:42:58.040Z"
+stopped_at: Completed 53-01-PLAN.md
+last_updated: "2026-03-10T13:43:22.164Z"
 last_activity: "2026-03-10 — Phase 53 planned: 4 plans across 2 waves"
 progress:
   total_phases: 2
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Phase: 53 of 54 (Shell & Navigation Fixes)
-Plan: Ready to execute (4 plans planned)
+Plan: 53-01 complete (1/4 plans done)
 Status: Executing
 Last activity: 2026-03-10 — Phase 53 planned: 4 plans across 2 waves
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 ✅ | v0.8.1 ◆ [░░░░░░░░░░] 0%
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 ✅ | v0.8.1 ◆ [██████████] 96%
 
 ## Performance Metrics
 
@@ -51,6 +51,8 @@ Recent decisions affecting v0.8.1 work:
 - [Phase 52.1-post-fix]: Pulse 402 insufficient_credits error handled with toast in catch block
 - [Phase 53]: Fixed header strip uses shrink-0 border-b as direct child of outer flex-col container for SidebarTrigger visibility in MyFilesPage
 - [Phase 53-02]: ChatInterface logo retained in active-chat header (CHAT-01 applies to WelcomeScreen only); WelcomeScreen expand button guarded by sessionId; ChatInterface header restructured to flex row for true-edge toggle pinning
+- [Phase 53-01]: WorkspacePage uses flex flex-col h-full with shrink-0 header strip — not sticky/fixed positioning
+- [Phase 53-01]: Nav item padding fix uses pl-1 on Link/anchor children of SidebarMenuButton asChild
 
 ### Pending Todos
 
@@ -68,6 +70,6 @@ Recent decisions affecting v0.8.1 work:
 
 ## Session Continuity
 
-Last session: 2026-03-10T13:42:58.038Z
-Stopped at: Completed 53-02-PLAN.md
+Last session: 2026-03-10T13:43:22.162Z
+Stopped at: Completed 53-01-PLAN.md
 Resume with: /gsd:execute-phase 53

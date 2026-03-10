@@ -9,8 +9,8 @@ Requirements for v0.8.1 UI Fixes & Enhancement. Phases continue from v0.8 (last 
 
 ### Leftbar
 
-- [ ] **LBAR-01**: Leftbar collapse toggle is visible when Pulse Analysis is selected (positioned at top left of main screen next to the leftbar)
-- [ ] **LBAR-02**: Menu items (Pulse Analysis, Chat, Files, Admin Panel) have correct left padding aligned with other icons
+- [x] **LBAR-01**: Leftbar collapse toggle is visible when Pulse Analysis is selected (positioned at top left of main screen next to the leftbar)
+- [x] **LBAR-02**: Menu items (Pulse Analysis, Chat, Files, Admin Panel) have correct left padding aligned with other icons
 
 ### Pulse Analysis
 
@@ -49,8 +49,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LBAR-01 | Phase 53 | Pending |
-| LBAR-02 | Phase 53 | Pending |
+| LBAR-01 | Phase 53 | Complete |
+| LBAR-02 | Phase 53 | Complete |
 | CHAT-01 | Phase 53 | Complete |
 | CHAT-02 | Phase 53 | Complete |
 | CHAT-03 | Phase 53 | Complete |
