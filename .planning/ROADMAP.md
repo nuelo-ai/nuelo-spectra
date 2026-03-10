@@ -11,7 +11,7 @@
 - ✅ **v0.7 API Services & MCP** — Phases 38-41 (shipped 2026-02-25)
 - ✅ **v0.7.12 Spectra Pulse Mockup** — Phases 42-46 (shipped 2026-03-05)
 - ✅ **v0.8 Spectra Pulse (Detection)** — Phases 47-52.1 (shipped 2026-03-10)
-- ✅ **v0.8.1 UI Fixes & Enhancement** — Phases 53-54 (shipped 2026-03-10)
+- ✅ **v0.8.1 UI Fixes & Enhancement** — Phases 53–54 (shipped 2026-03-10)
 
 ## Phases
 
@@ -123,54 +123,13 @@
 
 </details>
 
-### ✅ v0.8.1 UI Fixes & Enhancement (Shipped 2026-03-10)
+<details>
+<summary>✅ v0.8.1 UI Fixes & Enhancement (Phases 53–54) — SHIPPED 2026-03-10</summary>
 
-**Milestone Goal:** Fix polish gaps across the app shell, Chat, Files, and Pulse Analysis sections — correcting navigation chrome behaviour, removing misplaced branding, and adding missing Pulse capabilities (credit accuracy, mobile responsiveness, Chat bridge, timestamp detail).
+- [x] Phase 53: Shell & Navigation Fixes (6/6 plans) — completed 2026-03-10
+- [x] Phase 54: Pulse Analysis Fixes (4/4 plans) — completed 2026-03-10
 
-#### Phase Checklist
-
-- [x] **Phase 53: Shell & Navigation Fixes** - Fix leftbar toggle visibility, menu icon padding, logo presence in Chat/Files panels, and rightbar toggle placement in Chat (gap closure in progress — plans 05-06 close LBAR-01 and LBAR-02) (completed 2026-03-10)
-- [x] **Phase 54: Pulse Analysis Fixes** - Fix credit tracking accuracy, add mobile responsiveness to Signal View, add Chat bridge button, and show full timestamps in activity/file history (completed 2026-03-10)
-
-## Phase Details
-
-### Phase 53: Shell & Navigation Fixes
-**Goal**: The app shell chrome behaves correctly across all sections — leftbar toggle is always accessible, menu icons are aligned, section panels do not show the Spectra logo, and Chat rightbar toggles sit in the correct corner
-**Depends on**: Nothing (first phase of v0.8.1)
-**Requirements**: LBAR-01, LBAR-02, CHAT-01, CHAT-02, CHAT-03, FILES-01, FILES-02
-**Success Criteria** (what must be TRUE):
-  1. When Pulse Analysis is selected, the leftbar collapse toggle is visible at the top left of the main screen (next to the leftbar), not hidden
-  2. Pulse Analysis, Chat, Files, and Admin Panel menu items have left padding that aligns with their icons — no visual misalignment
-  3. Selecting the Chat section shows no Spectra logo in the top left of the Chat main panel
-  4. Selecting the Files section shows no Spectra logo in the top left of the Files main panel, and the leftbar collapse toggle is at the top of the main screen next to the leftbar
-  5. The Chat rightbar expand toggle is visible at the top right of the chat area after the rightbar is collapsed, and the collapse/expand toggle on an existing chat is positioned at the top right (not top middle)
-**Plans**: 6 plans
-
-Plans:
-- [x] 53-01-PLAN.md — Fix WorkspacePage leftbar toggle (LBAR-01) + UnifiedSidebar nav padding (LBAR-02)
-- [x] 53-02-PLAN.md — Remove Chat logo, add rightbar expand button on WelcomeScreen (CHAT-01, CHAT-02), pin toggle in ChatInterface (CHAT-03)
-- [x] 53-03-PLAN.md — Remove Files logo, fix SidebarTrigger position in MyFilesPage (FILES-01, FILES-02)
-- [x] 53-04-PLAN.md — Human visual verification of all 7 requirements (5/7 pass; LBAR-01 and LBAR-02 gaps identified)
-- [ ] 53-05-PLAN.md — Gap closure: SidebarTrigger in workspace sub-views (LBAR-01) + remove pl-1 nav child padding (LBAR-02)
-- [ ] 53-06-PLAN.md — Human visual verification of LBAR-01 and LBAR-02 gap fixes
-
-### Phase 54: Pulse Analysis Fixes
-**Goal**: Pulse Analysis shows accurate data and provides a complete user experience — credits reflect actual usage, Signal View works on mobile, users can bridge to Chat from a Signal, and timestamps show both date and time throughout
-**Depends on**: Phase 53
-**Requirements**: PULSE-01, PULSE-02, PULSE-03, PULSE-04, PULSE-05
-**Success Criteria** (what must be TRUE):
-  1. The Credits Used card on Collection Overview shows the actual cumulative credits spent after one or more pulse runs (not a hardcoded "5")
-  2. On a small screen, the Signal detail panel is accessible — users can view Signal details without the panel being hidden behind the signals list
-  3. A "Chat with Spectra" button appears between the Analysis and Statistical Evidence sections on Signal View, and clicking it opens a new Chat session with the collection's files pre-linked
-  4. Each entry in the Activity history list displays both the date and the time of the activity
-  5. Each entry in the Files added list displays both the date and the time the file was added
-**Plans**: 4 plans
-
-Plans:
-- [x] 54-01-PLAN.md — Credits Used accuracy: backend aggregate subquery + schema + router + frontend type wiring (PULSE-01)
-- [x] 54-02-PLAN.md — Timestamp date+time fix: activity-feed, file-table, and collections page (PULSE-04, PULSE-05)
-- [x] 54-03-PLAN.md — Mobile Signal View toggle + Chat bridge button in SignalDetailPanel (PULSE-02, PULSE-03)
-- [x] 54-04-PLAN.md — Human visual verification of all 5 PULSE requirements
+</details>
 
 ## Progress
 
@@ -231,4 +190,4 @@ Plans:
 | 52. Admin and QA | v0.8 | 2/2 | Complete | 2026-03-09 |
 | 52.1. Delete and Rename Collection (INSERTED) | v0.8 | 3/3 | Complete | 2026-03-09 |
 | 53. Shell & Navigation Fixes | v0.8.1 | 6/6 | Complete | 2026-03-10 |
-| 54. Pulse Analysis Fixes | v0.8.1 | Complete    | 2026-03-10 | 2026-03-10 |
+| 54. Pulse Analysis Fixes | v0.8.1 | 4/4 | Complete | 2026-03-10 |

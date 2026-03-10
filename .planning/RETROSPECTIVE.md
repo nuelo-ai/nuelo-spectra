@@ -139,6 +139,41 @@
 
 ---
 
+## Milestone: v0.8.1 — UI Fixes & Enhancement
+
+**Shipped:** 2026-03-10
+**Phases:** 2 (53–54) | **Plans:** 10
+
+### What Was Built
+- Shell & Navigation Fixes: SidebarTrigger added to all workspace sub-views (Collection Detail, Signal View all 4 render states, Report View all 3 render states); nav icon alignment fixed via SidebarGroup wrapper; Spectra logo removed from Chat and Files panel headers; Chat rightbar toggle pinned to viewport right edge
+- Pulse Analysis Fixes: Credits Used stat card wired to actual aggregate subquery; date+time timestamps in activity feed and file tables via toLocaleString; mobile-responsive Signal View with showDetail toggle; Chat bridge button in SignalDetailPanel opening new tab
+
+### What Worked
+- **Verification plan pattern (53-04, 54-04):** Human visual verification plans caught 2 LBAR gaps before milestone close — gap closure plans 53-05 and 53-06 resolved them cleanly
+- **Root cause analysis before fixing:** LBAR-02 required two attempts (pl-1 removal first, then SidebarGroup wrapper) — the second fix was found by tracing the shadcn padding inheritance chain rather than guessing
+- **toLocaleString discovery:** Found a real browser compatibility gotcha (toLocaleDateString silently ignoring time options) — immediately documented as a pattern for future timestamp work
+
+### What Was Inefficient
+- LBAR-02 required two plan passes (53-01 and then 53-06) — the pl-1 fix alone was insufficient; root cause (missing SidebarGroup) should have been identified in the first plan
+- Phase 53-04 verification identified a gap ("Chat with Spectra" button) that was actually PULSE-03 scope — migrating it to Phase 54 was the right call but could have been avoided with tighter initial scoping
+
+### Patterns Established
+- **SidebarTrigger header strip pattern:** `shrink-0 border-b` div above `flex-1 overflow-y-auto` — not sticky/fixed; now the standard for all pages needing persistent header above scrollable content
+- **SidebarGroup wraps SidebarMenu for nav alignment:** SidebarMenu alone lacks `p-2` context; SidebarGroup wrapper required for icon alignment with chat history list
+- **toLocaleString for timestamps:** Never use `toLocaleDateString` when time display is needed — use `toLocaleString` with explicit locale options
+
+### Key Lessons
+1. **Verify padding inheritance chain before fixing alignment** — Don't patch child padding; find the correct parent context provider (SidebarGroup in shadcn case)
+2. **Timestamp formatting: toLocaleString ≠ toLocaleDateString** — `toLocaleDateString` with `hour`/`minute` options appears correct but silently ignores them in all browsers
+3. **Visual verification plans reveal real gaps** — Plans 53-04 and 54-04 caught actual defects post-implementation; always include a human-verify plan for UI-heavy phases
+
+### Cost Observations
+- Model profile: quality (claude-sonnet-4-6)
+- 2 phases, 10 plans, 2 days — fastest milestone to date
+- Patch milestone scope (UI-only, no backend schema changes) kept context very cheap
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -154,6 +189,7 @@
 | v0.7 | 4 | 15 | 4 days (+3 patches) | MCP loopback arch; 7 hotfixes post-ship |
 | v0.7.12 | 5 | 17 | 3 days (+1 polish patch) | Mockup-first milestone pattern; separate Next.js app |
 | v0.8 | 8 | 20 | 4 days | Decimal phase insertions for mid-milestone urgents; Pydantic structured output on all pipelines |
+| v0.8.1 | 2 | 10 | 2 days | Patch milestone pattern; verification plans catching post-impl gaps before close |
 
 ### Cumulative Quality
 
@@ -168,6 +204,7 @@
 | v0.7 | 30 | 100% | 0 |
 | v0.7.12 | 34 | 94% | 2 (COLL-01, COLL-02) |
 | v0.8 | 35 | 100% | 0 |
+| v0.8.1 | 12 | 100% | 0 |
 
 ### Top Lessons (Verified Across Milestones)
 

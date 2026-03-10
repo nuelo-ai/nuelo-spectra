@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.1
-milestone_name: milestone
-status: completed
-stopped_at: Completed 54-04-PLAN.md
-last_updated: "2026-03-10T17:30:00.647Z"
-last_activity: 2026-03-10 — Phase 54 verification complete; all PULSE requirements approved
+milestone: v0.8.1
+milestone_name: UI Fixes & Enhancement
+status: archived
+stopped_at: v0.8.1 milestone complete and archived
+last_updated: "2026-03-10T18:00:00.000Z"
+last_activity: 2026-03-10 — v0.8.1 milestone archived; git tagged and pushed to master
 progress:
   total_phases: 2
   completed_phases: 2
@@ -21,14 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** v0.8.1 — UI Fixes & Enhancement — COMPLETE (Phase 54: Pulse Analysis Fixes verified)
+**Current focus:** v0.8.1 shipped — start next milestone with `/gsd:new-milestone`
 
 ## Current Position
 
-Phase: 54 of 54 (Pulse Analysis Fixes)
-Plan: 54-04 complete (4/4 plans done) — all 5 PULSE requirements visually confirmed; v0.8.1 milestone gate passed
-Status: Complete — v0.8.1 milestone ready to ship
-Last activity: 2026-03-10 — Phase 54 verification complete; all PULSE requirements approved
+Phase: 54 of 54 (Pulse Analysis Fixes) — ARCHIVED
+Status: v0.8.1 complete and archived — tagged v0.8.1 on master
+Last activity: 2026-03-10 — v0.8.1 milestone archived; all 12 requirements satisfied
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 ✅ | v0.8.1 ✅ [██████████] 100%
 
@@ -81,6 +80,6 @@ Recent decisions affecting v0.8.1 work:
 
 ## Session Continuity
 
-Last session: 2026-03-10T17:20:09.183Z
-Stopped at: Completed 54-04-PLAN.md
-Resume with: /gsd:execute-phase 53
+Last session: 2026-03-10T18:00:00.000Z
+Stopped at: v0.8.1 milestone archived
+Resume with: /gsd:new-milestone

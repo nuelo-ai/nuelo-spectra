@@ -364,7 +364,23 @@ allowed_libraries:
 
 Changes to YAML configs require server restart.
 
-## Current Status (v0.8)
+## Current Status (v0.8.1)
+
+### v0.8.1 UI Fixes & Enhancement (March 2026)
+- **Leftbar toggle visibility** — SidebarTrigger added to all Pulse workspace sub-views (Collection Detail, Signal View, Report pages); toggle always accessible regardless of active sub-view
+- **Nav icon alignment** — Sidebar nav items aligned correctly with chat history list; SidebarGroup wrapper restores shadcn `p-2` padding context
+- **Logo cleanup** — Spectra logo removed from Chat and Files main panel headers; present only in the app shell sidebar
+- **Chat rightbar toggles** — Expand button visible at top right after collapse (WelcomeScreen); collapse/expand toggle pinned to top right in active chat (not top middle)
+- **Credits Used accuracy** — Collection Overview stat card now shows actual cumulative credit spend from completed Pulse runs (via PostgreSQL aggregate subquery); no longer hardcoded
+- **Mobile-responsive Signal View** — Signal detail panel accessible on small screens via show/hide toggle; back button returns user to signal list
+- **Chat bridge button** — "Chat with Spectra" button in Signal detail links collection files to a new Chat session, opening in a new tab
+- **Timestamps** — Activity history and file added lists display both date and time (not date only)
+- **Upgrading from v0.8:** No migrations required — UI-only changes. Pull and rebuild frontend.
+
+```bash
+git pull origin master
+cd frontend && npm install
+```
 
 ### v0.8 Spectra Pulse (Detection) (March 2026)
 - **Spectra Pulse** — full AI-powered anomaly detection workspace: create Collections, upload CSV/Excel files, run Pulse detection, view severity-sorted Signal cards with Plotly chart visualizations and 2x2 statistical evidence grids
@@ -485,4 +501,4 @@ MIT License - See LICENSE file for details.
 
 - **GitHub**: [github.com/marwazihs/nuelo-spectra](https://github.com/marwazihs/nuelo-spectra)
 - **Issues**: Report bugs or request features via GitHub Issues
-- **Version**: v0.8 (March 2026)
+- **Version**: v0.8.1 (March 2026)
