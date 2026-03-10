@@ -126,7 +126,10 @@ export function useCreateCollection() {
   return useMutation<CollectionDetail, Error, { name: string; description?: string }>({
     mutationFn: async (body) => {
       const response = await apiClient.post("/collections", body);
-      if (!response.ok) throw new Error(`Failed: ${response.status}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Failed: ${response.status}`);
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -206,6 +209,40 @@ export function useRemoveFile(collectionId: string) {
       queryClient.invalidateQueries({
         queryKey: ["collections", collectionId],
       });
+    },
+  });
+}
+
+export function useUpdateCollection(collectionId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<CollectionDetail, Error, { name: string; description?: string }>({
+    mutationFn: async (body) => {
+      const response = await apiClient.patch(`/collections/${collectionId}`, body);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Failed: ${response.status}`);
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["collections"] });
+      queryClient.invalidateQueries({ queryKey: ["collections", collectionId] });
+    },
+  });
+}
+
+export function useDeleteCollection() {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: async (collectionId) => {
+      const response = await apiClient.delete(`/collections/${collectionId}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Failed: ${response.status}`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["collections"] });
     },
   });
 }
