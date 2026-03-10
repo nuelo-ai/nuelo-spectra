@@ -11,7 +11,7 @@
 - ✅ **v0.7 API Services & MCP** — Phases 38-41 (shipped 2026-02-25)
 - ✅ **v0.7.12 Spectra Pulse Mockup** — Phases 42-46 (shipped 2026-03-05)
 - ✅ **v0.8 Spectra Pulse (Detection)** — Phases 47-52.1 (shipped 2026-03-10)
-- 🚧 **v0.8.1 UI Fixes & Enhancement** — Phases 53-54 (in progress)
+- ✅ **v0.8.1 UI Fixes & Enhancement** — Phases 53-54 (shipped 2026-03-10)
 
 ## Phases
 
@@ -123,14 +123,14 @@
 
 </details>
 
-### 🚧 v0.8.1 UI Fixes & Enhancement (In Progress)
+### ✅ v0.8.1 UI Fixes & Enhancement (Shipped 2026-03-10)
 
 **Milestone Goal:** Fix polish gaps across the app shell, Chat, Files, and Pulse Analysis sections — correcting navigation chrome behaviour, removing misplaced branding, and adding missing Pulse capabilities (credit accuracy, mobile responsiveness, Chat bridge, timestamp detail).
 
 #### Phase Checklist
 
 - [x] **Phase 53: Shell & Navigation Fixes** - Fix leftbar toggle visibility, menu icon padding, logo presence in Chat/Files panels, and rightbar toggle placement in Chat (gap closure in progress — plans 05-06 close LBAR-01 and LBAR-02) (completed 2026-03-10)
-- [ ] **Phase 54: Pulse Analysis Fixes** - Fix credit tracking accuracy, add mobile responsiveness to Signal View, add Chat bridge button, and show full timestamps in activity/file history
+- [x] **Phase 54: Pulse Analysis Fixes** - Fix credit tracking accuracy, add mobile responsiveness to Signal View, add Chat bridge button, and show full timestamps in activity/file history (completed 2026-03-10)
 
 ## Phase Details
 
@@ -167,10 +167,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 54-01-PLAN.md — Credits Used accuracy: backend aggregate subquery + schema + router + frontend type wiring (PULSE-01)
-- [ ] 54-02-PLAN.md — Timestamp date+time fix: activity-feed, file-table, and collections page (PULSE-04, PULSE-05)
-- [ ] 54-03-PLAN.md — Mobile Signal View toggle + Chat bridge button in SignalDetailPanel (PULSE-02, PULSE-03)
-- [ ] 54-04-PLAN.md — Human visual verification of all 5 PULSE requirements
+- [x] 54-01-PLAN.md — Credits Used accuracy: backend aggregate subquery + schema + router + frontend type wiring (PULSE-01)
+- [x] 54-02-PLAN.md — Timestamp date+time fix: activity-feed, file-table, and collections page (PULSE-04, PULSE-05)
+- [x] 54-03-PLAN.md — Mobile Signal View toggle + Chat bridge button in SignalDetailPanel (PULSE-02, PULSE-03)
+- [x] 54-04-PLAN.md — Human visual verification of all 5 PULSE requirements
 
 ## Progress
 
@@ -231,4 +231,4 @@ Plans:
 | 52. Admin and QA | v0.8 | 2/2 | Complete | 2026-03-09 |
 | 52.1. Delete and Rename Collection (INSERTED) | v0.8 | 3/3 | Complete | 2026-03-09 |
 | 53. Shell & Navigation Fixes | v0.8.1 | 6/6 | Complete | 2026-03-10 |
-| 54. Pulse Analysis Fixes | 3/4 | In Progress|  | - |
+| 54. Pulse Analysis Fixes | v0.8.1 | 4/4 | Complete | 2026-03-10 |

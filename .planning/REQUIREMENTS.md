@@ -15,8 +15,8 @@ Requirements for v0.8.1 UI Fixes & Enhancement. Phases continue from v0.8 (last 
 ### Pulse Analysis
 
 - [x] **PULSE-01**: Credit Used card on Collection Overview reflects actual credits used after pulse runs (not stuck at "5")
-- [ ] **PULSE-02**: Signal View is mobile responsive — Signal detail panel is accessible on small screens (not hidden behind signals list)
-- [ ] **PULSE-03**: "Chat with Spectra" button appears between Analysis and Statistical Evidence sections on Signal View, opening a new Chat session with the collection's files pre-linked
+- [x] **PULSE-02**: Signal View is mobile responsive — Signal detail panel is accessible on small screens (not hidden behind signals list)
+- [x] **PULSE-03**: "Chat with Spectra" button appears between Analysis and Statistical Evidence sections on Signal View, opening a new Chat session with the collection's files pre-linked
 - [x] **PULSE-04**: Activity history list displays both date and time per entry
 - [x] **PULSE-05**: File added list displays both date and time per entry
 
@@ -57,8 +57,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FILES-01 | Phase 53 | Complete |
 | FILES-02 | Phase 53 | Complete |
 | PULSE-01 | Phase 54 | Complete |
-| PULSE-02 | Phase 54 | Pending |
-| PULSE-03 | Phase 54 | Pending |
+| PULSE-02 | Phase 54 | Complete |
+| PULSE-03 | Phase 54 | Complete |
 | PULSE-04 | Phase 54 | Complete |
 | PULSE-05 | Phase 54 | Complete |
 
