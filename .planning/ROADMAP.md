@@ -129,7 +129,7 @@
 
 #### Phase Checklist
 
-- [ ] **Phase 53: Shell & Navigation Fixes** - Fix leftbar toggle visibility, menu icon padding, logo presence in Chat/Files panels, and rightbar toggle placement in Chat (gap closure in progress — plans 05-06 close LBAR-01 and LBAR-02)
+- [x] **Phase 53: Shell & Navigation Fixes** - Fix leftbar toggle visibility, menu icon padding, logo presence in Chat/Files panels, and rightbar toggle placement in Chat (gap closure in progress — plans 05-06 close LBAR-01 and LBAR-02) (completed 2026-03-10)
 - [ ] **Phase 54: Pulse Analysis Fixes** - Fix credit tracking accuracy, add mobile responsiveness to Signal View, add Chat bridge button, and show full timestamps in activity/file history
 
 ## Phase Details
@@ -230,5 +230,5 @@ Plans:
 | 51.1. Pipeline Refactor (INSERTED) | v0.8 | 3/3 | Complete | 2026-03-08 |
 | 52. Admin and QA | v0.8 | 2/2 | Complete | 2026-03-09 |
 | 52.1. Delete and Rename Collection (INSERTED) | v0.8 | 3/3 | Complete | 2026-03-09 |
-| 53. Shell & Navigation Fixes | 5/6 | In Progress|  | - |
+| 53. Shell & Navigation Fixes | 6/6 | Complete   | 2026-03-10 | - |
 | 54. Pulse Analysis Fixes | v0.8.1 | 0/TBD | Not started | - |
