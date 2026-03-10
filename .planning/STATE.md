@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Spectra Pulse (Detection)
 status: completed
-stopped_at: Phase 52.1 context gathered
-last_updated: "2026-03-10T01:43:01.362Z"
+stopped_at: Completed Phase 52.1 Plan 01 — backend DELETE collection
+last_updated: "2026-03-10T02:01:51.336Z"
 last_activity: 2026-03-08 — Phase 51 Plan 04 complete (Detection Results page, 22 bug fixes, debug logging cleanup)
 progress:
   total_phases: 8
   completed_phases: 7
-  total_plans: 17
-  completed_plans: 17
+  total_plans: 20
+  completed_plans: 18
   percent: 92
 ---
 
@@ -81,6 +81,7 @@ Recent decisions affecting v0.8 work:
 - [Phase 52-admin-and-qa]: CreditCostsResponse uses chat/pulse_run keys for frontend-friendly naming and v0.9 extensibility
 - [Phase 52-admin-and-qa]: [Phase 52-01]: GET /credit-costs uses json.loads() for JSON-encoded string settings, never float() directly
 - [Phase 52-admin-and-qa]: useCreditCosts path is /credit-costs (apiClient auto-prepends /api); loading fallback: spinner in header badge, ?? 0 for number-typed props
+- [Phase 52.1]: delete_collection placed after remove_file_from_collection in service; DB cascade handles all child row removal
 
 ### Pending Todos
 
@@ -104,6 +105,6 @@ Recent decisions affecting v0.8 work:
 
 ## Session Continuity
 
-Last session: 2026-03-10T01:43:01.356Z
-Stopped at: Phase 52.1 context gathered
+Last session: 2026-03-10T02:01:51.334Z
+Stopped at: Completed Phase 52.1 Plan 01 — backend DELETE collection
 Resume with: Phase 52 (Admin and QA) or insert pipeline refactor phase
