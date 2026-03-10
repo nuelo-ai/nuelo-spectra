@@ -2,6 +2,14 @@
 
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import {
+  TrendingUp,
+  BarChart2,
+  Layers,
+  Sparkles,
+  MessageSquare,
+  type LucideIcon,
+} from "lucide-react";
 
 interface QuerySuggestionsProps {
   categories: Array<{
@@ -12,11 +20,29 @@ interface QuerySuggestionsProps {
   autoSend?: boolean;
 }
 
+function getCategoryIcon(categoryName: string): LucideIcon {
+  const lower = categoryName.toLowerCase();
+  if (["trend", "growth", "change"].some((kw) => lower.includes(kw))) {
+    return TrendingUp;
+  }
+  if (["compare", "segment", "break"].some((kw) => lower.includes(kw))) {
+    return BarChart2;
+  }
+  if (["summary", "overview", "general"].some((kw) => lower.includes(kw))) {
+    return Layers;
+  }
+  if (["forecast", "predict", "future"].some((kw) => lower.includes(kw))) {
+    return Sparkles;
+  }
+  return MessageSquare;
+}
+
 /**
- * Displays grouped query suggestion chips for empty chat state.
- * Chips are organized by LLM-generated categories.
- * Clicking a chip auto-sends the query (default) or populates the input.
- * After selection, remaining chips fade out over 300ms.
+ * Displays grouped query suggestion cards for empty chat state.
+ * Suggestions are organized into a responsive multi-column grid — one column per category.
+ * Each category column has an icon + uppercase label header.
+ * Each suggestion is a Signal-card-style bordered card.
+ * Clicking a card fires onSelect and fades out remaining cards.
  */
 export function QuerySuggestions({
   categories,
@@ -31,62 +57,65 @@ export function QuerySuggestions({
   const handleClick = (suggestion: string) => {
     setSelected(suggestion);
     onSelect(suggestion);
-    // Fade out remaining chips, then hide entirely
+    // Fade out remaining cards, then hide entirely
     setTimeout(() => {
       setVisible(false);
     }, 300);
   };
 
   return (
-    <div className="flex items-center justify-center min-h-[60vh] p-8">
-      <div
-        className="flex flex-col items-center gap-6 max-w-2xl mx-auto"
-        style={{ animation: "var(--animate-fadeIn)" }}
-      >
-        {/* Greeting */}
-        <p className="text-muted-foreground text-lg font-medium text-center">
-          What would you like to know about your data?
-        </p>
+    <div style={{ animation: "var(--animate-fadeIn)" }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full max-w-4xl mx-auto">
+        {categories.map((category) => {
+          const Icon = getCategoryIcon(category.name);
 
-        {/* Category groups */}
-        {categories.map((category) => (
-          <div key={category.name} className="w-full space-y-2">
-            <h3 className="text-sm font-medium text-muted-foreground text-center uppercase tracking-wide">
-              {category.name}
-            </h3>
-            <div className="flex flex-wrap justify-center gap-2">
-              {category.queries.map((suggestion) => {
-                const isSelected = selected === suggestion;
-                const isFadingOut = selected !== null && !isSelected;
+          return (
+            <div key={category.name} className="flex flex-col">
+              {/* Column header */}
+              <div className="flex items-center gap-1.5 mb-3 pb-2 border-b border-border">
+                <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  {category.name}
+                </span>
+              </div>
 
-                return (
-                  <button
-                    key={suggestion}
-                    onClick={() => handleClick(suggestion)}
-                    disabled={selected !== null}
-                    className={`px-4 py-2 rounded-full border text-sm cursor-pointer transition-all duration-300 ${
-                      isSelected
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : isFadingOut
-                        ? "opacity-0"
-                        : "bg-background hover:bg-accent hover:border-primary/30"
-                    }`}
-                  >
-                    <span className="inline [&>strong]:font-semibold">
-                      <ReactMarkdown
-                        components={{
-                          p: ({ children }) => <>{children}</>,
-                        }}
-                      >
-                        {suggestion}
-                      </ReactMarkdown>
-                    </span>
-                  </button>
-                );
-              })}
+              {/* Suggestion cards */}
+              <div className="flex flex-col gap-2">
+                {category.queries.map((suggestion) => {
+                  const isSelected = selected === suggestion;
+                  const isFadingOut = selected !== null && !isSelected;
+
+                  return (
+                    <button
+                      key={suggestion}
+                      onClick={() => handleClick(suggestion)}
+                      disabled={selected !== null}
+                      className={[
+                        "rounded-lg border p-3 w-full text-left transition-all duration-150",
+                        isSelected
+                          ? "border-primary bg-primary/5 shadow-sm"
+                          : "border-border bg-transparent hover:bg-accent/50 hover:border-primary/30",
+                        isFadingOut ? "opacity-0 transition-opacity duration-300" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    >
+                      <span className="text-sm text-foreground leading-snug line-clamp-3 inline [&>strong]:font-semibold">
+                        <ReactMarkdown
+                          components={{
+                            p: ({ children }) => <>{children}</>,
+                          }}
+                        >
+                          {suggestion}
+                        </ReactMarkdown>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
