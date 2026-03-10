@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Phase: 53 of 54 (Shell & Navigation Fixes)
-Plan: 53-01 complete (1/4 plans done)
-Status: Executing
-Last activity: 2026-03-10 — Phase 53 planned: 4 plans across 2 waves
+Plan: 53-04 complete (4/4 plans done) — 5/7 requirements verified; LBAR-01, LBAR-02, and Signal detail Chat button need follow-up
+Status: Executing — gaps require follow-up plans before v0.8.1 closes
+Last activity: 2026-03-10 — Phase 53 verification complete; gaps recorded for follow-up
 
 Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 ✅ | v0.8.1 ◆ [██████████] 96%
 
