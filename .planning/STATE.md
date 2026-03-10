@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: executing
-stopped_at: Completed 54-01-PLAN.md
-last_updated: "2026-03-10T16:23:40.137Z"
+stopped_at: Completed 54-02-PLAN.md
+last_updated: "2026-03-10T16:26:59.093Z"
 last_activity: 2026-03-10 — Phase 53 verification complete; gaps recorded for follow-up
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 10
-  completed_plans: 7
+  completed_plans: 8
   percent: 96
 ---
 
@@ -60,6 +60,7 @@ Recent decisions affecting v0.8.1 work:
 - [Phase 53-shell-and-navigation-fixes]: LBAR-02 gap closed: pl-1 removed from UnifiedSidebar nav asChild children — shadcn p-2 default is the sole padding source for correct icon alignment
 - [Phase 54-01]: COALESCE(SUM(credit_cost), 0.0) correlated subquery returns 0.0 when no completed runs — no null from DB
 - [Phase 54-01]: credits_used: float = 0.0 schema default ensures create_collection response valid without passing field
+- [Phase 54-pulse-analysis-fixes]: toLocaleString used instead of toLocaleDateString for Pulse timestamps — toLocaleDateString silently ignores hour/minute options in all browsers
 
 ### Pending Todos
 
@@ -77,6 +78,6 @@ Recent decisions affecting v0.8.1 work:
 
 ## Session Continuity
 
-Last session: 2026-03-10T16:23:40.135Z
-Stopped at: Completed 54-01-PLAN.md
+Last session: 2026-03-10T16:26:59.090Z
+Stopped at: Completed 54-02-PLAN.md
 Resume with: /gsd:execute-phase 53
