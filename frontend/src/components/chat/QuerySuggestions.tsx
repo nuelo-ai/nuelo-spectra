@@ -72,7 +72,7 @@ export function QuerySuggestions({
     <div style={{ animation: "var(--animate-fadeIn)" }}>
       <div
         className="grid gap-4 w-full"
-        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}
+        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}
       >
         {visibleCategories.map((category) => {
           const Icon = getCategoryIcon(category.name);
