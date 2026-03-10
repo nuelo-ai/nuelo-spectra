@@ -3,7 +3,15 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Zap, FileText, ExternalLink, Loader2 } from "lucide-react";
+import { ArrowLeft, Zap, FileText, ExternalLink, Loader2, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { CreateCollectionDialog } from "@/components/workspace/create-collection-dialog";
+import { DeleteCollectionDialog } from "@/components/workspace/delete-collection-dialog";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -93,6 +101,8 @@ export default function CollectionDetailPage() {
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [showRerunDialog, setShowRerunDialog] = useState(false);
   const [pendingUserContext, setPendingUserContext] = useState<string | undefined>();
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   // Sort signals by severity (SIGNAL-01)
   const sortedSignals = useMemo(() => sortBySeverity(signals), [signals]);
@@ -216,11 +226,34 @@ export default function CollectionDetailPage() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
-        <div className="flex-1">
+        <div className="flex items-center gap-2">
           {loadingCollection ? (
             <Skeleton className="h-7 w-48" />
           ) : (
             <h1 className="text-2xl font-bold">{collection?.name}</h1>
+          )}
+          {!loadingCollection && collection && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreVertical className="h-4 w-4" />
+                  <span className="sr-only">Collection options</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setRenameOpen(true)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Rename
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
         {/* Credit usage pill (NAV-04) */}
@@ -442,7 +475,15 @@ export default function CollectionDetailPage() {
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {sortedSignals.map((signal) => (
-                  <SignalCard key={signal.id} signal={signal} preview />
+                  <SignalCard
+                    key={signal.id}
+                    signal={signal}
+                    onSelect={(id) =>
+                      router.push(
+                        `/workspace/collections/${collectionId}/signals?selected=${id}`
+                      )
+                    }
+                  />
                 ))}
               </div>
               <div className="flex justify-center pt-4">
@@ -527,6 +568,21 @@ export default function CollectionDetailPage() {
         filename={summaryFilename}
         open={summaryOpen}
         onOpenChange={setSummaryOpen}
+      />
+
+      {/* Rename dialog — edit mode */}
+      <CreateCollectionDialog
+        open={renameOpen}
+        onOpenChange={setRenameOpen}
+        collection={collection ?? undefined}
+      />
+
+      {/* Delete confirmation dialog */}
+      <DeleteCollectionDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        collection={collection ?? null}
+        onSuccess={() => router.push("/workspace")}
       />
     </div>
   );
