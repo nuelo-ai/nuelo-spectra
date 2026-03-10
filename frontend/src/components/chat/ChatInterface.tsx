@@ -360,37 +360,35 @@ export function ChatInterface({ sessionId, sessionTitle }: ChatInterfaceProps) {
       </Dialog>
 
       {/* Header */}
-      <div className="px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <SidebarTrigger className="-ml-1" />
-            <div className="h-7 w-7 rounded-lg gradient-primary flex items-center justify-center shrink-0">
-              <span className="text-sm font-bold text-white">S</span>
-            </div>
-            <span className="font-semibold text-sm tracking-tight shrink-0">Spectra</span>
-            <span className="text-muted-foreground/40 shrink-0">|</span>
-            <h2 className="text-lg font-semibold truncate">{sessionTitle}</h2>
+      <div className="px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center">
+        {/* Centered left content */}
+        <div className="flex-1 max-w-3xl flex items-center gap-2">
+          <SidebarTrigger className="-ml-1" />
+          <div className="h-7 w-7 rounded-lg gradient-primary flex items-center justify-center shrink-0">
+            <span className="text-sm font-bold text-white">S</span>
           </div>
-          <div className="flex items-center gap-2">
-            {/* TODO: Phase 18 - Migrate ContextUsage to session-based endpoint */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1.5 text-muted-foreground hover:text-foreground"
-              onClick={toggleRightPanel}
-              title={rightPanelOpen ? "Close linked files" : "Open linked files"}
-            >
-              {rightPanelOpen ? (
-                <PanelRightClose className="h-4 w-4" />
-              ) : (
-                <PanelRightOpen className="h-4 w-4" />
-              )}
-              <span className="text-xs">
-                Files{sessionDetail?.files?.length ? ` (${sessionDetail.files.length})` : ""}
-              </span>
-            </Button>
-          </div>
+          <span className="font-semibold text-sm tracking-tight shrink-0">Spectra</span>
+          <span className="text-muted-foreground/40 shrink-0">|</span>
+          <h2 className="text-lg font-semibold truncate">{sessionTitle}</h2>
         </div>
+        {/* TODO: Phase 18 - Migrate ContextUsage to session-based endpoint */}
+        {/* Rightbar toggle — outside max-w-3xl, pinned to right edge via ml-auto */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-1.5 text-muted-foreground hover:text-foreground ml-auto"
+          onClick={toggleRightPanel}
+          title={rightPanelOpen ? "Close linked files" : "Open linked files"}
+        >
+          {rightPanelOpen ? (
+            <PanelRightClose className="h-4 w-4" />
+          ) : (
+            <PanelRightOpen className="h-4 w-4" />
+          )}
+          <span className="text-xs">
+            Files{sessionDetail?.files?.length ? ` (${sessionDetail.files.length})` : ""}
+          </span>
+        </Button>
       </div>
 
       {/* Trim confirmation dialog */}
