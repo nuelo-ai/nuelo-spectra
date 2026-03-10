@@ -117,7 +117,6 @@ export function UnifiedSidebar() {
                       href={getAdminUrl()}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="pl-1"
                     >
                       <Icon className="shrink-0" />
                       {isExpanded && <span>{item.label}</span>}
@@ -139,7 +138,7 @@ export function UnifiedSidebar() {
                       : ""
                   }
                 >
-                  <Link href={item.href} className="pl-1">
+                  <Link href={item.href}>
                     <Icon className="shrink-0" />
                     {isExpanded && <span>{item.label}</span>}
                   </Link>
