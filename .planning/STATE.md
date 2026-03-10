@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Spectra Pulse (Detection)
 status: completed
-stopped_at: Completed 52.1-02-PLAN.md
-last_updated: "2026-03-10T02:02:46.207Z"
+stopped_at: Completed 52.1-03-PLAN.md
+last_updated: "2026-03-10T02:06:23.303Z"
 last_activity: 2026-03-08 — Phase 51 Plan 04 complete (Detection Results page, 22 bug fixes, debug logging cleanup)
 progress:
   total_phases: 8
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 20
-  completed_plans: 19
+  completed_plans: 20
   percent: 92
 ---
 
@@ -85,6 +85,9 @@ Recent decisions affecting v0.8 work:
 - [Phase 52.1-delete-and-rename-collection]: useUpdateCollection invalidates both list and detail caches; useDeleteCollection invalidates list only
 - [Phase 52.1-delete-and-rename-collection]: CreateCollectionDialog edit mode: useEffect on [open, collection] syncs state to handle switching between different collections
 - [Phase 52.1-delete-and-rename-collection]: DeleteCollectionDialog onSuccess callback optional: detail page passes router.push, list page omits (cache invalidation handles removal)
+- [Phase 52.1-delete-and-rename-collection]: DropdownMenuTrigger Button uses e.preventDefault() to block Link navigation without losing event bubbling
+- [Phase 52.1-delete-and-rename-collection]: Kebab menu on detail page hidden while loadingCollection to prevent null collection prop in dialogs
+- [Phase 52.1-delete-and-rename-collection]: CollectionDetail extends CollectionListItem so no type cast needed when passing to dialog collection props
 
 ### Pending Todos
 
@@ -108,6 +111,6 @@ Recent decisions affecting v0.8 work:
 
 ## Session Continuity
 
-Last session: 2026-03-10T02:02:46.205Z
-Stopped at: Completed 52.1-02-PLAN.md
+Last session: 2026-03-10T02:06:23.301Z
+Stopped at: Completed 52.1-03-PLAN.md
 Resume with: Phase 52 (Admin and QA) or insert pipeline refactor phase
