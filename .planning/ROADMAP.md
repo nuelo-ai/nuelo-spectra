@@ -223,6 +223,18 @@ Plans:
 - [ ] 52-01-PLAN.md — Backend: platform settings schema extension, credit_costs router, tier gating tests, smoke test doc
 - [ ] 52-02-PLAN.md — Frontend: admin settings form field, useCreditCosts hook, replace CREDIT_COST constant
 
+### Phase 52.1: delete and rename Collection (INSERTED)
+
+**Goal:** Users can delete or rename any collection from both the collection list page (card kebab menu) and the collection detail page (header kebab menu), with cascade warning on delete and query cache invalidation for seamless UI updates
+**Requirements**: (no formal IDs — behavioral: DELETE-collection-backend, DELETE-collection-surfaces, RENAME-collection-dialog-edit-mode, RENAME-collection-surfaces)
+**Depends on:** Phase 52
+**Plans:** 3 plans
+
+Plans:
+- [ ] 52.1-01-PLAN.md — Backend: delete_collection() service method + DELETE /{collection_id} endpoint (204)
+- [ ] 52.1-02-PLAN.md — Frontend hooks (useUpdateCollection, useDeleteCollection) + dialog components (edit mode + delete confirmation)
+- [ ] 52.1-03-PLAN.md — Wire kebab menus and dialogs into collection card, list page, and detail page header
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -280,3 +292,4 @@ Plans:
 | 51. Frontend Migration | 4/4 | Complete | 2026-03-08 | - |
 | 51.1. Pipeline Refactor | 3/3 | Complete    | 2026-03-08 | - |
 | 52. Admin and QA | 2/2 | Complete    | 2026-03-10 | - |
+| 52.1. Delete and Rename Collection | 0/3 | Planned | - |
