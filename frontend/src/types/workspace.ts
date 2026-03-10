@@ -17,6 +17,7 @@ export interface CollectionListItem {
 
 export interface CollectionDetail extends CollectionListItem {
   report_count: number;
+  credits_used: number;
 }
 
 export interface CollectionFile {

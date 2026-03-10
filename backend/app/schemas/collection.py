@@ -59,6 +59,7 @@ class CollectionDetailResponse(BaseModel):
     file_count: int
     signal_count: int
     report_count: int
+    credits_used: float = 0.0
 
 
 class CollectionFileResponse(BaseModel):

@@ -1,18 +1,21 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SignalListPanel } from "@/components/workspace/signal-list-panel";
 import { SignalDetailPanel } from "@/components/workspace/signal-detail-panel";
 import {
   useCollectionSignals,
   useCollectionDetail,
+  useCollectionFiles,
 } from "@/hooks/useWorkspace";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
+import { cn } from "@/lib/utils";
 import type { SignalDetail } from "@/types/workspace";
 
 const severityOrder: Record<SignalDetail["severity"], number> = {
@@ -59,11 +62,15 @@ export default function DetectionResultsPage() {
   const selectedSignal =
     sortedSignals.find((s) => s.id === selectedSignalId) ?? null;
 
+  const [showDetail, setShowDetail] = useState(false);
+  const { data: collectionFiles = [] } = useCollectionFiles(id);
+
   // Loading state
   if (isLoading) {
     return (
       <div className="flex flex-col h-full">
         <div className="px-6 py-4 border-b border-border flex items-center gap-3">
+          <SidebarTrigger className="-ml-1" />
           <Skeleton className="h-5 w-5" />
           <Skeleton className="h-5 w-48" />
         </div>
@@ -87,7 +94,8 @@ export default function DetectionResultsPage() {
   if (isError) {
     return (
       <div className="flex flex-col h-full">
-        <div className="px-6 py-4 border-b border-border">
+        <div className="px-6 py-4 border-b border-border flex items-center gap-3">
+          <SidebarTrigger className="-ml-1" />
           <Link
             href={`/workspace/collections/${id}`}
             className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-2"
@@ -116,7 +124,8 @@ export default function DetectionResultsPage() {
   if (sortedSignals.length === 0) {
     return (
       <div className="flex flex-col h-full">
-        <div className="px-6 py-4 border-b border-border">
+        <div className="px-6 py-4 border-b border-border flex items-center gap-3">
+          <SidebarTrigger className="-ml-1" />
           <Link
             href={`/workspace/collections/${id}`}
             className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-2"
@@ -146,6 +155,7 @@ export default function DetectionResultsPage() {
     <div className="flex flex-col h-screen">
       {/* Header */}
       <div className="px-6 py-4 border-b border-border flex items-center gap-3">
+        <SidebarTrigger className="-ml-1" />
         <Link
           href={`/workspace/collections/${id}`}
           className="text-muted-foreground hover:text-foreground transition-colors"
@@ -162,12 +172,32 @@ export default function DetectionResultsPage() {
 
       {/* Split Panel */}
       <div className="flex flex-1 overflow-hidden">
-        <SignalListPanel
-          signals={sortedSignals}
-          selectedId={selectedSignalId}
-          onSelect={setSelectedSignalId}
-        />
-        <SignalDetailPanel signal={selectedSignal} />
+        {/* List panel: hidden on mobile when detail is shown */}
+        <div className={cn(
+          "w-[350px] shrink-0 border-r border-border flex flex-col h-full",
+          showDetail ? "hidden sm:flex" : "flex"
+        )}>
+          <SignalListPanel
+            signals={sortedSignals}
+            selectedId={selectedSignalId}
+            onSelect={(id) => {
+              setSelectedSignalId(id);
+              setShowDetail(true);
+            }}
+          />
+        </div>
+        {/* Detail panel: hidden on mobile when list is shown */}
+        <div className={cn(
+          "flex-1 overflow-hidden",
+          showDetail ? "flex" : "hidden sm:flex"
+        )}>
+          <SignalDetailPanel
+            signal={selectedSignal}
+            onBack={() => setShowDetail(false)}
+            collectionFiles={collectionFiles}
+            collectionId={id}
+          />
+        </div>
       </div>
     </div>
   );

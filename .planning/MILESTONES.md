@@ -1,5 +1,32 @@
 # Project Milestones: Spectra
 
+## v0.8.1 UI Fixes & Enhancement (Shipped: 2026-03-10)
+
+**Delivered:** Closed UI polish gaps across app shell, Chat, Files, and Pulse Analysis — leftbar toggle visible in all workspace sub-views, nav icons aligned, Spectra logo removed from Chat/Files panels, chat rightbar toggles pinned to correct corners, Credits Used card shows actual spend, Signal View mobile-responsive with Chat bridge button, and timestamps show date+time throughout.
+
+**Phases completed:** 53–54 (2 phases, 10 plans)
+
+**Stats:**
+- 2 phases (53–54)
+- 10 plans executed
+- 71 files changed (+8,274 / -567 lines)
+- Timeline: 2 days (2026-03-09 → 2026-03-10)
+- Git range: `565bdda` → `65f0103`
+
+**Key accomplishments:**
+- Fixed leftbar collapse toggle visibility in all Pulse workspace sub-views (Collection Detail, Signal View, Report) — SidebarTrigger added to every render state (LBAR-01)
+- Corrected sidebar nav icon alignment by wrapping nav in `SidebarGroup` to restore shadcn `p-2` padding context (LBAR-02)
+- Removed Spectra logo from Chat and Files panel headers; fixed Chat rightbar toggle placement to viewport right edge (CHAT-01, CHAT-02, CHAT-03, FILES-01, FILES-02)
+- Wired Credits Used stat card to actual cumulative credit spend via PostgreSQL `COALESCE(SUM(credit_cost), 0.0)` aggregate subquery (PULSE-01)
+- Added mobile-responsive Signal View with show/hide panel toggle and back button (PULSE-02)
+- Added Chat bridge button in Signal detail linking collection files to a new Chat session in a new tab; fixed all timestamps to show date+time (PULSE-03, PULSE-04, PULSE-05)
+
+**Requirements:** 12/12 satisfied (100%)
+
+**Git range:** `565bdda` → `65f0103`
+
+---
+
 ## v0.8 Spectra Pulse (Detection) (Shipped: 2026-03-10)
 
 **Delivered:** Full Pulse Analysis module — users can create Collections, attach CSV/Excel files, run AI-powered Pulse detection, and view severity-sorted Signals with Plotly chart visualizations and statistical evidence. Establishes the Detect foundation of the Detect → Explain → What-If pipeline.

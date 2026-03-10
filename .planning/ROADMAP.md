@@ -11,6 +11,7 @@
 - ✅ **v0.7 API Services & MCP** — Phases 38-41 (shipped 2026-02-25)
 - ✅ **v0.7.12 Spectra Pulse Mockup** — Phases 42-46 (shipped 2026-03-05)
 - ✅ **v0.8 Spectra Pulse (Detection)** — Phases 47-52.1 (shipped 2026-03-10)
+- ✅ **v0.8.1 UI Fixes & Enhancement** — Phases 53–54 (shipped 2026-03-10)
 
 ## Phases
 
@@ -122,6 +123,14 @@
 
 </details>
 
+<details>
+<summary>✅ v0.8.1 UI Fixes & Enhancement (Phases 53–54) — SHIPPED 2026-03-10</summary>
+
+- [x] Phase 53: Shell & Navigation Fixes (6/6 plans) — completed 2026-03-10
+- [x] Phase 54: Pulse Analysis Fixes (4/4 plans) — completed 2026-03-10
+
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -180,3 +189,5 @@
 | 51.1. Pipeline Refactor (INSERTED) | v0.8 | 3/3 | Complete | 2026-03-08 |
 | 52. Admin and QA | v0.8 | 2/2 | Complete | 2026-03-09 |
 | 52.1. Delete and Rename Collection (INSERTED) | v0.8 | 3/3 | Complete | 2026-03-09 |
+| 53. Shell & Navigation Fixes | v0.8.1 | 6/6 | Complete | 2026-03-10 |
+| 54. Pulse Analysis Fixes | v0.8.1 | 4/4 | Complete | 2026-03-10 |

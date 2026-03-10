@@ -13,9 +13,11 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 **GitHub:** https://github.com/marwazihs/nuelo-spectra.git (private)
 **Remote:** origin
 **Branch:** master
-**Latest Tag:** v0.8 (2026-03-10)
+**Latest Tag:** v0.8.1 (2026-03-10)
 
 ## Previous Milestones
+
+**v0.8.1 UI Fixes & Enhancement (Shipped 2026-03-10):** Closed UI polish gaps — leftbar toggle visible in all workspace sub-views, nav icons aligned, logos removed from Chat/Files panels, Chat rightbar toggles pinned correctly, Credits Used shows actual spend, Signal View mobile-responsive with Chat bridge button, timestamps show date+time throughout.
 
 **v0.8 Spectra Pulse (Detection) (Shipped 2026-03-10):** Full Pulse Analysis module — Collections, file upload, AI-powered anomaly detection pipeline (multi-agent orchestrator + E2B sandbox), Signal cards with Plotly visualizations and statistical evidence, Markdown reports, tier-based workspace access gating, and delete/rename collection management. Establishes the Detect foundation of the Detect → Explain → What-If pipeline.
 
@@ -25,7 +27,7 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 ## Current State
 
-**Shipped:** v0.8 Spectra Pulse (Detection) (2026-03-10)
+**Shipped:** v0.8.1 UI Fixes & Enhancement (2026-03-10)
 **Status:** Milestone complete — planning next milestone (v0.9)
 **Codebase:** ~96,000 LOC (Python app + TypeScript/TSX across public frontend + admin frontend + pulse-mockup + Docker/shell infra)
 **Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily + Plotly + APScheduler (backend), Next.js 16 + React 19 + TanStack + Zustand + shadcn/ui + next-themes + Plotly.js + Recharts + Sonner (frontend + admin frontend), Docker + Dokploy + Tailscale (deployment), Next.js + shadcn/ui + Recharts (pulse-mockup)
@@ -81,7 +83,7 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **Known limitations:**
 - E2B sandboxes created per-execution (no warm pools - ~150ms cold start per query)
-- Basic mobile responsiveness (functional but not optimized)
+- Mobile responsiveness: Pulse Signal View is now responsive (v0.8.1); general app mobile optimization not yet done
 - No query safety filter in Manager Agent (PII extraction, prompt injection not blocked)
 - Agent JSON responses not using Pydantic structured output (inconsistent across providers)
 - In-memory admin login lockout (upgrade to Redis for multi-instance)
@@ -501,6 +503,23 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **v0.8 Total: 35/35 requirements satisfied (100%)**
 
+**✅ v0.8.1 UI Fixes & Enhancement — Shipped 2026-03-10**
+
+- ✓ LBAR-01: Leftbar collapse toggle visible in all workspace sub-views (Collection Detail, Signal View, Report) — v0.8.1
+- ✓ LBAR-02: Sidebar nav icon alignment corrected via SidebarGroup wrapper — v0.8.1
+- ✓ CHAT-01: Spectra logo removed from Chat WelcomeScreen panel header — v0.8.1
+- ✓ CHAT-02: Rightbar expand toggle visible at top right after collapse (WelcomeScreen) — v0.8.1
+- ✓ CHAT-03: Rightbar collapse/expand toggle pinned to top right in ChatInterface — v0.8.1
+- ✓ FILES-01: Spectra logo removed from Files panel header — v0.8.1
+- ✓ FILES-02: Leftbar collapse toggle correctly positioned in Files section — v0.8.1
+- ✓ PULSE-01: Credits Used card shows actual cumulative credit spend via aggregate subquery — v0.8.1
+- ✓ PULSE-02: Signal View mobile responsive with show/hide panel toggle — v0.8.1
+- ✓ PULSE-03: Chat bridge button in Signal detail opens new Chat session with collection files in new tab — v0.8.1
+- ✓ PULSE-04: Activity history entries display date + time — v0.8.1
+- ✓ PULSE-05: Files added list entries display date + time — v0.8.1
+
+**v0.8.1 Total: 12/12 requirements satisfied (100%)**
+
 ## Next Milestone
 
 <!-- Requirements for next milestone defined in .planning/REQUIREMENTS.md after /gsd:new-milestone -->
@@ -640,6 +659,10 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | Signal chart_data is Plotly fig.to_json() | Reuses existing ChartRenderer infrastructure from chat analysis | ✓ Good — consistent rendering across chat and workspace |
 | DropdownMenu trigger uses e.preventDefault() on collection cards | CollectionCard is wrapped in Link; clicking kebab menu triggered navigation | ✓ Good — reliable prevention without losing event bubbling |
 | Zustand detection state scoped per collectionId | Global store caused all collection pages to show running state simultaneously | ✓ Good — reactive selectors required (not getter functions) for re-render triggers |
+| SidebarTrigger header strip pattern (shrink-0 border-b above flex-1) | Sticky/fixed positioning breaks flex layout in Pulse workspace pages; header strip is the correct approach | ✓ Good — reliable SidebarTrigger visibility across all workspace sub-views |
+| SidebarGroup wrapper required for nav icon alignment | SidebarMenu alone lacks p-2 padding context that SidebarGroup provides; pl-1 on asChild children was insufficient | ✓ Good — icons align correctly with chat history list items below |
+| toLocaleString over toLocaleDateString for Pulse timestamps | toLocaleDateString silently ignores hour/minute options in all browsers; toLocaleString respects them | ✓ Good — date + time display works across all browsers |
+| Chat bridge button opens new tab (window.open) | Same-tab navigation would destroy current Signal View context; new tab preserves the user's place | ✓ Good — users can bridge to Chat without losing Pulse Analysis context |
 
 ---
-*Last updated: 2026-03-10 after v0.8 milestone*
+*Last updated: 2026-03-10 after v0.8.1 milestone*

@@ -13,6 +13,7 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
@@ -98,6 +99,7 @@ export function UnifiedSidebar() {
 
       {/* Navigation */}
       <SidebarContent>
+        <SidebarGroup>
         <SidebarMenu>
           {NAV_ITEMS.map((item) => {
             if (item.adminOnly && !user?.is_admin) return null;
@@ -147,6 +149,7 @@ export function UnifiedSidebar() {
             );
           })}
         </SidebarMenu>
+        </SidebarGroup>
 
         {showChatHistory && (
           <>

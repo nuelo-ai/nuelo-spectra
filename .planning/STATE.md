@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.8
-milestone_name: Spectra Pulse (Detection)
+milestone: v0.8.1
+milestone_name: UI Fixes & Enhancement
 status: archived
-stopped_at: v0.8 milestone archived 2026-03-10
-last_updated: "2026-03-10"
-last_activity: 2026-03-10 — v0.8 milestone archived, ROADMAP.md and REQUIREMENTS.md updated, git tag v0.8 pending
+stopped_at: v0.8.1 milestone complete and archived
+last_updated: "2026-03-10T18:00:00.000Z"
+last_activity: 2026-03-10 — v0.8.1 milestone archived; git tagged and pushed to master
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 20
-  completed_plans: 20
+  total_phases: 2
+  completed_phases: 2
+  total_plans: 10
+  completed_plans: 10
   percent: 100
 ---
 
@@ -21,21 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** v0.8 archived — planning next milestone (v0.9)
+**Current focus:** v0.8.1 shipped — start next milestone with `/gsd:new-milestone`
 
 ## Current Position
 
-Milestone v0.8 ARCHIVED — all 8 phases, 20 plans complete
-Status: v0.8 complete — Spectra Pulse (Detection) shipped
+Phase: 54 of 54 (Pulse Analysis Fixes) — ARCHIVED
+Status: v0.8.1 complete and archived — tagged v0.8.1 on master
+Last activity: 2026-03-10 — v0.8.1 milestone archived; all 12 requirements satisfied
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 ✅ [██████████] 100%
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 ✅ | v0.8.1 ✅ [██████████] 100%
 
 ## Performance Metrics
 
-**Velocity (v0.7.12):**
-- Total plans completed: 17 (Phases 42-46)
-- Timeline: 3 days (2026-03-03 → 2026-03-05)
-- 91 commits, 200 files changed (+28,242 / -3,389 lines)
+**Velocity (v0.8):**
+- Total plans completed: 20 (Phases 47-52.1, 8 phases)
+- Timeline: 4 days (2026-03-06 → 2026-03-09)
+- 144 commits, 168 files changed (+23,418 / -345 lines)
 
 ## Accumulated Context
 
@@ -43,53 +44,25 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7
 
 See PROJECT.md Key Decisions table for full decision log.
 
-Recent decisions affecting v0.8 work:
-- CollectionFile model: `__tablename__ = "collection_files"` — never "files" (name collision with existing `app.models.file.File`)
-- E2B Pulse timeout: `PULSE_SANDBOX_TIMEOUT_SECONDS=300` — not the 60s default; must be set before writing any Pulse execution code
-- Pulse Signal output: `PulseAgentOutput` Pydantic schema with `Literal["critical","warning","info"]` severity and `Literal["bar","line","scatter"]` chartType — structured output is non-optional for Pulse
-- Frontend workspace: `(workspace)` route group parallel to `(dashboard)` — ChatSidebar must NOT wrap workspace pages
-- Frontend palette: `globals.css` dark mode tokens updated to Hex.tech palette BEFORE any component migration; `ThemeProvider` added to `providers.tsx` BEFORE any component migration
-- SIGNAL-03: Investigation + What-If buttons present but disabled in v0.8 — "coming soon" state; full implementation is v0.10/v0.11
-- REPORT-04: "Download as PDF" button present but disabled (opacity-60) — v0.9 backend feature
-- Pulse credit pricing: flat cost (workspace_credit_cost_pulse default 5.0) regardless of file count — confirmed over per-file pricing
-- Phase 49 can start in parallel with Phase 48 after Phase 47 completes (Pulse Agent depends only on models, not CRUD routes)
-- [Phase 47]: Report.pulse_run_id uses ondelete SET NULL so reports persist after PulseRun deletion
-- [Phase 47-02]: Hand-written migration over autogenerate for correct FK-dependency ordering
-- [Phase 47-02]: workspace_credit_cost_pulse stored as JSON string "5.0" matching default_credit_cost pattern
-- [Phase 48-01]: CollectionFileResponse.data_summary typed as str | None (not dict) to match File model Text column
-- [Phase 48-01]: Ownership verification inside CollectionService methods for granular per-query control
-- [Phase 48]: [Phase 48-02]: All collection endpoints use WorkspaceUser for uniform tier gating
-- [Phase 48]: [Phase 48-02]: Report download returns text/markdown with Content-Disposition attachment
-- [Phase 49]: Stateless LangGraph pipeline: each ainvoke() starts fresh, no message history between Pulse runs
-- [Phase 49]: Credit deduction before background task, refund in except block within _run_pipeline
-- [Phase 50]: UserCredit pre-fetch before CreditService.deduct_credit for accurate available_balance in 402 body
-- [Phase 50-pulse-endpoint-wire-up]: Pulse endpoints added to collections.py (not new router) matching existing file/report pattern
-- [Phase 51]: Settings removed from sidebar nav — accessible only via profile dropdown
-- [Phase 51]: Spectra logo at top of sidebar matching mockup design
-- [Phase 51]: is_admin added to UserResponse for admin-only nav visibility
-- [Phase 51-03]: GET /collections/{id}/signals endpoint added -- was missing from Phase 48; signals queried by collection_id directly
-- [Phase 51-03]: DataSummaryPanel uses Sheet (slide-out) instead of Dialog for non-blocking file inspection
-- [Phase 51-04]: Signal chart_data is Plotly fig.to_json() output rendered by existing ChartRenderer
-- [Phase 51-04]: Pipeline refactor (_validate_single_candidate → reuse Coding Agent) deferred to separate phase
-- [Phase 51.1]: Moved code_gen_prompt from pulse_agent to pulse_coder for ownership clarity
-- [Phase 51.1-03]: RerunDetectionDialog uses controlled mode (open/onOpenChange) since RunDetectionBanner has its own internal button
-- [Phase 51.1-03]: Toast replaces auto-navigation to signals tab on detection completion
-- [Phase 51.1]: Coder/Viz agents use raw LLM invocation (not with_structured_output) since they produce code
-- [Phase 51.1]: Re-run deletes both signals AND reports before persisting new results
-- [Phase 52-admin-and-qa]: CreditCostsResponse uses chat/pulse_run keys for frontend-friendly naming and v0.9 extensibility
-- [Phase 52-admin-and-qa]: [Phase 52-01]: GET /credit-costs uses json.loads() for JSON-encoded string settings, never float() directly
-- [Phase 52-admin-and-qa]: useCreditCosts path is /credit-costs (apiClient auto-prepends /api); loading fallback: spinner in header badge, ?? 0 for number-typed props
-- [Phase 52.1]: delete_collection placed after remove_file_from_collection in service; DB cascade handles all child row removal
-- [Phase 52.1-delete-and-rename-collection]: useUpdateCollection invalidates both list and detail caches; useDeleteCollection invalidates list only
-- [Phase 52.1-delete-and-rename-collection]: CreateCollectionDialog edit mode: useEffect on [open, collection] syncs state to handle switching between different collections
-- [Phase 52.1-delete-and-rename-collection]: DeleteCollectionDialog onSuccess callback optional: detail page passes router.push, list page omits (cache invalidation handles removal)
-- [Phase 52.1-delete-and-rename-collection]: DropdownMenuTrigger Button uses e.preventDefault() to block Link navigation without losing event bubbling
-- [Phase 52.1-delete-and-rename-collection]: Kebab menu on detail page hidden while loadingCollection to prevent null collection prop in dialogs
-- [Phase 52.1-delete-and-rename-collection]: CollectionDetail extends CollectionListItem so no type cast needed when passing to dialog collection props
-- [Phase 52.1-post-fix]: CollectionCard Link wrapper replaced with router.push on Card onClick — nested interactive element + Link causes navigation even with stopPropagation; router.push is reliable
-- [Phase 52.1-post-fix]: Zustand detectionStatus/pulseRunId scoped per collectionId in collectionDetection map — global store caused all collection pages to show running state simultaneously
-- [Phase 52.1-post-fix]: Per-collection Zustand state requires reactive selectors (useWorkspaceStore(s => s.collectionDetection[id]?.field)) not getter functions — getters are not subscriptions and don't trigger re-renders
-- [Phase 52.1-post-fix]: Pulse 402 insufficient_credits error was silently swallowed — catch block now handles 402 with toast alongside existing 409 handler
+Recent decisions affecting v0.8.1 work:
+- [Phase 52.1-post-fix]: Per-collection Zustand state requires reactive selectors — getters are not subscriptions
+- [Phase 52.1-post-fix]: CollectionCard uses router.push on Card onClick (not Link wrapper) — avoids nested interactive element navigation issue
+- [Phase 52.1-post-fix]: Pulse 402 insufficient_credits error handled with toast in catch block
+- [Phase 53]: Fixed header strip uses shrink-0 border-b as direct child of outer flex-col container for SidebarTrigger visibility in MyFilesPage
+- [Phase 53-02]: ChatInterface logo retained in active-chat header (CHAT-01 applies to WelcomeScreen only); WelcomeScreen expand button guarded by sessionId; ChatInterface header restructured to flex row for true-edge toggle pinning
+- [Phase 53-01]: WorkspacePage uses flex flex-col h-full with shrink-0 header strip — not sticky/fixed positioning
+- [Phase 53-01]: Nav item padding fix uses pl-1 on Link/anchor children of SidebarMenuButton asChild
+- [Phase 53]: 53-04: LBAR-01 requires broader fix — SidebarTrigger header needed in Collection details, Signal detail, and Report views (not just WorkspacePage)
+- [Phase 53]: 53-04: LBAR-02 padding incomplete — pl-1 fix insufficient; icon centering in collapsed sidebar also misaligned
+- [Phase 53]: 53-04: New gap identified — 'Chat with Spectra' button missing from Signal detail view (not in original scope)
+- [Phase 53-shell-and-navigation-fixes]: LBAR-01 gap closed: SidebarTrigger added to all workspace sub-view pages (collection detail, signal view, report view) across all render states
+- [Phase 53-shell-and-navigation-fixes]: LBAR-02 gap closed: pl-1 removed from UnifiedSidebar nav asChild children — shadcn p-2 default is the sole padding source for correct icon alignment
+- [Phase 54-01]: COALESCE(SUM(credit_cost), 0.0) correlated subquery returns 0.0 when no completed runs — no null from DB
+- [Phase 54-01]: credits_used: float = 0.0 schema default ensures create_collection response valid without passing field
+- [Phase 54-pulse-analysis-fixes]: toLocaleString used instead of toLocaleDateString for Pulse timestamps — toLocaleDateString silently ignores hour/minute options in all browsers
+- [Phase 54-pulse-analysis-fixes]: Mobile toggle uses showDetail boolean in signals/page.tsx — list panel and detail panel each wrapped in div with sm:flex breakpoint classes; selecting a signal sets showDetail true
+- [Phase 54-pulse-analysis-fixes]: Chat bridge button in SignalDetailPanel disabled when collectionFiles.length === 0 to prevent empty session creation
+- [Phase 54]: PULSE-03 post-verification fix: Chat bridge button styled green and opens new chat session in a new tab (not same-tab navigation)
 
 ### Pending Todos
 
@@ -98,21 +71,15 @@ Recent decisions affecting v0.8 work:
 - [ ] Show suggestions in Data Summary sidebar panel (ui)
 - [ ] Use Pydantic structured output for agent JSON responses (consistency)
 - [ ] Plan production environment variable cleanup and validation (deployment)
-- [x] Disable "Run Detection" button while Pulse is running, show tooltip "Pulse analysis is currently running" (ui)
-
-### Roadmap Evolution
-
-- Phase 51.1 inserted after Phase 51: Pipeline Refactor (URGENT)
-- Phase 52.1 inserted after Phase 52: delete and rename Collection (URGENT)
 
 ### Blockers/Concerns
 
 - slowapi>=0.1.9 compatibility with FastAPI 0.115+ and custom key_func — verify before writing rate limiting middleware
 - Confirm spectra-api and spectra-public share same Dokploy host — spectra_uploads volume sharing is automatic only on single host
-- Statistical severity thresholds (Z-score >3 = critical, etc.) are starting values only — externalize to YAML from day one so they can be tuned post-launch without code changes
+- Statistical severity thresholds (Z-score >3 = critical, etc.) are starting values only — externalize to YAML from day one
 
 ## Session Continuity
 
-Last session: 2026-03-09
-Stopped at: Phase 52.1 fully complete — all plans executed, verified, and post-execution bugs resolved
-Resume with: Phase 52 complete (all 4 plans done) — milestone v0.8 is complete; consider /gsd:complete-milestone or adding any remaining polish phases
+Last session: 2026-03-10T18:00:00.000Z
+Stopped at: v0.8.1 milestone archived
+Resume with: /gsd:new-milestone

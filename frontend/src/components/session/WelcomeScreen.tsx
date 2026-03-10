@@ -23,6 +23,7 @@ import {
   Upload,
   FileSpreadsheet,
   X,
+  PanelRightOpen,
 } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,8 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
   const searchToggle = useSearchToggle();
   const creatingSession = useRef(false);
   const setRightPanelOpen = useSessionStore((s) => s.setRightPanelOpen);
+  const rightPanelOpen = useSessionStore((s) => s.rightPanelOpen);
+  const toggleRightPanel = useSessionStore((s) => s.toggleRightPanel);
 
   // Pending file tracking for pre-session state
   const [pendingFileIds, setPendingFileIds] = useState<string[]>([]);
@@ -301,16 +304,25 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
         </div>
       )}
 
-      {/* Sidebar toggle with branding */}
+      {/* Sidebar toggle */}
       <div className="px-4 py-3">
         <div className="flex items-center gap-2">
           <SidebarTrigger className="-ml-1" />
-          <div className="h-7 w-7 rounded-lg gradient-primary flex items-center justify-center shrink-0">
-            <span className="text-sm font-bold text-white">S</span>
-          </div>
-          <span className="font-semibold text-sm tracking-tight">Spectra</span>
         </div>
       </div>
+
+      {/* Rightbar expand button — only shown on existing sessions when right panel is closed */}
+      {sessionId && !rightPanelOpen && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-3 right-3 z-10"
+          onClick={toggleRightPanel}
+          title="Open linked files"
+        >
+          <PanelRightOpen className="h-4 w-4" />
+        </Button>
+      )}
 
       {/* Main content area — centered greeting, scrollable when suggestions overflow */}
       <div className="flex-1 min-h-0 overflow-y-auto px-6 flex flex-col">

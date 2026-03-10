@@ -39,6 +39,7 @@ import { FileTable } from "@/components/workspace/file-table";
 import { FileUploadZone } from "@/components/workspace/file-upload-zone";
 import { DataSummaryModal } from "@/components/workspace/data-summary-panel";
 import { StickyActionBar } from "@/components/workspace/sticky-action-bar";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import type { CollectionFile } from "@/types/workspace";
 import type { FileListItem } from "@/types/file";
 import type { SignalDetail } from "@/types/workspace";
@@ -225,7 +226,14 @@ export default function CollectionDetailPage() {
   const hasNoFiles = !loadingCollectionFiles && collectionFiles.length === 0;
 
   return (
-    <div className="p-8">
+    <div className="flex flex-col h-full">
+      {/* SidebarTrigger header strip — leftbar toggle visible in collection detail (LBAR-01) */}
+      <div className="px-4 py-3 shrink-0 border-b">
+        <SidebarTrigger className="-ml-1" />
+      </div>
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto">
+      <div className="p-8">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="icon" asChild>
@@ -299,7 +307,7 @@ export default function CollectionDetailPage() {
               filesCount={collection?.file_count ?? 0}
               signalCount={collection?.signal_count ?? 0}
               reportsCount={collection?.report_count ?? 0}
-              creditsUsed={creditCosts?.pulse_run ?? 0}
+              creditsUsed={collection?.credits_used ?? 0}
             />
           )}
 
@@ -593,6 +601,8 @@ export default function CollectionDetailPage() {
         onSuccess={() => router.push("/workspace")}
       />
     </div>
+      </div>
+    </div>
   );
 }
 
@@ -674,10 +684,12 @@ function UserFileTable({
   }
 
   function formatDate(dateStr: string): string {
-    return new Date(dateStr).toLocaleDateString("en-US", {
+    return new Date(dateStr).toLocaleString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   }
 
