@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.collection import Collection, CollectionFile
+from app.models.pulse_run import PulseRun as PulseRunModel
 from app.models.report import Report
 from app.models.signal import Signal
 
@@ -122,9 +123,19 @@ class CollectionService:
             .scalar_subquery()
             .label("report_count")
         )
+        credits_used_sq = (
+            select(func.coalesce(func.sum(PulseRunModel.credit_cost), 0.0))
+            .where(
+                PulseRunModel.collection_id == Collection.id,
+                PulseRunModel.status == "completed",
+            )
+            .correlate(Collection)
+            .scalar_subquery()
+            .label("credits_used")
+        )
 
         stmt = (
-            select(Collection, file_count_sq, signal_count_sq, report_count_sq)
+            select(Collection, file_count_sq, signal_count_sq, report_count_sq, credits_used_sq)
             .where(
                 Collection.id == collection_id,
                 Collection.user_id == user_id,
@@ -141,6 +152,7 @@ class CollectionService:
             "file_count": row[1],
             "signal_count": row[2],
             "report_count": row[3],
+            "credits_used": float(row[4]),
         }
 
     @staticmethod

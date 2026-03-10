@@ -118,6 +118,7 @@ async def get_collection(
         file_count=detail["file_count"],
         signal_count=detail["signal_count"],
         report_count=detail["report_count"],
+        credits_used=detail["credits_used"],
     )
 
 
@@ -150,6 +151,7 @@ async def update_collection(
         file_count=detail["file_count"],
         signal_count=detail["signal_count"],
         report_count=detail["report_count"],
+        credits_used=detail["credits_used"],
     )
 
 
