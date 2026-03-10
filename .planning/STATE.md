@@ -4,8 +4,8 @@ milestone: v0.8.1
 milestone_name: UI Fixes & Enhancement
 status: archived
 stopped_at: v0.8.1 milestone complete and archived
-last_updated: "2026-03-10T18:00:00.000Z"
-last_activity: 2026-03-10 — v0.8.1 milestone archived; git tagged and pushed to master
+last_updated: "2026-03-10T18:30:00.000Z"
+last_activity: 2026-03-10 — quick-5 complete: QuerySuggestions redesigned with column-per-category card layout
 progress:
   total_phases: 2
   completed_phases: 2
@@ -80,6 +80,6 @@ Recent decisions affecting v0.8.1 work:
 
 ## Session Continuity
 
-Last session: 2026-03-10T18:00:00.000Z
-Stopped at: v0.8.1 milestone archived
+Last session: 2026-03-10T18:30:00.000Z
+Stopped at: Completed quick-5 (QuerySuggestions card layout redesign)
 Resume with: /gsd:new-milestone
