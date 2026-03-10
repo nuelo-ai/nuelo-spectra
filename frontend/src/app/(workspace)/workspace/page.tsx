@@ -6,10 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CollectionList } from "@/components/workspace/collection-list";
 import { CreateCollectionDialog } from "@/components/workspace/create-collection-dialog";
+import { DeleteCollectionDialog } from "@/components/workspace/delete-collection-dialog";
 import { useCollections } from "@/hooks/useWorkspace";
+import type { CollectionListItem } from "@/types/workspace";
 
 export default function WorkspacePage() {
   const [createOpen, setCreateOpen] = useState(false);
+  const [renameTarget, setRenameTarget] = useState<CollectionListItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CollectionListItem | null>(null);
   const { data: collections, isLoading, isError, refetch } = useCollections();
 
   return (
@@ -60,10 +64,30 @@ export default function WorkspacePage() {
         <CollectionList
           collections={collections}
           onCreateClick={() => setCreateOpen(true)}
+          onRename={(collection) => setRenameTarget(collection)}
+          onDelete={(collection) => setDeleteTarget(collection)}
         />
       )}
 
-      <CreateCollectionDialog open={createOpen} onOpenChange={setCreateOpen} />
+      {/* Create dialog */}
+      <CreateCollectionDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+      />
+
+      {/* Rename dialog — edit mode */}
+      <CreateCollectionDialog
+        open={renameTarget !== null}
+        onOpenChange={(open) => { if (!open) setRenameTarget(null); }}
+        collection={renameTarget ?? undefined}
+      />
+
+      {/* Delete confirmation dialog */}
+      <DeleteCollectionDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        collection={deleteTarget}
+      />
     </div>
   );
 }
