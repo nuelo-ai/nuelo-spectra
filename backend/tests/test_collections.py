@@ -561,3 +561,58 @@ class TestReportOperations:
             with pytest.raises(HTTPException) as exc_info:
                 await download_report(uuid4(), uuid4(), user, mock_db)
             assert exc_info.value.status_code == 404
+
+
+# ============================================================================
+# Test Group 5: Credits Used Aggregate
+# ============================================================================
+
+
+class TestCreditsUsed:
+    """Test that credits_used is surfaced through GET /collections/{id}."""
+
+    @pytest.mark.asyncio
+    async def test_get_collection_credits_used_zero(self):
+        """GET /collections/{id} should return credits_used=0.0 when no completed runs."""
+        from app.routers.collections import get_collection
+
+        user = _make_mock_user()
+        mock_db = AsyncMock()
+        coll = _make_mock_collection(user_id=user.id)
+
+        with patch(
+            "app.routers.collections.CollectionService.get_collection_detail",
+            new_callable=AsyncMock,
+            return_value={
+                "collection": coll,
+                "file_count": 0,
+                "signal_count": 0,
+                "report_count": 0,
+                "credits_used": 0.0,
+            },
+        ):
+            result = await get_collection(coll.id, user, mock_db)
+            assert result.credits_used == 0.0
+
+    @pytest.mark.asyncio
+    async def test_get_collection_credits_used_nonzero(self):
+        """GET /collections/{id} should return credits_used=12.5 when runs have cost 12.5."""
+        from app.routers.collections import get_collection
+
+        user = _make_mock_user()
+        mock_db = AsyncMock()
+        coll = _make_mock_collection(user_id=user.id)
+
+        with patch(
+            "app.routers.collections.CollectionService.get_collection_detail",
+            new_callable=AsyncMock,
+            return_value={
+                "collection": coll,
+                "file_count": 2,
+                "signal_count": 5,
+                "report_count": 1,
+                "credits_used": 12.5,
+            },
+        ):
+            result = await get_collection(coll.id, user, mock_db)
+            assert result.credits_used == 12.5
