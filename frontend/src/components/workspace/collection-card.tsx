@@ -59,13 +59,13 @@ export function CollectionCard({ collection, onRename, onDelete }: CollectionCar
             </Button>
           </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onRename(collection)}>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRename(collection); }}>
               <Pencil className="mr-2 h-4 w-4" />
               Rename
             </DropdownMenuItem>
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
-              onClick={() => onDelete(collection)}
+              onClick={(e) => { e.stopPropagation(); onDelete(collection); }}
             >
               <Trash2 className="mr-2 h-4 w-4" />
               Delete
