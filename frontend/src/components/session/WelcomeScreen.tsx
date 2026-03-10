@@ -373,7 +373,7 @@ export function WelcomeScreen({ sessionId }: WelcomeScreenProps) {
 
         {/* Query suggestions — full available width, outside the narrow greeting wrapper */}
         {hasLinkedFiles && sessionId && sessionDetail && fileSummary?.query_suggestions?.categories && (
-          <div className="w-full max-w-5xl pb-8">
+          <div className="w-full max-w-5xl pb-8 mt-6">
             <QuerySuggestions
               categories={fileSummary.query_suggestions.categories}
               onSelect={(suggestion) => handleSend(suggestion)}
