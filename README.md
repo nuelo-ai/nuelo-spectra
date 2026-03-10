@@ -1,15 +1,16 @@
 # Spectra
 
-AI-powered conversational data analytics platform. Create chat sessions, link multiple files, ask questions in natural language, and receive instant insights with full code transparency and cross-file analysis.
+AI-powered data analytics platform. Chat with your data through natural language, or run Pulse anomaly detection to automatically surface severity-sorted signals with statistical evidence and Plotly visualizations.
 
 ## What is Spectra?
 
-Spectra bridges the gap between raw data and actionable insights. Upload your datasets, and a multi-agent AI system analyzes the data structure, generates Python code, executes it in a secure sandbox, and presents results as interactive Data Cards — all through a conversational chat interface.
+Spectra bridges the gap between raw data and actionable insights. Upload your datasets, and a multi-agent AI system analyzes data structure, generates Python code, executes it in a secure sandbox, and presents results — either through a conversational chat interface or the Pulse Analysis workspace.
 
 **Key Differentiators:**
 - **Code Transparency**: See and verify the Python code generated for each analysis
 - **Multi-File Analysis**: Link multiple datasets to a single conversation for cross-file queries
 - **Multi-Agent Accuracy**: 6 specialized AI agents ensure accurate, safe results
+- **Spectra Pulse**: Automated anomaly detection — upload files, run Pulse, get severity-sorted Signal cards with Plotly charts and statistical evidence
 - **Intelligent Visualization**: AI determines when charts enhance analysis and generates interactive Plotly visualizations
 - **Intelligent Routing**: Manager Agent skips code generation for simple queries (~40% faster)
 - **Multi-Provider LLM**: Choose from Anthropic, OpenAI, Google, Ollama, or OpenRouter per agent
@@ -30,8 +31,9 @@ Spectra bridges the gap between raw data and actionable insights. Upload your da
 - **Web Search**: Tavily integration with source citations
 - **Multi-LLM Support**: 6 providers with per-agent configuration
 - **Authentication**: JWT with refresh tokens and secure password reset
-- **Theming**: Dark/light mode with Nord palette
-- **Admin Portal**: Separate admin app for user management, credits, invitations, platform settings, and audit logging
+- **Theming**: Dark/light mode with Nord palette (chat) and Hex.tech palette (workspace)
+- **Spectra Pulse**: Collection management, CSV/Excel file upload with column profiling, AI anomaly detection with Plotly signal cards, downloadable Markdown reports, tier-based access gating
+- **Admin Portal**: Separate admin app for user management, credits, invitations, platform settings (including Pulse credit cost), and audit logging
 - **REST API v1**: File upload/list/download/delete, file context, synchronous query — all with Bearer token auth and credit deduction
 - **MCP Server**: FastMCP 3.0.2 with Streamable HTTP transport at `/mcp/`, 6 `spectra_` tools for AI agent integrations
 - **API Key Management**: Create, view, revoke keys from Settings page; admin manages keys for all users
@@ -362,7 +364,23 @@ allowed_libraries:
 
 Changes to YAML configs require server restart.
 
-## Current Status (v0.7.10)
+## Current Status (v0.8)
+
+### v0.8 Spectra Pulse (Detection) (March 2026)
+- **Spectra Pulse** — full AI-powered anomaly detection workspace: create Collections, upload CSV/Excel files, run Pulse detection, view severity-sorted Signal cards with Plotly chart visualizations and 2x2 statistical evidence grids
+- **Multi-agent orchestrator pipeline** — brain/orchestrator calling independent coder, interpreter, viz, and report writer sub-agents; Pydantic structured output on all reasoning LLM calls; E2B sandbox with 300s timeout
+- **Collection management** — create, rename, delete collections; file upload with column profile slide-out (DataSummaryPanel); cascade delete; query cache invalidation
+- **Detection UX** — inline progress banner on Overview tab, sonner toast on completion with signal count and "View Signals" link, re-run confirmation dialog with credit cost warning
+- **Reports** — auto-generated Markdown analysis reports per Pulse run; full-page report viewer with Markdown rendering and download
+- **Tier-based access gating** — workspace_access + max_active_collections per tier in user_classes.yaml; workspace_credit_cost_pulse configurable via Admin Portal at runtime
+- **Upgrading from v0.7:**
+
+```bash
+git pull origin master
+cd backend && uv sync
+uv run alembic upgrade head  # Creates collections, collection_files, signals, reports, pulse_runs tables
+cd ../frontend && npm install
+```
 
 ### v0.7.10 Admin Credit Usage Display Fix (February 2026)
 - Fixed admin Activity Tab showing zero activity for API-only users — `get_user_activity()` now queries `api_usage_logs` by month and merges `api_query_count` into the monthly breakdown; "API Queries" column added to the activity table
@@ -467,4 +485,4 @@ MIT License - See LICENSE file for details.
 
 - **GitHub**: [github.com/marwazihs/nuelo-spectra](https://github.com/marwazihs/nuelo-spectra)
 - **Issues**: Report bugs or request features via GitHub Issues
-- **Version**: v0.7.10 (February 2026)
+- **Version**: v0.8 (March 2026)

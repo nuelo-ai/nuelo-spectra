@@ -40,6 +40,7 @@ export interface UserResponse {
   first_name: string | null;
   last_name: string | null;
   is_active: boolean;
+  is_admin: boolean;
   created_at: string;
 }
 

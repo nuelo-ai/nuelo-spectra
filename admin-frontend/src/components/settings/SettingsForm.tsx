@@ -52,6 +52,7 @@ export function SettingsForm({ settings, isLoading }: SettingsFormProps) {
   const [inviteExpiryDays, setInviteExpiryDays] = useState(7);
   const [defaultCreditCost, setDefaultCreditCost] = useState(1);
   const [maxPendingInvites, setMaxPendingInvites] = useState(10);
+  const [pulseCreditCost, setPulseCreditCost] = useState(5);
 
   // Sync form state when settings data loads
   useEffect(() => {
@@ -61,6 +62,7 @@ export function SettingsForm({ settings, isLoading }: SettingsFormProps) {
       setInviteExpiryDays(settings.invite_expiry_days);
       setDefaultCreditCost(settings.default_credit_cost);
       setMaxPendingInvites(settings.max_pending_invites);
+      setPulseCreditCost(settings.workspace_credit_cost_pulse);
     }
   }, [settings]);
 
@@ -68,6 +70,10 @@ export function SettingsForm({ settings, isLoading }: SettingsFormProps) {
     // Validation
     if (defaultCreditCost <= 0) {
       toast.error("Credit cost must be greater than 0");
+      return;
+    }
+    if (pulseCreditCost <= 0) {
+      toast.error("Pulse detection cost must be greater than 0");
       return;
     }
     if (inviteExpiryDays <= 0) {
@@ -86,6 +92,7 @@ export function SettingsForm({ settings, isLoading }: SettingsFormProps) {
         invite_expiry_days: inviteExpiryDays,
         default_credit_cost: defaultCreditCost,
         max_pending_invites: maxPendingInvites,
+        workspace_credit_cost_pulse: pulseCreditCost,
       },
       {
         onSuccess: () => {
@@ -268,6 +275,22 @@ export function SettingsForm({ settings, isLoading }: SettingsFormProps) {
             />
             <p className="text-sm text-muted-foreground">
               Number of credits deducted per agent message
+            </p>
+          </div>
+          <Separator />
+          <div className="space-y-2">
+            <Label htmlFor="pulse-credit-cost">Pulse Detection Cost per Run</Label>
+            <Input
+              id="pulse-credit-cost"
+              type="number"
+              min={0.1}
+              step={0.1}
+              value={pulseCreditCost}
+              onChange={(e) => setPulseCreditCost(Number(e.target.value))}
+              className="w-32"
+            />
+            <p className="text-sm text-muted-foreground">
+              Number of credits deducted per Pulse detection run
             </p>
           </div>
         </CardContent>

@@ -1,0 +1,12 @@
+# Pulse detection configuration -- tunable without code changes
+thresholds:
+  z_score_critical: 3.0
+  z_score_warning: 2.0
+  p_value_threshold: 0.05
+  correlation_strong: 0.7
+signals:
+  max_per_run: 8
+  min_for_success: 1
+profiling:
+  max_columns: 200
+  sample_rows: 10000

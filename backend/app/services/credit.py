@@ -231,6 +231,7 @@ class CreditService:
         txn = CreditTransaction(
             user_id=user_id,
             amount=amount,
+            balance_after=float(user_credit.balance),
             transaction_type="api_refund",
             reason=reason,
         )

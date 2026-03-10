@@ -10,7 +10,7 @@ from app.config import get_settings
 
 # Import all models so Alembic can see them
 from app.models.base import Base
-from app.models import user, file, chat_message, chat_session, search_quota, password_reset, admin_audit_log, user_credit, credit_transaction, invitation, platform_setting, api_key
+from app.models import user, file, chat_message, chat_session, search_quota, password_reset, admin_audit_log, user_credit, credit_transaction, invitation, platform_setting, api_key, collection, signal, report, pulse_run
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

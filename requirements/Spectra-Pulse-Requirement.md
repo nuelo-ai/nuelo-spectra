@@ -62,13 +62,13 @@ Throughout this document, the detection stage is referred to as **Pulse**. Indiv
 
 The current chat-with-your-data flow. Stays as-is. Becomes the most primitive feature of Spectra — freeform exploration, quick questions, ad-hoc analysis. Think of it as the "calculator" — always available, always useful, but not the main event.
 
-### Module 2: Analysis Workspace (new — the differentiator)
+### Module 2: Pulse Analysis (new — the differentiator)
 
 A completely separate module with its own entry point, its own flow, and its own output format. This is where Spectra becomes a business tool, not just a data tool. Core focus: **Detect → Explain → What-If** (three stages within one workspace).
 
 ```mermaid
 graph TB
-    subgraph workspace["ANALYSIS WORKSPACE"]
+    subgraph workspace["PULSE ANALYSIS"]
         direction LR
         D["💡 <b>PULSE</b><br/>What's happening"]
         E["🧠 <b>EXPLAIN</b><br/>Why it happened"]
@@ -101,7 +101,7 @@ graph TB
         subgraph modules["User-Facing Modules"]
             direction LR
             Chat["💬 <b>Chat Sessions</b><br/><i>Freeform exploration</i><br/>Ad-hoc questions<br/>Quick analysis"]
-            Workspace["📊 <b>Analysis Workspace</b><br/><i>Guided investigation</i><br/>Pulse → Explain → What-If<br/>Structured reports"]
+            Workspace["📊 <b>Pulse Analysis</b><br/><i>Guided investigation</i><br/>Pulse → Explain → What-If<br/>Structured reports"]
         end
 
         subgraph shared["Shared Engine"]
@@ -133,7 +133,7 @@ graph TB
 
 **Both modules share** the same data layer, same agents, same E2B engine — but have completely different UX paradigms:
 
-| | Chat Sessions | Analysis Workspace |
+| | Chat Sessions | Pulse Analysis |
 |---|---|---|
 | **Purpose** | Exploration | Deliverables |
 | **Interaction** | Freeform typing | Guided steps + Q&A |
@@ -266,145 +266,175 @@ erDiagram
 
 ## 6. The User Journey (end to end)
 
+> **Note (v0.7.12):** The flow below reflects the implemented v0.7.12 mockup (pulse-mockup/). It supersedes the original brainstorm flow. The mockup is the source of truth for v0.8 and beyond.
+
 ```mermaid
 graph TD
-    Start["👤 User enters<br/><b>Analysis Workspace</b><br/>Sees list of Collections"] --> Create["📁 Create new Collection<br/>Give it a name"]
-    Create --> Pick["📂 Select data source(s)<br/>from uploaded files<br/>OR upload new files"]
-    Pick --> Pulse["💡 <b>PULSE</b><br/>User clicks 'Run Detection'<br/>Spectra scans data<br/>Signals appear as cards"]
+    Start["👤 User enters Pulse Analysis<br/>Sidebar: 'Pulse Analysis' → /workspace<br/>Landing page title: 'Collections'"] --> Create["📁 Create new Collection<br/>'Create Collection' dialog<br/>Name field only"]
+    Create --> Files["📂 Collection Detail — Files tab<br/>Upload files or select from uploaded<br/>Click file → DataSummaryPanel (column profile)<br/>Check files → sticky action bar appears"]
+    Files --> Pulse["💡 <b>PULSE</b><br/>Click 'Run Detection (5 credits)'<br/>Full-page DetectionLoading state<br/>Animated steps — replaces entire page content"]
 
-    Pulse --> Choice1{User reviews Signals}
-    Choice1 -->|"Download report"| Save
-    Choice1 -->|"Investigate a Signal"| Explain
+    Pulse --> Overview["Collection Detail — Overview tab<br/>Stat cards · Signal preview grid (up to 4)<br/>Activity feed · Run Detection banner"]
+    Overview --> SignalsTab["Collection Detail — Signals tab<br/>All Signal cards (non-interactive)<br/>'Open Signals View' button"]
+    SignalsTab --> DetectionResults["🔍 Detection Results page<br/>/workspace/collections/[id]/signals<br/>Breadcrumb: Collections / [Name] / Detection Results<br/>Two-column: SignalListPanel + SignalDetailPanel<br/>Auto-selects highest severity signal"]
 
-    Explain["🧠 <b>EXPLAIN</b><br/>Doctor-style interview<br/>Spectra hypothesizes, user confirms<br/>3-5 exchanges to root cause"]
+    DetectionResults --> Investigation["🧠 <b>EXPLAIN</b><br/>Click 'Investigate (3 credits)'<br/>Navigates to Guided Investigation page<br/>/signals/[id]/investigate"]
+    Investigation --> QnA["Q&A thread — structured exchanges<br/>Spectra asks questions with discrete choices<br/>+ free-text option per exchange<br/>Answered choices visually locked"]
+    QnA --> Closing["After ≥3 exchanges answered:<br/>Closing question appears<br/>'Proceed with report' or 'Discuss something'"]
+    Closing -->|"Proceed"| Checkpoint["InvestigationCheckpoint<br/>'Generate Report' button<br/>2-second loading → report viewer"]
+    Closing -->|"Discuss something"| MoreQA["Free-text input → appends discussion exchange<br/>New follow-up question added<br/>Closing question resets — another round possible"]
+    MoreQA --> Closing
 
-    Explain --> Choice2{Root cause identified}
-    Choice2 -->|"Download report"| Save
-    Choice2 -->|"Explore what-if"| WhatIf
+    Checkpoint --> InvReport["📄 Investigation Report viewer<br/>Related Signals section<br/>'Explore What-If Scenarios' CTA"]
 
-    WhatIf["⚙️ <b>WHAT-IF</b><br/>Set objective from root cause<br/>AI generates scenario options<br/>Refine, compare, decide"]
+    DetectionResults --> WhatIfEntry["⚙️ <b>WHAT-IF</b> (from SignalDetailPanel)<br/>Enabled only after complete investigation exists<br/>Click 'What-If (5 credits)'"]
+    InvReport --> WhatIfEntry2["⚙️ OR from report viewer:<br/>'Start What-If →' CTA"]
 
-    WhatIf --> Save
+    WhatIfEntry --> WhatIfObj["What-If Objective page<br/>/signals/[id]/whatif<br/>Root cause context card<br/>Objective search bar + AI suggestions dropdown"]
+    WhatIfEntry2 --> WhatIfObj
+    WhatIfObj --> WhatIfLoad["Inline loading — 4 animated steps<br/>Analyzing root cause → Generating scenarios<br/>Scoring confidence → Finalizing scenarios<br/>~10 seconds → redirects to session"]
+    WhatIfLoad --> Session["What-If Session page<br/>/signals/[id]/whatif/[sessionId]<br/>Three-panel: scenario list (left) +<br/>scenario detail (center) + sliding Refine panel (right)"]
+    Session --> WhatIfReport["'Generate What-If Report' button<br/>→ report viewer"]
 
-    Save["💾 <b>AUTO-SAVED TO COLLECTION</b><br/>All progress saves continuously<br/>Download as Markdown or PDF"]
+    WhatIfReport --> Save["💾 <b>AUTO-SAVED TO COLLECTION</b><br/>Reports appear in collection's Reports tab<br/>Download as Markdown (functional)<br/>Download as PDF (present, disabled)"]
+    Checkpoint --> Save
 
     style Start fill:#4C566A,stroke:#D8DEE9,color:#ECEFF4
     style Create fill:#4C566A,stroke:#D8DEE9,color:#ECEFF4
-    style Pick fill:#4C566A,stroke:#D8DEE9,color:#ECEFF4
+    style Files fill:#4C566A,stroke:#D8DEE9,color:#ECEFF4
     style Pulse fill:#5E81AC,stroke:#D8DEE9,color:#ECEFF4
-    style Explain fill:#EBCB8B,stroke:#2E3440,color:#2E3440
-    style WhatIf fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
+    style Overview fill:#4C566A,stroke:#D8DEE9,color:#ECEFF4
+    style SignalsTab fill:#4C566A,stroke:#D8DEE9,color:#ECEFF4
+    style DetectionResults fill:#5E81AC,stroke:#D8DEE9,color:#ECEFF4
+    style Investigation fill:#EBCB8B,stroke:#2E3440,color:#2E3440
+    style QnA fill:#EBCB8B,stroke:#2E3440,color:#2E3440
+    style Closing fill:#EBCB8B,stroke:#2E3440,color:#2E3440
+    style Checkpoint fill:#EBCB8B,stroke:#2E3440,color:#2E3440
+    style MoreQA fill:#EBCB8B,stroke:#2E3440,color:#2E3440
+    style InvReport fill:#4C566A,stroke:#D8DEE9,color:#ECEFF4
+    style WhatIfEntry fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
+    style WhatIfEntry2 fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
+    style WhatIfObj fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
+    style WhatIfLoad fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
+    style Session fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
+    style WhatIfReport fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
     style Save fill:#5E81AC,stroke:#D8DEE9,color:#ECEFF4
-    style Choice1 fill:#3B4252,stroke:#D8DEE9,color:#ECEFF4
-    style Choice2 fill:#3B4252,stroke:#D8DEE9,color:#ECEFF4
 ```
 
 **Step 1: Start an Analysis — Deliverable: SIGNALS**
-- User enters Analysis Workspace and sees list of existing Collections
-- User creates new Collection and provides a name
-- Picks data source(s) from their uploaded files OR uploads new files
-- User clicks "Run Detection" and Spectra auto-runs Pulse
-- Screen shows Signals as cards: "Here's what we found"
-- List of Signals shown as cards on the left panel. When user selects a Signal, the main interface shows details: title (key finding), description, and visualization
-- No configuration, no setup. Select data → see Signals.
+- User enters Pulse Analysis via sidebar nav (label: "Pulse Analysis", route: /workspace). The landing page title is "Collections".
+- User creates a new Collection via the "Create Collection" button, which opens a dialog with a name field.
+- Collection detail page has 4 tabs: Overview, Files, Signals, Reports.
+- Files tab: FileUploadZone (drag/drop or click to upload) plus FileTable with row checkboxes. Clicking a file row opens a DataSummaryPanel (slide-out sheet showing column profile). Selecting files via checkboxes activates a sticky action bar at the bottom showing selected count and "Run Detection (5 credits)" button.
+- Clicking "Run Detection" replaces the entire page content with a full-page DetectionLoading state (animated steps: Profiling data, Detecting anomalies, Analyzing trends, Generating signals). This is not an inline spinner — it takes over the full page.
+- After detection completes: Overview tab shows stat cards (files, signals, reports, credits used), a Run Detection banner, a 2-column grid of up to 4 Signal cards (non-interactive preview, links to Detection Results page), a compact file table, and an activity feed. The Signals tab shows all Signal cards plus an "Open Signals View" button.
+- Sidebar also includes Chat, Files, API, Settings, Admin Panel. Only /workspace, /chat, and /admin are live routes — others are # placeholders. Sidebar collapses/expands with a toggle button on desktop. Credit balance shown in the header as a Zap-icon pill.
 
-**Step 2: Guided Investigation (the Q&A flow) — Deliverable: ROOT CAUSE HYPOTHESIS**
-- User opens the Collection and sees Signals generated from Pulse
-- User taps a Signal: "Revenue declined 18% in Q4"
-- User initiates investigation by clicking "Investigate"
-- Spectra asks structured questions with discrete choices, plus an option for custom free-text answers
-- These questions are designed to narrow down to the root cause. It starts with Spectra's own hypotheses, and lets the user confirm or challenge them
-- Imagine a doctor interview — the doctor is trying to understand the root cause of the patient's symptoms
-- 3-5 exchanges, progressively narrowing to root cause
-- Spectra continues asking until it has enough information for a diagnosis
-- In the process, Spectra might ask user for additional information or clarification
-- User can upload additional resources (documents: pdf, pptx, docs or images) for the diagnosis. NOTE: this is for later version.
-- **Output:** Comprehensive analysis with root cause hypothesis. One root cause may explain multiple Signals.
+**Step 2: Guided Investigation (the Q&A flow) — Deliverable: INVESTIGATION REPORT**
+- From the Detection Results page (/workspace/collections/[id]/signals): user sees SignalListPanel (left, scrollable, sorted by severity — critical first, then warning, then info) and SignalDetailPanel (right). The highest severity signal is auto-selected on load.
+- Severity color scheme: critical = red, warning = amber, info = blue. Note: there is no "opportunity" severity in the mockup UI — severity values are critical, warning, and info only.
+- SignalDetailPanel sections (in order): title + severity/category badges, Visualization card (Recharts chart driven by signal.chartType), Analysis (description text), Statistical Evidence (2x2 metric grid), Investigation section.
+- Investigation section: "Investigate (3 credits)" button (always enabled). "What-If (5 credits)" button visible but disabled until at least one complete investigation exists for this signal (shows "(requires investigation)" label when disabled). Below the buttons: list of past investigation reports (date, report title, Complete badge).
+- Clicking "Investigate" navigates to the dedicated Guided Investigation page (/signals/[signalId]/investigate).
+- Guided Investigation page layout: sticky header (Back to Signals button, "Guided Investigation" label, "3 credits" badge, signal title on right). Signal context block at top (muted card showing signal title and truncated description). Q&A thread below.
+- Q&A thread: each exchange shows Spectra's question plus multiple-choice buttons (discrete options). User selects a choice OR provides free-text via a textarea. Answered choices are visually locked (cannot be re-selected).
+- After ≥3 exchanges are answered and no active (unanswered) exchange remains, a closing question appears: "Is there anything else you'd like to discuss about this signal before I generate the report?" with two choice buttons: "No, that covers it — proceed with report" and "Yes, I'd like to discuss something".
+- "Discuss something" path: a free-text textarea appears. User types and submits. This appends a new discussion exchange to the thread AND a follow-up question. The closing question resets to hidden, allowing another round of discussion before proceeding.
+- "Proceed with report" path: InvestigationCheckpoint component shown with "Generate Report" button. Clicking triggers a 2-second loading state, then navigates to the report viewer.
+- **Output:** Investigation Report (not a root cause card). There is no separate root cause card displayed — the investigation ends directly in report generation.
+- The report viewer shows (for Investigation Reports only): a "Related Signals — Same Root Cause" section (one gray card per related signal with "View Signal" link), then an "Explore What-If Scenarios" CTA (violet card with "Start What-If →" button).
+- Note: user document upload during investigation is deferred to a later version.
+- Gap noted: COLL-01 — see Known Gaps section below.
 
-**Step 3: What-If Scenarios — Deliverable: SCENARIO COMPARISON & RECOMMENDATION**
+**Step 3: What-If Scenarios — Deliverable: WHAT-IF SCENARIO REPORT**
 
-> **Revised (2026-03-02):** Original "Model & Simulate" approach (tornado charts, lever sliders, Monte Carlo) was replaced. The old approach was naive — it assumed the user's data could be auto-modeled with meaningful input-output relationships, and that users would know which "levers" to adjust. The revised approach uses Spectra's AI agent to generate data-backed narrative scenarios that users can evaluate, refine, and compare. Full predictive ML model concept is documented in Appendix as a future separate module.
+> **Revised (2026-03-02):** Original "Model & Simulate" approach (tornado charts, lever sliders, Monte Carlo) was replaced. The old approach was naive — it assumed the user's data could be auto-modeled with meaningful input-output relationships, and that users would know which "levers" to adjust. The revised approach uses Spectra's AI agent to generate data-backed narrative scenarios that users can evaluate and refine. Full predictive ML model concept is documented in Appendix as a future separate module.
 
-After root cause identification, Spectra offers What-If scenario exploration. The flow has four phases:
+What-If scenario exploration is triggered from two entry points: (a) the SignalDetailPanel "What-If" button (enabled only after at least one complete investigation exists for the signal), or (b) the "Start What-If →" CTA in an Investigation Report viewer. The flow has four phases:
 
 ```mermaid
 graph TD
-    RC["🧠 Root cause identified<br/>'APAC Enterprise pricing<br/>caused revenue drop'"] --> Objective["<b>Phase 1: Set Objective</b><br/>User states what they want<br/>to achieve based on the findings"]
+    Entry["Entry point:<br/>(a) SignalDetailPanel 'What-If' button<br/>(b) Investigation Report 'Start What-If →' CTA"] --> ObjPage["<b>Phase 1: Objective page</b><br/>/signals/[id]/whatif<br/>Root cause context card (from investigation)<br/>Objective search bar — type or select from 4 AI suggestions<br/>'Generate Scenarios →' button (disabled until text entered)"]
 
-    Objective --> Generate["<b>Phase 2: AI Generates Scenarios</b><br/>Agent analyzes data in E2B<br/>Produces 2-3 narrative scenarios<br/>with data-backed estimates"]
+    ObjPage --> Loading["<b>Phase 2: Inline loading</b><br/>4 animated steps with icons<br/>Analyzing root cause → Generating scenarios<br/>Scoring confidence → Finalizing scenarios<br/>Progress bar — ~10 seconds"]
 
-    Generate --> Refine["<b>Phase 3: Explore & Refine</b><br/>User drills into scenarios<br/>Challenges assumptions<br/>Requests additional scenarios"]
+    Loading --> SessionPage["<b>Phase 3: Session page</b><br/>/signals/[id]/whatif/[sessionId]<br/>Three-panel layout"]
 
-    Refine --> Compare["<b>Phase 4: Compare & Decide</b><br/>Side-by-side scenario cards<br/>User selects preferred approach<br/>Comparison becomes report section"]
+    subgraph session["Session page panels"]
+        direction LR
+        Left["Left panel (280px fixed)<br/>Scenario list: name, confidence badge, estimated impact<br/>Selected scenario has ring highlight<br/>'Generate What-If Report' button below last scenario"]
+        Center["Center panel (fills remaining)<br/>Scenario detail: Narrative & Recommendations,<br/>Estimated Impact, Assumptions, Confidence, Data Backing<br/>'Refine' toggle button in header"]
+        Right["Right overlay (320px)<br/>Slides in from right edge<br/>WhatIfRefinementChat scoped to selected scenario<br/>Chat history resets on scenario switch"]
+    end
 
-    style RC fill:#EBCB8B,stroke:#2E3440,color:#2E3440
-    style Objective fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
-    style Generate fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
-    style Refine fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
-    style Compare fill:#5E81AC,stroke:#D8DEE9,color:#ECEFF4
+    SessionPage --> Left
+    SessionPage --> Center
+    SessionPage --> Right
+
+    Left -->|"Generate What-If Report"| Report["<b>Phase 4: What-If Scenario Report</b><br/>Report viewer with scenario content<br/>No extra sections (unlike Investigation Reports)"]
+
+    style Entry fill:#EBCB8B,stroke:#2E3440,color:#2E3440
+    style ObjPage fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
+    style Loading fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
+    style SessionPage fill:#A3BE8C,stroke:#D8DEE9,color:#2E3440
+    style Left fill:#4C566A,stroke:#D8DEE9,color:#ECEFF4
+    style Center fill:#4C566A,stroke:#D8DEE9,color:#ECEFF4
+    style Right fill:#4C566A,stroke:#D8DEE9,color:#ECEFF4
+    style Report fill:#5E81AC,stroke:#D8DEE9,color:#ECEFF4
 ```
 
-**Phase 1: Set Objective (What do you want to achieve?)**
-- Triggered after Investigation. Spectra presents the root cause context and asks the user to state their objective.
-- Presented as a selection with free-text option — not a chat, not a form. One question:
-  - *"Revenue declined 18% due to APAC Enterprise pricing pressure. What would you like to explore?"*
-  - "How do I recover the lost revenue?"
-  - "Which segments should I double down on?"
-  - "What's my realistic Q1 outlook?"
-  - [Type your own objective]
-- The objective anchors everything that follows. Without it, the AI has no direction.
+**Phase 1: Objective page (/signals/[id]/whatif)**
+- Sticky header: "Back to Signals" button, "What-If Scenarios" label, "5 credits" badge, signal title on right.
+- Root cause context card (muted background): investigation report title, confidence badge, brief root cause description.
+- Objective section: "Define your objective" heading + subtext. Action search bar with Search icon, text input, and "Generate Scenarios →" button (disabled until text is non-empty). On focus: suggestions dropdown shows 4 AI-suggested objectives (selected via onMouseDown to avoid blur/click race condition).
+- Clicking "Generate Scenarios" costs 5 credits and transitions to the loading state.
 
-**Phase 2: AI Generates Scenarios (Here are your options)**
-- The AI agent takes the objective + root cause + data and does the analytical work:
-  1. Runs targeted analysis in E2B (groupbys, historical trends, segment performance, period comparisons)
-  2. Identifies what the data can actually support as scenarios
-  3. Generates 2-3 **narrative scenarios** simultaneously, each saved as a named entity
-- Each scenario is a **story with numbers**, not a spreadsheet:
-  - Scenario name (e.g., "Shift Focus to Domestic SMB")
-  - Narrative explanation of the approach
-  - Estimated impact with range (e.g., "$420K–$580K over Q1")
-  - Key requirements/assumptions (e.g., "Requires ~28 additional SMB deals vs. Q4 average of 22/month")
-  - Confidence level with rationale (e.g., "Medium — based on Q3-Q4 trend continuation")
-  - Data backing — exactly what calculations produced these numbers
-- **No pre-built simulation engine.** The AI agent writes Python, runs it in E2B, interprets results, and presents them as scenarios. This uses Spectra's existing architecture — no new infrastructure.
-- **Loading state:** While AI generates scenarios, user sees a progress indicator. Generation may take 15-30 seconds as multiple analyses run.
+**Phase 2: Scenario generation (inline loading)**
+- Inline loading state replaces main page content but keeps the sticky header visible.
+- 4 animated steps with step icons and spinner/checkmark states: Analyzing root cause, Generating scenarios, Scoring confidence, Finalizing scenarios.
+- Progress bar below steps. Estimated time shown. Navigates to the session page after ~10 seconds.
 
-**Phase 3: Explore & Refine (Dig deeper, challenge assumptions)**
-- User picks a scenario they're interested in and can ask follow-up questions via a **scoped chat** (not freeform — stays on-topic with these scenarios):
-  - "What if we combine Scenario A and B?"
-  - "The SMB growth was seasonal — Q4 always spikes. Don't extrapolate that."
-  - "What about exiting APAC entirely?"
-- AI runs additional analysis in E2B to back up every response — no hallucinated numbers.
-- User can request **additional scenarios** — AI generates new ones alongside the existing set.
-- Each refinement is saved to the scenario's `refinement_trail`.
-- The user's domain knowledge fills causal gaps — same principle as the Investigation step.
+**Phase 3: Session page (/signals/[id]/whatif/[sessionId])**
+- Three-panel layout. Objective shown in page header (signal title + objective text on right side).
+- Scenario list panel (280px, left): vertical list of scenario buttons. Each entry shows scenario name, confidence badge (High = emerald, Medium = amber, Low = muted), estimated impact. Selected scenario has ring highlight. Below the last scenario: a separator and "Generate What-If Report" primary button.
+- Scenario detail panel (fills remaining width, center): header with selected scenario name, confidence badge, and "Refine" toggle button. Scrollable content with 5 cards: Narrative & Recommendations, Estimated Impact (highlighted primary-color box with projected outcome), Assumptions (checklist), Confidence (badge + rationale text), Data Backing.
+- Refine panel (320px, right overlay): slides in from the right edge via CSS translate when "Refine" is clicked, overlaying the detail panel. Header: "Refine Scenario" label + X close button. Contains WhatIfRefinementChat scoped to the selected scenario. Chat history resets when switching scenarios (component remount via key prop).
+- Deferred: WHAT-05 (Add Scenario button) and WHAT-06 (side-by-side comparison view) are intentionally not in the mockup. The "Compare & Decide" phase from the original requirements is replaced by the scenario list + "Generate Report" action. See Known Gaps section.
 
-**Phase 4: Compare & Decide (Which approach wins?)**
-- All scenarios displayed as **clean comparison cards** — not a table-heavy spreadsheet:
-  - Scenario name + one-line summary
-  - Estimated impact range
-  - Confidence level
-  - Time to impact
-- User selects their preferred scenario → the comparison itself becomes a **report section**:
-  - Objective stated, scenarios evaluated, selected approach with rationale
-  - This is what gets shared with the VP — ready to read without reformatting.
-- User can revisit and re-run scenarios later with updated data.
+**Phase 4: What-If Scenario Report**
+- "Generate What-If Report" button in the scenario list panel routes to the report viewer.
+- What-If Scenario Reports do not have the Related Signals or What-If CTA sections that Investigation Reports have.
 
-**Step 4: Save to Collections**
-- All progress is automatically saved to the Collection throughout the process
-- Spectra compiles the entire journey — Signals, investigation steps, charts, scenario results — into a structured markdown document
-- Export as PDF or Markdown as download options
-- Lives in Collections, organized by date/topic
+**Step 4: Auto-saved to Collections**
+- All progress is automatically saved to the Collection throughout the process. No explicit save button needed.
+- Reports (Investigation Reports and What-If Scenario Reports) appear in the collection's Reports tab as rows with type badge, title, source line, generated date, and "View Report" button.
+- Report viewer: sticky header with Back button (to collection detail), report title, type badge (Investigation Report = blue, What-If Scenario Report = violet), "Download as Markdown" button (functional), "Download as PDF" button (present but disabled — planned for v0.9).
+- Report content rendered as HTML from markdown (handles h1/h2/h3, bold, italic, hr, tables, ul, blockquotes, paragraphs) in a white paper area (max-w-3xl, white bg, gray-900 text) centered on a muted background.
 
 ---
 
-## 7. Admin Portal: Analysis Workspace Management
+### Known Gaps (Mockup vs. Full Spec)
 
-The Analysis Workspace is a premium, token-heavy feature. The Admin Portal needs controls for **access gating**, **cost management**, and **activity monitoring**. This builds on the existing tier system (`user_classes.yaml`) and credit infrastructure.
+These features are described in the full product spec but are not implemented in the v0.7.12 mockup. They are planned for future milestones.
+
+**COLL-01: Collection archiving UI**
+- Status: Active/Archived status badge is shown on collection detail and list pages, but archive/unarchive action buttons are not implemented in the mockup.
+- The v0.9 requirements describe archive/unarchive actions on both the collection list and detail pages.
+- Planned for v0.9.
+
+**COLL-02: Collection limit usage display**
+- Status: The v0.9 requirements describe an "X of Y active collections" usage counter and tier upgrade prompts in the collection list or detail header. Neither is present in the mockup's CollectionList or collection detail header.
+- Planned for v0.9.
+
+---
+
+## 7. Admin Portal: Pulse Analysis Management
+
+The Pulse Analysis is a premium, token-heavy feature. The Admin Portal needs controls for **access gating**, **cost management**, and **activity monitoring**. This builds on the existing tier system (`user_classes.yaml`) and credit infrastructure.
 
 ### 1. Tier-Based Access & Collection Limits
 
-The Analysis Workspace is not available to all tiers by default. Each tier gets a configurable access level and collection limit.
+The Pulse Analysis is not available to all tiers by default. Each tier gets a configurable access level and collection limit.
 
 | Tier | Workspace Access | Max Active Collections | Rationale |
 |------|:---:|:---:|---|
@@ -460,7 +490,7 @@ internal:
 
 ### 2. Granular Credit Costs per Workspace Activity
 
-The existing system has a single `default_credit_cost` (1.0 per message). Analysis Workspace activities are **significantly more token-intensive** than a single chat message — a Pulse run may execute 5-10 statistical analyses, and an Investigation may involve multiple agent exchanges. Costs must be granular and configurable.
+The existing system has a single `default_credit_cost` (1.0 per message). Pulse Analysis activities are **significantly more token-intensive** than a single chat message — a Pulse run may execute 5-10 statistical analyses, and an Investigation may involve multiple agent exchanges. Costs must be granular and configurable.
 
 **Proposed credit cost structure:**
 
@@ -488,7 +518,7 @@ The existing system has a single `default_credit_cost` (1.0 per message). Analys
 
 ### 3. Admin Monitoring & Analytics
 
-Admins need visibility into how the Analysis Workspace is being used — both for business insights (is the feature driving engagement?) and operational concerns (who's consuming the most resources?).
+Admins need visibility into how the Pulse Analysis is being used — both for business insights (is the feature driving engagement?) and operational concerns (who's consuming the most resources?).
 
 **3a. Workspace Activity Dashboard (new Admin page)**
 

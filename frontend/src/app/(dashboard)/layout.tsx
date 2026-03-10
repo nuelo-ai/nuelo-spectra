@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { ChatSidebar } from "@/components/sidebar/ChatSidebar";
+import { UnifiedSidebar } from "@/components/sidebar/UnifiedSidebar";
 import { LinkedFilesPanel } from "@/components/session/LinkedFilesPanel";
 import { useSessionStore } from "@/stores/sessionStore";
 import { useSessionDetail } from "@/hooks/useChatSessions";
@@ -49,7 +49,7 @@ export default function DashboardLayout({
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="flex h-screen overflow-hidden w-full">
-        <ChatSidebar />
+        <UnifiedSidebar />
         <main className="flex-1 overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out">
           {children}
         </main>

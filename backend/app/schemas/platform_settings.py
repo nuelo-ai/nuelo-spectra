@@ -11,6 +11,7 @@ class SettingsResponse(BaseModel):
     invite_expiry_days: int
     default_credit_cost: float
     max_pending_invites: int
+    workspace_credit_cost_pulse: float
 
 
 class SettingsUpdateRequest(BaseModel):
@@ -27,6 +28,7 @@ class SettingsUpdateRequest(BaseModel):
     invite_expiry_days: int | None = None
     default_credit_cost: float | None = None
     max_pending_invites: int | None = None
+    workspace_credit_cost_pulse: float | None = None
 
     @model_validator(mode="after")
     def at_least_one_field(self) -> "SettingsUpdateRequest":
@@ -39,6 +41,7 @@ class SettingsUpdateRequest(BaseModel):
                 self.invite_expiry_days,
                 self.default_credit_cost,
                 self.max_pending_invites,
+                self.workspace_credit_cost_pulse,
             ]
         ):
             raise ValueError("At least one setting must be provided")

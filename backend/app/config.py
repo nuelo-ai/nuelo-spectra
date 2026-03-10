@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     sandbox_memory_mb: int = 1024
     sandbox_max_retries: int = 2
 
+    # Pulse Agent sandbox (longer timeout for deep profiling)
+    pulse_sandbox_timeout_seconds: int = 300
+    pulse_orphan_timeout_minutes: int = 10  # PULSE_ORPHAN_TIMEOUT_MINUTES env var
+
     # Session Memory
     context_window_tokens: int = 12000
     context_warning_threshold: float = 0.85

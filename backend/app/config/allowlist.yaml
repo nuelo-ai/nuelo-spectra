@@ -9,6 +9,12 @@ allowed_libraries:
   - functools
   - re
   - json
+  - scipy
+  - scipy.stats
+  - openpyxl
+  - plotly
+  - plotly.graph_objects
+  - plotly.express
 
 unsafe_builtins:
   - eval

@@ -1,5 +1,59 @@
 # Project Milestones: Spectra
 
+## v0.8 Spectra Pulse (Detection) (Shipped: 2026-03-10)
+
+**Delivered:** Full Pulse Analysis module — users can create Collections, attach CSV/Excel files, run AI-powered Pulse detection, and view severity-sorted Signals with Plotly chart visualizations and statistical evidence. Establishes the Detect foundation of the Detect → Explain → What-If pipeline.
+
+**Phases completed:** 47–52.1 (8 phases, 20 plans)
+
+**Stats:**
+- 8 phases (47–52.1, including 2 inserted decimal phases: 51.1, 52.1)
+- 20 plans executed
+- 168 files changed (+23,418 / -345 lines)
+- Timeline: 4 days (2026-03-06 → 2026-03-09)
+- Git range: `d6fe76d` → `7b4bb19` (144 commits)
+
+**Key accomplishments:**
+- Built 5 new SQLAlchemy models (Collection, CollectionFile, Signal, Report, PulseRun) with Alembic migration, tier config (workspace_access, max_active_collections), and runtime-configurable workspace_credit_cost_pulse platform setting
+- Shipped 11 collection endpoints with WorkspaceAccess tier gating (403 for non-workspace plans), file upload/profile, and report storage with Markdown download
+- Built LangGraph Pulse Agent pipeline with E2B sandbox (300s timeout), Pydantic-validated Signal output (severity/chartType Literals), credit pre-check (402) + atomic deduction + automatic refund on failure
+- Migrated all pulse-mockup workspace screens to main Next.js app: Hex.tech dark palette, (workspace) route group with own sidebar layout, Collection list/detail 4-tab, Detection Results split-panel with Plotly charts
+- Refactored Pulse pipeline from monolith to multi-agent orchestrator pattern with Pydantic structured output on all LLM calls, inline progress banner, sonner toast on detection completion, and re-run confirmation dialog
+- Delivered tier gating E2E verification across all 5 tiers, admin settings for Pulse credit cost (runtime configurable), and delete/rename collection with cascade handling and query cache invalidation
+
+**Requirements:** 35/35 satisfied (100%)
+
+**Git range:** `d6fe76d` → `7b4bb19`
+
+---
+
+## v0.7.12 Spectra Pulse Mockup (Shipped: 2026-03-05)
+
+**Delivered:** Standalone Next.js UI/UX mockup covering the full Analysis Workspace feature set — Pulse detection through Explain, What-If Scenarios, and Admin Workspace Management — as static design reference for v0.8–v0.12 implementation milestones
+
+**Phases completed:** 42–46 (5 phases, 17 plans)
+
+**Key accomplishments:**
+- Built standalone `pulse-mockup/` Next.js app with full app shell (Sidebar, Header, credit indicator, theme toggle) and Hex.tech dark palette; 7,869 LOC TypeScript/TSX across 62 files
+- Implemented Analysis Workspace with Collection list/detail, Run Detection flow with credit estimate and loading state, and Signal results page with severity-sorted signal list and chart detail panel
+- Built Collections & Reports hub with four-tab Collection detail, full-page report reader with markdown typography, Chat-to-Collection modal bridge, and running credit total display
+- Delivered Guided Investigation (Explain) flow: doctor-style Q&A with progress indicator, root cause summary card, investigation history list, and related signals cross-link display
+- Built What-If Scenarios flow: objective selection with command-palette search, scenario cards (impact/assumptions/confidence), per-scenario refinement chat overlay, and What-If report section
+- Delivered Admin Workspace Management extension: activity dashboard (line/donut/bar/funnel/stacked charts), per-user Workspace tab with credit breakdown, and Settings page with 8 editable credit cost inputs and dismissable alerts
+
+**Stats:**
+- 5 phases (42–46), 17 plans
+- 91 commits, 200 files changed (+28,242 / -3,389 lines)
+- 7,869 LOC TypeScript/TSX (pulse-mockup/src — 62 files)
+- Timeline: 3 days (2026-03-03 → 2026-03-05)
+
+**Requirements:** 32/34 satisfied (94%)
+- Known gaps: COLL-01 (archive/unarchive status indicators), COLL-02 (collection limit usage display)
+
+**Git range:** `cd1431c` (milestone docs start) → `6343cf8` (v0.7.12 UI polish)
+
+---
+
 ## v0.1 Beta MVP (Shipped: 2026-02-06)
 
 **Delivered:** AI-powered data analytics platform with natural language querying, secure code execution, and interactive data visualization

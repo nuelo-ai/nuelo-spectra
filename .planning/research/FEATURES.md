@@ -1,27 +1,29 @@
 # Feature Research
 
-**Domain:** API Key Management, Public REST API v1, and MCP Server — Spectra v0.7
-**Researched:** 2026-02-23
-**Confidence:** HIGH (API key UX and REST patterns verified against multiple sources and industry standards; MCP verified against official modelcontextprotocol.io docs and Python SDK)
-**Supersedes:** Previous FEATURES.md (v0.6 Docker/Dokploy features, 2026-02-18)
+**Domain:** Pulse/Detection module — data analytics platform (v0.8 Spectra Pulse)
+**Researched:** 2026-03-05
+**Confidence:** MEDIUM-HIGH
+**Supersedes:** Previous FEATURES.md (v0.7 API Services and MCP, 2026-02-23)
 
 ---
 
 ## Context: Subsequent Milestone Scope
 
-This research covers only the NEW features being added in v0.7. The following already exist and must NOT be re-planned:
+This research covers only the NEW v0.8 features. The following already exist and must NOT be re-planned:
 
-- JWT authentication with refresh tokens
-- File upload and management (Excel/CSV, up to 50MB)
-- 6-agent LangGraph analysis system (sessions, multi-file, cross-file, streaming)
-- Credit system with atomic deduction and tier-based allocations
-- Admin portal with user management (SPECTRA_MODE split-horizon)
-- Docker/Dokploy deployment infrastructure
+- Chat Sessions with multi-file analysis, LangGraph agent system, E2B code execution
+- File upload and management for user files (My Files screen)
+- Admin portal with tier-based credit system and platform_settings
+- Authentication, credit deduction infrastructure, user_classes.yaml
 
-v0.7 adds three surfaces on top of the existing backend:
-1. **API key management** — new DB table + CRUD endpoints + user-facing UI screen + admin portal extension
-2. **Public REST API v1** — programmatic access to file management and analysis capabilities
-3. **MCP server** — wraps REST API as tools callable by Claude Desktop, Claude Code, or any MCP host
+v0.8 adds four new surfaces:
+1. **Collections** — workspace container (create, list, view detail with 4-tab layout, archive)
+2. **File attachment to Collections** — upload or select existing files, view column profile, remove
+3. **Pulse detection** — trigger analysis via Pulse Agent, full-page loading state, credit deduction
+4. **Signal results** — list by severity, detail panel with chart + evidence, admin access gating
+
+The v0.7.12 pulse-mockup is the authoritative UI contract. Features below are mapped to that
+mockup and classified by ecosystem pattern (table stakes vs. differentiator vs. anti-feature).
 
 ---
 
@@ -29,155 +31,145 @@ v0.7 adds three surfaces on top of the existing backend:
 
 ### Table Stakes (Users Expect These)
 
-Features that developers and API consumers assume exist. Missing any of these makes the product feel incomplete or untrustworthy to developers evaluating integration.
-
-#### API Key Management — User Self-Service
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Create named API key | Every API portal lets users name keys descriptively. Name is the only identifier after creation since the full key is hashed. | LOW | Name is required; e.g., "CI pipeline prod" or "Claude Desktop". Enforce non-empty, max 100 chars. |
-| Display full key exactly once on creation | Industry-standard security invariant — key is hashed at rest, never stored in plaintext, therefore never retrievable after creation | LOW | Show full key in a modal/dialog with an explicit "Copy now. You will not be able to view this key again." warning and a copy-to-clipboard button. Modal closes on user confirmation. |
-| Show key prefix in list view | Users cannot identify keys without seeing something. Full hash is never stored, so a prefix (first 8-12 chars of raw key) is stored plaintext and displayed in the list. | LOW | Display format: `sk-spectra-abc12345...` — the prefix disambiguates keys without exposing anything useful to an attacker |
-| Revoke (delete) a key | Users must be able to decommission compromised or stale keys. Revocation must be immediate. | LOW | Confirmation dialog required. Set `revoked_at` timestamp; do not hard-delete (audit trail). Key immediately fails auth after revocation. |
-| List keys with metadata | Developers need to audit what keys exist and when they were last used to identify stale keys or suspicious access | LOW | Columns: Name, Prefix, Created, Last Used (or "Never"), Status (Active / Revoked) |
-| Key status indicator | Instant visual feedback on usability. Active keys are the operational default; revoked keys are dead. | LOW | Active (green) / Revoked (red/muted). No other statuses at v1. |
-| Cannot view key again after creation | Security invariant enforced in UI — no "reveal key" button anywhere. Only prefix is ever shown post-creation. | LOW | Any "view key" UI is an anti-pattern. The list shows prefix only; full key is permanently gone after the creation modal closes. |
-
-#### API Key Management — Admin Portal Extension
+Features that analytics/detection tools universally provide. Missing any of these makes the product
+feel unfinished or untrustworthy.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| View all users' API keys | Admins must audit key usage across the platform for security compliance and support | LOW | Read-only list view per user within existing admin user management screen. Same metadata columns as user view. |
-| Revoke any user's key | Security incident response: admin must be able to kill any key without user cooperation | LOW | Add revoke action to admin key list. Extends existing admin user management patterns. |
-| Last-used timestamp per key visible to admin | Identifies stale keys, dormant API integrations, or anomalous usage patterns | LOW | Populated on every successful API key auth request. Visible in admin view. |
-
-#### Public REST API v1
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Bearer token auth via API key | Standard HTTP auth pattern for REST APIs. Developers expect `Authorization: Bearer {key}` | LOW | New auth dependency in FastAPI that validates API key, looks up user, checks revoked status, updates `last_used_at` |
-| `/api/v1/` URL prefix | Signals versioning intent. Developers assume any production API is versioned. Absence feels like a red flag. | LOW | All API v1 routes under `/api/v1/`. Internal JWT routes remain at `/api/`. No naming conflict. |
-| Consistent JSON response envelope | Predictable structure enables client code that doesn't inspect every endpoint's shape | LOW | Success: `{"data": {...}, "meta": {"request_id": "..."}}`. Error: `{"error": {"code": "...", "message": "..."}}` |
-| Structured error responses | Machine-readable `code` + human-readable `message`. Required for client error handling and debugging. | LOW | Error codes should be screaming-snake: `FILE_NOT_FOUND`, `INSUFFICIENT_CREDITS`, `ANALYSIS_TIMEOUT`. Include `request_id` for support correlation. |
-| `GET /api/v1/files` — list user files | Core discovery endpoint. Developers need to know what files are available before querying. | LOW | Reuse existing file listing service. New auth adapter. Returns: `id`, `name`, `size`, `upload_date`, `row_count` |
-| `GET /api/v1/files/{id}/context` — get file profile | The AI-generated data profile is Spectra's highest-value zero-cost (pre-computed) response. Agents need this to form good queries. | LOW | Returns profiling summary, column names and types, row count, AI-generated natural language description. All computed at upload time. |
-| `POST /api/v1/analysis` — submit query | The core product capability. Primary reason to use the API. | MEDIUM | Synchronous blocking; accepts `file_ids[]`, `query` string; invokes LangGraph pipeline; returns answer, optional table, optional chart spec. Credit deduction required. |
-| Credit deduction on API queries | API access must respect the existing credit model. Developers should not be able to bypass billing by using the API instead of the web UI. | LOW | Reuse existing `SELECT FOR UPDATE` atomic deduction. Same credit cost as interactive queries. Return `INSUFFICIENT_CREDITS` error when balance is zero. |
-| `GET /api/v1/me` — current user info | Developers need to verify auth is working and check their remaining credits | LOW | Returns: `user_id`, `email`, `tier`, `credits_remaining`. Simple read-only endpoint. |
-| 429 Too Many Requests on credit exhaustion | Standard API error for resource exhaustion. Developers expect HTTP semantics. | LOW | Return 429 with `Retry-After` header when credits hit zero. Communicates "temporary" exhaustion vs. 403 "permanently forbidden". |
-| OpenAPI docs at `/api/v1/docs` | Developers expect interactive documentation. FastAPI generates this automatically. | LOW | Zero marginal implementation cost. Set `docs_url="/api/v1/docs"` on the v1 APIRouter. Essential for developer adoption. |
-
-#### MCP Server
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| `tools/list` discovery | Core MCP protocol requirement. Any MCP host (Claude Desktop, Claude Code) issues `tools/list` on connect to enumerate capabilities. | LOW | Handled automatically by MCP SDK. Tool metadata is declared once in tool definitions. |
-| `tools/call` execution | Core MCP execution primitive. How the LLM invokes a tool and receives results. | LOW | SDK handles JSON-RPC routing. Developer writes handler functions. |
-| JSON Schema input definitions per tool | LLMs use the schema to generate valid tool arguments. Missing or vague schema causes bad argument generation. | LOW | Defined via Python type hints in `@mcp.tool()` decorators. SDK auto-generates JSON Schema from types. |
-| Natural language tool descriptions | The LLM uses the `description` field to decide when and whether to call a tool. Vague descriptions cause wrong tool selection. | LOW | Critical quality gate: descriptions must be precise about what the tool does, when to use it, and what inputs mean. |
-| Streamable HTTP transport | Required for remote MCP servers serving multiple clients. stdio transport is local-process only. | LOW | Official MCP Python SDK (`mcp` package, 1.8+) supports `streamable-http` transport natively. |
-| API key auth passed from MCP client config | MCP server calls the REST API on behalf of a user. It needs the user's Spectra API key to authenticate. | LOW | User configures their API key in Claude Desktop's MCP server settings (env var or config param). MCP server reads it at startup and passes as `Authorization: Bearer` on all REST API calls. |
+| Severity classification (critical / warning / info) | Every analytics alert tool (Datadog, Power BI, Tableau) uses severity tiers so users know what to act on first. | LOW | Mockup: critical=red, warning=amber, info=blue. Three tiers is correct — more tiers add confusion without value. |
+| Anomaly detection signals | Core reason Pulse exists. Users expect outlier identification as the baseline output. | HIGH | Table-stakes method: statistical outlier detection (z-score / IQR). Must be present as a signal category. |
+| Trend analysis signals | Users expect "is this going up or down?" as a baseline output. Period-over-period change is universally expected. | HIGH | Time-series delta (direction, % change) is expected at any analytics maturity level. |
+| Signal list sorted by severity | Users assume critical signals appear first. An unsorted flat list feels broken — users should not have to hunt for urgent findings. | LOW | Mockup correctly implements: critical first, then warning, then info. Auto-select highest severity signal on page load. |
+| Pre-action cost estimate shown in UI | Users on credit-based systems expect to see the cost before committing. This is table stakes for any credit-consuming AI action (established by OpenAI, Midjourney, and similar products). | LOW | Mockup: "Run Detection (5 credits)" on button label + "~N credits" in sticky action bar. Both are correct pattern. |
+| Progress feedback during long-running analysis | NNG research: for operations exceeding 10 seconds, a progress bar is strongly recommended. A spinner alone is insufficient. Users need to know the system is working and how much longer to wait. | LOW | Mockup: 4-step animated indicator + determinate progress bar + "Estimated time: 15-30 seconds" text. This matches NNG recommendations. |
+| Collection creation via dialog | SaaS workspace-type entities (projects, boards, workspaces) always require a name before entry. Users expect to identify their workspace before working in it. | LOW | Mockup: name-only creation dialog. Correct — description can be added later. Navigation to detail page immediately after creation. |
+| Collection list with status badges | Users expect to see active vs. archived at a glance. Grid card layout is standard for workspace containers in SaaS. | LOW | Mockup: grid of collection cards with Active=emerald, Archived=muted gray. Standard pattern. |
+| File attachment to workspace | Without data files, the workspace cannot run analysis. Users expect to bring their own data. | MEDIUM | Mockup: FileUploadZone + FileTable with row checkboxes. File selection activates sticky action bar. |
+| Column profile / data summary on file view | Any data analytics tool that accepts uploads shows a schema preview. Users need to verify "is this the right file?" before running analysis. This is especially important before a 5-credit operation. | MEDIUM | Mockup: DataSummaryPanel slide-out sheet on file row click. Correct pattern — reuses existing Onboarding Agent profiling data. |
+| Tier-based workspace access gating | SaaS users expect free and trial tiers to have restricted access to premium features. The upgrade prompt is expected UX when a limit is hit. | LOW | user_classes.yaml extension: workspace_access (boolean) + max_active_collections (int, -1=unlimited) per tier. |
+| Admin credit cost configuration | Admins managing a credit-based product expect to tune costs per feature without a redeploy. | LOW | platform_settings entries for workspace_credit_cost_*. Follows existing pattern. |
 
 ### Differentiators (Competitive Advantage)
 
-Features beyond table stakes that create differentiated value for Spectra's AI-agent integration use case.
+Features that go beyond what users passively expect — reasons to choose Spectra Pulse over
+competing tools (Julius.ai, Power BI anomaly detection, Datadog alerts).
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| `spectra_list_files` MCP tool | Exposes file inventory to agents so they can discover what data is available before querying. Without this, agents must know file IDs out of band. | LOW | Maps directly to `GET /api/v1/files`. Returns rich metadata so the agent can select the right file. |
-| `spectra_get_file_context` MCP tool | Exposes AI-generated data profile to agents. Agent reads column names, types, and data summary before forming queries — results in far more accurate analysis requests. | LOW | Maps to `GET /api/v1/files/{id}/context`. This is unique to Spectra: no other API would pre-compute and expose structured data profiles. |
-| `spectra_run_analysis` MCP tool | Core capability: agent asks a natural language question about data and gets structured results back in the conversation. | MEDIUM | Maps to `POST /api/v1/analysis`. Returns answer text + table data + optional chart spec. The chart spec can be rendered by the agent or ignored. |
-| `SPECTRA_MODE=api` deployment mode | Clean, dedicated API-serving backend with no web session overhead, no cookie routes, no WebSocket/SSE routes. Leaner process, easier to reason about. | LOW | Extends existing SPECTRA_MODE pattern (public / admin / dev). Disable interactive session endpoints. Enable API key auth as the only auth mechanism. |
-| Key naming with descriptive labels | Developers give each key a name so they can tell keys apart ("Mobile app", "Zapier integration"). Without names, a list of prefixes is meaningless. | LOW | Already included in table stakes — called out here because the UX quality of the creation modal (descriptive placeholder text, validation) is where products differentiate. |
-| `X-Credits-Remaining` response header | API consumers can track credit consumption per-request without polling `/api/v1/me`. Useful for automation pipelines that need to stay within budget. | LOW | Append remaining balance after deduction as a response header. One line of middleware. High UX value for zero implementation cost. |
-| Scoped API keys (read vs. analysis) | Limits blast radius of a leaked key. Read-only keys can access files and context but cannot trigger analysis (credit consumption). Enterprise users expect least-privilege. | MEDIUM | v1: Start with no scopes (full access is the default). Add two scopes — `files:read` and `analysis:run` — in v1.x when first enterprise user requests it. Schema should accommodate `scopes` column from day one to avoid migration pain. |
-| Key expiration / TTL | Enables short-lived keys for automation pipelines. Reduces stale key risk. Limits exposure window if a key is leaked. | LOW | Add `expires_at TIMESTAMPTZ NULL` column. NULL = no expiry. Check `expires_at < now()` in auth middleware. Expose in creation UI as optional field. |
+| Concentration analysis (Pareto/80-20 signals) | Julius.ai and Akkio focus on anomalies and trends. Concentration analysis — "3 customers account for 71% of revenue" — surfaces strategic risk/opportunity that statistical outlier detectors miss. It answers business questions, not just statistical ones. | HIGH | Requires Pareto chart output (sorted bar + cumulative % line). Mockup defines "concentration" as a distinct signal category. Differentiating if executed well in the Pulse Agent. |
+| Data quality as a signal type | Tools like Power BI and Tableau focus on business metric anomalies. Surfacing missing data patterns and inconsistencies as signals helps users trust the analysis — a meta-layer others skip. It also unblocks investigation: a user cannot diagnose a trend anomaly if they don't know 30% of the dates are missing. | MEDIUM | Defined in Pulse Agent scope: data quality checks as a signal category. Should surface null %, outlier %, inconsistent format counts in the statistical evidence grid. |
+| Category-aware chart type per signal | Competitors show anomalies as generic line charts. Mapping chart type to signal category (area/line for trends, bar for concentration, scatter for outliers) makes findings immediately comprehensible without user configuration. | MEDIUM | Mockup: signal.chartType field drives SignalChart component, switching between LineSignalChart (area), BarSignalChart, ScatterSignalChart. The Pulse Agent must emit the correct chartType per signal category. |
+| Statistical evidence grid in signal detail | Most detection tools say "anomaly detected." Spectra shows the actual statistical values behind the finding (e.g., "Z-Score: 3.8 | Confidence: 94% | Method: IQR | Baseline: 2,847"). This builds user trust and enables non-technical users to evaluate whether a signal is meaningful. | MEDIUM | Mockup: 2x2 grid of label:value pairs from signal.statisticalEvidence. The Pulse Agent must populate this grid meaningfully per signal category. This is the key differentiator in the signal detail panel. |
+| Full-page detection loading state (not inline spinner) | Analytics tools typically use modal spinners or background toast notifications for analysis. Spectra's full-page step checklist creates a "something important is happening" moment that primes the user to engage with results. It frames the wait as productive, not dead time. | LOW | Mockup: DetectionLoading component with 4 steps (Analyzing files, Detecting patterns, Scoring signals, Finalizing results) + progress bar + time estimate. Psychologically effective — the animated step completion sequence makes the wait feel structured. |
+| Two-panel signal viewer (list + detail) | Competitors show signal cards in a feed. The SignalListPanel + SignalDetailPanel split lets users compare signals while keeping context — more efficient for reviewing 5-15 findings than opening each card separately. This is the standard pattern for email clients and code review tools; analytics tools rarely implement it. | MEDIUM | Mockup: fixed left panel (scrollable list sorted by severity) + right detail panel (chart, analysis, evidence, investigation actions). Auto-selects highest severity signal on load. |
+| Inline credit balance transparency | Pre-run estimate + running total in collection header reduces bill-shock and builds trust. This is the pattern OpenAI uses in its interface (usage dashboard) but competitors in the data analytics space do not implement at this granularity. | LOW | Mockup: "Credits used: N" Zap-icon pill in collection header. Sticky bar shows "~N credits for N files selected" before run. Both patterns are correct and should be wired to live credit balance. |
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| SSE streaming on REST API | Developers used to interactive chat want streaming in the API too | Synchronous API design is far simpler to integrate, test, and document. SSE over HTTP adds client SDK complexity, server infrastructure complexity, and unclear benefit for the MCP use case where the tool call must complete before the LLM continues. | Synchronous blocking response. 30-60 second timeout is acceptable for data analysis. If individual queries regularly exceed 60s, the real fix is optimizing the pipeline, not adding streaming. |
-| Per-key rate limiting independent of credits | "Proper API management" | Credits already serve as the consumption gate. Adding a separate rate limit layer doubles state to manage. At Spectra's current scale, credits are more meaningful than req/min limits. | Use credits as the primary consumption gate. Add a hard abuse-prevention limit (e.g., 120 req/min per key) only as an anti-abuse floor. |
-| GraphQL API | Developers familiar with GraphQL ask for it | Spectra's operations (list files, run query, get context) are simple resource-oriented operations. GraphQL adds schema definition overhead, resolver complexity, and is harder for MCP to wrap than REST endpoints. | REST with a consistent JSON envelope covers all use cases at v1. |
-| OAuth 2.0 for API access | "OAuth is the proper auth standard" | OAuth adds an authorization server, redirect flows, token exchange endpoints, scope consent screens, and refresh token management. API keys are sufficient and standard for programmatic/agent access. | API keys with optional scopes. Add OAuth when third-party app integrations (where delegated user consent is required) justify the infrastructure. |
-| Webhook delivery | Useful for async notification patterns | Async delivery requires retry infrastructure, exponential backoff, signature verification (`X-Spectra-Signature`), dead-letter queues, and endpoint health monitoring. Not justified when a synchronous API covers the use case. | Synchronous API. If async becomes necessary, expose a job ID endpoint with polling — not webhooks. |
-| File upload via API | Logical extension: if files can be listed, they should be uploadable | File upload adds multipart form handling, size limit enforcement, storage quota checks across API + web, onboarding agent async invocation, and response design (synchronous vs. async profiling). Significantly expands scope. v1 agents reference existing files by ID. | v1 API is read-only for files + analysis. Files uploaded via web UI. Agents are expected to work with pre-existing datasets. |
-| SDK libraries (Python, JS, etc.) | Developers want convenience wrappers | SDKs require ongoing maintenance across API versions. The MCP server already provides the primary AI-agent integration point. OpenAPI spec enables auto-generation if needed. | Document curl examples and OpenAPI spec. Publish auto-generated SDKs (Speakeasy, OpenAPI Generator) only after stable API surface. |
-| Multiple keys per key (key namespaces/groups) | Useful for org-level access management | Premature hierarchy. At current user scale, a flat list per user with descriptive names is sufficient. Namespaces add UI complexity for no user-visible benefit. | Flat list with descriptive names. Add grouping only when org-level billing and team access management are built. |
+| Real-time monitoring / scheduled re-runs | "Can it monitor my data automatically?" is a common ask for detection tools. | Requires data source integrations (database connectors, APIs), scheduling infrastructure, and change-detection logic. Out of scope through v0.12 per Decision #6. Implementing it early forces premature infrastructure decisions before the core workflow is validated. | Deferred to post-v0.12 backlog. Manual "Run Detection" keeps complexity bounded and user intent explicit. |
+| Sensitivity threshold sliders (user-controlled algorithm tuning) | Power BI and Tableau expose sensitivity controls. Users ask for this to reduce false positives. | Sensitivity controls require users to understand statistical significance — expertise most Spectra users lack. Incorrect tuning produces misleading signals and destroys trust. | Let the Pulse Agent determine confidence from statistical evidence. Surface confidence as an attribute (high/medium/low) in the evidence grid. Users filter by severity tier instead of tuning algorithms. |
+| Global alert notifications (email/push for new signals) | "Alert me when anomalies are found" is a natural next ask after detection. | Requires notification infrastructure (SMTP hooks, push) and persistent monitoring. Alerting on a one-time manual run is meaningless — you'd alert immediately after every "Run Detection." Tied to the deferred monitoring module. | Keep results in-product for v0.8-v0.12. Users navigate to their Collection to see results. Alerts are a v2+ concern tied to the monitoring module. |
+| Signal export as PDF | Users always ask for PDF output. | PDF generation (Kaleido or headless Chrome) adds server-side infrastructure. Signals are work-in-progress artifacts — the input to Investigation and What-If, not a final deliverable. PDF export belongs on compiled Reports (v0.9), not raw Signals. | Download as Markdown for Signal data. Full PDF export on compiled Reports in v0.9 (already planned, present-but-disabled in mockup). |
+| Bulk detection across all collections | "Run detection on everything at once" saves time. | Multiplies credit costs without user review of scope. Users may trigger unexpected large deductions. Also voids the per-run cost transparency pattern (the sticky bar is per-collection by design). | Single-collection detection with clear per-file credit estimates. Users queue runs manually. |
+| "Opportunity" as a fourth severity level | The original product brainstorm listed opportunity/warning/critical/info. | The mockup correctly collapsed this to three levels. Adding "opportunity" creates cognitive ambiguity: is an opportunity more or less urgent than a warning? Severity should map to urgency, not valence (positive vs. negative). | Use signal title and description text to convey whether a finding is positive or negative. Keep severity as a pure urgency signal. |
+| Confidence threshold configuration in admin | Admins may want to tune the statistical sensitivity of Pulse across all users. | Global confidence tuning changes what every user sees in their signals. This is an algorithm change, not a configuration change, and requires validated statistical expertise to tune responsibly. | Tune via the Pulse Agent prompt and method parameters in YAML config (dev-level change). Do not expose in admin UI. |
 
 ---
 
 ## Feature Dependencies
 
 ```
-[API Key DB Table + CRUD Endpoints]
-    └──required by──> [User Self-Service Key Management UI]
-    └──required by──> [Admin Portal Key View + Revoke]
-    └──required by──> [REST API v1 Auth Middleware]
-                          └──required by──> [All REST API v1 Endpoints]
-                                                └──required by──> [MCP Server Tools]
+Collection CRUD (create, list, view)
+    └──requires──> Authentication + user session (EXISTING)
+    └──requires──> Tier check: workspace_access flag in user_classes.yaml (NEW — v0.8)
 
-[Existing Credit System]
-    └──must integrate with──> [POST /api/v1/analysis (credit deduction)]
+File Attachment to Collection
+    └──requires──> Collection exists
+    └──requires──> File upload infrastructure (EXISTING — user file upload system)
+    └──enhances──> DataSummaryPanel reads existing column_profile from Onboarding Agent
 
-[Existing File Management Service]
-    └──re-exposed by──> [GET /api/v1/files]
-    └──re-exposed by──> [GET /api/v1/files/{id}/context]
+Pulse Detection (Run Detection)
+    └──requires──> Collection exists with at least 1 file attached
+    └──requires──> Credit balance >= workspace_credit_cost_pulse (EXISTING credit infra)
+    └──requires──> E2B sandbox (EXISTING)
+    └──requires──> Pulse Agent (NEW — extends existing agent base class)
+    └──produces──> Signal objects stored to DB
 
-[Existing LangGraph Analysis Pipeline]
-    └──re-exposed by──> [POST /api/v1/analysis]
-                            └──wrapped by──> [spectra_run_analysis MCP tool]
+Detection Loading State
+    └──requires──> Pulse detection API call initiated
+    └──best case──> SSE progress events from backend
+    └──fallback──> timer simulation (mockup pattern)
 
-[SPECTRA_MODE pattern (existing)]
-    └──extended by──> [SPECTRA_MODE=api]
+Signal Results View
+    └──requires──> Pulse detection has run and produced Signals
+    └──requires──> signal.chartType populated by Pulse Agent (one of: line, bar, scatter)
+    └──requires──> signal.statisticalEvidence populated by Pulse Agent (pipe-delimited label:value pairs)
 
-[Admin Portal User Management (existing)]
-    └──extended by──> [Admin API Key View + Revoke UI]
+Admin: workspace_access tier gating
+    └──requires──> user_classes.yaml extended with workspace_access + max_active_collections
+    └──requires──> Collection creation API endpoint enforces tier check
+
+Admin: Pulse credit cost setting
+    └──requires──> platform_settings table (EXISTING)
+    └──requires──> New setting key: workspace_credit_cost_pulse
+
+Investigation (v0.10 — NOT in v0.8)
+    └──requires──> Signals exist (v0.8 Pulse output)
+
+What-If (v0.11 — NOT in v0.8)
+    └──requires──> Complete investigation exists for the signal (v0.10 output)
+    └──enforced──> "What-If" button disabled in SignalDetailPanel until hasCompleteInvestigation
 ```
 
 ### Dependency Notes
 
-- **API keys must be built before REST API v1.** The REST API has no authentication without API key infrastructure. Build `api_keys` table, key generation, hashing, and auth middleware first.
-- **REST API v1 must be built before MCP server.** The MCP server is a thin client that calls the REST API. It cannot exist without the API.
-- **Credit system integration is mandatory on the analysis endpoint.** The LangGraph pipeline is the most expensive operation. Do not ship `POST /api/v1/analysis` without credit deduction using the existing atomic `SELECT FOR UPDATE` pattern.
-- **`SPECTRA_MODE=api` is a deployment optimization, not a blocker.** The MCP server can call the existing public-mode backend. Deploy `api` mode after the rest is working.
-- **Admin key management is a UI extension, not new infrastructure.** Add to the existing user management screen. No new tables, no new backend patterns needed.
+- **File attachment requires Collection to exist first.** Files are attached to a specific Collection, not standalone. Users can reuse files from My Files OR upload new files directly to a Collection. The Collection FILE table is an association to existing user files, not a copy.
+- **Pulse detection requires at least one file selected.** The "Run Detection" button is disabled when no files are selected (enforced in sticky action bar UI and at the API level).
+- **Signal chart display requires Pulse Agent to emit valid chartType.** The SignalChart component switches behavior on signal.chartType. If the Pulse Agent does not emit one of {"line", "bar", "scatter"}, the chart falls through to an "Unsupported chart type" fallback. This is a hard agent output contract.
+- **What-If (v0.11) requires Investigation (v0.10).** The "What-If" button is disabled until at least one complete investigation exists for the signal. This dependency is enforced in the mockup (hasCompleteInvestigation check) and must be enforced at the API level.
+- **Admin access gating must be live at v0.8 launch.** Users on free tier must see the upgrade prompt on first Collection creation attempt. Access gating cannot be deferred to a later admin milestone.
+- **DataSummaryPanel does not require new backend profiling.** The column_profile JSON is already generated by the existing Onboarding Agent on file upload. DataSummaryPanel reads this existing data. No new profiling call is needed for v0.8.
 
 ---
 
-## MVP Definition (v0.7)
+## MVP Definition
 
-### Launch With
+### Launch With (v0.8)
 
-- [ ] **`api_keys` table migration + CRUD endpoints** — Foundation for everything else; without this nothing works
-- [ ] **User self-service key management UI screen** — Create (display-once modal), list (prefix + metadata), revoke
-- [ ] **REST API v1 auth middleware** — Validate Bearer key, look up user, check revocation, update `last_used_at`
-- [ ] **`GET /api/v1/files`** — List user's files; simplest endpoint; validates auth plumbing end-to-end
-- [ ] **`GET /api/v1/files/{id}/context`** — Returns AI-generated profile; high value, zero new computation
-- [ ] **`POST /api/v1/analysis`** — Synchronous query; core capability; must include credit deduction
-- [ ] **`GET /api/v1/me`** — Current user info + credits; developer validation endpoint
-- [ ] **Consistent JSON error format across all v1 routes** — Developers cannot use the API without predictable error responses
-- [ ] **OpenAPI docs at `/api/v1/docs`** — Auto-generated by FastAPI; zero marginal cost; essential for developer adoption
-- [ ] **MCP server with 3 core tools**: `spectra_list_files`, `spectra_get_file_context`, `spectra_run_analysis`
-- [ ] **Admin portal key view + revoke** — Security requirement; extends existing user management screen
-- [ ] **`SPECTRA_MODE=api` deployment mode** — 5th Dokploy service; clean API-only backend
+The goal for v0.8 is a working Detect phase: users can create a Collection, attach data, run Pulse, and review Signals. This is the foundation for the v0.8-v0.12 pipeline.
 
-### Add After Validation (v1.x)
+- [ ] COLL-01: User can create a Collection with a name — required; workspace entry point
+- [ ] COLL-02: User can view list of their Collections — required; navigation requires a list
+- [ ] COLL-03: User can view Collection detail with 4-tab layout (Overview, Files, Signals, Reports) — required; the workspace container UX
+- [ ] FILE-01: User can upload files (CSV/Excel) to a Collection — required; Pulse has no input without files
+- [ ] FILE-02: User can view column profile of an uploaded file (DataSummaryPanel) — required; users need to verify file content before committing 5 credits
+- [ ] FILE-03: User can remove a file from a Collection — required; correcting mis-attached files
+- [ ] PULSE-01: User can select files and trigger Pulse detection (Run Detection button) — core v0.8 deliverable
+- [ ] PULSE-02: User sees full-page detection loading state with animated steps — required; 5-30s operation requires progress feedback per NNG guidelines
+- [ ] PULSE-03: User can view Signal cards on Detection Results page sorted by severity — core v0.8 deliverable
+- [ ] PULSE-04: User can view Signal detail (visualization, analysis text, statistical evidence) — required; a signal without evidence is unactionable
+- [ ] PULSE-05: Credit cost pre-check and deduction before Pulse run — required; existing credit infrastructure must be respected; refund on failure
+- [ ] ADMIN-01: Admin can configure workspace access per tier in user_classes.yaml — required from launch; gating must be present when feature goes live
+- [ ] ADMIN-02: Admin can configure Pulse credit cost via platform_settings — required; cost must be runtime-tunable from day one
 
-- [ ] **API key scopes** (`files:read` and `analysis:run`) — Add when an enterprise user or paying customer requests least-privilege. Accommodate `scopes` column in DB schema from day one.
-- [ ] **Key expiration / TTL** — Add when automation pipeline users request short-lived keys
-- [ ] **`X-Credits-Remaining` response header** — Add when API users report difficulty tracking consumption. One line of middleware.
-- [ ] **Per-key usage statistics** — Add when admin needs detailed API consumption analytics by user
-- [ ] **MCP Resources primitive** — Expose uploaded files as MCP resources (not just tools) for richer agent context passing
+### Add After Validation (v0.9)
+
+These extend the v0.8 foundation once the core Pulse workflow is validated with users.
+
+- [ ] Collection archiving (archive/unarchive actions) — COLL-01 mockup gap; needed when users accumulate collections and hit tier limits
+- [ ] Collection limit usage display ("X of Y active collections") — COLL-02 mockup gap; needed when users approach their tier limit
+- [ ] Report compilation from Signals — the output layer for the workspace
+- [ ] Chat-to-Collection bridge — connect existing Chat Sessions to workspace
+- [ ] PDF export on reports — planned, "present but disabled" state already in mockup report viewer
 
 ### Future Consideration (v2+)
 
-- [ ] **File upload via API** — Significantly expands scope; build when fully headless workflow demand is validated
-- [ ] **Async analysis with job ID + polling** — Build when 30-60s synchronous timeout regularly hits users; requires a job queue
-- [ ] **OAuth 2.0** — Build when third-party apps require user-consented delegated access
-- [ ] **SDK libraries** — Auto-generate (Speakeasy, OpenAPI Generator) after stable API surface; maintain only if adoption justifies it
-- [ ] **Webhooks** — Build when async event notification patterns are validated over polling
+- [ ] Monitoring module (recurring automated detection) — requires scheduling infrastructure and data source connectors; deferred post-v0.12
+- [ ] Email/push alerts on new signals — tied to monitoring module; meaningless on one-time manual runs
+- [ ] Sensitivity/confidence threshold controls — initial users lack statistical expertise to tune correctly; adds risk of misleading signals
+- [ ] Cross-collection signal correlation — "same root cause across multiple collections" — requires cross-workspace analysis infrastructure
 
 ---
 
@@ -185,202 +177,163 @@ Features beyond table stakes that create differentiated value for Spectra's AI-a
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| `api_keys` table + CRUD endpoints | HIGH | LOW | P1 |
-| User self-service key management UI | HIGH | LOW | P1 |
-| REST API v1 auth middleware | HIGH | LOW | P1 |
-| `GET /api/v1/files` | HIGH | LOW | P1 |
-| `GET /api/v1/files/{id}/context` | HIGH | LOW | P1 |
-| `POST /api/v1/analysis` + credit integration | HIGH | MEDIUM | P1 |
-| `GET /api/v1/me` | MEDIUM | LOW | P1 |
-| Consistent error format for v1 | HIGH | LOW | P1 |
-| OpenAPI docs at `/api/v1/docs` | HIGH | LOW | P1 — auto-generated |
-| MCP server: 3 core tools | HIGH | LOW | P1 |
-| Admin key view + revoke | MEDIUM | LOW | P1 |
-| `SPECTRA_MODE=api` | MEDIUM | LOW | P1 |
-| `X-Credits-Remaining` header | MEDIUM | LOW | P2 |
-| API key scopes | MEDIUM | MEDIUM | P2 |
-| Key expiration / TTL | LOW | LOW | P2 |
-| Per-key usage stats | LOW | MEDIUM | P3 |
-| File upload via API | MEDIUM | HIGH | P3 |
-| OAuth 2.0 | LOW | HIGH | P3 |
+| Collection CRUD (create, list, view) | HIGH | LOW | P1 |
+| File attachment + removal | HIGH | MEDIUM | P1 |
+| DataSummaryPanel (column profile) | MEDIUM | LOW | P1 — reuses existing profiling data |
+| Run Detection (Pulse Agent trigger) | HIGH | HIGH | P1 — core v0.8 deliverable |
+| Detection loading state (4-step animated) | MEDIUM | LOW | P1 — UX requirement for 5-30s operations |
+| Signal list sorted by severity | HIGH | LOW | P1 — results are unactionable without prioritization |
+| Signal detail panel (chart + evidence) | HIGH | MEDIUM | P1 — evidence grid is the differentiator |
+| Credit pre-check + estimate in sticky bar | HIGH | LOW | P1 — required by existing credit system contract |
+| Tier-based access gating | HIGH | LOW | P1 — must be present at launch |
+| Pulse credit cost admin setting | MEDIUM | LOW | P1 — runtime tunable from day one |
+| Concentration analysis signals | HIGH | HIGH | P2 — differentiator; complexity is in Pulse Agent, not UI |
+| Data quality signals | MEDIUM | MEDIUM | P2 — trust builder; implement after core anomaly/trend signals work |
+| Collection archiving | MEDIUM | LOW | P2 — v0.9; needed when collections accumulate |
+| Collection limit display ("X of Y") | LOW | LOW | P2 — v0.9; needed when users approach limits |
 
 **Priority key:**
-- P1: Must have for v0.7 launch
-- P2: Add after v0.7 ships, when first user requests it
-- P3: Future milestone, defer until demand is validated
+- P1: Must have for v0.8 launch
+- P2: Should have — add in v0.9 or when first users request it
+- P3: Nice to have — future consideration
 
 ---
 
-## Implementation Notes by Feature
+## Statistical Method Recommendations for Pulse Agent
 
-### API Key Security Model
+**Confidence: MEDIUM** — based on Adobe Analytics official documentation (ETS, GESD), general
+industry practice (z-score, IQR, STL), and Pareto's known utility for business segment analysis.
+The specific method-to-category mapping is a reasoned recommendation, not a codified standard.
 
-**Key generation and storage pattern** (HIGH confidence — verified against freeCodeCamp best practices, AppMaster UX guide, and multiple authoritative sources):
+### Table Stakes Methods (implement in v0.8)
 
-- **Format:** `sk-spectra-{url_safe_base64_random_32_bytes}` — recognizable namespace prefix, hard to guess
-- **Storage:** Store only `prefix` (first 16 chars, plaintext for display) + `key_hash` (SHA-256 of full key, hex). Never store the raw key.
-- **Auth lookup:** Hash incoming Bearer token, query `WHERE key_hash = $1 AND revoked_at IS NULL`. O(1), index on `key_hash`.
-- **Display:** Return full key in API creation response only. Never again. Frontend shows modal with copy button.
+These are the minimum analysis methods for a credible detection output. Users will recognize these findings as meaningful without needing to understand the statistics.
 
-**Minimum DB schema:**
-```sql
-CREATE TABLE api_keys (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    name        TEXT NOT NULL,              -- "CI pipeline prod"
-    prefix      TEXT NOT NULL,              -- "sk-spectra-abc12" (16 chars)
-    key_hash    TEXT NOT NULL UNIQUE,       -- SHA-256 hex of full key
-    scopes      TEXT[] DEFAULT '{}',        -- empty = full access; future: ["files:read", "analysis:run"]
-    expires_at  TIMESTAMPTZ,               -- NULL = no expiry
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    last_used_at TIMESTAMPTZ,              -- updated on every successful auth
-    revoked_at  TIMESTAMPTZ                -- NULL = active; set = revoked (soft delete for audit)
-);
-CREATE INDEX ON api_keys (key_hash);
-CREATE INDEX ON api_keys (user_id);
-```
+| Method | Signal Category | Recommended Chart Type | Key Evidence Fields to Populate |
+|--------|----------------|------------------------|----------------------------------|
+| IQR outlier detection | anomaly | scatter | Q1, Q3, IQR, outlier count, threshold |
+| Z-score outlier detection | anomaly | scatter | Mean, Std Dev, Z-Score, % above threshold |
+| Period-over-period delta | trend | line (area) | Previous period total, current period total, % change, direction |
+| Cumulative % / Pareto | concentration | bar | Top-N items share %, total item count, items covering 80% |
+| Missing data rate | quality | bar | Null % per column, affected row count, column name |
 
-### REST API v1 Endpoint Design
+### Differentiating Methods (implement in v0.8 if time allows, else v0.9)
 
-**URL conventions:**
-```
-GET  /api/v1/me                          — current user + credits
-GET  /api/v1/files                       — list files (paginated)
-GET  /api/v1/files/{file_id}             — file metadata
-GET  /api/v1/files/{file_id}/context     — AI-generated data profile
-POST /api/v1/analysis                    — submit synchronous query
-```
+| Method | Signal Category | Chart Type | Key Evidence Fields |
+|--------|----------------|------------|---------------------|
+| Linear trend slope (regression) | trend | line (area) | Slope direction, R², start/end values, projected next period |
+| Segment dominance | concentration | bar | Top segment share %, segment count, HHI-style concentration score |
+| Distribution skew | anomaly | bar | Skewness coefficient, mode vs. mean delta, long-tail direction |
 
-**Auth header:** `Authorization: Bearer sk-spectra-{key}`
+### Not in v0.8 (complexity without validated need)
 
-**Error envelope (machine-readable):**
-```json
-{
-  "error": {
-    "code": "FILE_NOT_FOUND",
-    "message": "No file found with ID abc123 for this user",
-    "request_id": "req_01HABCXYZ"
-  }
-}
-```
+- Time-series seasonal decomposition (STL/ETS) — requires sufficient date granularity and regular time intervals; most user uploads will not qualify
+- ML-based anomaly detection (Isolation Forest, DBSCAN) — high complexity, hard to explain to non-technical users; save for when simpler methods fail to surface meaningful signals
+- Cross-file correlation analysis — reserved for multi-file Collection scenarios; evaluate after v0.8 usage patterns emerge
 
-**Success envelope:**
-```json
-{
-  "data": { ... },
-  "meta": { "request_id": "req_01HABCXYZ" }
-}
-```
+---
 
-**Analysis request:**
-```json
-{
-  "file_ids": ["uuid-1", "uuid-2"],
-  "query": "What is the average revenue by region?"
-}
-```
+## Behavioral Clarifications for v0.8
 
-**Analysis response** (synchronous blocking; 60s timeout):
-```json
-{
-  "data": {
-    "answer": "Average revenue by region: North $1.2M, South $890K...",
-    "table": {
-      "columns": ["region", "avg_revenue"],
-      "rows": [["North", 1200000], ["South", 890000]]
-    },
-    "chart": {
-      "type": "bar",
-      "plotly_spec": { "data": [...], "layout": {...} }
-    },
-    "code": "import pandas as pd\n..."
-  },
-  "meta": { "request_id": "req_01HABCXYZ", "credits_used": 1.0 }
-}
-```
+These are implementation decisions derived from the mockup and requirements that resolve ambiguities before development begins.
 
-### MCP Server Tool Definitions
+### Signal Severity Classification
 
-**Transport:** Streamable HTTP (not stdio) — required for multi-user remote deployment
+Use exactly three severity levels: **critical**, **warning**, **info**. The Pulse Agent determines severity from statistical evidence:
 
-**Authentication:** User configures their Spectra API key as an environment variable in Claude Desktop's MCP server configuration. MCP server reads it at startup and passes as `Authorization: Bearer {key}` on all outbound calls to the REST API.
+- **critical** (red) — high-impact finding warranting immediate attention (e.g., z-score > 3, top-1 segment > 90% concentration, >30% missing data)
+- **warning** (amber) — notable finding worth investigating (e.g., z-score 2-3, significant trend deviation, 10-30% missing data)
+- **info** (green — per mockup #22c55e) — low-urgency pattern worth noting (e.g., mild skew, gradual trend, <10% missing data)
 
-**Implementation approach:** Use the official `mcp` Python SDK (`pip install mcp`) with `@mcp.tool()` decorators wrapping `httpx.AsyncClient` calls to the REST API. The `fastapi-mcp` library is an alternative that auto-converts FastAPI OpenAPI routes to tools via ASGI, but the explicit `httpx` approach is preferred for `SPECTRA_MODE=api` where MCP server is a separate process.
+The "opportunity" severity from the original brainstorm is correctly dropped in the mockup. Do not reintroduce it. Signal valence (positive vs. negative) belongs in the title and description text, not the severity badge. Severity maps to urgency only.
 
-**Three tools for v0.7:**
+The thresholds above should be externalized to YAML config so they can be tuned without code changes.
 
-```python
-@mcp.tool()
-async def spectra_list_files() -> list[dict]:
-    """
-    List all data files the user has uploaded to Spectra.
-    Returns file IDs, names, sizes, upload dates, and row counts.
-    Use this first to discover what data is available before running analysis.
-    If you already know the file ID, you can skip this step.
-    """
-    # calls GET /api/v1/files
+### Collection CRUD Behaviors
 
-@mcp.tool()
-async def spectra_get_file_context(file_id: str) -> dict:
-    """
-    Get the AI-generated data profile for a specific Spectra file.
-    Returns column names, data types, row count, and a natural language
-    summary of the dataset's structure and content.
-    Use this before running analysis to understand what questions are
-    answerable and how to phrase them accurately.
-    """
-    # calls GET /api/v1/files/{file_id}/context
+- **Create:** Name-only dialog. No description field on create (can edit after). Navigate immediately to the new Collection's detail page on creation. Default to the Overview tab.
+- **List:** Grid of collection cards. Empty state when no collections exist (with "Create Collection" CTA). Status badges visible at a glance. Filter by status is a v0.9 addition — not needed in v0.8.
+- **View Detail:** 4-tab layout (Overview, Files, Signals, Reports). Default to Overview. Tab state does not persist across navigation in v0.8.
+- **Archive:** NOT in v0.8 scope. This is the COLL-01 mockup gap, planned for v0.9.
+- **Delete:** NOT in v0.8 scope. The requirements do not specify collection deletion — archiving serves the lifecycle management need.
+- **Search/Filter:** NOT in v0.8 scope. Collection counts will be small (1-5 per tier) — filtering is premature.
 
-@mcp.tool()
-async def spectra_run_analysis(
-    file_ids: list[str],
-    query: str
-) -> dict:
-    """
-    Run a natural language data analysis query against one or more Spectra files.
-    Returns a text answer, optional structured data table, and optional Plotly
-    chart specification. Deducts credits per query.
+### Credit Cost Model
 
-    file_ids: One or more file IDs from spectra_list_files to analyze.
-    query: A natural language question about the data (e.g., "What is the
-           average revenue by region?" or "Show me the top 10 customers by spend").
-    """
-    # calls POST /api/v1/analysis
-```
+The mockup's `COST_PER_FILE` constant implies a per-file pricing model. The requirements specify a flat 5.0 credit cost for Pulse (not per-file). Resolve this:
 
-**Tool naming rationale:** `spectra_{resource}_{action}` matches MCP best-practice `namespace_verb` convention. Avoids generic names like `query` or `search` that conflict with other MCP tools in the same client.
+- Use the flat `workspace_credit_cost_pulse` platform setting (default: 5.0) regardless of file count
+- The sticky action bar should show the flat cost: "Run Detection (5 credits)" — not scaled by file count
+- The credit estimate text in the sticky bar can show "Run Detection (5 credits)" to communicate the flat cost clearly
+- If a per-file pricing model is later desired, it requires a platform_settings change and a UI change — not a code change
+
+### Detection Loading UX
+
+The mockup uses `setTimeout` simulation (3500ms per step, ~14s total). In production:
+
+- Best case: advance steps via SSE progress events from the Pulse API endpoint
+- Acceptable fallback: advance on polling (e.g., GET /collections/{id}/pulse/status every 2s)
+- Degraded fallback: timer simulation with a longer timeout buffer (real E2B analysis may exceed 30s depending on file size and method count; use 45s buffer minimum)
+
+The 4 step labels in the mockup are: "Analyzing files", "Detecting patterns", "Scoring signals", "Finalizing results". These are correct — do not change them. They correspond to the actual Pulse Agent pipeline phases.
+
+### Signal Chart Type Assignment
+
+The Pulse Agent must emit exactly one of: `"line"`, `"bar"`, `"scatter"` per signal. Use the following mapping:
+
+| Signal Category | Default Chart Type | Rationale |
+|----------------|-------------------|-----------|
+| trend | line | Time-series data; area/line chart communicates direction and magnitude |
+| concentration | bar | Categorical comparison; sorted bars communicate dominance |
+| anomaly | scatter | Point-based; scatter shows the outlier position relative to the cluster |
+| quality | bar | Column-level comparison; bars communicate relative severity per column |
+
+If the Pulse Agent cannot determine the appropriate chart type from the data, default to `"bar"`. Do not emit null — the SignalChart component has no null handling.
 
 ---
 
 ## Competitor Feature Analysis
 
-| Feature | Stripe API | OpenAI API | Perplexity API | Spectra v0.7 Approach |
-|---------|------------|------------|----------------|------------------------|
-| Key creation UX | Name + type (test/live), display once, copy button | Name only, display once, copy button | Simple create, display once | Name required, display once, copy button with warning, prefix shown in list |
-| Key list metadata | Name, type, created, last used, prefix | Name, created, last used | Name, created | Name, prefix, created, last used, status |
-| Key revocation | Immediate, confirmation required | Immediate | Immediate | Immediate, soft delete (revoked_at timestamp) for audit |
-| Key scopes | Restricted keys with fine-grained resource permissions | Full access only at key level | Full access | v1: full access; v1.x: `files:read` + `analysis:run` scopes |
-| Admin key visibility | Yes, organization dashboard | Yes, organization settings | N/A | Yes, in existing admin portal user detail view |
-| API versioning | Header (`Stripe-Version`) | URL (`/v1/`) | URL (`/v1/`) | URL (`/api/v1/`) — FastAPI router prefix |
-| Error format | `{"error": {"type": ..., "code": ..., "message": ...}}` | `{"error": {"message": ..., "type": ..., "code": ...}}` | `{"detail": ...}` | `{"error": {"code": ..., "message": ..., "request_id": ...}}` |
-| Interactive API docs | No (handwritten) | No (handwritten) | No | Yes — FastAPI Swagger UI auto-generated at `/api/v1/docs` |
-| MCP server | Yes (Stripe MCP, official) | Yes (OpenAI tools for agents) | No | Yes — 3 core tools wrapping REST API |
+| Feature | Julius.ai | Power BI Anomaly Detection | Spectra Pulse v0.8 Approach |
+|---------|-----------|---------------------------|------------------------------|
+| Signal severity levels | Not applicable — chat-based, no signal concept | Sensitivity slider (not severity tiers) | 3-tier: critical/warning/info. Severity = urgency, not sensitivity setting. |
+| Chart type per signal | User-selected from available chart types | Line chart only (time-series focused) | Agent-determined per category: area/line for trends, bar for concentration, scatter for outliers |
+| Statistical evidence transparency | Shows data table + natural language explanation | Shows "expected range" band on chart | 2x2 evidence grid (method, values, confidence, baseline) — most transparent of the three |
+| Workspace / collection concept | Chat sessions (no persistent structured workspace) | No workspace concept — anomalies embedded in reports | Collections as persistent workspaces with 4-tab layout — strongest workspace pattern of the three |
+| Credit / cost transparency | Post-run usage counter | Not applicable (subscription) | Pre-run estimate in button label + sticky bar + header balance — comprehensive |
+| Loading UX during analysis | Inline spinner | Progress bar during report refresh | Full-page step indicator + progress bar — most communicative for 5-30s waits |
+| Tier-based access gating | No tier gating on core chat feature | No tier gating on anomaly detection | Workspace access per tier (free=no access, trial=1 collection, standard=5, premium=unlimited) |
+| Concentration / Pareto signals | Not surfaced as a signal type | Not implemented | Planned as a distinct signal category — differentiator |
+| Data quality as a signal type | Not surfaced | Separate data quality tooling | Integrated as a Pulse signal category — not siloed |
+
+---
+
+## Dependencies on Existing Spectra Features
+
+| v0.8 Feature | Dependency on Existing System | Notes |
+|---|---|---|
+| File attachment to Collection | Existing file upload infrastructure (user file store) | Files are associated to a Collection, not copied. The Collection FILE table references the user's existing file. |
+| DataSummaryPanel | Existing Onboarding Agent column profiling (column_profile JSON) | No new backend profiling call needed for v0.8. DataSummaryPanel reads already-computed data. |
+| Pulse Agent execution | Existing E2B sandbox, existing agent base class | New agent, same execution infrastructure. Same allowlist.yaml governs permitted Python libraries. |
+| Credit pre-check and deduction | Existing credit_transactions table + SELECT FOR UPDATE atomic deduction | Same pattern as chat message credit deduction. New platform_settings key for the cost amount. |
+| Tier-based workspace gating | Existing user_classes.yaml + user.user_class field | Extend YAML schema. Collection creation API enforces workspace_access on every request. |
+| Admin Pulse credit cost setting | Existing platform_settings table + admin settings UI | Add "Workspace Credit Costs" section to existing admin settings page. Same runtime-configurable pattern as default_credit_cost. |
 
 ---
 
 ## Sources
 
-- [MCP Architecture Overview — modelcontextprotocol.io](https://modelcontextprotocol.io/docs/learn/architecture) — HIGH confidence; official Anthropic documentation, verified June 2025 spec
-- [API Key Rotation UX: Scopes, Self-Serve Keys, and Logs — AppMaster](https://appmaster.io/blog/api-key-rotation-scoping-ux) — MEDIUM confidence; aligns with industry patterns observed across Stripe, OpenAI, and other major APIs
-- [Best Practices for Building Secure API Keys — freeCodeCamp](https://www.freecodecamp.org/news/best-practices-for-building-api-keys-97c26eabfea9/) — HIGH confidence; widely cited, consistent with multiple authoritative sources
-- [API Keys: The Complete 2025 Guide — DEV Community](https://dev.to/hamd_writer_8c77d9c88c188/api-keys-the-complete-2025-guide-to-security-management-and-best-practices-3980) — MEDIUM confidence
-- [REST API Best Practices — Postman Blog](https://blog.postman.com/rest-api-best-practices/) — HIGH confidence; authoritative source, current
-- [Rate Limiting Best Practices in REST API Design — Speakeasy](https://www.speakeasy.com/api-design/rate-limiting) — MEDIUM confidence
-- [fastapi-mcp — GitHub (tadata-org)](https://github.com/tadata-org/fastapi_mcp) — HIGH confidence; active maintained library
-- [fastmcp / MCP Python SDK — PyPI](https://pypi.org/project/fastmcp/2.2.6/) — HIGH confidence; official SDK
-- [RESTful API Best Practices 2025 — Hevo](https://hevodata.com/learn/rest-api-best-practices/) — MEDIUM confidence
+- Adobe Analytics Anomaly Detection Statistical Techniques: https://experienceleague.adobe.com/en/docs/analytics-platform/using/cja-workspace/anomaly-detection/statistics-anomaly-detection (MEDIUM confidence — verified ETS/GESD methodology; industry standard status extrapolated)
+- NNG Skeleton Screens (loading UX for 10+ second operations): https://www.nngroup.com/articles/skeleton-screens/ (HIGH confidence — authoritative UX research; progress bars recommended for 10+ second waits)
+- Smart Interface Design Patterns (loading UX): https://smart-interface-design-patterns.com/articles/designing-better-loading-progress-ux/ (MEDIUM confidence — aligns with NNG: progress bar + status updates for 10+ second waits)
+- Power BI Anomaly Detection (UI/severity pattern): https://powerbi.microsoft.com/en-us/blog/anomaly-detection-preview/ (HIGH confidence — first-party documentation; sensitivity slider vs. severity tier design decision informed by this)
+- IBM Databand (severity-prioritized signal view): https://www.ibm.com/products/databand/data-anomaly-detection (MEDIUM confidence — severity-prioritized alert view confirmed as industry pattern)
+- Pareto Chart 101: https://mode.com/blog/pareto-chart-101/ (HIGH confidence — standard charting practice; sorted bar + cumulative line is the canonical Pareto output)
+- Pyramid Analytics Pareto Analysis: https://www.pyramidanalytics.com/blog/pareto-analysis-using-the-80-20-rule/ (MEDIUM confidence — confirms Pareto chart as BI standard for concentration analysis)
+- Spectra Pulse Requirement (Section 6 — User Journey): requirements/Spectra-Pulse-Requirement.md (HIGH confidence — primary source)
+- Pulse Milestone Plan (v0.8 scope): requirements/Pulse-req-milestone-plan.md (HIGH confidence — primary source)
+- pulse-mockup source code: pulse-mockup/src/components/workspace/ — detection-loading.tsx, signal-detail-panel.tsx, signal-chart.tsx, sticky-action-bar.tsx (HIGH confidence — authoritative UI contract per project decision in PROJECT.md)
 
 ---
-
-*Feature research for: Spectra v0.7 API Services and MCP*
-*Researched: 2026-02-23*
+*Feature research for: Spectra Pulse v0.8 (Detection module)*
+*Researched: 2026-03-05*

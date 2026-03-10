@@ -14,36 +14,55 @@ interface ChartRendererProps {
   data: string;
   /** Optional height override */
   height?: number;
+  /** Called after Plotly finishes rendering */
+  onReady?: () => void;
 }
 
 /**
  * Calculate dynamic chart height based on data complexity.
- * Base: 400px, +10px per 100 data points, capped at 700px.
- * If backend layout explicitly sets height, that takes priority (handled by caller).
+ *
+ * General formula — works for any Plotly chart type:
+ *   base (420px)
+ *   + logarithmic boost from data point count (up to +140px)
+ *   + multi-trace boost for legend overhead (+15px per extra trace, up to +60px)
+ *   + small boost for marker-based charts that need vertical spread (+30px)
+ *   capped at 620px
  */
-function calculateChartHeight(chartData: Plotly.PlotData[]): number {
-  const BASE_HEIGHT = 400;
-  const MAX_HEIGHT = 700;
+function calculateChartHeight(traces: Plotly.PlotData[]): number {
+  const BASE = 420;
+  const MAX = 620;
 
-  let totalPoints = 0;
-  for (const trace of chartData) {
-    // Count data points from common trace properties
-    const traceAny = trace as unknown as Record<string, unknown>;
-    if (Array.isArray(traceAny.x)) {
-      totalPoints += traceAny.x.length;
-    } else if (Array.isArray(traceAny.y)) {
-      totalPoints += traceAny.y.length;
-    } else if (Array.isArray(traceAny.values)) {
-      totalPoints += traceAny.values.length;
-    }
+  if (traces.length === 0) return BASE;
+
+  let maxPoints = 0;
+  for (const trace of traces) {
+    const t = trace as unknown as Record<string, unknown>;
+    const len = Array.isArray(t.x)
+      ? (t.x as unknown[]).length
+      : Array.isArray(t.y)
+        ? (t.y as unknown[]).length
+        : Array.isArray(t.values)
+          ? (t.values as unknown[]).length
+          : 0;
+    if (len > maxPoints) maxPoints = len;
   }
 
-  const dynamicHeight = BASE_HEIGHT + Math.floor(totalPoints / 100) * 10;
-  return Math.min(dynamicHeight, MAX_HEIGHT);
+  // Logarithmic scale: grows fast for small counts, flattens for large
+  const pointBoost = Math.min(Math.floor(Math.log(maxPoints + 1) * 22), 140);
+
+  // Extra traces → legend needs vertical space
+  const traceBoost = Math.min((traces.length - 1) * 15, 60);
+
+  // Marker-based charts (scatter, bubble) spread points vertically — give extra room
+  const first = traces[0] as unknown as Record<string, unknown>;
+  const mode = (first.mode as string) || "";
+  const markerBoost = mode.includes("markers") ? 30 : 0;
+
+  return Math.min(BASE + pointBoost + traceBoost + markerBoost, MAX);
 }
 
 const ChartRenderer = forwardRef<ChartRendererHandle, ChartRendererProps>(
-  function ChartRenderer({ data, height }, ref) {
+  function ChartRenderer({ data, height, onReady }, ref) {
     const chartRef = useRef<HTMLDivElement>(null);
     const [error, setError] = useState<string | null>(null);
     const { resolvedTheme } = useTheme();
@@ -57,14 +76,20 @@ const ChartRenderer = forwardRef<ChartRendererHandle, ChartRendererProps>(
     if (!chartRef.current || !data) return;
 
     let resizeObserver: ResizeObserver | null = null;
+    let raf1: number;
+    let raf2: number;
 
+    // Double-rAF: ensures browser has painted spinner before Plotly blocks the main thread
+    raf1 = requestAnimationFrame(() => {
+    raf2 = requestAnimationFrame(() => {
+    if (!chartRef.current) return;
     try {
       const chartData = JSON.parse(data);
       const traces: Plotly.PlotData[] = chartData.data || [];
 
-      // Determine chart height: prop override > backend layout > dynamic calculation
-      const chartHeight =
-        height ?? chartData.layout?.height ?? calculateChartHeight(traces);
+      // Determine chart height: explicit prop override > dynamic calculation.
+      // Backend layout.height is intentionally ignored — it is often stale or too small.
+      const chartHeight = height ?? calculateChartHeight(traces);
 
       // Get theme configuration
       const themeConfig = getChartThemeConfig(isDark ? 'dark' : 'light');
@@ -115,8 +140,10 @@ const ChartRenderer = forwardRef<ChartRendererHandle, ChartRendererProps>(
         modeBarButtonsToRemove: ["sendDataToCloud"] as Plotly.ModeBarDefaultButtons[],
       };
 
-      Plotly.react(chartRef.current, themedTraces, layout, config);
-      setError(null);
+      Plotly.react(chartRef.current, themedTraces, layout, config).then(() => {
+        setError(null);
+        onReady?.();
+      });
 
       // Set up ResizeObserver for responsive resizing
       resizeObserver = new ResizeObserver(() => {
@@ -130,9 +157,13 @@ const ChartRenderer = forwardRef<ChartRendererHandle, ChartRendererProps>(
       console.error("ChartRenderer error:", err);
       setError(message);
     }
+    }); // inner rAF
+    }); // outer rAF
 
-    // Cleanup: disconnect observer and purge Plotly (memory leak prevention)
+    // Cleanup: cancel pending rAFs, disconnect observer, purge Plotly (memory leak prevention)
     return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
       if (resizeObserver) {
         resizeObserver.disconnect();
       }

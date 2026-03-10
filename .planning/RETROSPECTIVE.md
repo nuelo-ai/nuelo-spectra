@@ -53,6 +53,92 @@
 
 ---
 
+## Milestone: v0.7.12 — Spectra Pulse Mockup
+
+**Shipped:** 2026-03-05
+**Phases:** 5 (42–46) | **Plans:** 17
+
+### What Was Built
+- App shell + Hex.tech dark palette with sidebar collapse, credit indicator, and theme toggle (Phase 42)
+- Collection list/detail, Run Detection flow with credit estimate and loading state, Signal results with severity-sorted panel (Phase 42)
+- Collections four-tab hub, full-page markdown report reader, Chat-to-Collection bridge modal (Phase 43)
+- Guided Investigation Q&A with doctor-style flow, progress indicator, root cause summary, history list, and related signals (Phase 44)
+- What-If Scenarios: objective selection, scenario cards, per-scenario refinement chat overlay, comparison view, generated report section (Phase 45)
+- Admin Workspace Activity Dashboard (line/donut/bar/funnel/stacked charts), per-user Workspace tab, Settings (8 credit cost inputs + dismissable alerts) (Phase 46)
+
+### What Worked
+- **Separate Next.js app** (`pulse-mockup/`) was the right call — zero interference with production code, independent deploy, no bundling concerns
+- **Hex.tech dark palette** as a single design constraint kept all screens visually coherent across 5 different feature areas
+- **GSD phase grouping by feature area** (not by page count) made each phase self-contained and easy to UAT
+- **key={selectedScenarioId} remount pattern** for chat components is a clean React idiom — no manual state cleanup
+- **Violet for What-If, blue for Investigation** — color-coding feature themes is intuitive and worth formalizing for v0.8+
+
+### What Was Inefficient
+- COLL-01 (archive/unarchive status indicators) and COLL-02 (collection limit display) were never checked off — checkbox hygiene in REQUIREMENTS.md lagged behind implementation
+- v0.7.12 was a post-ship polish commit but not called out as a separate GSD plan — should have been a quick task or plan 46-04 to keep execution history clean
+- Phase 42–43 SUMMARY.md files didn't capture `one_liner` fields — made automated accomplishment extraction fail (gsd-tools returned empty)
+
+### Patterns Established
+- **Mockup-first milestone before feature implementation** — creates concrete design artifact with zero backend risk; reviewers get full E2E flow before a line of real code is written
+- **Feature color theming** — violet/What-If, blue/Investigation — should be documented as a design system decision in v0.8 implementation plan
+- **Admin layout without shared Header** — each page owns its own title; simpler and more flexible for admin-specific layouts
+
+### Key Lessons
+- When closing a mockup milestone, explicitly check REQUIREMENTS.md checkbox parity against what was actually built during each phase execution
+- Post-ship polish commits (like v0.7.12) should either be a named quick task or an explicit plan to maintain clean execution history
+- SUMMARY.md `one_liner` field should be filled — GSD tooling depends on it for MILESTONES.md auto-population
+
+### Cost Observations
+- Sessions: ~8 across 3 days
+- All work in a standalone Next.js app made context much cheaper — no backend complexity in scope
+- Phase-by-phase execution was efficient; no rework rounds needed
+
+---
+
+## Milestone: v0.8 — Spectra Pulse (Detection)
+
+**Shipped:** 2026-03-10
+**Phases:** 8 (47–52.1, including 2 inserted decimal phases) | **Plans:** 20
+
+### What Was Built
+- Data Foundation: 5 SQLAlchemy models with Alembic migration and tier config
+- Backend CRUD API: 11 collection endpoints with WorkspaceAccess tier gating and Pydantic schemas
+- Pulse Agent: LangGraph pipeline with E2B sandbox (300s), Pydantic-validated Signal output, credit pre-check/deduction/refund
+- Frontend Migration: All workspace screens in main Next.js app with Hex.tech palette, (workspace) route group, and Plotly charts
+- Pipeline Refactor (Phase 51.1): Monolith → multi-agent orchestrator with structured output, inline progress, toast, re-run dialog
+- Admin & QA + Collection Management: Tier gating verified E2E, Pulse credit cost in admin settings, delete/rename collection
+
+### What Worked
+- **Mockup-first reference** (v0.7.12) made Phase 51 migration very efficient — every screen had a pixel-perfect reference to match
+- **Phased E2B work** (Phase 49 before frontend) caught Pulse Agent schema issues early, before any UI existed
+- **Decimal phase insertions** (51.1, 52.1) are the right pattern for urgent mid-milestone additions — no renumbering disruption
+- **Pydantic structured output** on all reasoning LLM calls eliminated JSON parsing failures that plagued the old pipeline
+- **Inline progress banner** (not full-page overlay) was the correct UX decision — users can navigate freely during long-running detection
+
+### What Was Inefficient
+- SIGNAL-03 was shipped but not checked off in REQUIREMENTS.md — requirement tracking lagged behind implementation
+- The Pipeline Refactor (Phase 51.1) was inserted mid-milestone after the monolith showed quality issues in testing; ideally would have been planned from the start
+- Several post-execution fixes after Phase 52.1 (kebab nav, per-collection Zustand state, 402 toast) — these should have been caught in Phase 52 QA
+
+### Patterns Established
+- **Workspace route group pattern**: `(workspace)` parallel to `(dashboard)` — prevents sidebar layout inheritance across feature areas
+- **Per-collectionId Zustand state**: Scoping detection state by collectionId via `collectionDetection[id]` map, with reactive selectors (not getter functions)
+- **Pulse orchestrator architecture**: Brain node → per-hypothesis sub-agent loop (Coder → Validator → Sandbox → Interpreter → Viz) → Report Writer
+- **CollectionFile naming convention**: `__tablename__ = "collection_files"` to avoid collision with `app.models.file.File`
+
+### Key Lessons
+1. **Schema-validate Pulse output before building UI** — Phase 49 (Pulse Agent first) was the right call; late schema discovery would have required UI rework
+2. **Structured Pydantic output is non-negotiable for multi-step pipelines** — Raw LLM JSON parsing fails silently; structured output fails loudly and is debuggable
+3. **DropdownMenu inside Link requires e.preventDefault() on trigger** — React's event propagation through Link elements is a recurring frontend gotcha worth documenting
+4. **Reactive Zustand selectors required for per-ID state** — Getter functions are not subscriptions; `useStore(s => s.map[id]?.field)` is the correct pattern
+
+### Cost Observations
+- Model mix: quality profile (claude-sonnet-4-6) throughout
+- Sessions: 8+ sessions across 4 days
+- Notable: Phase 51.1 pipeline refactor was the most expensive phase (full rewrite of pulse.py + frontend UX); Phase 47 data foundation was the cheapest (schema-only, no LLM calls in execution)
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -66,6 +152,8 @@
 | v0.5 | 7 | 24 | 2 days | Audit milestone before complete; deferred reqs tracked |
 | v0.6 | 5 | 10 | 3 days | Docker multi-stage; all modes tested in containers |
 | v0.7 | 4 | 15 | 4 days (+3 patches) | MCP loopback arch; 7 hotfixes post-ship |
+| v0.7.12 | 5 | 17 | 3 days (+1 polish patch) | Mockup-first milestone pattern; separate Next.js app |
+| v0.8 | 8 | 20 | 4 days | Decimal phase insertions for mid-milestone urgents; Pydantic structured output on all pipelines |
 
 ### Cumulative Quality
 
@@ -78,6 +166,8 @@
 | v0.5 | 86 | 95% | 3 (CREDIT-11, SETTINGS-06, TIER-02) |
 | v0.6 | 28 | 100% | 0 |
 | v0.7 | 30 | 100% | 0 |
+| v0.7.12 | 34 | 94% | 2 (COLL-01, COLL-02) |
+| v0.8 | 35 | 100% | 0 |
 
 ### Top Lessons (Verified Across Milestones)
 
