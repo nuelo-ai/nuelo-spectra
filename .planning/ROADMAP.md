@@ -129,7 +129,7 @@
 
 #### Phase Checklist
 
-- [x] **Phase 53: Shell & Navigation Fixes** - Fix leftbar toggle visibility, menu icon padding, logo presence in Chat/Files panels, and rightbar toggle placement in Chat (completed 2026-03-10)
+- [ ] **Phase 53: Shell & Navigation Fixes** - Fix leftbar toggle visibility, menu icon padding, logo presence in Chat/Files panels, and rightbar toggle placement in Chat (gap closure in progress — plans 05-06 close LBAR-01 and LBAR-02)
 - [ ] **Phase 54: Pulse Analysis Fixes** - Fix credit tracking accuracy, add mobile responsiveness to Signal View, add Chat bridge button, and show full timestamps in activity/file history
 
 ## Phase Details
@@ -144,13 +144,15 @@
   3. Selecting the Chat section shows no Spectra logo in the top left of the Chat main panel
   4. Selecting the Files section shows no Spectra logo in the top left of the Files main panel, and the leftbar collapse toggle is at the top of the main screen next to the leftbar
   5. The Chat rightbar expand toggle is visible at the top right of the chat area after the rightbar is collapsed, and the collapse/expand toggle on an existing chat is positioned at the top right (not top middle)
-**Plans**: 4 plans
+**Plans**: 6 plans
 
 Plans:
-- [ ] 53-01-PLAN.md — Fix WorkspacePage leftbar toggle (LBAR-01) + UnifiedSidebar nav padding (LBAR-02)
-- [ ] 53-02-PLAN.md — Remove Chat logo, add rightbar expand button on WelcomeScreen (CHAT-01, CHAT-02), pin toggle in ChatInterface (CHAT-03)
-- [ ] 53-03-PLAN.md — Remove Files logo, fix SidebarTrigger position in MyFilesPage (FILES-01, FILES-02)
-- [ ] 53-04-PLAN.md — Human visual verification of all 7 requirements
+- [x] 53-01-PLAN.md — Fix WorkspacePage leftbar toggle (LBAR-01) + UnifiedSidebar nav padding (LBAR-02)
+- [x] 53-02-PLAN.md — Remove Chat logo, add rightbar expand button on WelcomeScreen (CHAT-01, CHAT-02), pin toggle in ChatInterface (CHAT-03)
+- [x] 53-03-PLAN.md — Remove Files logo, fix SidebarTrigger position in MyFilesPage (FILES-01, FILES-02)
+- [x] 53-04-PLAN.md — Human visual verification of all 7 requirements (5/7 pass; LBAR-01 and LBAR-02 gaps identified)
+- [ ] 53-05-PLAN.md — Gap closure: SidebarTrigger in workspace sub-views (LBAR-01) + remove pl-1 nav child padding (LBAR-02)
+- [ ] 53-06-PLAN.md — Human visual verification of LBAR-01 and LBAR-02 gap fixes
 
 ### Phase 54: Pulse Analysis Fixes
 **Goal**: Pulse Analysis shows accurate data and provides a complete user experience — credits reflect actual usage, Signal View works on mobile, users can bridge to Chat from a Signal, and timestamps show both date and time throughout
@@ -165,10 +167,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 53-01-PLAN.md — Fix WorkspacePage leftbar toggle (LBAR-01) + UnifiedSidebar nav padding (LBAR-02)
-- [ ] 53-02-PLAN.md — Remove Chat logo, add rightbar expand button on WelcomeScreen (CHAT-01, CHAT-02), pin toggle in ChatInterface (CHAT-03)
-- [ ] 53-03-PLAN.md — Remove Files logo, fix SidebarTrigger position in MyFilesPage (FILES-01, FILES-02)
-- [ ] 53-04-PLAN.md — Human visual verification of all 7 requirements
+- [ ] 54-01-PLAN.md — TBD
+- [ ] 54-02-PLAN.md — TBD
+- [ ] 54-03-PLAN.md — TBD
+- [ ] 54-04-PLAN.md — TBD
 
 ## Progress
 
@@ -228,5 +230,5 @@ Plans:
 | 51.1. Pipeline Refactor (INSERTED) | v0.8 | 3/3 | Complete | 2026-03-08 |
 | 52. Admin and QA | v0.8 | 2/2 | Complete | 2026-03-09 |
 | 52.1. Delete and Rename Collection (INSERTED) | v0.8 | 3/3 | Complete | 2026-03-09 |
-| 53. Shell & Navigation Fixes | 4/4 | Complete   | 2026-03-10 | - |
+| 53. Shell & Navigation Fixes | v0.8.1 | 4/6 | In Progress (gap closure) | - |
 | 54. Pulse Analysis Fixes | v0.8.1 | 0/TBD | Not started | - |
