@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.8
-milestone_name: Spectra Pulse (Detection)
-status: archived
-stopped_at: v0.8 milestone archived 2026-03-10
+milestone: v0.8.1
+milestone_name: UI Fixes & Enhancement
+status: defining requirements
+stopped_at: ~
 last_updated: "2026-03-10"
-last_activity: 2026-03-10 — v0.8 milestone archived, ROADMAP.md and REQUIREMENTS.md updated, git tag v0.8 pending
+last_activity: 2026-03-10 — Milestone v0.8.1 started
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 20
-  completed_plans: 20
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,14 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** v0.8 archived — planning next milestone (v0.9)
+**Current focus:** v0.8.1 — UI Fixes & Enhancement
 
 ## Current Position
 
-Milestone v0.8 ARCHIVED — all 8 phases, 20 plans complete
-Status: v0.8 complete — Spectra Pulse (Detection) shipped
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-10 — Milestone v0.8.1 started
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 ✅ [██████████] 100%
+Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 ✅ | v0.8.1 ◆ [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 

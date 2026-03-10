@@ -641,5 +641,15 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | DropdownMenu trigger uses e.preventDefault() on collection cards | CollectionCard is wrapped in Link; clicking kebab menu triggered navigation | ✓ Good — reliable prevention without losing event bubbling |
 | Zustand detection state scoped per collectionId | Global store caused all collection pages to show running state simultaneously | ✓ Good — reactive selectors required (not getter functions) for re-render triggers |
 
+## Current Milestone: v0.8.1 UI Fixes & Enhancement
+
+**Goal:** Fix UI polish issues across Leftbar, Pulse Analysis, Chat, and Files sections to improve usability and mobile responsiveness.
+
+**Target features:**
+- Leftbar toggle visibility and menu alignment fixes
+- Pulse Analysis: credit used display, mobile-responsive Signal View, "Chat with Spectra" button, timestamps on history lists
+- Chat: remove logo from main panel, rightbar toggle fixes
+- Files: remove logo from main panel, leftbar toggle position fix
+
 ---
-*Last updated: 2026-03-10 after v0.8 milestone*
+*Last updated: 2026-03-10 after v0.8.1 milestone started*
