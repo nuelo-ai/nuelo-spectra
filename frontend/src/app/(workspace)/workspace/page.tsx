@@ -8,6 +8,7 @@ import { CollectionList } from "@/components/workspace/collection-list";
 import { CreateCollectionDialog } from "@/components/workspace/create-collection-dialog";
 import { DeleteCollectionDialog } from "@/components/workspace/delete-collection-dialog";
 import { useCollections } from "@/hooks/useWorkspace";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import type { CollectionListItem } from "@/types/workspace";
 
 export default function WorkspacePage() {
@@ -17,7 +18,14 @@ export default function WorkspacePage() {
   const { data: collections, isLoading, isError, refetch } = useCollections();
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="flex flex-col h-full">
+      {/* Fixed header strip — SidebarTrigger only, no logo per anti-pattern in research */}
+      <div className="px-4 py-3 shrink-0 border-b">
+        <SidebarTrigger className="-ml-1" />
+      </div>
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto">
+      <div className="p-8 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold">Collections</h1>
@@ -88,6 +96,8 @@ export default function WorkspacePage() {
         onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
         collection={deleteTarget}
       />
+    </div>
+    </div>
     </div>
   );
 }
