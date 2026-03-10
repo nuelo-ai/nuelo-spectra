@@ -167,10 +167,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 54-01-PLAN.md — TBD
-- [ ] 54-02-PLAN.md — TBD
-- [ ] 54-03-PLAN.md — TBD
-- [ ] 54-04-PLAN.md — TBD
+- [ ] 54-01-PLAN.md — Credits Used accuracy: backend aggregate subquery + schema + router + frontend type wiring (PULSE-01)
+- [ ] 54-02-PLAN.md — Timestamp date+time fix: activity-feed, file-table, and collections page (PULSE-04, PULSE-05)
+- [ ] 54-03-PLAN.md — Mobile Signal View toggle + Chat bridge button in SignalDetailPanel (PULSE-02, PULSE-03)
+- [ ] 54-04-PLAN.md — Human visual verification of all 5 PULSE requirements
 
 ## Progress
 
@@ -230,5 +230,5 @@ Plans:
 | 51.1. Pipeline Refactor (INSERTED) | v0.8 | 3/3 | Complete | 2026-03-08 |
 | 52. Admin and QA | v0.8 | 2/2 | Complete | 2026-03-09 |
 | 52.1. Delete and Rename Collection (INSERTED) | v0.8 | 3/3 | Complete | 2026-03-09 |
-| 53. Shell & Navigation Fixes | 6/6 | Complete    | 2026-03-10 | - |
-| 54. Pulse Analysis Fixes | v0.8.1 | 0/TBD | Not started | - |
+| 53. Shell & Navigation Fixes | v0.8.1 | 6/6 | Complete | 2026-03-10 |
+| 54. Pulse Analysis Fixes | v0.8.1 | 0/4 | Not started | - |
