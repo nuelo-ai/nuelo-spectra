@@ -83,9 +83,10 @@ Recent decisions affecting v0.8.2 work:
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 5 | update the query suggestion on the chat dashboard design and style to make it beautiful. use a nice card (Similar to Signal card item on the Signal view). Sort it as multiple columns grouped by the Category. | 2026-03-10 | 43343e9 | [5-update-the-query-suggestion-on-the-chat-](./quick/5-update-the-query-suggestion-on-the-chat-/) |
+| 6 | Fix bug on the signal list panel where the spacing between signal cards is too wide on Safari (h-screen -> h-full, space-y -> flex gap) | 2026-03-14 | 492c7b8 | [6-fix-bug-on-the-signal-list-panel-where-t](./quick/6-fix-bug-on-the-signal-list-panel-where-t/) |
 
 ## Session Continuity
 
-Last session: 2026-03-10T18:30:00.000Z
-Stopped at: Completed quick-5 (QuerySuggestions card layout redesign)
+Last session: 2026-03-14T14:25:47Z
+Stopped at: Completed quick-6 (Safari signal list panel spacing fix)
 Resume with: /gsd:new-milestone
