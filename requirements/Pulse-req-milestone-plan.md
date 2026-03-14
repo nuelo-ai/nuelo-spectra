@@ -38,7 +38,7 @@ v0.8 (Pulse + Reporting — SHIPPED) -> v0.9 (What-If Scenarios) -> v0.10 (Admin
 | Version | Name | Scope | Key Deliverable | Complexity | Status |
 |---------|------|-------|-----------------|:---:|:---:|
 | **v0.8** | Spectra Pulse (Detection + Reporting) | Create Collections, attach files, run Pulse, view Signals, view Reports | Signal cards + report viewer with markdown download | XL | ✅ SHIPPED |
-| **v0.9** | What-If Scenarios (Prescriptive) | AI-generated scenarios from Signal, refinement, report generation | Data-backed scenario cards accessible directly from Signal | XL | Planned |
+| **v0.9** | What-If Scenarios (Prescriptive) | AI-generated scenarios from Signal, refinement, report generation; Activity tab on Collection detail | Data-backed scenario cards accessible directly from Signal + dedicated activity log tab | XL | Planned |
 | **v0.10** | Admin Workspace Management | Activity dashboard, per-user tracking, alerts | Full admin visibility over workspace usage | M | Planned |
 
 ---
@@ -106,7 +106,7 @@ This is the foundation milestone. It introduces the Pulse Analysis as a new modu
 
 **Collection detail page (/workspace/collections/[id]) — 4-tab layout:**
 - Page header: collection name, status badge, credit usage pill ("Credits used: N" with Zap icon).
-- Tab 1 — Overview: stat cards (files count, signal count, reports count, credits used), Run Detection banner, 2-column grid of up to 4 Signal cards (non-interactive, link to Detection Results page), compact file table with "View all files in Files tab" link, activity feed.
+- Tab 1 — Overview: stat cards (files count, signal count, reports count, credits used), Run Detection banner, 2-column grid of up to 4 Signal cards (non-interactive, link to Detection Results page), compact file table with "View all files in Files tab" link, activity feed. *(Note: activity feed moves to a dedicated Activity tab in v0.9.)*
 - Tab 2 — Files: FileUploadZone (drag/drop or click to upload). FileTable with row checkboxes. Clicking a file row opens DataSummaryPanel (slide-out sheet showing column profile). A sticky action bar appears at the bottom when files are selected: shows selected count and "Run Detection (5 credits)" button with credit estimate.
 - Tab 3 — Signals: all Signal cards (non-interactive) plus "Open Signals View" button that navigates to the Detection Results page.
 - Tab 4 — Reports: list of reports as rows (type badge, title, source line, generated date, "View Report" button).
@@ -221,6 +221,15 @@ This is the foundation milestone. It introduces the Pulse Analysis as a new modu
 - What-If section (in SignalDetailPanel on Detection Results page):
   - "What-If (5 credits)" button — always enabled, navigates to the What-If objective page.
   - List of past What-If scenario reports below button: date, report title (truncated), links to report viewer.
+
+**Collection detail page — Activity tab (new tab, v0.9):**
+- The activity feed currently embedded in the Overview tab (v0.8) is removed from Overview and replaced with a dedicated 5th tab: **Activity**.
+- Overview tab (updated): retains stat cards, Run Detection banner, Signal preview grid, and compact file table. Activity feed removed.
+- Activity tab: full tabular log of all collection activity, paginated.
+  - Columns: Timestamp, Activity Type (badge — e.g. Pulse Run, What-If Generated, Report Compiled), Description, Credits Used.
+  - Sorted newest-first by default.
+  - Paging controls: rows-per-page selector (10 / 25 / 50) and page navigation (prev/next + page indicator).
+  - Empty state when no activity has occurred yet.
 
 ### Admin Scope
 

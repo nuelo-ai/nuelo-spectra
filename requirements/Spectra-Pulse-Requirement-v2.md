@@ -235,7 +235,7 @@ graph TD
     Create --> Files["📂 Collection Detail — Files tab<br/>Upload files or select from uploaded<br/>Click file → DataSummaryPanel (column profile)<br/>Check files → sticky action bar appears"]
     Files --> Pulse["💡 <b>PULSE</b><br/>Click 'Run Detection (5 credits)'<br/>Full-page DetectionLoading state<br/>Animated steps — replaces entire page content"]
 
-    Pulse --> Overview["Collection Detail — Overview tab<br/>Stat cards · Signal preview grid (up to 4)<br/>Activity feed · Run Detection banner"]
+    Pulse --> Overview["Collection Detail — Overview tab<br/>Stat cards · Signal preview grid (up to 4)<br/>Run Detection banner"]
     Overview --> SignalsTab["Collection Detail — Signals tab<br/>All Signal cards (non-interactive)<br/>'Open Signals View' button"]
     SignalsTab --> DetectionResults["🔍 Detection Results page<br/>/workspace/collections/[id]/signals<br/>Breadcrumb: Collections / [Name] / Detection Results<br/>Two-column: SignalListPanel + SignalDetailPanel<br/>Auto-selects highest severity signal"]
 
@@ -269,7 +269,8 @@ graph TD
 - Collection detail page has 4 tabs: Overview, Files, Signals, Reports.
 - Files tab: FileUploadZone (drag/drop or click to upload) plus FileTable with row checkboxes. Clicking a file row opens a DataSummaryPanel (slide-out sheet showing column profile). Selecting files via checkboxes activates a sticky action bar at the bottom showing selected count and "Run Detection (5 credits)" button.
 - Clicking "Run Detection" replaces the entire page content with a full-page DetectionLoading state (animated steps: Profiling data, Detecting anomalies, Analyzing trends, Generating signals). This is not an inline spinner — it takes over the full page.
-- After detection completes: Overview tab shows stat cards (files, signals, reports, credits used), a Run Detection banner, a 2-column grid of up to 4 Signal cards (non-interactive preview, links to Detection Results page), a compact file table, and an activity feed. The Signals tab shows all Signal cards plus an "Open Signals View" button.
+- After detection completes: Overview tab shows stat cards (files, signals, reports, credits used), a Run Detection banner, a 2-column grid of up to 4 Signal cards (non-interactive preview, links to Detection Results page), and a compact file table. The Signals tab shows all Signal cards plus an "Open Signals View" button.
+- Note: the activity feed currently shown in the Overview tab (v0.8) moves to a dedicated Activity tab in v0.9 (see v0.9 UI changes below).
 - Sidebar also includes Chat, Files, API, Settings, Admin Panel. Only /workspace, /chat, and /admin are live routes — others are # placeholders. Sidebar collapses/expands with a toggle button on desktop. Credit balance shown in the header as a Zap-icon pill.
 
 **Step 2: What-If Scenarios — Deliverable: WHAT-IF SCENARIO REPORT**
