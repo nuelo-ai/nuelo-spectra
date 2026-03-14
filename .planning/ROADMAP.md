@@ -13,6 +13,7 @@
 - ✅ **v0.8 Spectra Pulse (Detection)** — Phases 47-52.1 (shipped 2026-03-10)
 - ✅ **v0.8.1 UI Fixes & Enhancement** — Phases 53–54 (shipped 2026-03-10)
 - ✅ **v0.8.2 Chat Query Suggestions Redesign** — quick-5 (shipped 2026-03-10)
+- ✅ **v0.8.3 Safari Signal List & React Hooks Fix** — quick-6 (shipped 2026-03-14)
 
 ## Phases
 
