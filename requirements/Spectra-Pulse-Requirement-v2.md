@@ -438,7 +438,10 @@ The existing system has a single `default_credit_cost` (1.0 per message). Pulse 
 **Implementation approach:**
 - Store as **`platform_settings`** entries (same pattern as `default_credit_cost`) — runtime configurable via Admin Portal without redeploy
 - Setting keys: `workspace_credit_cost_pulse`, `workspace_credit_cost_whatif_generate`, `workspace_credit_cost_whatif_refine`, etc.
-- Admin UI: dedicated "Workspace Credit Costs" section in Settings page with all costs editable
+- **Admin UI — phased rollout:**
+  - v0.8: Pulse + Report credit cost fields added to existing Platform Settings page
+  - v0.9: What-If credit cost fields added to existing Platform Settings page (editable immediately when What-If ships)
+  - v0.10: All workspace credit cost fields consolidated into a dedicated "Workspace Credit Costs" section in the Admin settings (UI grouping improvement — no functional change)
 - Pre-check: before each activity, verify user has sufficient credits. Show cost estimate before running ("This will use ~5 credits. You have 23 remaining.")
 
 **Credit transparency for users:**

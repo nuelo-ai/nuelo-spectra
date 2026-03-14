@@ -228,6 +228,15 @@ This is the foundation milestone. It introduces the Pulse Analysis as a new modu
 - `workspace_credit_cost_whatif_generate` (default: 5.0)
 - `workspace_credit_cost_whatif_refine` (default: 1.0)
 - `workspace_credit_cost_whatif_add_scenario` (default: 2.0)
+- All three stored as `platform_settings` entries, runtime-configurable via Admin Portal without redeploy
+
+**Admin settings UI (extends existing Platform Settings page):**
+- Add "What-If Credit Costs" section to the existing Admin Portal Platform Settings page:
+  - What-If: Generate Scenarios (editable, default 5.0)
+  - What-If: Refine Scenario (editable, default 1.0)
+  - What-If: Add Scenario (editable, default 2.0)
+- Save button with confirmation (same pattern as existing credit cost settings)
+- These settings are live immediately — no redeploy needed
 
 **Activity tracking:**
 - What-If activities logged to workspace_activity_log:
@@ -306,15 +315,16 @@ Activity type enum values: `pulse_run`, `whatif_generate`, `whatif_refine`, `wha
 - Activity timeline: when they last used the Workspace, frequency of use
 - Collection limit usage display: "3 of 5 active collections"
 
-**Workspace Credit Costs settings section:**
-- Editable form for all workspace credit cost settings:
+**Workspace Credit Costs settings section (consolidation):**
+- The existing Platform Settings page already has What-If credit cost fields (added in v0.9) and Pulse/Report fields (added in v0.8).
+- v0.10 consolidates these into a dedicated "Workspace Credit Costs" section in the Admin settings with a unified view:
   - Pulse: Run Detection
-  - What-If: Generate Scenarios
-  - What-If: Refine Scenario
-  - What-If: Add Scenario
+  - What-If: Generate Scenarios *(added in v0.9)*
+  - What-If: Refine Scenario *(added in v0.9)*
+  - What-If: Add Scenario *(added in v0.9)*
   - Report: Compile & Generate
   - Report: PDF Export
-- Save button with confirmation
+- No functional change — fields are already configurable. This is a UI grouping/polish improvement.
 
 **Alerts section:**
 - Configurable thresholds (high-cost Collection credit limit, etc.)
