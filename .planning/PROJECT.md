@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Spectra is an AI-powered data analytics platform that transforms how users interact with their data. Users upload datasets (Excel/CSV), create chat sessions, link multiple files, and ask questions in natural language — receiving instant insights as interactive Data Cards with AI-generated Plotly charts. A ChatGPT-style session-centric UX with sidebar navigation enables multi-file conversations and cross-file analysis. A 6-agent AI system with intelligent query routing generates validated Python code in a secure sandbox, automatically creating visualizations when analysis benefits from charts. Multi-turn conversation memory, web search integration, smart query suggestions, 7 chart types with PNG/SVG export, and theme-aware Nord palette across 5 LLM providers. Fully deployable via Docker Compose (local) or Dokploy (production) with automatic admin seeding and fail-fast startup validation. Exposes a public REST API and MCP server for programmatic access and AI agent integrations. Now includes Spectra Pulse: users create Collections, attach CSV/Excel files, and run AI-powered anomaly detection that generates severity-sorted Signal cards with Plotly chart visualizations, statistical evidence, and downloadable Markdown reports — the foundation of the Detect → Explain → What-If analysis pipeline.
+Spectra is an AI-powered data analytics platform that transforms how users interact with their data. Users upload datasets (Excel/CSV), create chat sessions, link multiple files, and ask questions in natural language — receiving instant insights as interactive Data Cards with AI-generated Plotly charts. A ChatGPT-style session-centric UX with sidebar navigation enables multi-file conversations and cross-file analysis. A 6-agent AI system with intelligent query routing generates validated Python code in a secure sandbox, automatically creating visualizations when analysis benefits from charts. Multi-turn conversation memory, web search integration, smart query suggestions, 7 chart types with PNG/SVG export, and theme-aware Nord palette across 5 LLM providers. Fully deployable via Docker Compose (local) or Dokploy (production) with automatic admin seeding and fail-fast startup validation. Exposes a public REST API and MCP server for programmatic access and AI agent integrations. Now includes Spectra Pulse: users create Collections, attach CSV/Excel files, and run AI-powered anomaly detection that generates severity-sorted Signal cards with Plotly chart visualizations, statistical evidence, and downloadable Markdown reports. Users can then launch What-If Scenarios directly from any Signal to generate AI-backed prescriptive scenario cards with refinement chat — the Detect → What-If analysis pipeline.
 
 ## Core Value
 
@@ -19,16 +19,16 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **v0.8.1 UI Fixes & Enhancement (Shipped 2026-03-10):** Closed UI polish gaps — leftbar toggle visible in all workspace sub-views, nav icons aligned, logos removed from Chat/Files panels, Chat rightbar toggles pinned correctly, Credits Used shows actual spend, Signal View mobile-responsive with Chat bridge button, timestamps show date+time throughout.
 
-**v0.8 Spectra Pulse (Detection) (Shipped 2026-03-10):** Full Pulse Analysis module — Collections, file upload, AI-powered anomaly detection pipeline (multi-agent orchestrator + E2B sandbox), Signal cards with Plotly visualizations and statistical evidence, Markdown reports, tier-based workspace access gating, and delete/rename collection management. Establishes the Detect foundation of the Detect → Explain → What-If pipeline.
+**v0.8 Spectra Pulse (Detection + Reporting) (Shipped 2026-03-10):** Full Pulse Analysis module — Collections, file upload, AI-powered anomaly detection pipeline (multi-agent orchestrator + E2B sandbox), Signal cards with Plotly visualizations and statistical evidence, Markdown reports with download, tier-based workspace access gating, and delete/rename collection management. Establishes the Detect foundation of the Detect → What-If pipeline.
 
-**v0.7.12 Spectra Pulse Mockup (Shipped 2026-03-05):** Standalone Next.js mockup (`pulse-mockup/`) covering full Analysis Workspace — Pulse detection, Collections, Guided Investigation, What-If Scenarios, and Admin Workspace Management. Design reference for v0.8–v0.12 implementation milestones.
+**v0.7.12 Spectra Pulse Mockup (Shipped 2026-03-05):** Standalone Next.js mockup (`pulse-mockup/`) covering full Analysis Workspace — Pulse detection, Collections, What-If Scenarios, and Admin Workspace Management. Design reference for v0.8–v0.10 implementation milestones. (Note: Guided Investigation screens exist in the mockup but the feature is dropped from the product roadmap.)
 
 **v0.7 API Services & MCP (Shipped 2026-02-25):** Public REST API and MCP server exposing Spectra's data analysis capabilities for programmatic access and AI agent integrations, with API key management, credit deduction, and usage logging.
 
 ## Current State
 
 **Shipped:** v0.8.1 UI Fixes & Enhancement (2026-03-10)
-**Status:** Milestone complete — planning next milestone (v0.9)
+**Status:** Milestone complete — v0.9 (What-If Scenarios) requirements defined, ready for `/gsd:new-milestone`
 **Codebase:** ~96,000 LOC (Python app + TypeScript/TSX across public frontend + admin frontend + pulse-mockup + Docker/shell infra)
 **Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily + Plotly + APScheduler (backend), Next.js 16 + React 19 + TanStack + Zustand + shadcn/ui + next-themes + Plotly.js + Recharts + Sonner (frontend + admin frontend), Docker + Dokploy + Tailscale (deployment), Next.js + shadcn/ui + Recharts (pulse-mockup)
 
@@ -663,6 +663,11 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | SidebarGroup wrapper required for nav icon alignment | SidebarMenu alone lacks p-2 padding context that SidebarGroup provides; pl-1 on asChild children was insufficient | ✓ Good — icons align correctly with chat history list items below |
 | toLocaleString over toLocaleDateString for Pulse timestamps | toLocaleDateString silently ignores hour/minute options in all browsers; toLocaleString respects them | ✓ Good — date + time display works across all browsers |
 | Chat bridge button opens new tab (window.open) | Same-tab navigation would destroy current Signal View context; new tab preserves the user's place | ✓ Good — users can bridge to Chat without losing Pulse Analysis context |
+| Guided Investigation (Explain) dropped from roadmap | Feature adds complexity with questionable value; What-If alone delivers the prescriptive analytics goal | ✓ Decided 2026-03-14 — Investigation and RootCause data models removed; Scenario links directly to Signal |
+| What-If entry point: direct from Signal, no prerequisite | Requiring a completed investigation before What-If created unnecessary friction and dependency | ✓ Decided 2026-03-14 — "What-If" button always enabled on SignalDetailPanel; Signal data used as context |
+| v0.9 old (Collections/Chat bridge) dropped | Chat-to-Collection bridge deferred to future Chat enhancement; archive UI deferred to future milestone | ✓ Decided 2026-03-14 — v0.9 slot is now What-If Scenarios; v0.10 is Admin |
+| Activity tab in Collection detail (v0.9) | Activity feed in Overview tab buries key collection stats; dedicated tab gives full log with paging | ✓ Decided 2026-03-14 — 5th tab, tabular paginated format, replaces inline feed in Overview |
+| What-If credit costs configurable in v0.9 Admin settings | Credit costs must be editable the moment the feature ships, not deferred to v0.10 admin dashboard | ✓ Decided 2026-03-14 — What-If cost fields added to Platform Settings page in v0.9; v0.10 consolidates UI |
 
 ---
-*Last updated: 2026-03-10 after v0.8.1 milestone*
+*Last updated: 2026-03-14 after quick-7 requirements restructure*
