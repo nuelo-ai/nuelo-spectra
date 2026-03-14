@@ -12,6 +12,7 @@
 - ✅ **v0.7.12 Spectra Pulse Mockup** — Phases 42-46 (shipped 2026-03-05)
 - ✅ **v0.8 Spectra Pulse (Detection)** — Phases 47-52.1 (shipped 2026-03-10)
 - ✅ **v0.8.1 UI Fixes & Enhancement** — Phases 53–54 (shipped 2026-03-10)
+- ✅ **v0.8.2 Chat Query Suggestions Redesign** — quick-5 (shipped 2026-03-10)
 
 ## Phases
 

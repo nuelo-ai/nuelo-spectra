@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.8.1
-milestone_name: UI Fixes & Enhancement
+milestone: v0.8.2
+milestone_name: Chat Query Suggestions Redesign
 status: archived
-stopped_at: v0.8.1 milestone complete and archived
+stopped_at: v0.8.2 complete and archived
 last_updated: "2026-03-10T18:30:00.000Z"
 last_activity: 2026-03-10 — quick-5 complete: QuerySuggestions redesigned with column-per-category card layout
 progress:
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** v0.8.1 shipped — start next milestone with `/gsd:new-milestone`
+**Current focus:** v0.8.2 shipped — start next milestone with `/gsd:new-milestone`
 
 ## Current Position
 
@@ -44,7 +44,7 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7
 
 See PROJECT.md Key Decisions table for full decision log.
 
-Recent decisions affecting v0.8.1 work:
+Recent decisions affecting v0.8.2 work:
 - [Phase 52.1-post-fix]: Per-collection Zustand state requires reactive selectors — getters are not subscriptions
 - [Phase 52.1-post-fix]: CollectionCard uses router.push on Card onClick (not Link wrapper) — avoids nested interactive element navigation issue
 - [Phase 52.1-post-fix]: Pulse 402 insufficient_credits error handled with toast in catch block
@@ -83,9 +83,10 @@ Recent decisions affecting v0.8.1 work:
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 5 | update the query suggestion on the chat dashboard design and style to make it beautiful. use a nice card (Similar to Signal card item on the Signal view). Sort it as multiple columns grouped by the Category. | 2026-03-10 | 43343e9 | [5-update-the-query-suggestion-on-the-chat-](./quick/5-update-the-query-suggestion-on-the-chat-/) |
+| 6 | Fix bug on the signal list panel where the spacing between signal cards is too wide on Safari (h-screen -> h-full, space-y -> flex gap) | 2026-03-14 | 492c7b8 | [6-fix-bug-on-the-signal-list-panel-where-t](./quick/6-fix-bug-on-the-signal-list-panel-where-t/) |
 
 ## Session Continuity
 
-Last session: 2026-03-10T18:30:00.000Z
-Stopped at: Completed quick-5 (QuerySuggestions card layout redesign)
+Last session: 2026-03-14T14:25:47Z
+Stopped at: Completed quick-6 (Safari signal list panel spacing fix)
 Resume with: /gsd:new-milestone
