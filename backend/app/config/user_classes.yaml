@@ -4,13 +4,13 @@ user_classes:
     credits: 100
     reset_policy: none
     workspace_access: true
-    max_active_collections: 10
+    max_active_collections: 1
   free:
     display_name: "Free"
     credits: 10
     reset_policy: weekly
     workspace_access: false
-    max_active_collections: 0
+    max_active_collections: 1
   standard:
     display_name: "Standard"
     credits: 100
