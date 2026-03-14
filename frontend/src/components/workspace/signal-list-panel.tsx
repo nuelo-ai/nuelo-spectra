@@ -73,7 +73,7 @@ export function SignalListPanel({
 
       {/* Signal List */}
       <div className="flex-1 overflow-y-auto min-h-0">
-        <div className="p-2 space-y-1.5">
+        <div className="p-2 flex flex-col gap-1.5">
           {sorted.map((signal) => {
             const severity = severityConfig[signal.severity];
             return (
