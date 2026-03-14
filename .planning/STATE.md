@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.8.1
-milestone_name: UI Fixes & Enhancement
+milestone: v0.8.2
+milestone_name: Chat Query Suggestions Redesign
 status: archived
-stopped_at: v0.8.1 milestone complete and archived
+stopped_at: v0.8.2 complete and archived
 last_updated: "2026-03-10T18:30:00.000Z"
 last_activity: 2026-03-10 — quick-5 complete: QuerySuggestions redesigned with column-per-category card layout
 progress:
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** v0.8.1 shipped — start next milestone with `/gsd:new-milestone`
+**Current focus:** v0.8.2 shipped — start next milestone with `/gsd:new-milestone`
 
 ## Current Position
 
@@ -44,7 +44,7 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7
 
 See PROJECT.md Key Decisions table for full decision log.
 
-Recent decisions affecting v0.8.1 work:
+Recent decisions affecting v0.8.2 work:
 - [Phase 52.1-post-fix]: Per-collection Zustand state requires reactive selectors — getters are not subscriptions
 - [Phase 52.1-post-fix]: CollectionCard uses router.push on Card onClick (not Link wrapper) — avoids nested interactive element navigation issue
 - [Phase 52.1-post-fix]: Pulse 402 insufficient_credits error handled with toast in catch block
