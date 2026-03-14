@@ -84,7 +84,7 @@ Recent decisions affecting v0.8.3 work:
 |---|-------------|------|--------|-----------|
 | 5 | update the query suggestion on the chat dashboard design and style to make it beautiful. use a nice card (Similar to Signal card item on the Signal view). Sort it as multiple columns grouped by the Category. | 2026-03-10 | 43343e9 | [5-update-the-query-suggestion-on-the-chat-](./quick/5-update-the-query-suggestion-on-the-chat-/) |
 | 6 | Fix bug on the signal list panel where the spacing between signal cards is too wide on Safari (h-screen -> h-full, space-y -> flex gap) | 2026-03-14 | 492c7b8 | [6-fix-bug-on-the-signal-list-panel-where-t](./quick/6-fix-bug-on-the-signal-list-panel-where-t/) |
-| 7 | update requirements docs: move Reporting to v0.8, drop Guided Investigation, keep What-If, create v2 of Spectra-Pulse-Requirement.md | 2026-03-14 | TBD | [7-update-requirements-docs-move-reporting-](./quick/7-update-requirements-docs-move-reporting-/) |
+| 7 | update requirements docs: move Reporting to v0.8, drop Guided Investigation, keep What-If, create v2 of Spectra-Pulse-Requirement.md | 2026-03-14 | eebd17b | [7-update-requirements-docs-move-reporting-](./quick/7-update-requirements-docs-move-reporting-/) |
 
 ## Session Continuity
 
