@@ -46,6 +46,10 @@ interface SignalDetailPanelProps {
 }
 
 export function SignalDetailPanel({ signal, onBack, collectionFiles = [], collectionId }: SignalDetailPanelProps) {
+  const createSession = useCreateSession();
+  const { mutateAsync: linkFileAsync } = useLinkFile();
+  const [isBridging, setIsBridging] = useState(false);
+
   if (!signal) {
     return (
       <div className="flex-1 flex items-center justify-center h-full">
@@ -57,10 +61,6 @@ export function SignalDetailPanel({ signal, onBack, collectionFiles = [], collec
   }
 
   const severity = severityConfig[signal.severity];
-
-  const createSession = useCreateSession();
-  const { mutateAsync: linkFileAsync } = useLinkFile();
-  const [isBridging, setIsBridging] = useState(false);
 
   const handleChatBridge = async () => {
     setIsBridging(true);
