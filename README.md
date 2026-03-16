@@ -6,19 +6,7 @@ AI-powered data analytics platform. Chat with your data through natural language
 
 Spectra bridges the gap between raw data and actionable insights. Upload your datasets, and a multi-agent AI system analyzes data structure, generates Python code, executes it in a secure sandbox, and presents results — either through a conversational chat interface or the Pulse Analysis workspace.
 
-**Key Differentiators:**
-- **Code Transparency**: See and verify the Python code generated for each analysis
-- **Multi-File Analysis**: Link multiple datasets to a single conversation for cross-file queries
-- **Multi-Agent Accuracy**: 6 specialized AI agents ensure accurate, safe results
-- **Spectra Pulse**: Automated anomaly detection — upload files, run Pulse, get severity-sorted Signal cards with Plotly charts and statistical evidence
-- **Intelligent Visualization**: AI determines when charts enhance analysis and generates interactive Plotly visualizations
-- **Intelligent Routing**: Manager Agent skips code generation for simple queries (~40% faster)
-- **Multi-Provider LLM**: Choose from Anthropic, OpenAI, Google, Ollama, or OpenRouter per agent
-- **Production Security**: E2B Firecracker microVM isolation for safe code execution
-- **Admin Portal**: Internal admin dashboard with user management, credit system, invitations, and platform settings
-- **Public REST API**: Versioned API v1 for programmatic file management, context retrieval, and synchronous data analysis
-- **MCP Server**: 6 curated tools for Claude Desktop, Claude Code, and any MCP-compatible AI agent
-- **API Key Management**: User self-service and admin key management with SHA-256 hashing and credit tracking
+![Spectra screenshot](spectra-screenshot.png)
 
 ## Features
 
@@ -50,18 +38,6 @@ Spectra bridges the gap between raw data and actionable insights. Upload your da
 | **Admin Frontend** | Next.js 16, React 19, TanStack Query, Zustand, shadcn/ui, Recharts |
 | **Email** | aiosmtplib, Jinja2 templates, DB-backed reset tokens |
 
-## AI Agent Architecture
-
-Spectra uses 6 specialized agents orchestrated by LangGraph:
-
-1. **Manager Agent** — Routes queries to optimal path: memory-only response, code modification, or fresh analysis
-2. **Onboarding Agent** — Analyzes uploaded file structure, generates data summary and query suggestions
-3. **Coding Agent** — Generates or modifies Python pandas code from natural language queries
-4. **Code Checker Agent** — Validates code via AST analysis, checks library allowlist and unsafe operations
-5. **Data Analysis Agent** — Interprets execution results, generates explanations, optionally searches web for context
-6. **Visualization Agent** — Generates Plotly chart code when analysis benefits from visual representation
-
-All agents use YAML-configured prompts and support per-agent LLM provider/model configuration.
 
 ## Getting Started
 
