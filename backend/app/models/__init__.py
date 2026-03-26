@@ -16,10 +16,16 @@ from app.models.collection import Collection, CollectionFile
 from app.models.signal import Signal
 from app.models.report import Report
 from app.models.pulse_run import PulseRun, pulse_run_files
+from app.models.subscription import Subscription
+from app.models.payment_history import PaymentHistory
+from app.models.credit_package import CreditPackage
+from app.models.stripe_event import StripeEvent
+from app.models.discount_code import DiscountCode
 
 __all__ = [
     "Base", "User", "File", "ChatMessage", "ChatSession", "session_files",
     "SearchQuota", "PasswordResetToken", "AdminAuditLog", "UserCredit",
     "CreditTransaction", "Invitation", "PlatformSetting", "ApiKey", "ApiUsageLog",
     "Collection", "CollectionFile", "Signal", "Report", "PulseRun", "pulse_run_files",
+    "Subscription", "PaymentHistory", "CreditPackage", "StripeEvent", "DiscountCode",
 ]

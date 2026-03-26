@@ -27,6 +27,9 @@ async function proxyRequest(request: NextRequest) {
   const contentType = request.headers.get("content-type");
   if (contentType) headers["Content-Type"] = contentType;
 
+  const stripeSignature = request.headers.get("stripe-signature");
+  if (stripeSignature) headers["Stripe-Signature"] = stripeSignature;
+
   const body =
     request.method !== "GET" && request.method !== "HEAD"
       ? await request.arrayBuffer()

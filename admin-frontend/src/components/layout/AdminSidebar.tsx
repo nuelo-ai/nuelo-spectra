@@ -10,6 +10,8 @@ import {
   CreditCard,
   Settings,
   ScrollText,
+  Receipt,
+  Tag,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -50,6 +52,13 @@ const navSections: NavSection[] = [
       { label: "Credits", href: "/credits", icon: CreditCard },
       { label: "Settings", href: "/settings", icon: Settings },
       { label: "Audit Log", href: "/audit-log", icon: ScrollText },
+    ],
+  },
+  {
+    title: "Billing",
+    items: [
+      { label: "Billing Settings", href: "/billing-settings", icon: Receipt },
+      { label: "Discount Codes", href: "/discount-codes", icon: Tag },
     ],
   },
 ];

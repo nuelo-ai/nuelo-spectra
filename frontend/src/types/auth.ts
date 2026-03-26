@@ -42,6 +42,8 @@ export interface UserResponse {
   is_active: boolean;
   is_admin: boolean;
   created_at: string;
+  user_class: string;
+  trial_expires_at: string | null;
 }
 
 export interface ProfileUpdateRequest {

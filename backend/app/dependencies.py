@@ -19,6 +19,18 @@ from app.services.auth import get_user_by_id
 from app.services.user_class import get_class_config
 from app.utils.security import verify_token
 
+# Paths exempt from trial expiration enforcement.
+# Prefix-matched: any path starting with these is exempt.
+TRIAL_EXEMPT_PREFIXES = (
+    "/auth/",
+    "/credits/balance",
+    "/admin/",
+    "/health",
+    "/version",
+    "/webhooks/",
+    "/subscriptions/",
+)
+
 # OAuth2 scheme for token extraction (tokenUrl points to login endpoint)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
@@ -53,7 +65,29 @@ def is_user_deactivated(user_id: UUID) -> bool:
     return user_id in _deactivated_users
 
 
+def _check_trial_expiration(user: User, request: Request) -> None:
+    """Raise 402 if user is on expired free trial and path is not exempt."""
+    if (
+        user.user_class == "free_trial"
+        and user.trial_expires_at is not None
+        and user.trial_expires_at < datetime.now(timezone.utc)
+    ):
+        path = request.url.path
+        if not any(path.startswith(prefix) for prefix in TRIAL_EXEMPT_PREFIXES):
+            days_overdue = (datetime.now(timezone.utc) - user.trial_expires_at).days
+            raise HTTPException(
+                status_code=402,
+                detail={
+                    "detail": "Trial expired",
+                    "code": "trial_expired",
+                    "trial_expires_at": user.trial_expires_at.isoformat(),
+                    "days_overdue": days_overdue,
+                },
+            )
+
+
 async def get_current_user(
+    request: Request,
     token: Annotated[str, Depends(oauth2_scheme)],
     db: Annotated[AsyncSession, Depends(get_db)],
     settings: Annotated[Settings, Depends(get_settings)]
@@ -109,6 +143,9 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"}
         )
 
+    # Trial expiration check
+    _check_trial_expiration(user, request)
+
     return user
 
 
@@ -151,6 +188,7 @@ async def get_authenticated_user(
             )
         user, api_key_id = result
         request.state.api_key_id = api_key_id
+        _check_trial_expiration(user, request)
         await db.commit()
         return user
 
@@ -165,6 +203,7 @@ async def get_authenticated_user(
                 detail="User not found or inactive",
             )
         request.state.api_key_id = None
+        _check_trial_expiration(user, request)
         return user
     except HTTPException:
         # Re-raise JWT-specific errors (expired token, invalid token, etc.) as-is

@@ -11,6 +11,7 @@ from app.models.credit_transaction import CreditTransaction
 from app.models.user import User
 from app.models.user_credit import UserCredit
 from app.schemas.credit import CreditBalanceResponse, CreditDeductionResult
+from app.services.platform_settings import get as get_platform_setting
 from app.services.user_class import get_class_config
 
 
@@ -68,8 +69,11 @@ class CreditService:
                 error_message="No credit record found for user.",
             )
 
-        current_balance = Decimal(str(credit.balance))
-        if current_balance < cost:
+        current_sub = Decimal(str(credit.balance))
+        current_purchased = Decimal(str(credit.purchased_balance))
+        total_available = current_sub + current_purchased
+
+        if total_available < cost:
             # Get user signup date for next reset calculation
             user_row = await db.execute(
                 select(User.created_at).where(User.id == user_id)
@@ -79,28 +83,37 @@ class CreditService:
             next_reset = CreditService._get_next_reset_date(
                 signup_date, credit.last_reset_at, reset_policy
             )
-            reset_msg = "You're out of credits. Please contact your administrator."
             return CreditDeductionResult(
                 success=False,
-                balance=current_balance,
-                error_message=reset_msg,
+                balance=total_available,
+                error_message="You're out of credits. Please contact your administrator.",
                 next_reset=next_reset,
             )
 
-        # Deduct and record
-        credit.balance = current_balance - cost
+        # Dual-balance deduction: subscription first, purchased second
+        if current_sub >= cost:
+            credit.balance = current_sub - cost
+            balance_pool = "subscription"
+        else:
+            remainder = cost - current_sub
+            credit.balance = Decimal("0")
+            credit.purchased_balance = current_purchased - remainder
+            balance_pool = "split" if current_sub > Decimal("0") else "purchased"
+
         transaction = CreditTransaction(
             user_id=user_id,
             amount=-cost,
-            balance_after=credit.balance,
+            balance_after=Decimal(str(credit.balance)),
             transaction_type="usage",
             api_key_id=api_key_id,
+            balance_pool=balance_pool,
         )
         db.add(transaction)
         await db.flush()
 
         return CreditDeductionResult(
-            success=True, balance=Decimal(str(credit.balance))
+            success=True,
+            balance=Decimal(str(credit.balance)) + Decimal(str(credit.purchased_balance)),
         )
 
     @staticmethod
@@ -119,18 +132,28 @@ class CreditService:
         display_name = class_config.get("display_name", user_class)
         is_unlimited = reset_policy == "unlimited"
 
+        # Platform-level monetization toggle (cached with 30s TTL)
+        monetization_enabled = await get_platform_setting(db, "monetization_enabled")
+        if monetization_enabled is None:
+            monetization_enabled = True
+
         if credit is None:
             return CreditBalanceResponse(
                 balance=Decimal("-1") if is_unlimited else Decimal("0"),
+                purchased_balance=Decimal("0"),
+                total_balance=Decimal("-1") if is_unlimited else Decimal("0"),
                 tier_allocation=tier_allocation,
                 reset_policy=reset_policy,
                 next_reset_at=None,
                 is_low=False if is_unlimited else True,
                 is_unlimited=is_unlimited,
                 display_class=display_name,
+                monetization_enabled=monetization_enabled,
             )
 
         balance = Decimal(str(credit.balance))
+        purchased = Decimal(str(credit.purchased_balance))
+        total = balance + purchased
 
         # Get signup date for next_reset calculation
         user_result = await db.execute(
@@ -142,23 +165,26 @@ class CreditService:
             signup_date, credit.last_reset_at, reset_policy
         )
 
-        # Low credit: balance < 20% of allocation OR balance < 3, whichever triggers first
+        # Low credit: total < 20% of allocation OR total < 3, whichever triggers first
         if is_unlimited:
             is_low = False
         elif tier_allocation > 0:
             threshold_pct = Decimal(str(tier_allocation)) * Decimal("0.2")
-            is_low = balance < threshold_pct or balance < Decimal("3")
+            is_low = total < threshold_pct or total < Decimal("3")
         else:
-            is_low = balance < Decimal("3")
+            is_low = total < Decimal("3")
 
         return CreditBalanceResponse(
             balance=balance,
+            purchased_balance=purchased,
+            total_balance=total,
             tier_allocation=tier_allocation,
             reset_policy=reset_policy,
             next_reset_at=next_reset_at,
             is_low=is_low,
             is_unlimited=is_unlimited,
             display_class=display_name,
+            monetization_enabled=monetization_enabled,
         )
 
     @staticmethod
@@ -196,6 +222,7 @@ class CreditService:
             transaction_type="admin_adjustment",
             reason=reason,
             admin_id=admin_id,
+            balance_pool="subscription",
         )
         db.add(transaction)
         await db.flush()
@@ -226,7 +253,7 @@ class CreditService:
         if user_credit is None:
             return  # No credit record = unlimited user, nothing to refund
 
-        user_credit.balance += amount
+        user_credit.purchased_balance = Decimal(str(user_credit.purchased_balance)) + amount
 
         txn = CreditTransaction(
             user_id=user_id,
@@ -234,6 +261,7 @@ class CreditService:
             balance_after=float(user_credit.balance),
             transaction_type="api_refund",
             reason=reason,
+            balance_pool="purchased",
         )
         db.add(txn)
         await db.flush()
@@ -260,6 +288,7 @@ class CreditService:
             amount=new_balance - old_balance,
             balance_after=new_balance,
             transaction_type=transaction_type,
+            balance_pool="subscription",
         )
         db.add(transaction)
         await db.flush()
@@ -334,6 +363,7 @@ class CreditService:
                 User.user_class,
                 func.count(UserCredit.id).label("user_count"),
                 func.avg(UserCredit.balance).label("avg_balance"),
+                func.avg(UserCredit.purchased_balance).label("avg_purchased"),
             )
             .join(UserCredit, UserCredit.user_id == User.id)
             .group_by(User.user_class)
@@ -343,6 +373,7 @@ class CreditService:
                 "user_class": row.user_class,
                 "user_count": row.user_count,
                 "avg_balance": float(row.avg_balance) if row.avg_balance else 0.0,
+                "avg_purchased": float(row.avg_purchased) if row.avg_purchased else 0.0,
             }
             for row in result.all()
         ]

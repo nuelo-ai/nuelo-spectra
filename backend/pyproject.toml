@@ -28,6 +28,7 @@ dependencies = [
     "langchain-openai",
     "langchain-google-genai",
     "langchain-ollama>=0.2.0",
+    "stripe>=14.0.0,<15.0",
     "sse-starlette>=3.2.0",
     "e2b-code-interpreter>=1.0.2",
     "tavily-python>=0.7.0",

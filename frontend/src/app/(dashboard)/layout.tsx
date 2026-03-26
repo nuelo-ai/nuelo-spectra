@@ -8,6 +8,8 @@ import { UnifiedSidebar } from "@/components/sidebar/UnifiedSidebar";
 import { LinkedFilesPanel } from "@/components/session/LinkedFilesPanel";
 import { useSessionStore } from "@/stores/sessionStore";
 import { useSessionDetail } from "@/hooks/useChatSessions";
+import { TrialBanner } from "@/components/trial/TrialBanner";
+import { TrialExpiredOverlay } from "@/components/trial/TrialExpiredOverlay";
 
 /**
  * Dashboard layout - protected route that requires authentication.
@@ -50,9 +52,12 @@ export default function DashboardLayout({
     <SidebarProvider defaultOpen={true}>
       <div className="flex h-screen overflow-hidden w-full">
         <UnifiedSidebar />
-        <main className="flex-1 overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out">
-          {children}
-        </main>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <TrialBanner />
+          <main className="flex-1 overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out">
+            {children}
+          </main>
+        </div>
         {currentSessionId && (
           <LinkedFilesPanel
             sessionId={currentSessionId}
@@ -60,6 +65,7 @@ export default function DashboardLayout({
           />
         )}
       </div>
+      <TrialExpiredOverlay />
     </SidebarProvider>
   );
 }

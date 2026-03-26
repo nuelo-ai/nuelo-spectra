@@ -219,6 +219,278 @@ async def send_invite_email(
         return False
 
 
+async def send_payment_failed_email(
+    to_email: str,
+    first_name: str | None,
+    settings: Settings,
+) -> bool:
+    """Send payment failure notification email via SMTP or log to console in dev mode."""
+    display_name = first_name or "there"
+    billing_url = f"{settings.frontend_url}/settings/billing"
+
+    if not is_smtp_configured(settings):
+        logger.info(
+            "Payment failed email (dev mode)",
+            extra={"email": to_email, "event": "email_dev_mode", "billing_url": billing_url},
+        )
+        logger.info("=" * 60)
+        logger.info("PAYMENT FAILED (Dev Mode - SMTP not configured)")
+        logger.info(f"  To: {to_email}")
+        logger.info(f"  Billing URL: {billing_url}")
+        logger.info("=" * 60)
+        return True
+
+    try:
+        html_template = _jinja_env.get_template("payment_failed.html")
+        text_template = _jinja_env.get_template("payment_failed.txt")
+
+        template_vars = {"first_name": display_name, "billing_url": billing_url}
+
+        html_body = html_template.render(**template_vars)
+        text_body = text_template.render(**template_vars)
+
+        msg = EmailMessage()
+        msg["Subject"] = "Spectra - Payment Failed"
+        msg["From"] = f"{settings.smtp_from_name} <{settings.smtp_from_email}>"
+        msg["To"] = to_email
+
+        msg.set_content(text_body)
+        msg.add_alternative(html_body, subtype="html")
+
+        await aiosmtplib.send(
+            msg,
+            hostname=settings.smtp_host,
+            port=settings.smtp_port,
+            username=settings.smtp_user,
+            password=settings.smtp_pass,
+            start_tls=True,
+        )
+
+        logger.info("Payment failed email sent", extra={"email": to_email, "event": "email_sent"})
+        return True
+
+    except Exception as e:
+        logger.error(
+            "Failed to send payment failed email",
+            extra={"email": to_email, "event": "email_failed", "error": str(e)},
+        )
+        return False
+
+
+async def send_subscription_confirmation_email(
+    to_email: str,
+    first_name: str | None,
+    plan_name: str,
+    amount_display: str,
+    settings: Settings,
+) -> bool:
+    """Send subscription activation confirmation email."""
+    display_name = first_name or "there"
+    billing_url = f"{settings.frontend_url}/settings/billing"
+
+    if not is_smtp_configured(settings):
+        logger.info(
+            "Subscription confirmation email (dev mode)",
+            extra={"email": to_email, "event": "email_dev_mode", "plan": plan_name},
+        )
+        logger.info("=" * 60)
+        logger.info("SUBSCRIPTION CONFIRMED (Dev Mode)")
+        logger.info(f"  To: {to_email}")
+        logger.info(f"  Plan: {plan_name}")
+        logger.info(f"  Amount: {amount_display}")
+        logger.info("=" * 60)
+        return True
+
+    try:
+        html_template = _jinja_env.get_template("subscription_confirmation.html")
+        text_template = _jinja_env.get_template("subscription_confirmation.txt")
+
+        template_vars = {
+            "first_name": display_name,
+            "plan_name": plan_name,
+            "amount_display": amount_display,
+            "billing_url": billing_url,
+        }
+
+        html_body = html_template.render(**template_vars)
+        text_body = text_template.render(**template_vars)
+
+        msg = EmailMessage()
+        msg["Subject"] = "Spectra - Subscription Activated"
+        msg["From"] = f"{settings.smtp_from_name} <{settings.smtp_from_email}>"
+        msg["To"] = to_email
+
+        msg.set_content(text_body)
+        msg.add_alternative(html_body, subtype="html")
+
+        await aiosmtplib.send(
+            msg,
+            hostname=settings.smtp_host,
+            port=settings.smtp_port,
+            username=settings.smtp_user,
+            password=settings.smtp_pass,
+            start_tls=True,
+        )
+
+        logger.info(
+            "Subscription confirmation email sent",
+            extra={"email": to_email, "event": "email_sent"},
+        )
+        return True
+
+    except Exception as e:
+        logger.error(
+            "Failed to send subscription confirmation email",
+            extra={"email": to_email, "event": "email_failed", "error": str(e)},
+        )
+        return False
+
+
+async def send_topup_confirmation_email(
+    to_email: str,
+    first_name: str | None,
+    credit_amount: int,
+    amount_display: str,
+    settings: Settings,
+) -> bool:
+    """Send credit top-up confirmation email."""
+    display_name = first_name or "there"
+    billing_url = f"{settings.frontend_url}/settings/billing"
+
+    if not is_smtp_configured(settings):
+        logger.info(
+            "Top-up confirmation email (dev mode)",
+            extra={
+                "email": to_email,
+                "event": "email_dev_mode",
+                "credits": credit_amount,
+            },
+        )
+        logger.info("=" * 60)
+        logger.info("TOP-UP CONFIRMED (Dev Mode)")
+        logger.info(f"  To: {to_email}")
+        logger.info(f"  Credits: {credit_amount}")
+        logger.info(f"  Amount: {amount_display}")
+        logger.info("=" * 60)
+        return True
+
+    try:
+        html_template = _jinja_env.get_template("topup_confirmation.html")
+        text_template = _jinja_env.get_template("topup_confirmation.txt")
+
+        template_vars = {
+            "first_name": display_name,
+            "credit_amount": credit_amount,
+            "amount_display": amount_display,
+            "billing_url": billing_url,
+        }
+
+        html_body = html_template.render(**template_vars)
+        text_body = text_template.render(**template_vars)
+
+        msg = EmailMessage()
+        msg["Subject"] = "Spectra - Credits Added"
+        msg["From"] = f"{settings.smtp_from_name} <{settings.smtp_from_email}>"
+        msg["To"] = to_email
+
+        msg.set_content(text_body)
+        msg.add_alternative(html_body, subtype="html")
+
+        await aiosmtplib.send(
+            msg,
+            hostname=settings.smtp_host,
+            port=settings.smtp_port,
+            username=settings.smtp_user,
+            password=settings.smtp_pass,
+            start_tls=True,
+        )
+
+        logger.info(
+            "Top-up confirmation email sent",
+            extra={"email": to_email, "event": "email_sent"},
+        )
+        return True
+
+    except Exception as e:
+        logger.error(
+            "Failed to send top-up confirmation email",
+            extra={"email": to_email, "event": "email_failed", "error": str(e)},
+        )
+        return False
+
+
+async def send_renewal_confirmation_email(
+    to_email: str,
+    first_name: str | None,
+    plan_name: str,
+    amount_display: str,
+    credit_allocation: int,
+    settings: Settings,
+) -> bool:
+    """Send subscription renewal confirmation email."""
+    display_name = first_name or "there"
+    billing_url = f"{settings.frontend_url}/settings/billing"
+
+    if not is_smtp_configured(settings):
+        logger.info(
+            "Renewal confirmation email (dev mode)",
+            extra={"email": to_email, "event": "email_dev_mode", "plan": plan_name},
+        )
+        logger.info("=" * 60)
+        logger.info("RENEWAL CONFIRMED (Dev Mode)")
+        logger.info(f"  To: {to_email}")
+        logger.info(f"  Plan: {plan_name}")
+        logger.info(f"  Amount: {amount_display}")
+        logger.info(f"  Credits: {credit_allocation}")
+        logger.info("=" * 60)
+        return True
+
+    try:
+        html_template = _jinja_env.get_template("renewal_confirmation.html")
+        text_template = _jinja_env.get_template("renewal_confirmation.txt")
+
+        template_vars = {
+            "first_name": display_name,
+            "plan_name": plan_name,
+            "amount_display": amount_display,
+            "credit_allocation": credit_allocation,
+            "billing_url": billing_url,
+        }
+
+        html_body = html_template.render(**template_vars)
+        text_body = text_template.render(**template_vars)
+
+        msg = EmailMessage()
+        msg["Subject"] = "Spectra - Subscription Renewed"
+        msg["From"] = f"{settings.smtp_from_name} <{settings.smtp_from_email}>"
+        msg["To"] = to_email
+
+        msg.set_content(text_body)
+        msg.add_alternative(html_body, subtype="html")
+
+        await aiosmtplib.send(
+            msg,
+            hostname=settings.smtp_host,
+            port=settings.smtp_port,
+            username=settings.smtp_user,
+            password=settings.smtp_pass,
+            start_tls=True,
+        )
+
+        logger.info(
+            "Renewal confirmation email sent",
+            extra={"email": to_email, "event": "email_sent"},
+        )
+        return True
+
+    except Exception as e:
+        logger.error(
+            "Failed to send renewal confirmation email",
+            extra={"email": to_email, "event": "email_failed", "error": str(e)},
+        )
+        return False
+
+
 async def validate_smtp_connection(settings: Settings) -> bool:
     """Validate SMTP connection at application startup.
 

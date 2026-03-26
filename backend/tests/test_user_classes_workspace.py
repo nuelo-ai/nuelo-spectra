@@ -1,13 +1,16 @@
-"""Tests for ADMIN-01: workspace tier config in user_classes.yaml."""
+"""Tests for ADMIN-01: workspace tier config in user_classes.yaml.
+
+Covers tiers: free_trial, on_demand, standard, premium, internal.
+"""
 
 from app.services.user_class import get_user_classes, invalidate_cache
 
 
 def test_workspace_access_exists_for_all_tiers():
-    """All 5 tiers must have workspace_access key."""
+    """All tiers must have workspace_access key."""
     invalidate_cache()
     classes = get_user_classes()
-    expected_tiers = ["free_trial", "free", "standard", "premium", "internal"]
+    expected_tiers = ["free_trial", "on_demand", "standard", "premium", "internal"]
     for tier in expected_tiers:
         assert tier in classes, f"Tier '{tier}' missing from user_classes.yaml"
         assert "workspace_access" in classes[tier], (
@@ -21,7 +24,7 @@ def test_workspace_access_correct_values():
     classes = get_user_classes()
     expected = {
         "free_trial": True,
-        "free": False,
+        "on_demand": True,
         "standard": True,
         "premium": True,
         "internal": True,
@@ -34,10 +37,10 @@ def test_workspace_access_correct_values():
 
 
 def test_max_active_collections_exists_for_all_tiers():
-    """All 5 tiers must have max_active_collections key."""
+    """All tiers must have max_active_collections key."""
     invalidate_cache()
     classes = get_user_classes()
-    expected_tiers = ["free_trial", "free", "standard", "premium", "internal"]
+    expected_tiers = ["free_trial", "on_demand", "standard", "premium", "internal"]
     for tier in expected_tiers:
         assert "max_active_collections" in classes[tier], (
             f"Tier '{tier}' missing max_active_collections key"
@@ -50,7 +53,7 @@ def test_max_active_collections_correct_values():
     classes = get_user_classes()
     expected = {
         "free_trial": 1,
-        "free": 0,
+        "on_demand": 3,
         "standard": 5,
         "premium": -1,
         "internal": -1,

@@ -383,6 +383,10 @@ app.include_router(health.router)
 if mode != "api":
     app.include_router(health_llm_router)
 app.include_router(version.router)           # GET /version — for public frontend proxy
+
+# Webhooks must be accessible in ALL modes (Stripe calls directly)
+from app.routers import webhooks
+app.include_router(webhooks.router)
 app.include_router(version.router, prefix="/api")  # GET /api/version — for admin frontend proxy
 
 # Public routes (public and dev modes)
@@ -394,8 +398,9 @@ if mode in ("public", "dev"):
     app.include_router(chat_sessions.router)
     app.include_router(search.router)
 
-    from app.routers import credits
+    from app.routers import credits, subscriptions
     app.include_router(credits.router)
+    app.include_router(subscriptions.router)
 
     from app.routers import credit_costs
     app.include_router(credit_costs.router)

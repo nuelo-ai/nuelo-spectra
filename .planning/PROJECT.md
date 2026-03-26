@@ -28,7 +28,7 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 ## Current State
 
 **Shipped:** v0.8.1 UI Fixes & Enhancement (2026-03-10)
-**Status:** Milestone complete — v0.9 (What-If Scenarios) requirements defined, ready for `/gsd:new-milestone`
+**Status:** Monetization milestone in progress — Phase 59 (Admin Billing Tools) complete, all 5 phases done
 **Codebase:** ~96,000 LOC (Python app + TypeScript/TSX across public frontend + admin frontend + pulse-mockup + Docker/shell infra)
 **Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily + Plotly + APScheduler (backend), Next.js 16 + React 19 + TanStack + Zustand + shadcn/ui + next-themes + Plotly.js + Recharts + Sonner (frontend + admin frontend), Docker + Dokploy + Tailscale (deployment), Next.js + shadcn/ui + Recharts (pulse-mockup)
 
@@ -80,6 +80,19 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 - ✅ Spectra Pulse: Inline detection progress banner, sonner toast on completion with signal count, re-run confirmation dialog, credit cost pre-check (402) + atomic deduction + automatic refund
 - ✅ Spectra Pulse: Tier-based workspace access gating (workspace_access + max_active_collections per tier in user_classes.yaml), runtime-configurable credit cost via Admin Portal
 - ✅ Spectra Pulse: (workspace) route group with own sidebar layout and Hex.tech dark palette (independent of chat interface)
+
+- ✅ Trial expiration enforcement: backend 402 blocking for expired free_trial users with exempt paths (auth, credits, admin, health)
+- ✅ Trial UI: countdown banner (amber urgency at ≤3 days/≤10 credits, session-dismissible), blocking overlay for expired trials (self-hides on /settings/*), placeholder plan page with 3 tier cards
+- ✅ Frontend trial data layer: useTrialState hook, apiClient 402 interception with trial-expired event
+- ✅ Stripe billing backend: SubscriptionService (customer creation, checkout sessions, 5 webhook handlers), webhook router with signature verification and event deduplication, subscription/credits checkout endpoints, payment failure email notifications, 31 passing billing tests
+- ✅ Billing UI: Plan Selection page (/settings/plan) with live pricing from backend, upgrade/downgrade confirmation dialogs with Stripe proration preview, Stripe hosted checkout redirect for new subscriptions
+- ✅ Manage Plan page (/settings/billing) with plan status card, credit balance (subscription + purchased), credit top-up purchase flow, billing history table, post-Stripe redirect toast handling
+- ✅ Settings restructured with tab navigation (Profile, API Keys, Plan, Billing)
+- ✅ Payment confirmation email templates (subscription, top-up, renewal) integrated into webhook handlers
+- ✅ On-demand switch with confirmation dialog (trial and subscribed variants), cancel at period end
+- ✅ Admin billing tools: user billing detail (subscription status, payment history, Stripe event log), force-set tier with Stripe sync, admin cancel subscription, refund with credit deduction
+- ✅ Admin billing settings: monetization toggle, trial duration, trial credits, subscription pricing with Stripe Price auto-creation
+- ✅ Admin discount codes: CRUD with Stripe Coupon + Promotion Code sync, promotion code entry enabled on Checkout
 
 **Known limitations:**
 - E2B sandboxes created per-execution (no warm pools - ~150ms cold start per query)
@@ -520,13 +533,29 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **v0.8.1 Total: 12/12 requirements satisfied (100%)**
 
-## Next Milestone
+## Current Milestone: Monetization
 
-<!-- Requirements for next milestone defined in .planning/REQUIREMENTS.md after /gsd:new-milestone -->
+**Goal:** Add payment gateway (Stripe), subscription management, self-service billing, tier restructure, and admin billing tools to enable Spectra's revenue model.
+
+**Target features:**
+- Tier restructure: Free Trial (temporary 14-day), On Demand, Basic, Premium
+- Stripe integration: Checkout Sessions, Webhooks, Subscription lifecycle
+- Trial expiration mechanism with blocking overlay
+- Plan Selection page (`/settings/plan`) and Manage Plan page (`/settings/billing`)
+- Credit top-up purchases (predefined packages)
+- Subscription upgrade/downgrade/cancel flows
+- Credit deduction priority (subscription first, purchased second)
+- Admin: manual subscription override, cancel on behalf of user, billing event log, refund capability
+- Data model additions (Subscription, PaymentHistory, CreditPackage tables)
+- New billing API endpoints + Stripe webhook handler
+
+**Development workflow:** Feature-based (see FEATURE-WORKFLOW.md). Version assigned at release time, not at planning. GSD milestone on `feature/monetization-*` branch.
+
+**Source requirements:** `requirements/monetization-milestone-plan.md`, `requirements/monetization-requirement.md`
 
 ### Active
 
-*(No active requirements — start next milestone with `/gsd:new-milestone`)*
+*(Requirements defined in `.planning/REQUIREMENTS.md` after scoping)*
 
 ### Out of Scope
 
@@ -535,7 +564,6 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 - **Full Collections organization** — Basic file list sufficient; collections add complexity
 - **Google OAuth authentication** — Email/password sufficient for current validation
 - **PowerPoint export** — PDF export proves the concept first
-- **Billing and subscription management** — Validate product-market fit before payment infrastructure
 - **S3/cloud file storage** — Local storage sufficient; cloud storage adds deployment complexity
 - **Real-time collaboration** — Single-user experience for now
 - **Mobile native apps** — Web-responsive design only
@@ -599,7 +627,7 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | DB-backed password reset tokens (not JWT) | Single-use, revocable, auditable | ✓ Good — more secure than JWT-based resets |
 | LLM-generated query suggestions | Dataset-specific, not hardcoded templates | ✓ Good — suggestions reflect actual data structure |
 | Local file storage (defer S3) | Simpler deployment, fewer dependencies | ✓ Good — named volumes work for current scale |
-| Skip billing for v1 | Need product validation first | — Pending |
+| Skip billing for v1 | Need product validation first | ✓ Revisited — Monetization milestone started 2026-03-18 |
 | Chat-session-centric UX (v0.3) | Enable multi-file analysis, ChatGPT-style conversations | ✓ Good — ChatGPT-style sidebar + sessions shipped, UAT passed |
 | Cross-file analysis support | AI can reference all linked files in a single query | ✓ Good — ContextAssembler with named DataFrames and join hints works well |
 | At least one file required per chat | Prevents empty chats, maintains data analysis focus | ✓ Good — dual feedback (toast + inline warning) provides clear UX |
@@ -670,4 +698,4 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | What-If credit costs configurable in v0.9 Admin settings | Credit costs must be editable the moment the feature ships, not deferred to v0.10 admin dashboard | ✓ Decided 2026-03-14 — What-If cost fields added to Platform Settings page in v0.9; v0.10 consolidates UI |
 
 ---
-*Last updated: 2026-03-14 after quick-7 requirements restructure*
+*Last updated: 2026-03-20 after Phase 56 (trial expiration & conversion pressure) complete*

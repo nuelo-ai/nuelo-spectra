@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { UnifiedSidebar } from "@/components/sidebar/UnifiedSidebar";
+import { TrialBanner } from "@/components/trial/TrialBanner";
+import { TrialExpiredOverlay } from "@/components/trial/TrialExpiredOverlay";
 
 /**
  * Workspace layout - protected route for workspace pages.
@@ -40,10 +42,14 @@ export default function WorkspaceLayout({
     <SidebarProvider defaultOpen={true}>
       <div className="flex h-screen overflow-hidden w-full">
         <UnifiedSidebar />
-        <main className="flex-1 overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out">
-          {children}
-        </main>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <TrialBanner />
+          <main className="flex-1 overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out">
+            {children}
+          </main>
+        </div>
       </div>
+      <TrialExpiredOverlay />
     </SidebarProvider>
   );
 }
