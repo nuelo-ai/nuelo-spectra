@@ -46,6 +46,7 @@ import {
 import { useTiers } from "@/hooks/useTiers";
 import type { UserDetail, CreditTransaction } from "@/types/user";
 import { ApiKeysTab } from "./UserApiKeysTab";
+import { UserBillingTab } from "./UserBillingTab";
 import {
   CalendarIcon,
   CreditCardIcon,
@@ -634,6 +635,7 @@ export function UserDetailTabs({ user }: UserDetailTabsProps) {
         <TabsTrigger value="activity">Activity</TabsTrigger>
         <TabsTrigger value="sessions">Sessions</TabsTrigger>
         <TabsTrigger value="api-keys">API Keys</TabsTrigger>
+        <TabsTrigger value="billing">Billing</TabsTrigger>
       </TabsList>
       <TabsContent value="overview" className="mt-4">
         <OverviewTab user={user} />
@@ -649,6 +651,9 @@ export function UserDetailTabs({ user }: UserDetailTabsProps) {
       </TabsContent>
       <TabsContent value="api-keys" className="mt-4">
         <ApiKeysTab user={user} />
+      </TabsContent>
+      <TabsContent value="billing" className="mt-4">
+        <UserBillingTab user={user} />
       </TabsContent>
     </Tabs>
   );

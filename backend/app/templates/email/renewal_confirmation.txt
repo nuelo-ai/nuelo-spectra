@@ -1,0 +1,12 @@
+Hi {{ first_name }},
+
+Your {{ plan_name }} plan has been renewed. You were charged {{ amount_display }}.
+
+Your credits have been reset to {{ credit_allocation }}.
+
+Manage your subscription at:
+{{ billing_url }}
+
+If you have any questions, please contact our support team.
+
+- Spectra

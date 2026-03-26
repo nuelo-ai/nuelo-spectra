@@ -18,6 +18,7 @@ class UserCredit(Base):
         index=True
     )
     balance: Mapped[float] = mapped_column(NUMERIC(10, 1), default=0)
+    purchased_balance: Mapped[float] = mapped_column(NUMERIC(10, 1), default=0)
     last_reset_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

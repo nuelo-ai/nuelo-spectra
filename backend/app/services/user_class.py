@@ -41,12 +41,8 @@ def get_class_config(class_name: str) -> dict | None:
 
 
 def get_default_class() -> str:
-    """Return the default user class name.
-
-    Returns "free" as the hardcoded default.
-    # TODO: Phase 28 will make this configurable via platform_settings
-    """
-    return "free"
+    """Return the default user class name for new registrations."""
+    return "free_trial"
 
 
 def invalidate_cache() -> None:

@@ -125,6 +125,10 @@ class Settings(BaseSettings):
     # MCP Server
     mcp_api_base_url: str = "http://localhost:8000"  # Internal REST API URL for MCP tool calls
 
+    # Stripe
+    stripe_secret_key: str = ""       # STRIPE_SECRET_KEY env var
+    stripe_webhook_secret: str = ""   # STRIPE_WEBHOOK_SECRET env var
+
     # Scheduler
     enable_scheduler: bool = False  # Set ENABLE_SCHEDULER=true for credit reset job
 

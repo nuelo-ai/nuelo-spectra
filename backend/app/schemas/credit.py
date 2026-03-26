@@ -10,13 +10,16 @@ from pydantic import BaseModel, Field
 class CreditBalanceResponse(BaseModel):
     """Response schema for credit balance queries."""
 
-    balance: Decimal
+    balance: Decimal                          # subscription credits
+    purchased_balance: Decimal = Decimal("0") # purchased credits
+    total_balance: Decimal = Decimal("0")     # subscription + purchased (convenience)
     tier_allocation: int
     reset_policy: str
     next_reset_at: datetime | None
     is_low: bool
     is_unlimited: bool
     display_class: str
+    monetization_enabled: bool = True         # platform-level billing toggle
 
     model_config = {"from_attributes": True}
 
