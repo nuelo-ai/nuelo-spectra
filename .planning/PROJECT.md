@@ -13,9 +13,11 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 **GitHub:** https://github.com/marwazihs/nuelo-spectra.git (private)
 **Remote:** origin
 **Branch:** master
-**Latest Tag:** v0.8.1 (2026-03-10)
+**Latest Tag:** v0.9 (2026-04-14)
 
 ## Previous Milestones
+
+**v0.9 Monetization (Shipped 2026-04-14):** Full Stripe billing integration — 5-tier model (Free Trial, On Demand, Basic, Premium), dual-balance credit tracking (subscription + purchased), trial expiration enforcement with blocking overlay, Stripe Checkout for subscriptions and credit top-ups, webhook-driven subscription lifecycle, Plan Selection and Manage Plan billing pages, admin billing tools (force-set tier, refunds, discount codes, billing settings). 5 phases, 15 plans, 59 requirements.
 
 **v0.8.1 UI Fixes & Enhancement (Shipped 2026-03-10):** Closed UI polish gaps — leftbar toggle visible in all workspace sub-views, nav icons aligned, logos removed from Chat/Files panels, Chat rightbar toggles pinned correctly, Credits Used shows actual spend, Signal View mobile-responsive with Chat bridge button, timestamps show date+time throughout.
 
@@ -27,8 +29,8 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 ## Current State
 
-**Shipped:** v0.8.1 UI Fixes & Enhancement (2026-03-10)
-**Status:** Monetization milestone in progress — Phase 59 (Admin Billing Tools) complete, all 5 phases done
+**Shipped:** v0.9 Monetization (2026-04-14)
+**Status:** v0.9 complete — planning next milestone
 **Codebase:** ~96,000 LOC (Python app + TypeScript/TSX across public frontend + admin frontend + pulse-mockup + Docker/shell infra)
 **Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily + Plotly + APScheduler (backend), Next.js 16 + React 19 + TanStack + Zustand + shadcn/ui + next-themes + Plotly.js + Recharts + Sonner (frontend + admin frontend), Docker + Dokploy + Tailscale (deployment), Next.js + shadcn/ui + Recharts (pulse-mockup)
 
@@ -533,29 +535,59 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **v0.8.1 Total: 12/12 requirements satisfied (100%)**
 
-## Current Milestone: Monetization
+**✅ v0.9 Monetization — Shipped 2026-04-14**
 
-**Goal:** Add payment gateway (Stripe), subscription management, self-service billing, tier restructure, and admin billing tools to enable Spectra's revenue model.
+**Tier & Credit (8/8):**
+- ✓ 4 consumer tiers: Free Trial, On Demand, Basic, Premium — v0.9
+- ✓ Tier config restructured in user_classes.yaml — v0.9
+- ✓ Existing free-tier users migrated (confirmed none in production) — v0.9
+- ✓ Dual-balance credit tracking (subscription + purchased) — v0.9
+- ✓ Subscription-first credit deduction — v0.9
+- ✓ Purchased credits persist across billing cycles — v0.9
+- ✓ Subscription credits reset via Stripe invoice.paid webhook — v0.9
+- ✓ APScheduler skips subscription-tier users — v0.9
 
-**Target features:**
-- Tier restructure: Free Trial (temporary 14-day), On Demand, Basic, Premium
-- Stripe integration: Checkout Sessions, Webhooks, Subscription lifecycle
-- Trial expiration mechanism with blocking overlay
-- Plan Selection page (`/settings/plan`) and Manage Plan page (`/settings/billing`)
-- Credit top-up purchases (predefined packages)
-- Subscription upgrade/downgrade/cancel flows
-- Credit deduction priority (subscription first, purchased second)
-- Admin: manual subscription override, cancel on behalf of user, billing event log, refund capability
-- Data model additions (Subscription, PaymentHistory, CreditPackage tables)
-- New billing API endpoints + Stripe webhook handler
+**Trial (7/7):**
+- ✓ Free Trial on registration with configurable credits — v0.9
+- ✓ Configurable trial duration (default 14 days) — v0.9
+- ✓ Trial expiration enforced in auth middleware (web, API, MCP) — v0.9
+- ✓ Trial banner with days/credits remaining — v0.9
+- ✓ Amber urgency at ≤3 days or ≤10 credits — v0.9
+- ✓ Blocking overlay when trial expires — v0.9
+- ✓ Trial credits not eligible for top-up — v0.9
 
-**Development workflow:** Feature-based (see FEATURE-WORKFLOW.md). Version assigned at release time, not at planning. GSD milestone on `feature/monetization-*` branch.
+**Stripe Integration (10/10):**
+- ✓ Stripe SDK with env var configuration — v0.9
+- ✓ Checkout Sessions for subscriptions and credit top-ups — v0.9
+- ✓ Webhook endpoint with signature verification — v0.9
+- ✓ Event deduplication via stripe_events table — v0.9
+- ✓ checkout.session.completed, invoice.paid, invoice.payment_failed webhooks — v0.9
+- ✓ customer.subscription.updated and .deleted webhooks — v0.9
 
-**Source requirements:** `requirements/monetization-milestone-plan.md`, `requirements/monetization-requirement.md`
+**Subscription & Billing UI (12/12):**
+- ✓ Plan Selection page with On Demand, Basic, Premium pricing — v0.9
+- ✓ Upgrade/downgrade with proration preview — v0.9
+- ✓ Cancel at period end, purchased credits preserved — v0.9
+- ✓ Credit top-up packages via Stripe Checkout — v0.9
+- ✓ Manage Plan page with subscription details, credits, billing history — v0.9
+- ✓ Settings tab navigation (Profile, API Keys, Plan, Billing) — v0.9
 
-### Active
+**Data Model (6/6):**
+- ✓ Subscription, PaymentHistory, CreditPackage, StripeEvent tables — v0.9
+- ✓ trial_expires_at and purchased_balance fields — v0.9
 
-*(Requirements defined in `.planning/REQUIREMENTS.md` after scoping)*
+**Admin Billing (10/10):**
+- ✓ Admin user subscription view and payment history — v0.9
+- ✓ Force-set tier with Stripe sync and reason logging — v0.9
+- ✓ Admin cancel subscription, refund with credit deduction — v0.9
+- ✓ Billing event log, billing settings (trial, pricing) — v0.9
+- ✓ Discount codes with Stripe Coupon/Promotion Code sync — v0.9
+
+**v0.9 Total: 59/59 requirements satisfied (100%)**
+
+## Current Milestone
+
+*(Planning next milestone — run `/gsd-new-milestone` to start)*
 
 ### Out of Scope
 
@@ -698,4 +730,4 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | What-If credit costs configurable in v0.9 Admin settings | Credit costs must be editable the moment the feature ships, not deferred to v0.10 admin dashboard | ✓ Decided 2026-03-14 — What-If cost fields added to Platform Settings page in v0.9; v0.10 consolidates UI |
 
 ---
-*Last updated: 2026-03-20 after Phase 56 (trial expiration & conversion pressure) complete*
+*Last updated: 2026-04-14 after v0.9 Monetization milestone*

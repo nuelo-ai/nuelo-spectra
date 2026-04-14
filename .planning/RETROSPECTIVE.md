@@ -174,6 +174,53 @@
 
 ---
 
+## Milestone: v0.9 — Monetization
+
+**Shipped:** 2026-04-14
+**Phases:** 5 (Phases 55-59) | **Plans:** 15
+
+### What Was Built
+
+- 5-tier model (Free Trial, On Demand, Basic, Premium) with dual-balance credit tracking (subscription + purchased) and subscription-first deduction
+- Trial expiration enforcement with backend 402 blocking, countdown banner with amber urgency, and full blocking overlay
+- Stripe billing backend: SubscriptionService with 9 operations, webhook router with signature verification and event deduplication, checkout endpoints for subscriptions and credit top-ups (31 passing tests)
+- Billing UI: Plan Selection with live pricing and proration preview, Manage Plan with subscription status, credit balances, top-up purchase, billing history
+- Admin billing tools: force-set tier with Stripe sync, refund with proportional credit deduction, billing settings with Stripe Price auto-creation, discount codes with Stripe Coupon/Promotion Code sync
+- Settings restructured with tab navigation (Profile, API Keys, Plan, Billing)
+
+### What Worked
+
+- **Phase dependency chain (55→56→57→58→59):** Linear dependencies meant each phase built cleanly on the previous — no merge conflicts or integration surprises
+- **Hosted Stripe Checkout over embedded:** Owner decision to use redirect instead of embedded Checkout eliminated @stripe/stripe-js dependency and simplified the frontend significantly
+- **Webhook-driven architecture:** Making Stripe webhooks the source of truth for subscription state kept the system consistent without polling or sync complexity
+- **Dual-balance credit model designed upfront:** Separating subscription and purchased credits in Phase 55 prevented refactoring in later phases when billing flows needed to distinguish credit types
+
+### What Was Inefficient
+
+- **REQUIREMENTS.md checkbox tracking:** 27 of 59 requirement checkboxes weren't ticked despite all work being complete — traceability table showed "Pending" for phases 58-59 even after UAT passed. Manual checkbox maintenance doesn't scale.
+- **Parallel worktree conflicts (Phase 58):** Plans 58-01 and 58-02 ran in parallel worktrees but 58-02 depended on subscription.py from 58-01, causing a blocking merge conflict
+- **Stripe SDK v14 migration pain:** Multiple fixes needed for client.v1 namespace, items.data[0] period dates, and create_preview API — SDK upgrade documentation was insufficient
+
+### Patterns Established
+
+- **Hosted checkout pattern:** Use Stripe redirect checkout for all payment flows, not embedded — simpler, fewer deps
+- **Webhook idempotency via dedup table:** stripe_events table with event_id uniqueness prevents duplicate processing
+- **Admin billing tab pattern:** User detail gets a billing tab (6th position) with subscription card, payment history, and Stripe event log
+
+### Key Lessons
+
+- **Stripe SDK upgrades need a research phase:** v14 changed namespaces, parameter locations, and API patterns. Research phase caught most issues but some only surfaced during execution.
+- **Parallel worktree plans must not share files_modified:** Phase 58 worktree conflict was avoidable — plan checker should enforce no overlap in files_modified between parallel plans.
+- **Trial enforcement path exemptions are tricky:** Multiple auth paths (web, API, MCP) each needed independent trial checking — easy to miss one.
+
+### Cost Observations
+- Model profile: quality (opus)
+- 5 phases, 15 plans, 8 days (2026-03-18 → 2026-03-26)
+- 174 files changed, +25,065 / -6,547 lines
+- Most complex milestone to date: Stripe integration, webhooks, billing UI, admin tools
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -190,6 +237,7 @@
 | v0.7.12 | 5 | 17 | 3 days (+1 polish patch) | Mockup-first milestone pattern; separate Next.js app |
 | v0.8 | 8 | 20 | 4 days | Decimal phase insertions for mid-milestone urgents; Pydantic structured output on all pipelines |
 | v0.8.1 | 2 | 10 | 2 days | Patch milestone pattern; verification plans catching post-impl gaps before close |
+| v0.9 | 5 | 15 | 8 days | Stripe webhook-driven billing; hosted checkout over embedded; dual-balance credit model |
 
 ### Cumulative Quality
 
@@ -205,6 +253,7 @@
 | v0.7.12 | 34 | 94% | 2 (COLL-01, COLL-02) |
 | v0.8 | 35 | 100% | 0 |
 | v0.8.1 | 12 | 100% | 0 |
+| v0.9 | 59 | 100% | 0 |
 
 ### Top Lessons (Verified Across Milestones)
 

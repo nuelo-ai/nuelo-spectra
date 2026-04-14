@@ -25,6 +25,7 @@ Spectra bridges the gap between raw data and actionable insights. Upload your da
 - **REST API v1**: File upload/list/download/delete, file context, synchronous query — all with Bearer token auth and credit deduction
 - **MCP Server**: FastMCP 3.0.2 with Streamable HTTP transport at `/mcp/`, 6 `spectra_` tools for AI agent integrations
 - **API Key Management**: Create, view, revoke keys from Settings page; admin manages keys for all users
+- **Stripe Billing**: Subscription management (Basic/Premium), credit top-ups, trial expiration enforcement, webhook-driven lifecycle, admin billing tools with discount codes and refunds
 
 ## Tech Stack
 
@@ -340,7 +341,23 @@ allowed_libraries:
 
 Changes to YAML configs require server restart.
 
-## Current Status (v0.8.2)
+## Current Status (v0.9)
+
+### v0.9 Monetization (April 2026)
+- **Stripe billing integration** — full payment infrastructure with Checkout Sessions for subscriptions and credit top-ups, webhook-driven subscription lifecycle (checkout.session.completed, invoice.paid, invoice.payment_failed, customer.subscription.updated/deleted)
+- **Tier restructure** — 4 consumer tiers: Free Trial (14-day), On Demand, Basic, Premium; dual-balance credit tracking (subscription + purchased credits); subscription-first deduction
+- **Trial expiration** — backend 402 enforcement, countdown banner with amber urgency, blocking overlay on expiration, configurable duration and credits
+- **Billing UI** — Plan Selection page with live pricing and upgrade/downgrade confirmation with Stripe proration preview; Manage Plan page with subscription status, credit balances, top-up purchase, billing history
+- **Admin billing tools** — user billing detail (subscription, payments, Stripe events), force-set tier with Stripe sync, refund with proportional credit deduction, billing settings (trial duration, pricing with Stripe Price auto-creation), discount codes with Stripe Coupon/Promotion Code sync
+- **Settings restructured** — tab navigation (Profile, API Keys, Plan, Billing)
+- **Upgrading from v0.8.2:**
+
+```bash
+git pull origin master
+cd backend && uv sync
+uv run alembic upgrade head  # Creates Subscription, PaymentHistory, CreditPackage, StripeEvent, DiscountCode tables
+cd ../frontend && npm install
+```
 
 ### v0.8.2 Chat Query Suggestions Redesign (March 2026)
 - **Query suggestion cards** — redesigned from pill chips to Signal-card-style bordered cards with icon, bold category title, and per-suggestion cards
@@ -487,4 +504,4 @@ MIT License - See LICENSE file for details.
 
 - **GitHub**: [github.com/marwazihs/nuelo-spectra](https://github.com/marwazihs/nuelo-spectra)
 - **Issues**: Report bugs or request features via GitHub Issues
-- **Version**: v0.8.2 (March 2026)
+- **Version**: v0.9 (April 2026)

@@ -1,5 +1,27 @@
 # Project Milestones: Spectra
 
+## v0.9 Monetization (Shipped: 2026-04-14)
+
+**Phases completed:** 5 phases, 15 plans, 32 tasks
+
+**Key accomplishments:**
+
+- 5-tier YAML config with dual-balance fields, 4 billing SQLAlchemy models, and Alembic migration for all schema changes
+- Dual-balance CreditService with subscription-first deduction, LIFO refund, trial-aware registration, and updated tier gating tests
+- Backend 402 enforcement for expired free_trial users with path-based exemptions, plus frontend UserResponse types, 402 interception, and useTrialState hook
+- Trial banner with days/credits and amber urgency on all authenticated pages, blocking overlay for expired users (except settings), and placeholder plan page with 3 tier cards
+- Stripe SDK v14.x with config, exception classes, Pydantic schemas, proxy header fix, payment email templates, and 22 test scaffolds
+- SubscriptionService with 9 Stripe operations (customer, checkout, 5 webhook handlers) plus POST /webhooks/stripe with signature verification, deduplication, and 15 passing tests
+- Checkout endpoints for subscription and credit top-up with all 31 billing tests passing (zero stubs)
+- 6 new billing API endpoints with Stripe subscription update for plan changes, period-end cancellation, and billing history
+- Settings restructured with tab navigation (Profile, API Keys, Plan & Billing) and Plan Selection page with live pricing from backend API, Stripe checkout redirect, and AlertDialog confirmation for plan changes
+- Complete billing management page at /settings/billing with plan status card, dual credit balance display, credit top-up purchase flow via Stripe, and billing history table with post-redirect toast handling.
+- Admin billing API with force-set-tier (Stripe sync), refund with proportional credit deduction, billing settings CRUD, and DiscountCode model
+- Discount code CRUD service with Stripe Coupon + Promotion Code sync and Checkout promotion code entry
+- Admin billing UI with UserBillingTab (subscription card, payment history, Stripe events), ForceSetTierDialog, RefundDialog, BillingSettingsPage, and sidebar nav
+
+---
+
 ## v0.8.1 UI Fixes & Enhancement (Shipped: 2026-03-10)
 
 **Delivered:** Closed UI polish gaps across app shell, Chat, Files, and Pulse Analysis — leftbar toggle visible in all workspace sub-views, nav icons aligned, Spectra logo removed from Chat/Files panels, chat rightbar toggles pinned to correct corners, Credits Used card shows actual spend, Signal View mobile-responsive with Chat bridge button, and timestamps show date+time throughout.
@@ -7,6 +29,7 @@
 **Phases completed:** 53–54 (2 phases, 10 plans)
 
 **Stats:**
+
 - 2 phases (53–54)
 - 10 plans executed
 - 71 files changed (+8,274 / -567 lines)
@@ -14,6 +37,7 @@
 - Git range: `565bdda` → `65f0103`
 
 **Key accomplishments:**
+
 - Fixed leftbar collapse toggle visibility in all Pulse workspace sub-views (Collection Detail, Signal View, Report) — SidebarTrigger added to every render state (LBAR-01)
 - Corrected sidebar nav icon alignment by wrapping nav in `SidebarGroup` to restore shadcn `p-2` padding context (LBAR-02)
 - Removed Spectra logo from Chat and Files panel headers; fixed Chat rightbar toggle placement to viewport right edge (CHAT-01, CHAT-02, CHAT-03, FILES-01, FILES-02)
@@ -34,6 +58,7 @@
 **Phases completed:** 47–52.1 (8 phases, 20 plans)
 
 **Stats:**
+
 - 8 phases (47–52.1, including 2 inserted decimal phases: 51.1, 52.1)
 - 20 plans executed
 - 168 files changed (+23,418 / -345 lines)
@@ -41,6 +66,7 @@
 - Git range: `d6fe76d` → `7b4bb19` (144 commits)
 
 **Key accomplishments:**
+
 - Built 5 new SQLAlchemy models (Collection, CollectionFile, Signal, Report, PulseRun) with Alembic migration, tier config (workspace_access, max_active_collections), and runtime-configurable workspace_credit_cost_pulse platform setting
 - Shipped 11 collection endpoints with WorkspaceAccess tier gating (403 for non-workspace plans), file upload/profile, and report storage with Markdown download
 - Built LangGraph Pulse Agent pipeline with E2B sandbox (300s timeout), Pydantic-validated Signal output (severity/chartType Literals), credit pre-check (402) + atomic deduction + automatic refund on failure
@@ -61,6 +87,7 @@
 **Phases completed:** 42–46 (5 phases, 17 plans)
 
 **Key accomplishments:**
+
 - Built standalone `pulse-mockup/` Next.js app with full app shell (Sidebar, Header, credit indicator, theme toggle) and Hex.tech dark palette; 7,869 LOC TypeScript/TSX across 62 files
 - Implemented Analysis Workspace with Collection list/detail, Run Detection flow with credit estimate and loading state, and Signal results page with severity-sorted signal list and chart detail panel
 - Built Collections & Reports hub with four-tab Collection detail, full-page report reader with markdown typography, Chat-to-Collection modal bridge, and running credit total display
@@ -69,12 +96,14 @@
 - Delivered Admin Workspace Management extension: activity dashboard (line/donut/bar/funnel/stacked charts), per-user Workspace tab with credit breakdown, and Settings page with 8 editable credit cost inputs and dismissable alerts
 
 **Stats:**
+
 - 5 phases (42–46), 17 plans
 - 91 commits, 200 files changed (+28,242 / -3,389 lines)
 - 7,869 LOC TypeScript/TSX (pulse-mockup/src — 62 files)
 - Timeline: 3 days (2026-03-03 → 2026-03-05)
 
 **Requirements:** 32/34 satisfied (94%)
+
 - Known gaps: COLL-01 (archive/unarchive status indicators), COLL-02 (collection limit usage display)
 
 **Git range:** `cd1431c` (milestone docs start) → `6343cf8` (v0.7.12 UI polish)
@@ -107,6 +136,7 @@
 **Git range:** `9ea2714 (Phase 5)` → `ddee5af (Phase 6 final)`
 
 **Requirements:** 42/42 satisfied (100%)
+
 - Authentication: 5/5 ✓
 - File Management: 10/10 ✓
 - AI Agents & Chat: 9/9 ✓
@@ -119,7 +149,6 @@
 **What's next:** v0.2 will focus on enhancing AI agents with memory persistence and additional LLM providers (Ollama and OpenRouter)
 
 ---
-
 
 ## v0.2 Intelligence & Integration (Shipped: 2026-02-10)
 
@@ -147,6 +176,7 @@
 **Git range:** `adbfed0 (feat(07-01))` → `7dab5cc (docs: todo)`
 
 **Requirements:** 53/53 mapped (100%)
+
 - Multi-LLM Provider: 12/12 (LLM + CONFIG)
 - Session Memory: 8/8 (MEMORY)
 - Manager Agent Routing: 10/10 (ROUTING)
@@ -159,7 +189,6 @@
 **What's next:** v0.3 will focus on visualization capabilities, advanced memory features, and production hardening
 
 ---
-
 
 ## v0.3 Multi-file Conversation Support (Shipped: 2026-02-12)
 
@@ -188,6 +217,7 @@
 **Git range:** `v0.2` → `e4b9bb1 (Phase 19 final)`
 
 **Requirements:** 37/37 satisfied (100%)
+
 - Chat Sessions: 9/9 (CHAT)
 - File Linking: 8/8 (LINK)
 - File Management: 7/7 (FILE)
@@ -200,7 +230,6 @@
 **What's next:** v0.4 will be defined via `/gsd:new-milestone`
 
 ---
-
 
 ## v0.4 Data Visualization (Shipped: 2026-02-15)
 
@@ -229,6 +258,7 @@
 **Git range:** `v0.3 (cb936bf)` → `e3cf117 (Phase 25 final)`
 
 **Requirements:** 43/43 satisfied (100%)
+
 - Infrastructure: 4/4 (INFRA)
 - Visualization Agent: 6/6 (AGENT)
 - Chart Generation: 11/11 (CHART)
@@ -242,7 +272,6 @@
 **What's next:** v0.5 will be defined via `/gsd:new-milestone`
 
 ---
-
 
 ## v0.5 Admin Portal (Shipped: 2026-02-18)
 
@@ -270,6 +299,7 @@
 **Git range:** `feat(26-02)` → `fix(32-01)`
 
 **Requirements:** 82/86 satisfied (95%)
+
 - Admin Authentication: 7/7 (AUTH)
 - Admin Dashboard: 7/7 (DASH)
 - User Management: 13/13 (USER)
@@ -292,7 +322,6 @@
 **What's next:** v0.6 will be defined via `/gsd:new-milestone`
 
 ---
-
 
 ## v0.6 Docker and Dokploy Support (Shipped: 2026-02-21)
 
@@ -322,7 +351,6 @@
 
 ---
 
-
 ## v0.7 API Services & MCP (Shipped: 2026-02-25)
 
 **Delivered:** Public REST API and MCP server exposing Spectra's data analysis capabilities for programmatic access and AI agent integrations, with API key management, credit deduction, and usage logging
@@ -347,6 +375,7 @@
 **Git range:** `v0.6` → `v0.7`
 
 **Requirements:** 30/30 satisfied (100%)
+
 - API Key Management: 8/8 (APIKEY)
 - API Authentication & Security: 4/4 (APISEC)
 - API Files: 4/4 (APIF)
@@ -374,4 +403,3 @@
 **What's next:** v0.8 will be defined via `/gsd:new-milestone`
 
 ---
-
