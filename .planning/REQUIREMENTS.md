@@ -26,6 +26,11 @@ Requirements for v0.10 Streamline Pricing Configuration. Each maps to roadmap ph
 - [ ] **PKG-05**: Admin can edit credit packages (name, price, credits, active status)
 - [ ] **PKG-06**: Admin can reset credit packages to config-file defaults
 
+### User Frontend
+
+- [ ] **UI-01**: Plan Selection page (`/settings/plan`) dynamically renders subscription plans from tiers with `has_plan: true` instead of hardcoded entries
+- [ ] **UI-02**: Billing page (`/settings/billing`) displays credit packages and pricing as defined in the database
+
 ### Safeguards
 
 - [ ] **SAFE-01**: Existing admin-customized Stripe Price IDs in the database are preserved (startup sync fills gaps, never overwrites)
@@ -44,27 +49,29 @@ Requirements for v0.10 Streamline Pricing Configuration. Each maps to roadmap ph
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SUB-01 | — | Pending |
-| SUB-02 | — | Pending |
-| SUB-03 | — | Pending |
-| SUB-04 | — | Pending |
-| SUB-05 | — | Pending |
-| SUB-06 | — | Pending |
-| SUB-07 | — | Pending |
-| PKG-01 | — | Pending |
-| PKG-02 | — | Pending |
-| PKG-03 | — | Pending |
-| PKG-04 | — | Pending |
-| PKG-05 | — | Pending |
-| PKG-06 | — | Pending |
-| SAFE-01 | — | Pending |
-| SAFE-02 | — | Pending |
+| SUB-01 | Phase 60 | Pending |
+| SUB-02 | Phase 60 | Pending |
+| SUB-03 | Phase 60 | Pending |
+| SUB-04 | Phase 60 | Pending |
+| SUB-05 | Phase 61 | Pending |
+| SUB-06 | Phase 61 | Pending |
+| SUB-07 | Phase 61 | Pending |
+| PKG-01 | Phase 60 | Pending |
+| PKG-02 | Phase 60 | Pending |
+| PKG-03 | Phase 60 | Pending |
+| PKG-04 | Phase 61 | Pending |
+| PKG-05 | Phase 61 | Pending |
+| PKG-06 | Phase 61 | Pending |
+| UI-01 | Phase 61 | Pending |
+| UI-02 | Phase 61 | Pending |
+| SAFE-01 | Phase 60 | Pending |
+| SAFE-02 | Phase 60 | Pending |
 
 **Coverage:**
-- v0.10 requirements: 15 total
-- Mapped to phases: 0
-- Unmapped: 15 ⚠️
+- v0.10 requirements: 17 total
+- Mapped to phases: 17
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-22*
-*Last updated: 2026-04-22 after initial definition*
+*Last updated: 2026-04-22 after roadmap creation*
