@@ -585,9 +585,16 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **v0.9 Total: 59/59 requirements satisfied (100%)**
 
-## Current Milestone
+## Current Milestone: v0.10 Streamline Pricing Configuration
 
-*(Planning next milestone — run `/gsd-new-milestone` to start)*
+**Goal:** Unify and streamline how Stripe pricing is configured for both subscription plans and credit top-up packages — config-file driven defaults with admin override capability.
+
+**Target features:**
+- Add pricing fields (price_cents, has_plan flag) to user_classes.yaml for subscription tiers
+- Define default credit packages in config file (name, price, credits)
+- Auto-create Stripe Products/Prices on startup for missing items (zero-touch first deploy)
+- Admin can view/edit subscription pricing and credit packages
+- Admin can reset pricing to config-file defaults
 
 ### Out of Scope
 
