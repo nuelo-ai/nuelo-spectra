@@ -171,8 +171,8 @@ async def update_billing_settings(
         if key:
             await upsert(db, key, value, admin.id)
 
-    invalidate_cache()
     await db.commit()
+    invalidate_cache()
 
     # Return updated settings
     return await get_billing_settings(admin, db)
