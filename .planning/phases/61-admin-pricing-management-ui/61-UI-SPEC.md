@@ -47,10 +47,14 @@ Exceptions: none
 
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
+| Hint / Muted | 12px (text-xs) | 400 (normal) | 1.5 |
 | Body / Label | 14px (text-sm) | 400 (normal) | 1.5 |
-| Heading / Page Title | 16px (text-base) / 24px (text-2xl) | 600 (semibold) | 1.2 |
+| Card Title / Price Display | 16px (text-base) | 600 (semibold) | 1.2 |
+| Page Title | 24px (text-2xl) | 600 (semibold) | 1.2 |
 
-Note: Card titles use `text-base font-semibold` (16px). Page title uses `text-2xl font-semibold tracking-tight` per existing billing-settings page pattern.
+4 sizes total: 12px, 14px, 16px, 24px. 2 weights: 400 (normal), 600 (semibold).
+
+Note: Card titles use `text-base font-semibold` (16px). Page title uses `text-2xl font-semibold tracking-tight` per existing billing-settings page pattern. Hints (config defaults, display order, Stripe IDs) use `text-xs text-muted-foreground` (12px). Price display in tier rows uses `text-base font-semibold` (16px) to match card title weight.
 
 ---
 
@@ -63,7 +67,7 @@ Note: Card titles use `text-base font-semibold` (16px). Page title uses `text-2x
 | Accent (10%) | `--primary` oklch(0.45 0.2 260) / dark `#81A1C1` | Save button, edit button, monetization toggle active state, focus rings |
 | Destructive | `--destructive` oklch(0.577 0.245 27.325) / dark `#BF616A` | Reset to Defaults buttons, destructive confirmation button |
 
-Accent reserved for: primary CTA buttons (Save, Edit), monetization toggle active state, focus rings on inputs and dialogs. Never used for passive text or borders.
+Accent reserved for: primary CTA buttons (Save, Edit Pricing, Edit Package), monetization toggle active state, focus rings on inputs and dialogs. Never used for passive text or borders.
 
 Primary visual anchor: Monetization toggle — first decision point the admin must assess before editing any pricing values.
 
@@ -76,7 +80,7 @@ Primary visual anchor: Monetization toggle — first decision point the admin mu
 | Component | Source | Usage in Phase 61 |
 |-----------|--------|-------------------|
 | `Card` / `CardHeader` / `CardContent` / `CardTitle` / `CardDescription` | `@/components/ui/card` | Section containers for Monetization, Subscription Pricing, Credit Packages |
-| `Button` | `@/components/ui/button` | Save, Edit, Reset to Defaults, Discard Changes, Go Back, Confirm |
+| `Button` | `@/components/ui/button` | Save, Edit Pricing, Edit Package, Reset to Defaults, Discard Changes, Go Back, Confirm |
 | `Input` | `@/components/ui/input` | Price, name, credits, display_order fields in edit modals |
 | `Label` | `@/components/ui/label` | Form field labels in edit modals |
 | `Switch` | `@/components/ui/switch` | Monetization toggle, credit package active status toggle |
@@ -90,8 +94,8 @@ Primary visual anchor: Monetization toggle — first decision point the admin mu
 | Component | Location | Purpose |
 |-----------|----------|---------|
 | `PasswordConfirmDialog` | `@/components/shared/PasswordConfirmDialog.tsx` | Reusable confirmation dialog with impact description + inline password field. Extends pattern from existing `ConfirmModal` but adds password input. Used for all pricing edits and resets (D-09, D-10) |
-| `SubscriptionPricingCard` | Inline in billing-settings page or extracted component | Displays subscription tiers in view mode with click-to-edit. Shows tier name, current price, config default hint. Edit button opens modal (D-06) |
-| `CreditPackageCard` (admin) | Inline in billing-settings page or extracted component | Displays credit package details: name, price, credits, display_order, active status, Stripe Price ID (read-only). Edit button opens modal (D-07) |
+| `SubscriptionPricingCard` | Inline in billing-settings page or extracted component | Displays subscription tiers in view mode with click-to-edit. Shows tier name, current price, config default hint. Edit Pricing button opens modal (D-06) |
+| `CreditPackageCard` (admin) | Inline in billing-settings page or extracted component | Displays credit package details: name, price, credits, display_order, active status, Stripe Price ID (read-only). Edit Package button opens modal (D-07) |
 | `EditSubscriptionModal` | Inline or extracted | Dialog for editing a subscription tier price. Shows current value, config default hint, price input field |
 | `EditCreditPackageModal` | Inline or extracted | Dialog for editing credit package: name, price, credits, display_order, active toggle. Stripe Price ID shown read-only (D-08) |
 | `StripeReadinessChecklist` | Inline in Monetization card | When Stripe is not ready, shows checklist of missing items. Toggle disabled until all items pass (D-12) |
@@ -108,21 +112,21 @@ Layout wrapper: `max-w-2xl mx-auto space-y-6` (existing pattern)
 
 1. **Page Header** — "Billing Settings" title + description subtitle
 2. **Monetization Card** — Toggle + description + Stripe readiness checklist when disabled (D-12)
-3. **Subscription Pricing Card** — List of subscription tiers in view mode. Each tier row: tier name, current price display, config default hint below. Edit button per tier opens modal (D-06). "Reset to Defaults" button at card bottom (D-11)
-4. **Credit Packages Card** — Grid/list of credit package cards in view mode. Each card: name, price, credits, display_order, active badge, Stripe Price ID (read-only). Edit button per package opens modal (D-06). "Reset to Defaults" button at card bottom (D-11)
+3. **Subscription Pricing Card** — List of subscription tiers in view mode. Each tier row: tier name, current price display, config default hint below. Edit Pricing button per tier opens modal (D-06). "Reset to Defaults" button at card bottom (D-11)
+4. **Credit Packages Card** — Grid/list of credit package cards in view mode. Each card: name, price, credits, display_order, active badge, Stripe Price ID (read-only). Edit Package button per package opens modal (D-06). "Reset to Defaults" button at card bottom (D-11)
 
 ### View Mode Layout — Subscription Tier Row
 
 ```
-[Tier Name]                              [Edit button]
+[Tier Name]                              [Edit Pricing button]
 $XX.XX / month
 Default: $YY.YY                          (muted hint text)
 ```
 
 - Tier name: `text-sm font-normal`
-- Price display: `text-lg font-semibold`
+- Price display: `text-base font-semibold`
 - Default hint: `text-xs text-muted-foreground` — format "Default: $XX.XX" (D-04)
-- Edit button: `variant="outline" size="sm"` with Lucide `Pencil` icon
+- Edit Pricing button: `variant="outline" size="sm"` with Lucide `Pencil` icon + "Edit Pricing" label
 
 ### View Mode Layout — Credit Package Card
 
@@ -131,7 +135,7 @@ Default: $YY.YY                          (muted hint text)
 │ [Package Name]        [Active badge]│
 │ $XX.XX · XXX credits                │
 │ Display order: N                    │
-│ Stripe: price_xxxxx     [Edit btn]  │
+│ Stripe: price_xxxxx  [Edit Package] │
 └─────────────────────────────────────┘
 ```
 
@@ -140,7 +144,7 @@ Default: $YY.YY                          (muted hint text)
 - Display order: `text-xs text-muted-foreground`
 - Stripe Price ID: `text-xs font-mono text-muted-foreground` — truncate if long
 - Active badge: `<Badge variant="default">Active</Badge>` or `<Badge variant="secondary">Inactive</Badge>`
-- Edit button: `variant="outline" size="sm"` with Lucide `Pencil` icon
+- Edit Package button: `variant="outline" size="sm"` with Lucide `Pencil` icon + "Edit Package" label
 - Config default hint below price: `text-xs text-muted-foreground` — "Default: $XX.XX · XXX credits" (D-04)
 
 ### Edit Modal Layout — Subscription Pricing
@@ -242,7 +246,7 @@ When monetization toggle is disabled because Stripe is not ready:
 ### Click-to-Edit Flow (D-06)
 
 1. User sees pricing data in **view mode** (read-only display)
-2. User clicks **Edit** button on a specific tier or package
+2. User clicks **Edit Pricing** or **Edit Package** button on a specific tier or package
 3. **Edit modal** opens with current values pre-filled
 4. User modifies fields
 5. User clicks **Save Changes** in modal
@@ -293,7 +297,8 @@ When monetization toggle is disabled because Stripe is not ready:
 | Subscription card description | Changing prices creates new Stripe Price objects. Existing subscribers keep their current price. |
 | Credit packages card title | Credit Packages |
 | Credit packages card description | Configure credit package pricing and availability. |
-| Edit button label | Edit (with Pencil icon) |
+| Edit button label — subscription tier | Edit Pricing (with Pencil icon) |
+| Edit button label — credit package | Edit Package (with Pencil icon) |
 | Reset button label — subscriptions | Reset to Defaults |
 | Reset button label — packages | Reset to Defaults |
 | Save button in edit modal | Save Changes |
