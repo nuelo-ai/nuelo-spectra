@@ -42,7 +42,7 @@ async def get_billing_settings(
     settings = await get_platform_settings(db)
 
     return BillingSettingsResponse(
-        monetization_enabled=json.loads(settings.get("monetization_enabled", "true")),
+        monetization_enabled=json.loads(settings.get("monetization_enabled", "false")),
         price_standard_monthly_cents=json.loads(
             settings.get("price_standard_monthly_cents", "2900")
         ),
