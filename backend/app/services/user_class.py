@@ -22,8 +22,19 @@ def _load_yaml() -> dict:
     if _yaml_cache is not None and (now - _cache_loaded_at) < _CACHE_TTL_SECONDS:
         return _yaml_cache
 
-    with open(_CONFIG_PATH, "r") as f:
-        data = yaml.safe_load(f)
+    if not _CONFIG_PATH.exists():
+        raise FileNotFoundError(
+            f"user_classes.yaml not found at {_CONFIG_PATH}. "
+            "Ensure the config file is present in backend/app/config/."
+        )
+    try:
+        with open(_CONFIG_PATH, "r") as f:
+            data = yaml.safe_load(f)
+    except yaml.YAMLError as e:
+        raise ValueError(f"Invalid YAML in user_classes.yaml: {e}") from e
+
+    if not isinstance(data, dict) or "user_classes" not in data:
+        raise ValueError("user_classes.yaml must contain a 'user_classes' key")
 
     _yaml_cache = data
     _cache_loaded_at = now
