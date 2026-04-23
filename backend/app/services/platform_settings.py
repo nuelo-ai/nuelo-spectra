@@ -33,7 +33,7 @@ DEFAULTS: dict[str, str] = {
     "stripe_price_premium_monthly": json.dumps(""),
     "price_standard_monthly_cents": json.dumps(2900),   # $29.00
     "price_premium_monthly_cents": json.dumps(7900),     # $79.00
-    "monetization_enabled": json.dumps(True),
+    "monetization_enabled": json.dumps(False),
 }
 
 VALID_KEYS = set(DEFAULTS.keys())
