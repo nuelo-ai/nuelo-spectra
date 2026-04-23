@@ -32,7 +32,7 @@ See MILESTONES.md for completed phase details.
 
 ### v0.10 Streamline Pricing Configuration
 
-- [ ] **Phase 60: Config-Driven Pricing & Startup Sync** - Add pricing fields to config, seed defaults to DB, auto-create Stripe Products/Prices on startup
+- [x] **Phase 60: Config-Driven Pricing & Startup Sync** - Add pricing fields to config, seed defaults to DB, auto-create Stripe Products/Prices on startup (completed 2026-04-23)
 - [ ] **Phase 61: Admin Pricing Management UI** - Admin can view, edit, and reset subscription pricing and credit packages
 
 ## Phase Details
@@ -47,11 +47,11 @@ See MILESTONES.md for completed phase details.
   3. On first startup with an empty database, subscription pricing is seeded to platform_settings and credit packages are seeded to the credit_packages table from config defaults
   4. On startup, Stripe Products and Prices are auto-created for any subscription tier or credit package that is missing a Stripe Price ID -- no manual Stripe Dashboard configuration required
   5. Existing admin-customized Stripe Price IDs in the database are never overwritten by the startup sync (fills gaps only)
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 Plans:
-- [ ] 60-01-PLAN.md -- Extend user_classes.yaml with pricing fields and add get_credit_packages() loader
-- [ ] 60-02-PLAN.md -- Create pricing_sync.py service with seeding, Stripe sync, readiness check, and unit tests
-- [ ] 60-03-PLAN.md -- Wire pricing sync into lifespan() and add monetization toggle guard
+- [x] 60-01-PLAN.md -- Extend user_classes.yaml with pricing fields and add get_credit_packages() loader
+- [x] 60-02-PLAN.md -- Create pricing_sync.py service with seeding, Stripe sync, readiness check, and unit tests
+- [x] 60-03-PLAN.md -- Wire pricing sync into lifespan() and add monetization toggle guard
 
 ### Phase 61: Admin Pricing Management UI
 **Goal**: Admin can view, edit, and reset both subscription pricing and credit packages from the admin portal
@@ -76,5 +76,5 @@ Phases execute in numeric order: 60 → 61
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 60. Config-Driven Pricing & Startup Sync | 0/3 | Not started | - |
+| 60. Config-Driven Pricing & Startup Sync | 3/3 | Complete    | 2026-04-23 |
 | 61. Admin Pricing Management UI | 0/TBD | Not started | - |
