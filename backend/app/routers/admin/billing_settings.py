@@ -84,6 +84,19 @@ async def update_billing_settings(
         if error:
             raise HTTPException(status_code=422, detail=error)
 
+    # Guard: block monetization_enabled=true if Stripe not fully ready (D-07)
+    if updates.get("monetization_enabled") is True:
+        from app.services.pricing_sync import check_stripe_readiness
+        readiness = await check_stripe_readiness(db)
+        if not readiness["ready"]:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "message": "Cannot enable monetization — Stripe is not fully configured",
+                    "missing": readiness["missing"],
+                },
+            )
+
     # Get current settings for price change detection
     current_settings = await get_platform_settings(db)
 
