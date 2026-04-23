@@ -32,7 +32,7 @@ Declared values (must be multiples of 4):
 | Token | Value | Usage |
 |-------|-------|-------|
 | xs | 4px | Icon gaps, inline padding |
-| sm | 8px | Compact element spacing, input-to-label gap (mt-1.5 pattern) |
+| sm | 8px | Compact element spacing, input-to-label gap (mt-2 pattern) |
 | md | 16px | Default element spacing, card content padding |
 | lg | 24px | Section padding, space-y-6 between cards |
 | xl | 32px | Layout gaps |
@@ -47,12 +47,10 @@ Exceptions: none
 
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
-| Body | 14px (text-sm) | 400 (normal) | 1.5 |
-| Label | 14px (text-sm) | 500 (medium) | 1.4 |
-| Heading | 16px (text-base) | 600 (semibold) | 1.2 |
-| Page Title | 24px (text-2xl) | 700 (bold) | 1.2 |
+| Body / Label | 14px (text-sm) | 400 (normal) | 1.5 |
+| Heading / Page Title | 16px (text-base) / 24px (text-2xl) | 600 (semibold) | 1.2 |
 
-Note: Card titles use `text-base` (16px) per existing pattern. Page title uses `text-2xl font-bold tracking-tight` per existing billing-settings page.
+Note: Card titles use `text-base font-semibold` (16px). Page title uses `text-2xl font-semibold tracking-tight` per existing billing-settings page pattern.
 
 ---
 
@@ -67,6 +65,8 @@ Note: Card titles use `text-base` (16px) per existing pattern. Page title uses `
 
 Accent reserved for: primary CTA buttons (Save, Edit), monetization toggle active state, focus rings on inputs and dialogs. Never used for passive text or borders.
 
+Primary visual anchor: Monetization toggle — first decision point the admin must assess before editing any pricing values.
+
 ---
 
 ## Component Inventory
@@ -76,7 +76,7 @@ Accent reserved for: primary CTA buttons (Save, Edit), monetization toggle activ
 | Component | Source | Usage in Phase 61 |
 |-----------|--------|-------------------|
 | `Card` / `CardHeader` / `CardContent` / `CardTitle` / `CardDescription` | `@/components/ui/card` | Section containers for Monetization, Subscription Pricing, Credit Packages |
-| `Button` | `@/components/ui/button` | Save, Edit, Reset to Defaults, Cancel, Confirm |
+| `Button` | `@/components/ui/button` | Save, Edit, Reset to Defaults, Discard Changes, Go Back, Confirm |
 | `Input` | `@/components/ui/input` | Price, name, credits, display_order fields in edit modals |
 | `Label` | `@/components/ui/label` | Form field labels in edit modals |
 | `Switch` | `@/components/ui/switch` | Monetization toggle, credit package active status toggle |
@@ -119,7 +119,7 @@ $XX.XX / month
 Default: $YY.YY                          (muted hint text)
 ```
 
-- Tier name: `text-sm font-medium`
+- Tier name: `text-sm font-normal`
 - Price display: `text-lg font-semibold`
 - Default hint: `text-xs text-muted-foreground` — format "Default: $XX.XX" (D-04)
 - Edit button: `variant="outline" size="sm"` with Lucide `Pencil` icon
@@ -135,7 +135,7 @@ Default: $YY.YY                          (muted hint text)
 └─────────────────────────────────────┘
 ```
 
-- Package name: `text-sm font-medium`
+- Package name: `text-sm font-normal`
 - Price and credits: `text-sm` — format "$XX.XX · XXX credits"
 - Display order: `text-xs text-muted-foreground`
 - Stripe Price ID: `text-xs font-mono text-muted-foreground` — truncate if long
@@ -153,7 +153,7 @@ Default: $YY.YY                          (muted hint text)
 │ [___________] input                  │
 │ Default: $XX.XX (hint)               │
 │                                      │
-│              [Cancel] [Save Changes] │
+│      [Discard Changes] [Save Changes]│
 └──────────────────────────────────────┘
 ```
 
@@ -187,7 +187,7 @@ Default: $YY.YY                          (muted hint text)
 │ Stripe Price ID                      │
 │ price_xxxxxxxxx (read-only text)     │
 │                                      │
-│              [Cancel] [Save Changes] │
+│      [Discard Changes] [Save Changes]│
 └──────────────────────────────────────┘
 ```
 
@@ -204,7 +204,7 @@ Default: $YY.YY                          (muted hint text)
 │ Enter your password to confirm       │
 │ [___________] password input         │
 │                                      │
-│          [Cancel] [Confirm Changes]  │
+│          [Go Back] [Confirm Changes] │
 └──────────────────────────────────────┘
 ```
 
@@ -297,7 +297,8 @@ When monetization toggle is disabled because Stripe is not ready:
 | Reset button label — subscriptions | Reset to Defaults |
 | Reset button label — packages | Reset to Defaults |
 | Save button in edit modal | Save Changes |
-| Cancel button | Cancel |
+| Discard button in edit modal | Discard Changes |
+| Go back button in password dialog | Go Back |
 | Confirm edit impact text (subscription) | This will update the subscription price for {tier name}. A new Stripe Price will be created automatically. Existing subscribers will keep their current price. |
 | Confirm edit impact text (credit package) | This will update the {package name} credit package. Changes take effect immediately for new purchases. |
 | Confirm reset impact text (subscription) | This will reset all subscription prices to their config-file defaults. New Stripe Prices will be created if needed. Existing subscribers keep their current price. |
