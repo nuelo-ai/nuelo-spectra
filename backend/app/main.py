@@ -226,6 +226,14 @@ async def lifespan(app: FastAPI):
     else:
         logging.getLogger("spectra.smtp").info("SMTP not configured - using dev mode (console logging)")
 
+    # Seed pricing config to database and sync Stripe prices
+    from app.services.pricing_sync import seed_pricing_from_config
+    from app.database import async_session_maker
+    async with async_session_maker() as pricing_db:
+        await seed_pricing_from_config(pricing_db)
+        await pricing_db.commit()
+    logging.getLogger("spectra.pricing").info("Pricing config synced to database")
+
     # Initialize PostgreSQL checkpointer for session memory
     from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
     from psycopg_pool import AsyncConnectionPool
