@@ -167,8 +167,8 @@ def validate_setting(key: str, value: Any) -> str | None:
     elif key in ("price_standard_monthly_cents", "price_premium_monthly_cents"):
         if not isinstance(value, int) or isinstance(value, bool):
             return f"{key} must be an integer"
-        if value < 0:
-            return f"{key} must be >= 0"
+        if value <= 0:
+            return f"{key} must be > 0"
 
     elif key in ("stripe_price_standard_monthly", "stripe_price_premium_monthly"):
         if not isinstance(value, str):
