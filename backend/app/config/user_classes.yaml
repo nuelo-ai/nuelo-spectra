@@ -14,6 +14,10 @@ user_classes:
     workspace_access: true
     max_active_collections: 3
     has_plan: false
+    features:
+      - "No monthly commitment"
+      - "Purchase credits as needed"
+      - "Full feature access"
   standard:
     display_name: "Standard"
     credits: 100
@@ -22,6 +26,9 @@ user_classes:
     max_active_collections: 5
     has_plan: true
     price_cents: 2900
+    features:
+      - "Priority support"
+      - "Full feature access"
   premium:
     display_name: "Premium"
     credits: 500
@@ -30,6 +37,11 @@ user_classes:
     max_active_collections: -1
     has_plan: true
     price_cents: 7900
+    features:
+      - "Priority support"
+      - "Full feature access"
+      - "Unlimited active collections"
+      - "Advanced analytics"
   internal:
     display_name: "Internal"
     credits: 0
