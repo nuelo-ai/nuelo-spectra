@@ -66,8 +66,13 @@ Plans:
   6. Admin can reset credit packages to config-file defaults with a single action
   7. Plan Selection page dynamically renders subscription plans from tiers with `has_plan: true` instead of hardcoded entries
   8. Billing page displays credit packages and pricing as defined in the database
-**Plans**: TBD
+**Plans:** 4 plans
 **UI hint**: yes
+Plans:
+- [ ] 61-01-PLAN.md -- Backend API: schemas, billing-settings extensions, credit-packages router
+- [ ] 61-02-PLAN.md -- Config features + dynamic /subscriptions/plans endpoint
+- [ ] 61-03-PLAN.md -- Admin frontend: PasswordConfirmDialog + extended hooks
+- [ ] 61-04-PLAN.md -- Admin frontend: billing-settings page refactor with view/edit/reset modals
 
 ## Progress
 
@@ -77,4 +82,4 @@ Phases execute in numeric order: 60 → 61
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 60. Config-Driven Pricing & Startup Sync | 3/3 | Complete    | 2026-04-23 |
-| 61. Admin Pricing Management UI | 0/TBD | Not started | - |
+| 61. Admin Pricing Management UI | 0/4 | Not started | - |
