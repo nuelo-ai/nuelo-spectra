@@ -254,7 +254,7 @@ When monetization toggle is disabled because Stripe is not ready:
 7. User enters password and clicks **Confirm**
 8. Request sent to backend with data + password
 9. On success: modal closes, toast success, data refetched
-10. On 401 (wrong password): inline error below password field "Incorrect password", dialog stays open
+10. On 403 (wrong password): inline error below password field "Incorrect password", dialog stays open
 11. On other error: toast error, dialog stays open
 
 ### Reset Flow (D-11)
@@ -266,7 +266,7 @@ When monetization toggle is disabled because Stripe is not ready:
 3. User enters password and clicks **Confirm Reset**
 4. Request sent to backend with scope + password
 5. On success: toast success, data refetched to show new values
-6. On 401: inline error, dialog stays open
+6. On 403: inline error, dialog stays open
 7. On other error: toast error, dialog stays open
 
 ### Loading States
@@ -309,7 +309,7 @@ When monetization toggle is disabled because Stripe is not ready:
 | Confirm reset impact text (subscription) | This will reset all subscription prices to their config-file defaults. New Stripe Prices will be created if needed. Existing subscribers keep their current price. |
 | Confirm reset impact text (credit package) | This will reset all credit packages to config-file defaults. Names, prices, credits, and display order will be restored. Existing purchase history is preserved. |
 | Password prompt label | Enter your password to confirm |
-| Password error (401) | Incorrect password. Please try again. |
+| Password error (403) | Incorrect password. Please try again. |
 | Confirm button — edit | Confirm Changes |
 | Confirm button — reset | Confirm Reset |
 | Toast success — edit | Pricing updated successfully |

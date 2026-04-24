@@ -44,7 +44,7 @@ Admin can view, edit, and reset both subscription pricing and credit packages fr
 - **D-16:** Billing page (`/settings/billing`) shows dynamic credit package cards rendered from the database. Each card shows package name, price, credits, and a "Buy" button. Replaces any hardcoded credit package references
 
 ### Backend API Contracts
-- **D-17:** Password sent in each save/reset request body (not a separate verify endpoint). Backend verifies atomically with the action. Returns 401 if password wrong
+- **D-17:** Password sent in each save/reset request body (not a separate verify endpoint). Backend verifies atomically with the action. Returns 403 if password wrong (deviation from original 401 — approved by owner because 401 triggers adminApiClient auto-redirect to /login, logging the admin out; 403 matches existing codebase pattern in admin/credits.py)
 - **D-18:** Router and endpoint design: Claude's discretion — pick the approach that best fits existing admin API patterns (extend billing-settings vs new router, dedicated reset endpoints vs scope parameter)
 
 ### Claude's Discretion
