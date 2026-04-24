@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException
 from app.dependencies import CurrentAdmin, DbSession
 from app.schemas.admin_billing import (
     BillingSettingsResponse,
+    BillingSettingsResetRequest,
     BillingSettingsUpdateRequest,
 )
 from app.services.platform_settings import (
@@ -20,6 +21,9 @@ from app.services.platform_settings import (
     upsert,
     validate_setting,
 )
+from app.services.pricing_sync import check_stripe_readiness, reset_subscription_pricing
+from app.services.user_class import get_user_classes
+from app.utils.security import verify_password
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +45,16 @@ async def get_billing_settings(
     """Read all billing-related platform settings."""
     settings = await get_platform_settings(db)
 
+    # Build config defaults from user_classes.yaml tiers
+    tiers = get_user_classes()
+    config_defaults = {}
+    for tier_name, tier_config in tiers.items():
+        if not tier_config.get("has_plan"):
+            continue
+        config_defaults[f"price_{tier_name}_monthly_cents"] = tier_config["price_cents"]
+
+    readiness = await check_stripe_readiness(db)
+
     return BillingSettingsResponse(
         monetization_enabled=json.loads(settings.get("monetization_enabled", "false")),
         price_standard_monthly_cents=json.loads(
@@ -55,6 +69,8 @@ async def get_billing_settings(
         stripe_price_premium_monthly=json.loads(
             settings.get("stripe_price_premium_monthly", '""')
         ),
+        config_defaults=config_defaults,
+        stripe_readiness=readiness,
     )
 
 
@@ -70,7 +86,7 @@ async def update_billing_settings(
     if the value changed, creates a new Stripe Price via API, deactivates old price,
     and stores the new price ID.
     """
-    updates = body.model_dump(exclude_none=True)
+    updates = body.model_dump(exclude_none=True, exclude={"password"})
 
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
@@ -83,6 +99,16 @@ async def update_billing_settings(
         error = validate_setting(key, value)
         if error:
             raise HTTPException(status_code=422, detail=error)
+
+    # Password verification for price changes (D-09, D-17)
+    price_fields_changing = any(
+        k in updates for k in ("price_standard_monthly_cents", "price_premium_monthly_cents")
+    )
+    if price_fields_changing:
+        if not body.password:
+            raise HTTPException(status_code=422, detail="Password required for price changes")
+        if not verify_password(body.password, admin.hashed_password):
+            raise HTTPException(status_code=403, detail="Incorrect password")
 
     # Guard: block monetization_enabled=true if Stripe not fully ready (D-07)
     if updates.get("monetization_enabled") is True:
@@ -175,4 +201,26 @@ async def update_billing_settings(
     invalidate_cache()
 
     # Return updated settings
+    return await get_billing_settings(admin, db)
+
+
+@router.post("/reset")
+async def reset_billing_settings(
+    body: BillingSettingsResetRequest,
+    admin: CurrentAdmin,
+    db: DbSession,
+):
+    """Reset subscription pricing to config-file defaults (D-11, SUB-07).
+
+    Requires password re-entry. Calls pricing_sync.reset_subscription_pricing()
+    which overwrites DB values, deactivates old Stripe Prices, creates new ones.
+    """
+    # Verify admin password -- use 403 (not 401) per established pattern
+    if not verify_password(body.password, admin.hashed_password):
+        raise HTTPException(status_code=403, detail="Incorrect password")
+
+    await reset_subscription_pricing(db)
+    await db.commit()
+    invalidate_cache()
+
     return await get_billing_settings(admin, db)

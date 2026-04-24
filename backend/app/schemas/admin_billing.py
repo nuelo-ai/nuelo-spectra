@@ -87,9 +87,50 @@ class BillingSettingsResponse(BaseModel):
     price_premium_monthly_cents: int
     stripe_price_standard_monthly: str
     stripe_price_premium_monthly: str
+    config_defaults: dict
+    stripe_readiness: dict
 
 
 class BillingSettingsUpdateRequest(BaseModel):
     monetization_enabled: bool | None = None
     price_standard_monthly_cents: int | None = Field(None, ge=0)
     price_premium_monthly_cents: int | None = Field(None, ge=0)
+    password: str | None = None  # Required for price changes, not for monetization toggle
+
+
+class BillingSettingsResetRequest(BaseModel):
+    password: str = Field(..., min_length=1)
+
+
+# --- Admin Credit Packages ---
+
+
+class AdminCreditPackageConfigDefaults(BaseModel):
+    name: str
+    price_cents: int
+    credit_amount: int
+    display_order: int
+
+
+class AdminCreditPackageResponse(BaseModel):
+    id: str
+    name: str
+    price_cents: int
+    credit_amount: int
+    display_order: int
+    is_active: bool
+    stripe_price_id: str
+    config_defaults: AdminCreditPackageConfigDefaults | None = None  # None if not in config
+
+
+class CreditPackageUpdateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    price_cents: int = Field(..., ge=0)
+    credit_amount: int = Field(..., ge=1)
+    display_order: int = Field(..., ge=0)
+    is_active: bool
+    password: str = Field(..., min_length=1)
+
+
+class CreditPackageResetRequest(BaseModel):
+    password: str = Field(..., min_length=1)

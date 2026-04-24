@@ -10,6 +10,7 @@ from app.routers.admin import invitations as admin_invitations
 from app.routers.admin import users as admin_users
 from app.routers.admin import billing as admin_billing
 from app.routers.admin import billing_settings as admin_billing_settings
+from app.routers.admin import credit_packages as admin_credit_packages
 from app.routers.admin import discount_codes as admin_discount_codes
 
 admin_router = APIRouter()
@@ -18,6 +19,7 @@ admin_router.include_router(admin_auth.router)
 admin_router.include_router(admin_audit.router)
 admin_router.include_router(admin_billing.router)
 admin_router.include_router(admin_billing_settings.router)
+admin_router.include_router(admin_credit_packages.router)
 admin_router.include_router(admin_credits.router)
 admin_router.include_router(admin_dashboard.router)
 admin_router.include_router(admin_invitations.router)
