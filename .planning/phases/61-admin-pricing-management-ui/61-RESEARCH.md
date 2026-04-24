@@ -33,7 +33,7 @@ The existing codebase provides strong foundations: the billing-settings page (20
 - **D-14:** The `/subscriptions/plans` endpoint reads tiers with `has_plan: true` from config and builds the response dynamically instead of hardcoding 3 plans
 - **D-15:** Plan Selection page (`/settings/plan`) already renders dynamically from API -- backend changes are sufficient, no frontend changes needed for plan rendering
 - **D-16:** Billing page (`/settings/billing`) shows dynamic credit package cards rendered from the database. Each card shows package name, price, credits, and a "Buy" button. Replaces any hardcoded credit package references
-- **D-17:** Password sent in each save/reset request body (not a separate verify endpoint). Backend verifies atomically with the action. Returns 401 if password wrong
+- **D-17:** Password sent in each save/reset request body (not a separate verify endpoint). Backend verifies atomically with the action. Returns 403 if password wrong (deviation from original 401 -- approved by owner because 401 triggers adminApiClient auto-redirect to /login, logging the admin out; 403 matches existing codebase pattern in admin/credits.py)
 - **D-18:** Router and endpoint design: Claude's discretion -- pick the approach that best fits existing admin API patterns
 
 ### Claude's Discretion
@@ -254,7 +254,7 @@ class BillingSettingsResponse(BaseModel):
 
 ### Pitfall 1: 401 vs 403 for Wrong Confirmation Password
 **What goes wrong:** Using 401 status code for incorrect confirmation password causes the `adminApiClient` to auto-redirect to the login page, logging the admin out.
-**Why it happens:** D-17 in CONTEXT.md says "Returns 401" but the existing codebase pattern (admin credit adjustments) deliberately uses 403 with the comment "Use 403 (not 401) -- admin IS authenticated, just wrong confirmation password."
+**Why it happens:** D-17 in CONTEXT.md says "Returns 403" (updated from original 401 after owner approval) and the existing codebase pattern (admin credit adjustments) deliberately uses 403 with the comment "Use 403 (not 401) -- admin IS authenticated, just wrong confirmation password."
 **How to avoid:** Use 403 for incorrect confirmation passwords. Use 401 only for actual authentication failures (expired/invalid JWT). The frontend PasswordConfirmDialog should handle 403 by showing inline error, not redirecting.
 **Warning signs:** Admin gets logged out when entering wrong confirmation password.
 
@@ -387,7 +387,9 @@ async def get_plans(db: DbSession, current_user: CurrentUser):
             continue
 
         price_key = f"price_{tier_name}_monthly_cents"
-        price_cents = json.loads(platform_settings.get(price_key, str(tier_config.get("price_cents", 0))))
+        price_cents = json.loads(
+            platform_settings.get(price_key, str(tier_config.get("price_cents", 0)))
+        )
 
         plans.append(PlanInfo(
             tier_key=tier_name,
@@ -421,22 +423,19 @@ async def get_plans(db: DbSession, current_user: CurrentUser):
 | A1 | The `on_demand` tier should still appear in Plan Selection even though it has `has_plan: false` | Code Examples (dynamic plans) | On Demand tier would disappear from the plan selection page. Need to handle it as a special case or add `has_plan: true` to on_demand in config |
 | A2 | Credit package price changes should follow the same Stripe Price creation pattern as subscription pricing (deactivate old, create new) | Pitfall 5 | If credit packages use a different Stripe flow, the implementation would be wrong. But this matches the existing `_sync_stripe_packages` pattern in pricing_sync.py |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Password status code: 401 vs 403**
-   - What we know: CONTEXT.md D-17 says "Returns 401 if password wrong." The existing codebase pattern (admin credits router) uses 403 with explicit comment: "Use 403 (not 401) -- admin IS authenticated, just wrong confirmation password."
-   - What's unclear: Whether D-17's "401" was intentional or the user meant "auth error" generically.
-   - Recommendation: Use 403 to match existing codebase convention. Using 401 would trigger the `adminApiClient` auto-redirect to `/login`, logging the admin out -- clearly unintended behavior. Flag this in planning as a deviation from D-17's literal text.
+1. **Password status code: 401 vs 403** (RESOLVED)
+   - What we know: CONTEXT.md D-17 originally said "Returns 401 if password wrong." The existing codebase pattern (admin credits router) uses 403 with explicit comment: "Use 403 (not 401) -- admin IS authenticated, just wrong confirmation password."
+   - Resolution: Owner approved updating D-17 to use 403. CONTEXT.md D-17 now reads "Returns 403 if password wrong" with rationale that 401 triggers adminApiClient auto-redirect to /login. All plans use 403 consistently.
 
-2. **On Demand tier in dynamic plan building**
+2. **On Demand tier in dynamic plan building** (RESOLVED)
    - What we know: Currently hardcoded as first plan in `/subscriptions/plans`. It has `has_plan: false` in config.
-   - What's unclear: Should on_demand be included in dynamic plan listing even though `has_plan: false`? Or should config be updated to include it?
-   - Recommendation: Add a `show_in_plan_selection: true` flag to on_demand tier in config, or handle it as a special case in the dynamic plan builder. The simplest approach: keep on_demand as a special case in the endpoint since it behaves differently (no subscription, no price).
+   - Resolution: Keep on_demand as a special case in the endpoint. It is handled separately before the `has_plan` iteration loop -- added first to the plans list with its own display logic (no subscription, "Pay as you go" pricing). This avoids config changes and preserves backward compatibility.
 
-3. **Billing settings GET response shape expansion**
+3. **Billing settings GET response shape expansion** (RESOLVED)
    - What we know: Current GET returns flat fields for standard + premium pricing. Phase 61 needs dynamic tier support + config defaults + stripe readiness.
-   - What's unclear: Whether to restructure as a list of tiers or keep flat with dynamic key generation.
-   - Recommendation: Add `subscription_tiers: [...]` list alongside existing flat fields for backwards compatibility, plus `config_defaults` and `stripe_readiness` top-level keys.
+   - Resolution: Keep existing flat fields for backward compatibility and add `config_defaults` dict and `stripe_readiness` dict as new top-level keys. Config defaults are built dynamically from `get_user_classes()` tiers with `has_plan: true`. No `subscription_tiers` list needed -- the flat fields plus config_defaults provide sufficient data for the admin UI.
 
 ## Validation Architecture
 
