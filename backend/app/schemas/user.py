@@ -16,5 +16,7 @@ class UserResponse(BaseModel):
     is_active: bool
     is_admin: bool = False
     created_at: datetime
+    user_class: str = "free_trial"
+    trial_expires_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)

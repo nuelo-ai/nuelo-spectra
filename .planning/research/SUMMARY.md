@@ -1,17 +1,17 @@
 # Project Research Summary
 
-**Project:** Spectra Pulse v0.8 — Detection Module
-**Domain:** Statistical analysis module additive to existing LLM-powered data analytics SaaS
-**Researched:** 2026-03-05
+**Project:** Spectra — Monetization Milestone (Stripe Integration, Subscription Management, Billing UI, Admin Billing Tools)
+**Domain:** SaaS monetization for credit-based AI analytics platform
+**Researched:** 2026-03-18
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Spectra v0.8 (Pulse) is a statistical detection module built entirely on top of an existing production platform (FastAPI, LangGraph, E2B, Next.js, PostgreSQL). The scope is deliberately additive: 3 new Python libraries, 3 new SQLAlchemy models, 9 new API endpoints, a new LangGraph pipeline, and a frontend component migration from an already-completed mockup. Nothing in the existing stack changes. The primary engineering challenge is building a high-quality Pulse Agent that produces structured, schema-validated Signal outputs — not building infrastructure, which is already in place.
+Spectra monetization is a Stripe-around-existing-credit-engine integration, not a greenfield payment system build. The core insight from all four research tracks is that Spectra already has the hardest part built: atomic credit deduction, tier-based allocations, transaction logging, admin portal, and a split-horizon multi-mode architecture. What monetization adds is a payment collection layer (Stripe Checkout Sessions), a subscription lifecycle manager (webhooks + local DB mirror), and a billing UI (two new settings pages). The total new dependency footprint is exactly 3 packages: `stripe` Python SDK on the backend, plus `@stripe/stripe-js` and `@stripe/react-stripe-js` on the frontend. Zero new infrastructure.
 
-The recommended approach is a strict build-order that lets each layer validate before the next begins: data models and migrations first, backend CRUD API second, Pulse Agent third (with its own validation milestone before frontend wiring), and frontend migration last. The pulse-mockup in the repo is the authoritative UI contract — 20 components should be migrated (not rebuilt) with only import paths, mock data, and setTimeout stubs swapped for live API calls. The frontend migration also requires two mandatory setup steps before any component is copied: a globals.css token update (Nord palette to Hex.tech palette) and a ThemeProvider addition to the main app's provider tree.
+The recommended approach is to build in dependency order, not feature order. Tier restructure must come first — it is a data migration that affects every other component. Then the credit model must be split into dual balance columns (subscription credits vs. purchased credits) before any Stripe code writes credit values. Only after those foundations are stable should Stripe Checkout Sessions, the webhook handler, and the billing UI be built. This ordering avoids the highest-cost recovery scenario: deploying a single-balance credit model that requires a complex data migration once payments are live.
 
-The two highest risks in v0.8 are both in the backend. First, the Pulse Agent must emit schema-validated JSON Signals — this is a known gap in the existing agent system and the only agent in the codebase where Pydantic structured output is essential (Signals are schema-sensitive in a way that chat code generation is not). Second, E2B sandbox timeout defaults (60 seconds) are sized for interactive chat queries and will consistently fail on multi-file statistical analysis — a Pulse-specific 300-second timeout must be set before writing any Pulse execution code. Both risks are avoidable with explicit early decisions and are not blockers to launching v0.8.
+The key risk is the webhook handler. Stripe retries on timeout and network failure, making idempotency non-optional. A `stripe_events` deduplication table must be part of the Stripe integration phase from the start, not an afterthought. The second risk is Stripe-local state drift: the local `subscriptions` table is a read cache; Stripe is the source of truth. The monthly credit reset must be driven by the `invoice.paid` webhook, not the existing APScheduler, to prevent double-resets. Both risks have clear mitigations and are avoidable with the phase ordering below.
 
 ---
 
@@ -19,187 +19,137 @@ The two highest risks in v0.8 are both in the backend. First, the Pulse Agent mu
 
 ### Recommended Stack
 
-The existing stack is locked (FastAPI, PostgreSQL, LangGraph, E2B, Next.js 16, React 19, shadcn/ui, TanStack Query, Zustand, Plotly.js). v0.8 adds three Python libraries and one frontend package.
+Monetization adds exactly 3 new dependencies to the existing stack. The `stripe` Python SDK (`>=14.4.0`) handles all server-side Stripe operations — Checkout Sessions, subscription lifecycle, refunds, and webhook signature verification — in a single package. On the frontend, `@stripe/stripe-js` (`>=8.10.0`) is the Stripe.js loader and `@stripe/react-stripe-js` (`>=5.6.0`) provides the `EmbeddedCheckout` component. React 19 compatibility is confirmed (resolved in v3.1.0, Dec 2024, issue #540). The admin frontend requires no new dependencies; all admin billing actions are server-side FastAPI calls rendered with existing shadcn/ui components.
 
-**Core technology additions:**
+The recommended Checkout UX is Stripe Embedded Checkout (not redirect), because `redirectToCheckout` was deprecated in Stripe's 2025-09-30 Clover API changelog. Embedded Checkout keeps users on the Spectra domain, maintains PCI compliance (card data never touches Spectra servers), and falls back to a server-side redirect with a one-line backend change if iframe issues arise. The Stripe Customer Portal is explicitly rejected: Spectra needs custom billing pages to display credit balances, top-up packages, and tier-specific logic that the hosted portal cannot render.
 
-- `scipy >=1.11.0`: univariate anomaly detection (Z-score, IQR) and data quality checks — pre-installed in E2B default Python environment; no sandbox config changes needed
-- `statsmodels >=0.14.0`: trend analysis with statistical significance (OLS regression, Augmented Dickey-Fuller) — produces p-values and confidence intervals that populate Signal `statistical_evidence` fields
-- `scikit-learn >=1.3.0`: multi-column anomaly detection (Isolation Forest) and concentration analysis — handles cross-column interactions that per-column statistics miss
-- `recharts ^2.15.3`: Signal visualizations (AreaChart for trends, BarChart for concentration, ScatterChart for anomalies) — already present in pulse-mockup at this version; Recharts v3 was alpha as of March 2026, stay on v2.x
+**Core technologies:**
+- `stripe>=14.4.0`: All server-side Stripe API calls — the only new backend dependency
+- `@stripe/stripe-js>=8.10.0`: Stripe.js CDN loader — required by the React component
+- `@stripe/react-stripe-js>=5.6.0`: Embedded Checkout React components — React 19 confirmed compatible
+- All other stack components (FastAPI, SQLAlchemy, Alembic, APScheduler, SMTP, shadcn/ui, TanStack Query): existing, reused with targeted modifications
 
-All three Python libraries are compatible with the existing pandas dependency and share the same numpy transitive dependency without conflicts. Version requirements verified on PyPI (scipy 1.17.1, statsmodels 0.14.6, sklearn 1.8.0). See `.planning/research/STACK-pulse-v0.8.md` for installation commands and full compatibility matrix.
-
-**What NOT to add:** `prophet` (requires Stan/C++ build toolchain), `pyod` (wraps sklearn with unnecessary overhead), Plotly in Signal visualization JSON (conflicts with chat DataCard format), Celery (E2B execution is the bottleneck; async task queue adds infrastructure without UX improvement).
+See `.planning/research/STACK-monetization.md` for full dependency rationale, version pinning notes, and what NOT to add.
 
 ### Expected Features
 
-**Must have (table stakes) — v0.8 launch:**
+Monetization features follow a strict dependency chain: tier restructure unlocks subscription models, subscription models unlock Stripe integration, Stripe integration unlocks billing UI, billing UI unlocks admin tools. Building out of this order creates rework.
 
-- Collection CRUD (create, list, view with 4-tab layout) — workspace entry point; no Pulse without it
-- File attachment to Collection (upload CSV/Excel, view column profile, remove) — Pulse requires data
-- Pulse detection trigger (Run Detection button, credit pre-check, deduction, refund on failure) — core v0.8 deliverable
-- Full-page detection loading state with 4-step animated indicator — mandatory per NNG guidelines for 5-30s operations
-- Signal list sorted by severity (critical first, auto-select highest on page load) — unsorted results feel broken
-- Signal detail panel with chart, analysis text, and statistical evidence grid — signal without evidence is unactionable
-- Pre-run credit cost estimate in button label and sticky action bar — table stakes for credit-based systems
-- Tier-based workspace access gating (workspace_access + max_active_collections per tier) — must be live at launch
+**Must have (table stakes — P1 for launch):**
+- Tier restructure — eliminates ongoing `free` tier, adds `on_demand`, renames `standard` -> `basic`; foundation for all billing logic
+- Trial expiration mechanism — `trial_expires_at` field + backend auth middleware check; without this, free trial never ends
+- Subscription data model — `subscriptions`, `payment_history`, `credit_packages` tables via Alembic migrations
+- Stripe webhook handler with idempotency — server-authoritative payment fulfillment; the central nervous system for all billing state
+- Plan Selection page (`/settings/plan`) — three-tier card layout, triggers Stripe Checkout
+- Stripe Checkout Sessions — subscription mode for plans, payment mode for top-ups
+- Manage Plan page (`/settings/billing`) — current plan status, billing history, cancel action
+- Cancel subscription flow — cancel at period end (not immediate) with confirmation dialog
+- Credit top-up purchases — predefined packages (e.g., 50/200/500 credits), one-time Checkout Sessions
+- Credit deduction priority — subscription credits consumed first (expire at cycle end), purchased credits second (never expire)
+- Trial status banner — countdown display, escalating urgency (blue → amber → red)
+- Admin billing visibility — subscription status and payment history in existing admin user detail page
 
-**Should have (differentiators) — v0.8 if time allows, else v0.9:**
+**Should have (P2 — add when triggered by first real case):**
+- Admin manual subscription override (with mandatory `expires_at` and reason)
+- Admin cancel on behalf of user
+- Admin refund capability (full/partial via Stripe Refund API + credit clawback)
+- Admin billing event log
+- Failed payment grace period (3 days, then downgrade to On Demand)
+- Upgrade/downgrade proration (Stripe handles the math; expose mid-cycle change UI)
 
-- Concentration analysis (Pareto/80-20 signals) — answers business questions that statistical outlier detection misses; not present in Julius.ai or Power BI
-- Data quality as a signal type — surfaces missing data patterns that block investigation of other signals
-- Category-aware chart type per signal (agent-determined; no user configuration) — competitors show anomalies as generic line charts
-- Statistical evidence grid (method, values, confidence, baseline) — "anomaly detected" is insufficient; Spectra shows the statistical proof
-- Inline credit balance transparency — pre-run estimate plus running total in collection header
+**Defer to v2+:**
+- Annual billing (add as a Price variant in Stripe; no structural code change needed when the time comes)
+- Coupon/promo codes (Stripe Coupons API exists; defer until marketing needs them)
+- Multi-currency support (defer until non-US revenue warrants it)
+- Stripe Tax (add in-place when legal/accounting requires it)
 
-**Defer to v0.9:**
-
-- Collection archiving and limit display ("X of Y active collections")
-- Report compilation from Signals
-- Chat-to-Collection bridge (add-to-collection-modal.tsx exists in mockup but is deferred)
-- PDF export on compiled Reports (button is "present but disabled" in mockup — correct for v0.8)
-
-**Permanent anti-features (do not build):**
-
-- Real-time monitoring / scheduled re-runs — requires scheduling infrastructure; deferred post-v0.12
-- Sensitivity threshold sliders — users lack statistical expertise to tune safely; filter by severity tier instead
-- "Opportunity" as a fourth severity level — severity must map to urgency, not valence; signal valence belongs in title text
-
-See `.planning/research/FEATURES.md` for full feature prioritization matrix, behavioral clarifications, and statistical method recommendations.
+See `.planning/research/FEATURES-monetization.md` for the full feature dependency graph and prioritization matrix.
 
 ### Architecture Approach
 
-v0.8 adds a completely independent module to the existing platform. No existing router, model, service, or agent file is modified. The Pulse pipeline is a separate LangGraph `StateGraph` with its own `PulseAgentState` TypedDict — it shares E2B sandbox runtime and the LLM factory with the chat pipeline, but has no shared state or graph nodes. Frontend workspace routes are placed in a new `(workspace)` route group (parallel to the existing `(dashboard)` group), with their own layout, rather than inheriting the Chat sidebar layout.
+The architecture wraps Stripe around the existing credit engine rather than replacing it. A new `SubscriptionService` becomes the central Stripe API orchestrator — all Checkout Session creation, subscription lifecycle management, and tier transition logic passes through it. A separate `StripeWebhookRouter` (at `/webhooks/stripe`) is explicitly excluded from JWT auth middleware and signature-verified instead. The existing `CreditService.deduct_credit()` is modified to implement dual-source deduction priority. The existing APScheduler credit reset is scoped to non-subscription tiers only; subscription credit resets are driven exclusively by `invoice.paid` webhooks to prevent double-resets.
+
+Three Alembic migrations are required in sequence: (1) additive column changes to existing tables (`stripe_customer_id`, `trial_expires_at`, `purchased_balance`, `credit_source`), (2) three new tables (`subscriptions`, `payment_history`, `credit_packages`), and (3) a data migration for tier restructure plus backfilling `trial_expires_at` for existing trial users.
 
 **Major components:**
+1. `SubscriptionService` (NEW) — Stripe API calls, checkout session creation, subscription CRUD, tier transitions, credit source tracking
+2. `StripeWebhookRouter` (NEW) — raw body signature verification, event dispatch to typed handlers, `stripe_events` idempotency table
+3. `BillingRouter` (NEW) — `/billing/*` user-facing endpoints for plan selection, subscription management, top-ups, billing history
+4. `CreditService` (MODIFIED) — dual-source deduction priority: subscription balance first, purchased balance second
+5. `UserCredit` model (MODIFIED) — add `purchased_balance` column separate from subscription `balance`
+6. Auth middleware (MODIFIED) — trial expiration check (`trial_expires_at < now()`) on every authenticated request
+7. Plan Selection page `/settings/plan` (NEW) — tier cards with Stripe Embedded Checkout
+8. Manage Plan page `/settings/billing` (NEW) — subscription details, top-up packages, billing history
+9. Admin BillingRouter (NEW) — admin visibility, override, cancel, refund endpoints
+10. Trial Banner / Upgrade Prompt (NEW) — global overlay components, appear on every page
 
-1. `Collection`, `CollectionFile`, `Signal` models — three new SQLAlchemy models; `CollectionFile` uses `__tablename__ = "collection_files"` (never "files" — name collision with existing model)
-2. `CollectionService` and `PulseService` — service layer between router and agent; routers own HTTP concerns only
-3. `pulse/graph.py` — independent LangGraph pipeline: `profile_data_node` → `run_analyses_node` → `generate_signals_node`; separate E2B executions per analysis type
-4. `pulse/analyzers.py` — E2B-executable Python scripts for anomaly, trend, concentration, quality checks
-5. `/collections` router — 9 endpoints with `WorkspaceAccess` FastAPI dependency for tier and collection limit enforcement
-6. `frontend/src/components/workspace/` — 15 migrated components from pulse-mockup (copy-and-wire, not rebuild)
-7. `(workspace)/` route group — 3 new pages: `/workspace`, `/workspace/collections/[id]`, `/workspace/collections/[id]/signals`
-
-**Critical path:** data models → Alembic migration → CollectionService → collections router → Pulse Agent validation → Pulse endpoint → frontend migration.
-
-See `.planning/research/ARCHITECTURE.md` for complete data flow diagrams, component responsibility table, anti-patterns, and build-order dependency chain.
+See `.planning/research/ARCHITECTURE-MONETIZATION.md` for full data flows, file-level project structure, anti-patterns, and Alembic migration plan.
 
 ### Critical Pitfalls
 
-1. **CollectionFile model named "File" — import collision with existing `app.models.file.File`** — Name the new model `CollectionFile` with `__tablename__ = "collection_files"`. Phase 1 decision; all downstream work depends on it being correct.
+1. **Non-idempotent webhook handler** — Stripe retries on failure; without deduplication, a slow DB write triggers duplicate credit grants. Prevention: create a `stripe_events` table with a unique constraint on `event_id`; check and insert at the start of every handler inside the same DB transaction. Must be built in from day one.
 
-2. **E2B sandbox timeout (60s default) too short for multi-file statistical analysis** — Create `PULSE_SANDBOX_TIMEOUT_SECONDS` config (default: 300). Instantiate `E2BSandboxRuntime(timeout_seconds=300)` in the Pulse Agent. Must be set before writing any Pulse execution code.
+2. **Single-balance credit model** — Adding purchased credits to the existing `balance` column means the monthly subscription reset (`balance = tier_allocation`) silently wipes credits users paid for. Prevention: split `UserCredit` into `balance` (subscription, resets monthly) and `purchased_balance` (never resets) before any Stripe code writes credits. Recovery cost after the fact is high.
 
-3. **Pulse Agent LLM output inconsistency breaks Signal parsing** — Known gap in the existing agent system. For Pulse specifically: use a strict `PulseAgentOutput` Pydantic model with `Literal["critical", "warning", "info"]` for severity. A Signal schema with missing or invalid fields silently discards user-paid results.
+3. **Tier migration breaks existing users** — Removing `free` from `user_classes.yaml` without an Alembic data migration leaves every `free` tier user's `get_class_config("free")` returning `None`, breaking credit deduction and scheduler resets. Prevention: write the Alembic data migration first; keep old tier keys as aliases for one release cycle; test on a production data copy.
 
-4. **Dashboard layout wraps workspace pages in Chat sidebar** — Create a `(workspace)` route group parallel to `(dashboard)`, with its own layout.tsx. Never nest `/workspace` inside `(dashboard)`. Must be established before any component migration.
+4. **Trial expiration only enforced in the frontend** — Users with open tabs and API key users bypass frontend route guards entirely. Prevention: enforce trial check in the FastAPI auth dependency (`Depends`), covering all paths (frontend, API v1, MCP server). Backend middleware, not scheduler, is the real-time enforcement mechanism.
 
-5. **CSS token conflict: Nord palette (main frontend) vs. Hex.tech palette (mockup)** — Update `globals.css` dark mode tokens globally to the mockup's Hex.tech palette before migrating any components. Also add `ThemeProvider` from `next-themes` to `frontend/src/app/providers.tsx` (currently absent).
+5. **Client-controlled Stripe pricing** — Accepting `price_id` or `amount` from the frontend request body allows a malicious user to pay $0.01 for Premium. Prevention: the API accepts only a plan name (`"basic"` or `"premium"`); the backend resolves it to a Stripe Price ID from server-side config. The client never controls what gets charged.
 
-6. **Credit deduction with no atomic rollback on long-running Pulse failures** — Add an APScheduler orphan-refund job that scans for credit deductions with no matching Signal rows after N minutes. Implement before the Pulse endpoint goes live.
-
-See `.planning/research/PITFALLS-v0.8-pulse.md` for full "Looks Done But Isn't" checklist, recovery strategies, integration gotchas, and security mistakes.
+See `.planning/research/PITFALLS-monetization.md` for the full pitfall list, security mistakes, UX pitfalls, recovery strategies, and the "Looks Done But Isn't" verification checklist.
 
 ---
 
 ## Implications for Roadmap
 
-The architecture research identifies a clear build-order based on hard layer dependencies. The phase structure below follows that order with pitfall-avoidance checkpoints at each transition.
+All four research files independently converge on the same build ordering. The dependency graph is unambiguous: tier restructure and credit model changes must precede Stripe integration, which must precede billing UI, which must precede admin tools.
 
-### Phase 1: Data Foundation
+### Phase 1: Tier Restructure and Trial Expiration
 
-**Rationale:** Every other phase depends on the data models and configuration. This is the critical path blocker. Must be done first and done correctly — the CollectionFile naming decision here affects import trees across all backend phases.
+**Rationale:** No Stripe code should be written against the old tier structure. Tier restructure is a data migration, not a config change — deploying it first prevents the "free tier users locked out overnight" failure mode. Trial expiration belongs here because it has zero Stripe dependency and is a prerequisite for conversion pressure. This phase also includes the credit model dual-balance split because it must happen before any Stripe code writes credit values.
+**Delivers:** Clean tier model (`free_trial`, `on_demand`, `basic`, `premium`, `internal`) in `user_classes.yaml`, Alembic migrations for column additions and data migration of existing `free`/`standard` users, `purchased_balance` column on `UserCredit`, `trial_expires_at` on `User`, trial expiration middleware check in FastAPI auth dependency, upgrade prompt UI as a static component (no payment flow yet).
+**Addresses:** Tier restructure, existing user migration, credit model dual-balance, trial expiration mechanism, trial banner (static version).
+**Avoids:** Pitfall 3 (tier migration breaks existing users), Pitfall 4 (trial only checked on frontend), and the high-cost recovery for single-balance credit model (Pitfall 2).
 
-**Delivers:** Three new SQLAlchemy models (`Collection`, `CollectionFile`, `Signal`) with Alembic migration, user_classes.yaml extended with `workspace_access` and `max_active_collections` per tier, `workspace_credit_cost_pulse` added to platform_settings DEFAULTS and VALID_KEYS.
+### Phase 2: Stripe Core and Webhook Foundation
 
-**Addresses:** COLL-01 through COLL-03 data layer, FILE-01 through FILE-03 data layer, ADMIN-01, ADMIN-02 data layer
+**Rationale:** Backend-only phase. Establishes the payment infrastructure before any UI is built on top of it. Webhook idempotency and the `stripe_events` table must be locked in here — once `invoice.paid` events start firing in production, retroactively adding idempotency is risky.
+**Delivers:** `stripe` SDK installed, `SubscriptionService`, `Subscription`/`PaymentHistory`/`CreditPackage` models (Alembic migration 2), webhook endpoint with signature verification and `stripe_events` deduplication, event handlers for `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated/deleted`, modified `CreditService.deduct_credit()` for source priority, APScheduler scoped to non-subscription tiers.
+**Uses:** `stripe>=14.4.0`, FastAPI, SQLAlchemy, Alembic, existing `CreditService`.
+**Avoids:** Pitfall 1 (non-idempotent webhooks), Pitfall 2 (Stripe-local state drift and double-reset), Pitfall 5 (client-controlled pricing), Pitfall 7 (Stripe secret keys in platform_settings).
 
-**Avoids:**
-- Pitfall 1 (CollectionFile name collision) — naming decision made before any downstream imports
-- Pitfall 7 (Alembic migration table name inconsistency) — review autogenerated migration before running; confirm `__tablename__` matches migration exactly
+### Phase 3: Billing UI
 
-### Phase 2: Backend CRUD API
+**Rationale:** Frontend billing pages depend on backend endpoints being functional and tested. Building UI second reduces the iteration loop — API contracts are stable before React components consume them. This is also where the Stripe Embedded Checkout components are introduced.
+**Delivers:** `@stripe/stripe-js` and `@stripe/react-stripe-js` installed, Plan Selection page (`/settings/plan`) with tier cards and Stripe Embedded Checkout, Manage Plan page (`/settings/billing`) with subscription status + buy credits + billing history, cancel subscription flow with confirmation dialog, settings navigation update (new "Plan & Billing" tab), TanStack Query billing hooks.
+**Implements:** Plan Selection page, Manage Plan page, Trial Banner (wired to live data), Upgrade Prompt overlay (wired to backend `TRIAL_EXPIRED` 403 response).
+**Avoids:** UX pitfalls — trial banner non-dismissible in last 3 days, cancel confirmation shows access-until-date, credit balance display shows subscription and purchased credits separately.
 
-**Rationale:** The frontend cannot develop against live APIs until CRUD endpoints exist. This phase unblocks parallel frontend work and provides a Postman/curl validation milestone before agent complexity is introduced.
+### Phase 4: Admin Billing Tools
 
-**Delivers:** Full `/collections` router with CRUD endpoints, file upload, `WorkspaceAccess` dependency, Pydantic schemas. Frontend can list, create, and upload files before the Pulse Agent exists.
-
-**Uses:** `CollectionService`, existing `CreditService` (deduct-before-execute pattern), `user_classes.yaml` tier enforcement via `WorkspaceAccess` dependency
-
-**Avoids:**
-- Pitfall 6 (credit deduction with no rollback) — design APScheduler orphan-refund safety net in this phase before wiring the Pulse endpoint
-
-### Phase 3: Pulse Agent
-
-**Rationale:** The Pulse Agent is the core value proposition of v0.8. It must be validated against real CSV data independently before the frontend signal display is built. Discovering agent output quality issues after building the UI wastes effort. Phase 3 can begin in parallel with Phase 2 after Phase 1 completes.
-
-**Delivers:** `PulseAgentState` TypedDict, `pulse/analyzers.py` (per-analysis-type E2B scripts), `pulse/agent.py` (LLM structuring with Pydantic output), `pulse/graph.py` (3-node pipeline), `pulse_service.py`. Validates Signal generation from a test CSV before any frontend work begins.
-
-**Uses:** scipy (anomaly/quality), statsmodels (trend), scikit-learn (concentration and multi-column anomaly), `E2BSandboxRuntime` with Pulse-specific 300s timeout, `get_llm()` factory with new `pulse_agent` entry in `prompts.yaml`
-
-**Avoids:**
-- Pitfall 2 (E2B timeout) — `PULSE_SANDBOX_TIMEOUT_SECONDS=300` set before first execution
-- Pitfall 8 (LLM output inconsistency) — `PulseAgentOutput` Pydantic schema defined before writing the agent prompt; severity `Literal["critical", "warning", "info"]` enforced
-
-### Phase 4: Pulse Endpoint Wire-Up
-
-**Rationale:** Short phase connecting the validated Pulse Agent to the API layer. Only begins after Phase 3 produces confirmed Signal output from real data files.
-
-**Delivers:** `POST /collections/{id}/pulse` endpoint with credit pre-check, atomic deduction, agent invocation, credit refund on failure (try/finally), returns signals list in response.
-
-**Avoids:**
-- Pitfall 6 continued — orphan-refund APScheduler job tested end-to-end; tier re-check on pulse trigger (not just on collection creation)
-
-### Phase 5: Frontend Migration
-
-**Rationale:** With Phases 1-4 complete, the backend contract is fully defined and stable. Frontend migration is low-risk: copy-and-wire from a completed mockup with only import paths, mock data, and setTimeout stubs changing.
-
-**Delivers:** 15 workspace components in `frontend/src/components/workspace/`, 3 new route pages in `(workspace)/` group, TanStack Query hooks (useCollections, useCollection, usePulse), Next.js API route handlers, recharts installed, ChatSidebar "Pulse Analysis" nav entry.
-
-**Uses:** recharts v2.15.3, existing TanStack Query patterns, existing Zustand stores (no new store needed)
-
-**Build order within Phase 5:** globals.css token update → ThemeProvider addition → `(workspace)` route group and layout → workspace list page → collection detail (Files tab first, then Overview, then Signals tab, then Reports stub) → detection results page → sidebar nav entry
-
-**Avoids:**
-- Pitfall 4 (dashboard layout wrapping workspace) — `(workspace)` route group created before migrating any component
-- Pitfall 5 (CSS token conflict) — globals.css updated to Hex.tech palette before any component copy
-- Pitfall 6 (missing ThemeProvider) — added to providers.tsx before any component copy
-
-### Phase 6: Admin and Tier Gating QA
-
-**Rationale:** Access gating must be verified end-to-end before the feature is released. This is validation work, not new development — confirming that WorkspaceAccess dependency, tier config, and credit cost config all behave correctly for every tier.
-
-**Delivers:** Confirmed tier access enforcement (free tier blocked, trial tier limited, premium unlimited), collection limit enforcement, workspace_credit_cost_pulse editable via admin settings page.
-
-**Addresses:** ADMIN-01, ADMIN-02 verified end-to-end; tier re-check on Pulse trigger (not just Collection creation)
-
-**Use the "Looks Done But Isn't" checklist** from `.planning/research/PITFALLS-v0.8-pulse.md` as the verification checklist for this phase.
-
----
+**Rationale:** Admin tools read and act on data created by all preceding phases. Building last means the data they operate on is already populated and tested. P2 features (override, refund) can be deferred to post-launch if timeline is tight; admin billing visibility (P1) is the minimum viable deliverable for this phase.
+**Delivers:** Admin billing visibility (subscription status + payment history on user detail page), admin billing event log, manual subscription override (with `expires_at`, reason, and background revert task for expired overrides), cancel on behalf of user, refund capability (Stripe Refund API + credit clawback prompt).
+**Avoids:** Pitfall 6 (admin override ghost state — override must have `expires_at`, a `subscription_overrides` table, and a resolver that checks overrides before Stripe subscription state).
 
 ### Phase Ordering Rationale
 
-- Phase 1 blocks everything — no model means no migration, no service, no router, no frontend
-- Phase 2 before Phase 5 — frontend needs stable API contracts; CRUD is low-risk and unblocks parallel mockup study
-- Phase 3 can run in parallel with Phase 2 — agent work depends only on Phase 1 models, not on CRUD routes
-- Phase 3 must complete with validated Signal output before Phase 5 Signals tab is built — this is the quality gate protecting the core v0.8 value proposition
-- Phase 5 migration is copy-and-wire only when Phases 1-4 are stable — reduces rework risk significantly
-- Phase 6 is QA and gating verification, not net-new development — correctly positioned last
+- Tier restructure must be first because it is a prerequisite that cannot be safely retrofitted after Stripe code runs against old tier names
+- Credit model dual-balance must happen before the first Stripe event writes credits, otherwise purchased credits get wiped on the first subscription reset
+- Stripe backend before billing UI so frontend components have stable API contracts to consume
+- Admin tools last because they depend on data that all other phases produce; the override data model should be designed in Phase 2 even if the UI comes in Phase 4
 
 ### Research Flags
 
-Phases needing deeper investigation during planning:
+Phases that need extra attention during implementation planning:
 
-- **Phase 3 (Pulse Agent):** Agent prompt engineering for Signal generation quality is empirical. The statistical method-to-signal-category mapping in FEATURES.md is a recommendation, not a codified standard. Allocate iteration cycles for prompt development and multi-provider testing before declaring the agent done.
-- **Phase 3 (Pulse Agent):** The split of analyses across separate E2B executions (one per detection type) reduces timeout risk but adds implementation complexity. Validate the exact split strategy against actual user file sizes before finalizing the analyzer design.
+- **Phase 1 (Tier Restructure):** The migration path for existing `free` tier users requires a product decision before the Alembic data migration can be written: migrate to `free_trial` with a 30-day grace period, or migrate directly to `on_demand`. This decision also determines whether a user communication email needs to go out before deploy. Must be resolved before Phase 1 task breakdown.
+- **Phase 2 (Stripe Core + Webhooks):** High implementation complexity across several intersecting concerns — idempotency, out-of-order event handling, APScheduler/webhook dual-reset prevention, Stripe Dashboard pre-configuration (Products, Prices, webhook endpoint registration), and webhook URL routing (direct to FastAPI backend vs. through Next.js proxy). Recommend a detailed task-level breakdown before implementation begins.
 
-Phases with well-documented patterns (research phase can be skipped):
+Phases with standard patterns (can proceed without additional research):
 
-- **Phase 1 (Data Foundation):** Standard SQLAlchemy 2.0 model plus Alembic migration. Existing codebase has clear, inspected examples for every pattern used.
-- **Phase 2 (Backend CRUD):** Standard FastAPI router plus service layer. Pattern is identical to the existing files and sessions routers inspected in architecture research.
-- **Phase 5 (Frontend Migration):** Copy-and-wire from completed mockup. Component tree, prop names, and interactions are fully defined in pulse-mockup source. No pattern research needed — only import and data wiring changes.
+- **Phase 3 (Billing UI):** Well-documented Stripe Embedded Checkout + Next.js patterns. `@stripe/react-stripe-js` component usage is straightforward once the backend Checkout Session endpoint is working. The existing settings page tab pattern is the model to follow.
+- **Phase 4 (Admin Billing Tools):** Follows existing Spectra admin portal patterns exactly. No novel integration points; the override data model is the only architectural decision, and research provides the recommended schema.
 
 ---
 
@@ -207,55 +157,52 @@ Phases with well-documented patterns (research phase can be skipped):
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All new library versions verified on PyPI. recharts v2.15.3 confirmed working in pulse-mockup against React 19. scipy/statsmodels/sklearn compatibility matrix cross-verified. E2B pre-installation of all three confirmed. |
-| Features | HIGH | Mockup directly inspected as authoritative UI contract. Feature classification informed by Adobe Analytics, Power BI, and NNG primary sources. Statistical method-to-category mapping is MEDIUM within overall HIGH confidence. |
-| Architecture | HIGH | Based entirely on direct codebase inspection — every claim traced to a specific file. Build order derived from hard dependency analysis, not opinion. |
-| Pitfalls | HIGH | All eight critical pitfalls verified against the actual codebase: existing File model import sites counted, sandbox timeout config confirmed, providers.tsx ThemeProvider absence confirmed, globals.css tokens directly compared. No speculative pitfalls. |
+| Stack | HIGH | All 3 new packages verified on PyPI and npm as of 2026-03-18. React 19 compatibility confirmed via GitHub issue #540 resolution. `redirectToCheckout` deprecation confirmed via Stripe changelog. Zero new infrastructure required. |
+| Features | HIGH | Stripe documentation is comprehensive. Spectra codebase patterns are clear (credit system, admin portal, platform settings all directly inspected). Feature dependencies are deterministic from the codebase. |
+| Architecture | HIGH | Integration patterns verified against official Stripe FastAPI examples and direct Spectra codebase analysis. Split-horizon router registration, proxy bypass for webhooks, and APScheduler scoping all confirmed against actual code paths. |
+| Pitfalls | HIGH | All 7 critical pitfalls grounded in either Stripe's own documentation, community post-mortems (Stigg, Hookdeck, Stripe.dev reconciliation series), or direct analysis of the Spectra codebase (e.g., single-balance field confirmed in `user_credits`, `user_classes.yaml` tier names confirmed). No speculative pitfalls. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Statistical severity thresholds:** The thresholds in FEATURES.md (Z-score > 3 = critical, etc.) are reasonable starting values but need empirical validation against real user data. Externalize to YAML config from day one so they can be tuned post-launch without code changes.
-- **Pulse Agent prompt quality:** Cannot be fully specified in research — requires iteration against real CSV inputs. Allocate explicit time in Phase 3 for prompt development and multi-provider testing before treating the agent as production-ready.
-- **Per-file vs. flat credit pricing:** The mockup implies per-file pricing but requirements specify flat cost (5.0 credits regardless of file count). FEATURES.md resolves this in favor of flat pricing, but confirm the decision with the owner before Phase 2 wires the credit check.
-- **Detection Results page cancel UX:** PITFALLS.md flags that the full-page loading state blocks back navigation. FEATURES.md does not specify a cancel action. Decide before Phase 5 — either implement a cancel endpoint or allow navigation away with a "Detection running in background" toast.
+- **Existing `free` tier user migration path:** Research identifies the migration is required but the product decision (grace period vs. immediate On Demand) needs owner input before the Alembic migration script can be written. This is a pre-Phase-1 decision.
+- **Stripe Dashboard pre-configuration:** Products, Prices, and webhook endpoint registration in the Stripe Dashboard must happen before Phase 2 can be tested. This is a manual prerequisite that should appear as a setup task before Phase 2 begins.
+- **`stripe_events` dedup table schema:** Research recommends the table but does not specify whether to include `processed_at`, `event_type`, `user_id`, and retention policy. Should be specified during Phase 2 task breakdown.
+- **Webhook URL routing (direct vs. proxied):** Research recommends pointing Stripe directly at the FastAPI backend origin rather than routing through the Next.js proxy. Whether this is possible depends on the Dokploy routing config. Verify during Phase 2 environment setup before registering the webhook endpoint in Stripe Dashboard.
 
 ---
 
 ## Sources
 
-### Primary (HIGH confidence)
+### Primary (HIGH confidence — official docs and codebase)
+- [Stripe Build Subscriptions with Checkout](https://docs.stripe.com/payments/checkout/build-subscriptions)
+- [Stripe Webhook Signature Verification](https://docs.stripe.com/webhooks/signature)
+- [Stripe Receive Webhook Events](https://docs.stripe.com/webhooks)
+- [Stripe Checkout Sessions API](https://docs.stripe.com/payments/quickstart-checkout-sessions)
+- [Stripe Idempotent Requests](https://docs.stripe.com/api/idempotent_requests)
+- [Stripe Database Reconciliation Series (Parts 1-3)](https://stripe.dev/blog/database-reconciliation-growing-businesses-part-1)
+- [redirectToCheckout deprecated — Stripe Clover changelog 2025-09-30](https://docs.stripe.com/changelog/clover/2025-09-30/remove-redirect-to-checkout)
+- [stripe PyPI v14.4.1](https://pypi.org/project/stripe/) — verified 2026-03-18
+- [@stripe/stripe-js npm v8.10.0](https://www.npmjs.com/package/@stripe/stripe-js) — verified 2026-03-18
+- [@stripe/react-stripe-js npm v5.6.1](https://www.npmjs.com/package/@stripe/react-stripe-js) — verified 2026-03-18
+- [React 19 support — issue #540 resolved (Dec 2024)](https://github.com/stripe/react-stripe-js/issues/540)
+- Spectra codebase: `backend/app/services/credit.py`, `backend/app/models/user_credit.py`, `backend/app/models/user.py`, `backend/app/config/user_classes.yaml`, `backend/app/services/platform_settings.py`, `frontend/src/app/api/[...slug]/route.ts`
+- Spectra requirements: `requirements/monetization-requirement.md`, `requirements/monetization-milestone-plan.md`
 
-- `pulse-mockup/src/components/workspace/` — 20 component files, authoritative UI contract
-- `pulse-mockup/src/lib/mock-data.ts` — `ChartType = "line" | "bar" | "scatter"` type definition
-- `backend/app/models/file.py` — existing `File` model, 8+ import sites confirmed
-- `backend/app/services/credit.py` — `SELECT FOR UPDATE` atomic deduction pattern
-- `backend/app/services/sandbox/e2b_runtime.py` — 60s sandbox timeout confirmed
-- `backend/app/config.py` — `sandbox_timeout_seconds: 60`, `stream_timeout_seconds: 180`
-- `frontend/src/app/(dashboard)/layout.tsx` — ChatSidebar + LinkedFilesPanel hardcoded on all dashboard routes
-- `frontend/src/app/providers.tsx` — ThemeProvider absence confirmed
-- `pulse-mockup/src/app/globals.css` vs `frontend/src/app/globals.css` — Hex.tech vs. Nord palette difference confirmed
-- `requirements/Pulse-req-milestone-plan.md` — authoritative v0.8 scope
-- `requirements/Spectra-Pulse-Requirement.md` — ER diagram, user journey, data model decisions
-- [SciPy 1.17.1 on PyPI](https://pypi.org/project/SciPy/) — current version verified
-- [statsmodels 0.14.6 on PyPI](https://pypi.org/project/statsmodels/) — current version verified
-- [scikit-learn 1.8.0 documentation](https://scikit-learn.org/stable/) — current version verified
-- [Recharts API documentation](https://recharts.github.io/en-US/api/) — AreaChart, BarChart, ScatterChart API verified stable in v2.x
-
-### Secondary (MEDIUM confidence)
-
-- Adobe Analytics Anomaly Detection Statistical Techniques — ETS/GESD methodology; statistical method-to-category mapping informed by this
-- NNG Skeleton Screens research — progress bars required for 10+ second waits; informs detection loading UX requirement
-- Power BI Anomaly Detection documentation — severity tier vs. sensitivity slider design decision
-- IBM Databand — severity-prioritized alert view confirmed as industry pattern
-- Pareto Chart 101 (Mode.com) — sorted bar plus cumulative line as canonical Pareto output
-
-### Tertiary (LOW confidence)
-
-- Statistical severity thresholds (Z-score > 3 = critical, etc.) — reasoned starting values based on academic statistics conventions; require empirical validation against user data before treating as final
+### Secondary (MEDIUM confidence — community patterns)
+- [FastAPI + Stripe Integration (fast-saas.com)](https://www.fast-saas.com/blog/fastapi-stripe-integration/)
+- [Stripe Webhook Best Practices (Stigg)](https://www.stigg.io/blog-posts/best-practices-i-wish-we-knew-when-integrating-stripe-webhooks)
+- [Stripe Webhooks Guide (Hookdeck)](https://hookdeck.com/webhooks/platforms/guide-to-stripe-webhooks-features-and-best-practices)
+- [Stripe + Next.js 2026 Guide (dev.to)](https://dev.to/sameer_saleem/the-ultimate-guide-to-stripe-nextjs-2026-edition-2f33)
+- [Stripe Subscription Lifecycle in Next.js 2026 (dev.to)](https://dev.to/thekarlesi/stripe-subscription-lifecycle-in-nextjs-the-complete-developer-guide-2026-4l9d)
+- [Building a Payment Backend with FastAPI, Stripe, and Webhooks (Medium)](https://medium.com/@abdulikram/building-a-payment-backend-with-fastapi-stripe-checkout-and-webhooks-08dc15a32010)
+- [Webhook Idempotency Patterns (Medium)](https://medium.com/@sohail_saifii/handling-payment-webhooks-reliably-idempotency-retries-validation-69b762720bf5)
+- [SaaS Free Trial Conversion Best Practices (UserPilot)](https://userpilot.com/blog/saas-free-trial-best-practices/)
+- [How to Implement Credit System in Subscription Model (FlexPrice)](https://flexprice.io/blog/how-to-implement-credit-system-in-subscription-model)
+- [Managing Subscription Changes in Stripe (Moldstud)](https://moldstud.com/articles/p-how-to-effectively-manage-subscription-changes-in-stripe-and-avoid-common-pitfalls)
 
 ---
-
-*Research completed: 2026-03-05*
+*Research completed: 2026-03-18*
+*Milestone: Monetization*
 *Ready for roadmap: yes*

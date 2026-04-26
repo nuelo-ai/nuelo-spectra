@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Spectra is an AI-powered data analytics platform that transforms how users interact with their data. Users upload datasets (Excel/CSV), create chat sessions, link multiple files, and ask questions in natural language — receiving instant insights as interactive Data Cards with AI-generated Plotly charts. A ChatGPT-style session-centric UX with sidebar navigation enables multi-file conversations and cross-file analysis. A 6-agent AI system with intelligent query routing generates validated Python code in a secure sandbox, automatically creating visualizations when analysis benefits from charts. Multi-turn conversation memory, web search integration, smart query suggestions, 7 chart types with PNG/SVG export, and theme-aware Nord palette across 5 LLM providers. Fully deployable via Docker Compose (local) or Dokploy (production) with automatic admin seeding and fail-fast startup validation. Exposes a public REST API and MCP server for programmatic access and AI agent integrations. Now includes Spectra Pulse: users create Collections, attach CSV/Excel files, and run AI-powered anomaly detection that generates severity-sorted Signal cards with Plotly chart visualizations, statistical evidence, and downloadable Markdown reports — the foundation of the Detect → Explain → What-If analysis pipeline.
+Spectra is an AI-powered data analytics platform that transforms how users interact with their data. Users upload datasets (Excel/CSV), create chat sessions, link multiple files, and ask questions in natural language — receiving instant insights as interactive Data Cards with AI-generated Plotly charts. A ChatGPT-style session-centric UX with sidebar navigation enables multi-file conversations and cross-file analysis. A 6-agent AI system with intelligent query routing generates validated Python code in a secure sandbox, automatically creating visualizations when analysis benefits from charts. Multi-turn conversation memory, web search integration, smart query suggestions, 7 chart types with PNG/SVG export, and theme-aware Nord palette across 5 LLM providers. Fully deployable via Docker Compose (local) or Dokploy (production) with automatic admin seeding and fail-fast startup validation. Exposes a public REST API and MCP server for programmatic access and AI agent integrations. Now includes Spectra Pulse: users create Collections, attach CSV/Excel files, and run AI-powered anomaly detection that generates severity-sorted Signal cards with Plotly chart visualizations, statistical evidence, and downloadable Markdown reports. Users can then launch What-If Scenarios directly from any Signal to generate AI-backed prescriptive scenario cards with refinement chat — the Detect → What-If analysis pipeline.
 
 ## Core Value
 
@@ -13,22 +13,24 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 **GitHub:** https://github.com/marwazihs/nuelo-spectra.git (private)
 **Remote:** origin
 **Branch:** master
-**Latest Tag:** v0.8.1 (2026-03-10)
+**Latest Tag:** v0.10 (2026-04-26)
 
 ## Previous Milestones
 
+**v0.9 Monetization (Shipped 2026-04-14):** Full Stripe billing integration — 5-tier model (Free Trial, On Demand, Basic, Premium), dual-balance credit tracking (subscription + purchased), trial expiration enforcement with blocking overlay, Stripe Checkout for subscriptions and credit top-ups, webhook-driven subscription lifecycle, Plan Selection and Manage Plan billing pages, admin billing tools (force-set tier, refunds, discount codes, billing settings). 5 phases, 15 plans, 59 requirements.
+
 **v0.8.1 UI Fixes & Enhancement (Shipped 2026-03-10):** Closed UI polish gaps — leftbar toggle visible in all workspace sub-views, nav icons aligned, logos removed from Chat/Files panels, Chat rightbar toggles pinned correctly, Credits Used shows actual spend, Signal View mobile-responsive with Chat bridge button, timestamps show date+time throughout.
 
-**v0.8 Spectra Pulse (Detection) (Shipped 2026-03-10):** Full Pulse Analysis module — Collections, file upload, AI-powered anomaly detection pipeline (multi-agent orchestrator + E2B sandbox), Signal cards with Plotly visualizations and statistical evidence, Markdown reports, tier-based workspace access gating, and delete/rename collection management. Establishes the Detect foundation of the Detect → Explain → What-If pipeline.
+**v0.8 Spectra Pulse (Detection + Reporting) (Shipped 2026-03-10):** Full Pulse Analysis module — Collections, file upload, AI-powered anomaly detection pipeline (multi-agent orchestrator + E2B sandbox), Signal cards with Plotly visualizations and statistical evidence, Markdown reports with download, tier-based workspace access gating, and delete/rename collection management. Establishes the Detect foundation of the Detect → What-If pipeline.
 
-**v0.7.12 Spectra Pulse Mockup (Shipped 2026-03-05):** Standalone Next.js mockup (`pulse-mockup/`) covering full Analysis Workspace — Pulse detection, Collections, Guided Investigation, What-If Scenarios, and Admin Workspace Management. Design reference for v0.8–v0.12 implementation milestones.
+**v0.7.12 Spectra Pulse Mockup (Shipped 2026-03-05):** Standalone Next.js mockup (`pulse-mockup/`) covering full Analysis Workspace — Pulse detection, Collections, What-If Scenarios, and Admin Workspace Management. Design reference for v0.8–v0.10 implementation milestones. (Note: Guided Investigation screens exist in the mockup but the feature is dropped from the product roadmap.)
 
 **v0.7 API Services & MCP (Shipped 2026-02-25):** Public REST API and MCP server exposing Spectra's data analysis capabilities for programmatic access and AI agent integrations, with API key management, credit deduction, and usage logging.
 
 ## Current State
 
-**Shipped:** v0.8.1 UI Fixes & Enhancement (2026-03-10)
-**Status:** Milestone complete — planning next milestone (v0.9)
+**Shipped:** v0.10 Streamline Pricing Configuration (2026-04-26)
+**Status:** v0.10 complete — Config-driven pricing & admin pricing management UI shipped
 **Codebase:** ~96,000 LOC (Python app + TypeScript/TSX across public frontend + admin frontend + pulse-mockup + Docker/shell infra)
 **Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily + Plotly + APScheduler (backend), Next.js 16 + React 19 + TanStack + Zustand + shadcn/ui + next-themes + Plotly.js + Recharts + Sonner (frontend + admin frontend), Docker + Dokploy + Tailscale (deployment), Next.js + shadcn/ui + Recharts (pulse-mockup)
 
@@ -80,6 +82,19 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 - ✅ Spectra Pulse: Inline detection progress banner, sonner toast on completion with signal count, re-run confirmation dialog, credit cost pre-check (402) + atomic deduction + automatic refund
 - ✅ Spectra Pulse: Tier-based workspace access gating (workspace_access + max_active_collections per tier in user_classes.yaml), runtime-configurable credit cost via Admin Portal
 - ✅ Spectra Pulse: (workspace) route group with own sidebar layout and Hex.tech dark palette (independent of chat interface)
+
+- ✅ Trial expiration enforcement: backend 402 blocking for expired free_trial users with exempt paths (auth, credits, admin, health)
+- ✅ Trial UI: countdown banner (amber urgency at ≤3 days/≤10 credits, session-dismissible), blocking overlay for expired trials (self-hides on /settings/*), placeholder plan page with 3 tier cards
+- ✅ Frontend trial data layer: useTrialState hook, apiClient 402 interception with trial-expired event
+- ✅ Stripe billing backend: SubscriptionService (customer creation, checkout sessions, 5 webhook handlers), webhook router with signature verification and event deduplication, subscription/credits checkout endpoints, payment failure email notifications, 31 passing billing tests
+- ✅ Billing UI: Plan Selection page (/settings/plan) with live pricing from backend, upgrade/downgrade confirmation dialogs with Stripe proration preview, Stripe hosted checkout redirect for new subscriptions
+- ✅ Manage Plan page (/settings/billing) with plan status card, credit balance (subscription + purchased), credit top-up purchase flow, billing history table, post-Stripe redirect toast handling
+- ✅ Settings restructured with tab navigation (Profile, API Keys, Plan, Billing)
+- ✅ Payment confirmation email templates (subscription, top-up, renewal) integrated into webhook handlers
+- ✅ On-demand switch with confirmation dialog (trial and subscribed variants), cancel at period end
+- ✅ Admin billing tools: user billing detail (subscription status, payment history, Stripe event log), force-set tier with Stripe sync, admin cancel subscription, refund with credit deduction
+- ✅ Admin billing settings: monetization toggle, trial duration, trial credits, subscription pricing with Stripe Price auto-creation
+- ✅ Admin discount codes: CRUD with Stripe Coupon + Promotion Code sync, promotion code entry enabled on Checkout
 
 **Known limitations:**
 - E2B sandboxes created per-execution (no warm pools - ~150ms cold start per query)
@@ -520,13 +535,66 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **v0.8.1 Total: 12/12 requirements satisfied (100%)**
 
-## Next Milestone
+**✅ v0.9 Monetization — Shipped 2026-04-14**
 
-<!-- Requirements for next milestone defined in .planning/REQUIREMENTS.md after /gsd:new-milestone -->
+**Tier & Credit (8/8):**
+- ✓ 4 consumer tiers: Free Trial, On Demand, Basic, Premium — v0.9
+- ✓ Tier config restructured in user_classes.yaml — v0.9
+- ✓ Existing free-tier users migrated (confirmed none in production) — v0.9
+- ✓ Dual-balance credit tracking (subscription + purchased) — v0.9
+- ✓ Subscription-first credit deduction — v0.9
+- ✓ Purchased credits persist across billing cycles — v0.9
+- ✓ Subscription credits reset via Stripe invoice.paid webhook — v0.9
+- ✓ APScheduler skips subscription-tier users — v0.9
 
-### Active
+**Trial (7/7):**
+- ✓ Free Trial on registration with configurable credits — v0.9
+- ✓ Configurable trial duration (default 14 days) — v0.9
+- ✓ Trial expiration enforced in auth middleware (web, API, MCP) — v0.9
+- ✓ Trial banner with days/credits remaining — v0.9
+- ✓ Amber urgency at ≤3 days or ≤10 credits — v0.9
+- ✓ Blocking overlay when trial expires — v0.9
+- ✓ Trial credits not eligible for top-up — v0.9
 
-*(No active requirements — start next milestone with `/gsd:new-milestone`)*
+**Stripe Integration (10/10):**
+- ✓ Stripe SDK with env var configuration — v0.9
+- ✓ Checkout Sessions for subscriptions and credit top-ups — v0.9
+- ✓ Webhook endpoint with signature verification — v0.9
+- ✓ Event deduplication via stripe_events table — v0.9
+- ✓ checkout.session.completed, invoice.paid, invoice.payment_failed webhooks — v0.9
+- ✓ customer.subscription.updated and .deleted webhooks — v0.9
+
+**Subscription & Billing UI (12/12):**
+- ✓ Plan Selection page with On Demand, Basic, Premium pricing — v0.9
+- ✓ Upgrade/downgrade with proration preview — v0.9
+- ✓ Cancel at period end, purchased credits preserved — v0.9
+- ✓ Credit top-up packages via Stripe Checkout — v0.9
+- ✓ Manage Plan page with subscription details, credits, billing history — v0.9
+- ✓ Settings tab navigation (Profile, API Keys, Plan, Billing) — v0.9
+
+**Data Model (6/6):**
+- ✓ Subscription, PaymentHistory, CreditPackage, StripeEvent tables — v0.9
+- ✓ trial_expires_at and purchased_balance fields — v0.9
+
+**Admin Billing (10/10):**
+- ✓ Admin user subscription view and payment history — v0.9
+- ✓ Force-set tier with Stripe sync and reason logging — v0.9
+- ✓ Admin cancel subscription, refund with credit deduction — v0.9
+- ✓ Billing event log, billing settings (trial, pricing) — v0.9
+- ✓ Discount codes with Stripe Coupon/Promotion Code sync — v0.9
+
+**v0.9 Total: 59/59 requirements satisfied (100%)**
+
+## Current Milestone: v0.10 Streamline Pricing Configuration
+
+**Goal:** Unify and streamline how Stripe pricing is configured for both subscription plans and credit top-up packages — config-file driven defaults with admin override capability.
+
+**Target features:**
+- Add pricing fields (price_cents, has_plan flag) to user_classes.yaml for subscription tiers
+- Define default credit packages in config file (name, price, credits)
+- Auto-create Stripe Products/Prices on startup for missing items (zero-touch first deploy)
+- Admin can view/edit subscription pricing and credit packages
+- Admin can reset pricing to config-file defaults
 
 ### Out of Scope
 
@@ -535,7 +603,6 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 - **Full Collections organization** — Basic file list sufficient; collections add complexity
 - **Google OAuth authentication** — Email/password sufficient for current validation
 - **PowerPoint export** — PDF export proves the concept first
-- **Billing and subscription management** — Validate product-market fit before payment infrastructure
 - **S3/cloud file storage** — Local storage sufficient; cloud storage adds deployment complexity
 - **Real-time collaboration** — Single-user experience for now
 - **Mobile native apps** — Web-responsive design only
@@ -599,7 +666,7 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | DB-backed password reset tokens (not JWT) | Single-use, revocable, auditable | ✓ Good — more secure than JWT-based resets |
 | LLM-generated query suggestions | Dataset-specific, not hardcoded templates | ✓ Good — suggestions reflect actual data structure |
 | Local file storage (defer S3) | Simpler deployment, fewer dependencies | ✓ Good — named volumes work for current scale |
-| Skip billing for v1 | Need product validation first | — Pending |
+| Skip billing for v1 | Need product validation first | ✓ Revisited — Monetization milestone started 2026-03-18 |
 | Chat-session-centric UX (v0.3) | Enable multi-file analysis, ChatGPT-style conversations | ✓ Good — ChatGPT-style sidebar + sessions shipped, UAT passed |
 | Cross-file analysis support | AI can reference all linked files in a single query | ✓ Good — ContextAssembler with named DataFrames and join hints works well |
 | At least one file required per chat | Prevents empty chats, maintains data analysis focus | ✓ Good — dual feedback (toast + inline warning) provides clear UX |
@@ -663,6 +730,11 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | SidebarGroup wrapper required for nav icon alignment | SidebarMenu alone lacks p-2 padding context that SidebarGroup provides; pl-1 on asChild children was insufficient | ✓ Good — icons align correctly with chat history list items below |
 | toLocaleString over toLocaleDateString for Pulse timestamps | toLocaleDateString silently ignores hour/minute options in all browsers; toLocaleString respects them | ✓ Good — date + time display works across all browsers |
 | Chat bridge button opens new tab (window.open) | Same-tab navigation would destroy current Signal View context; new tab preserves the user's place | ✓ Good — users can bridge to Chat without losing Pulse Analysis context |
+| Guided Investigation (Explain) dropped from roadmap | Feature adds complexity with questionable value; What-If alone delivers the prescriptive analytics goal | ✓ Decided 2026-03-14 — Investigation and RootCause data models removed; Scenario links directly to Signal |
+| What-If entry point: direct from Signal, no prerequisite | Requiring a completed investigation before What-If created unnecessary friction and dependency | ✓ Decided 2026-03-14 — "What-If" button always enabled on SignalDetailPanel; Signal data used as context |
+| v0.9 old (Collections/Chat bridge) dropped | Chat-to-Collection bridge deferred to future Chat enhancement; archive UI deferred to future milestone | ✓ Decided 2026-03-14 — v0.9 slot is now What-If Scenarios; v0.10 is Admin |
+| Activity tab in Collection detail (v0.9) | Activity feed in Overview tab buries key collection stats; dedicated tab gives full log with paging | ✓ Decided 2026-03-14 — 5th tab, tabular paginated format, replaces inline feed in Overview |
+| What-If credit costs configurable in v0.9 Admin settings | Credit costs must be editable the moment the feature ships, not deferred to v0.10 admin dashboard | ✓ Decided 2026-03-14 — What-If cost fields added to Platform Settings page in v0.9; v0.10 consolidates UI |
 
 ---
-*Last updated: 2026-03-10 after v0.8.1 milestone*
+*Last updated: 2026-04-23 after v0.10 Phase 60 (Config-Driven Pricing & Startup Sync)*

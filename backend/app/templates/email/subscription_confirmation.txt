@@ -1,0 +1,10 @@
+Hi {{ first_name }},
+
+Your {{ plan_name }} plan is now active. You were charged {{ amount_display }}.
+
+Manage your subscription at:
+{{ billing_url }}
+
+If you have any questions, please contact our support team.
+
+- Spectra

@@ -63,9 +63,11 @@ Do **not** use a patch version for new features or significant additions — tho
 ### Branch Structure
 
 ```
-master    →  Stable releases only (v0.1, v0.2, v1.0, etc.)
-develop   →  Active development for next version
-hotfix/*  →  Emergency fixes for current stable version (if needed)
+master      →  Stable releases only (tagged versions)
+develop     →  Integration branch — completed features accumulate here
+feature/*   →  One branch per feature, auto-created by GSD milestone strategy
+release/*   →  Short-lived release staging branch (cut from develop, merged to master)
+hotfix/*    →  Emergency fixes for current stable version
 ```
 
 ### Branch Purposes
@@ -73,8 +75,12 @@ hotfix/*  →  Emergency fixes for current stable version (if needed)
 | Branch | Purpose | Protected | Tags |
 |--------|---------|-----------|------|
 | `master` | Production-ready code, always stable | ✅ Yes | All version tags (v0.1, v0.2, etc.) |
-| `develop` | Active development for next milestone | ❌ No | Pre-release tags (v0.2-beta, optional) |
+| `develop` | Integration — completed features land here | ❌ No | Pre-release tags (optional) |
+| `feature/*` | GSD-managed: auto-created at first `execute-phase` per milestone | ❌ No | None |
+| `release/*` | Release staging — integration fixes only, no new features | ❌ No | None |
 | `hotfix/*` | Bug fixes and minor changes for current release | ❌ No | Patch tags (v0.1.1, v0.1.2) |
+
+> **Feature-based workflow:** Features are developed as GSD milestones with `branching_strategy: "milestone"`. GSD auto-creates `feature/*` branches — no manual branching needed. See [FEATURE-WORKFLOW.md](./FEATURE-WORKFLOW.md) for the complete guide.
 
 ### Remote Branch Policy
 
@@ -107,54 +113,36 @@ This ensures the live beta app always runs code that has been audited, verified,
 
 ## Development Workflow
 
-### Starting New Milestone
+### Starting a New Feature
 
-When starting a new milestone (e.g., v0.7):
+See [FEATURE-WORKFLOW.md](./FEATURE-WORKFLOW.md) for the complete step-by-step guide.
 
-```bash
-# 1. Ensure you're on develop
-git checkout develop
+**Summary:**
 
-# 2. All GSD phases work on develop
-/gsd:plan-phase 37
-/gsd:execute-phase 37
-# ... all phase commits go to develop ...
-
-# Develop branch accumulates all phase work
-```
-
-### During Development
-
-**All GSD commands execute on `develop` branch:**
-
-```bash
-# Verify you're on develop
-git branch --show-current  # should show "develop"
-
-# Normal GSD workflow
-/gsd:plan-phase 37
-/gsd:execute-phase 37
-/gsd:verify-phase 37
-
-# All commits automatically go to develop
-# GSD atomic commits continue as normal
-```
+1. Write a requirements document in `requirements/`
+2. Hand off to GSD: `/gsd:new-milestone <feature-name>` — GSD plans on `develop` (research, requirements, roadmap), then auto-creates the `feature/*` branch at first `/gsd:execute-phase`
+3. GSD signals completion via `/gsd:complete-milestone`
+4. PR the feature branch into `develop`
+5. Reconcile `.planning/` files on merge
 
 ### Releasing New Version
 
-When milestone is complete and audit passes:
+When the project owner decides which completed features to ship:
 
 ```bash
-# 1. Ensure all work is committed on develop
+# 1. Ensure all feature PRs are merged and develop is clean
 git checkout develop
+git pull origin develop
 git status  # should be clean
 
-# 2. Run final milestone audit
-/gsd:audit-milestone
+# 2. Cut release branch from develop
+git checkout -b release/vX.Y
 
-# 3. Switch to master and merge
+# 3. Smoke test — fix integration issues only (no new features)
+
+# 4. Switch to master and merge
 git checkout master
-git merge develop --no-ff  # create merge commit for clarity
+git merge release/vX.Y --no-ff  # create merge commit for clarity
 
 # 4. Tag the release
 git tag -a v0.6 -m "Release v0.6: Docker and Dokploy Support
@@ -173,11 +161,11 @@ Features:
 git push origin master
 git push origin v0.6
 
-# 6. Push develop to keep remote in sync
+# 6. Merge release branch back to develop and clean up
+git checkout develop
+git merge release/vX.Y
 git push origin develop
-
-# 7. Complete milestone via GSD
-/gsd:complete-milestone v0.6
+git branch -d release/vX.Y
 ```
 
 **After release:** Dokploy services automatically pick up the new code on next redeploy (they pull from `master`).
@@ -271,71 +259,55 @@ git tag v0.6-rc.1
 
 ## GSD Integration
 
-### GSD Commands Aware of Branches
-
-When working with GSD:
-
-1. **Always verify branch before starting phase:**
-   ```bash
-   git branch --show-current  # ensure you're on develop
-   ```
-
-2. **GSD atomic commits respect current branch:**
-   - `/gsd:execute-phase 37` commits go to current branch (develop)
-   - Planning docs in `.planning/` also committed to current branch
-
-3. **Before merging to master:**
-   - Run `/gsd:audit-milestone` to verify completion
-   - Ensure all UAT tests pass
-   - Review all commits since branch creation
-
 ### GSD Config
-
-Current `.planning/config.json` setting:
 
 ```json
 {
   "git": {
-    "branching_strategy": "none"
+    "branching_strategy": "milestone",
+    "milestone_branch_template": "feature/{milestone}-{slug}"
   }
 }
 ```
 
-**Note:** `"branching_strategy": "none"` means GSD does NOT automatically create branches. Branch management is manual (as documented in this file).
+GSD manages the feature development lifecycle on `feature/*` branches. Our process takes over after GSD signals completion. See [FEATURE-WORKFLOW.md](./FEATURE-WORKFLOW.md) for the full handshake details.
+
+### Handshake Points
+
+| Point | Direction | What happens |
+|-------|-----------|--------------|
+| `/gsd:new-milestone` | Us → GSD | We hand off a requirements doc; GSD plans on `develop` (research, requirements, roadmap) |
+| `/gsd:execute-phase` | GSD | GSD auto-creates `feature/*` branch on first execution; all code committed there |
+| `/gsd:complete-milestone` | GSD → Us | GSD signals feature is done; we take over for PR + release |
 
 ---
 
 ## Release Checklist
 
-### Pre-Release (on develop branch)
+### Pre-Release
 
-- [ ] All phase plans executed and verified
-- [ ] `/gsd:audit-milestone` passes
-- [ ] All UAT tests passed
-- [ ] No critical bugs or blockers
-- [ ] All commits include proper messages
-- [ ] MILESTONES.md updated with release notes
+- [ ] All target feature branches merged into `develop` via PR
+- [ ] `.planning/` reconciliation done for each merged feature
+- [ ] No critical bugs or blockers on `develop`
 - [ ] README.md updated (if needed)
-- [ ] Documentation updated
 
-### Release (merge to master)
+### Release
 
-- [ ] Switch to master: `git checkout master`
-- [ ] Merge develop: `git merge develop --no-ff`
-- [ ] Resolve any conflicts
-- [ ] Tag release: `git tag -a v0.x -m "Release v0.x: ..."`
+- [ ] Cut release branch: `git checkout -b release/vX.Y` from `develop`
+- [ ] Smoke test — fix integration issues only
+- [ ] Merge to master: `git merge release/vX.Y --no-ff`
+- [ ] Tag release: `git tag -a vX.Y -m "Release vX.Y: ..."`
 - [ ] Push master: `git push origin master`
-- [ ] Push tag: `git push origin v0.x`
+- [ ] Push tag: `git push origin vX.Y`
+- [ ] Merge release back to develop: `git merge release/vX.Y`
 - [ ] Push develop: `git push origin develop`
-- [ ] Verify GitHub shows correct tag on master
-- [ ] Update Dokploy services to use `master` branch (if not already set)
-- [ ] Trigger redeployment on each Dokploy service
+- [ ] Delete release branch: `git branch -d release/vX.Y`
+- [ ] Trigger Dokploy redeployment
 
 ### Post-Release
 
-- [ ] Create new develop branch if deleted (or continue on existing develop)
-- [ ] Update PROJECT.md with next milestone goals
-- [ ] `/gsd:new-milestone v0.x` for next version
+- [ ] Verify Dokploy services running new version
+- [ ] Update PROJECT.md with next goals (if applicable)
 
 ---
 
@@ -486,18 +458,19 @@ git push -u origin develop
 
 ## Best Practices
 
-1. **Always work on develop branch** during milestone development
+1. **Use GSD milestone branching strategy** — let GSD create `feature/*` branches automatically
 2. **Never commit directly to master** except for emergency hotfixes
 3. **Tag every release** on master (v0.1, v0.6, etc.)
 4. **Use descriptive tag messages** (include feature summary)
-5. **Merge develop to master only when milestone audit passes**
-6. **Always push both branches** after a release (`git push origin master && git push origin develop`)
+5. **Use `release/vX.Y` branches** for release staging — no new features on release branches
+6. **Always push both `master` and `develop`** after a release
 7. **Use `--no-ff` for merge commits** (preserves branch history)
 8. **Dokploy services always point to `master`** — never deploy from `develop`
 
 ---
 
-*Last Updated: 2026-02-20*
+*Last Updated: 2026-03-17*
 *Strategy Established: v0.2 milestone*
 *Updated: v0.6 milestone — clarified remote branch policy and Dokploy branch requirement*
+*Updated: 2026-03-17 — adopted GSD milestone branching strategy (feature/* auto-branches), added release/* for release staging, aligned with GSD native parallel development (see FEATURE-WORKFLOW.md)*
 *Next Review: After v1.0 release*

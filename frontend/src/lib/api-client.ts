@@ -107,6 +107,12 @@ async function fetchWithAuth(
 
   let response = await fetch(`${BASE_URL}${path}`, options);
 
+  // Trial expired — do NOT attempt token refresh, emit event for UI
+  if (response.status === 402) {
+    window.dispatchEvent(new CustomEvent("trial-expired"));
+    return response;
+  }
+
   // If 401 Unauthorized, attempt token refresh
   if (response.status === 401) {
     const refreshed = await refreshAccessToken();
@@ -200,6 +206,12 @@ export const apiClient = {
       headers,
       body: formData,
     });
+
+    // Trial expired check (before 401 handler)
+    if (response.status === 402) {
+      window.dispatchEvent(new CustomEvent("trial-expired"));
+      return response;
+    }
 
     // Handle 401 with token refresh
     if (response.status === 401) {

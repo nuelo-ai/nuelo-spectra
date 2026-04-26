@@ -1,11 +1,11 @@
-"""Tests for ADMIN-01: tier gating — workspace access and collection limits.
+"""Tests for ADMIN-01: tier gating -- workspace access and collection limits.
 
-Covers all five tiers: free, free_trial, standard, premium, internal.
-All tests use unittest.mock — no database or live API required.
+Covers tiers: free_trial, on_demand, standard, premium, internal.
+All tests use unittest.mock -- no database or live API required.
 
 Resolution: free_trial has workspace_access=True (per user_classes.yaml).
-TestWorkspaceAccess covers free tier only. TestCollectionLimit covers
-free_trial (passes workspace, blocked on 2nd collection create).
+TestWorkspaceAccess covers workspace_access boolean enforcement.
+TestCollectionLimit covers free_trial (passes workspace, blocked on 2nd collection create).
 """
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -26,11 +26,11 @@ def _make_mock_user(user_class: str = "standard", user_id=None):
 
 @pytest.mark.asyncio
 class TestWorkspaceAccess:
-    """ADMIN-01: workspace_access boolean enforcement (free tier blocked)."""
+    """ADMIN-01: workspace_access boolean enforcement."""
 
-    async def test_free_tier_blocked(self):
-        """Free tier user is blocked from workspace access with 403."""
-        user = _make_mock_user(user_class="free")
+    async def test_workspace_access_blocked_when_disabled(self):
+        """User with workspace_access=False is blocked from workspace access with 403."""
+        user = _make_mock_user(user_class="on_demand")
         with patch(
             "app.dependencies.get_class_config",
             return_value={"workspace_access": False, "max_active_collections": 0},
@@ -41,11 +41,21 @@ class TestWorkspaceAccess:
             assert "workspace access" in exc_info.value.detail.lower()
 
     async def test_free_trial_workspace_allowed(self):
-        """Free trial user has workspace_access=True — no exception raised."""
+        """Free trial user has workspace_access=True -- no exception raised."""
         user = _make_mock_user(user_class="free_trial")
         with patch(
             "app.dependencies.get_class_config",
             return_value={"workspace_access": True, "max_active_collections": 1},
+        ):
+            result = await require_workspace_access(user)
+            assert result is user
+
+    async def test_on_demand_workspace_allowed(self):
+        """On Demand user has workspace_access=True -- no exception raised."""
+        user = _make_mock_user(user_class="on_demand")
+        with patch(
+            "app.dependencies.get_class_config",
+            return_value={"workspace_access": True, "max_active_collections": 3},
         ):
             result = await require_workspace_access(user)
             assert result is user
@@ -86,7 +96,7 @@ class TestCollectionLimit:
                     new_callable=AsyncMock,
                     return_value=mock_collection,
                 ):
-                    # Should not raise — first collection is allowed
+                    # Should not raise -- first collection is allowed
                     result = await create_collection(body, user, mock_db)
                     assert result.name == "My First Collection"
 

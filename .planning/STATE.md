@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.8.2
-milestone_name: Chat Query Suggestions Redesign
-status: archived
-stopped_at: v0.8.2 complete and archived
-last_updated: "2026-03-10T18:30:00.000Z"
-last_activity: 2026-03-10 — quick-5 complete: QuerySuggestions redesigned with column-per-category card layout
+milestone: v0.10
+milestone_name: Streamline Pricing Configuration
+status: milestone_complete
+stopped_at: v0.10 shipped — all phases complete, release tagged
+last_updated: "2026-04-26"
+last_activity: 2026-04-26 -- v0.10 release shipped
 progress:
   total_phases: 2
   completed_phases: 2
-  total_plans: 10
-  completed_plans: 10
+  total_plans: 7
+  completed_plans: 7
   percent: 100
 ---
 
@@ -18,25 +18,31 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-10)
+See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** v0.8.2 shipped — start next milestone with `/gsd:new-milestone`
+**Current focus:** v0.10 complete — Streamline Pricing Configuration shipped
 
 ## Current Position
 
-Phase: 54 of 54 (Pulse Analysis Fixes) — ARCHIVED
-Status: v0.8.2 complete — tagged v0.8.2 on master
-Last activity: 2026-03-10 - Released v0.8.2: Chat query suggestions redesign (card layout, column grouping)
+Phase: 61 of 61
+Plan: 4 of 4
+Status: Milestone complete
+Last activity: 2026-04-26
 
-Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7 ✅ | v0.7.12 ✅ | v0.8 ✅ | v0.8.1 ✅ | v0.8.2 ✅ [██████████] 100%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
-**Velocity (v0.8):**
-- Total plans completed: 20 (Phases 47-52.1, 8 phases)
-- Timeline: 4 days (2026-03-06 → 2026-03-09)
-- 144 commits, 168 files changed (+23,418 / -345 lines)
+**Velocity (v0.9):**
+
+- Total plans completed: 22 (Phases 55-59, 5 phases)
+- Timeline: 27 days (2026-03-18 -> 2026-04-14)
+
+**Velocity (v0.10):**
+
+- Total plans completed: 7 (Phases 60-61, 2 phases)
+- Timeline: 4 days (2026-04-22 -> 2026-04-26)
 
 ## Accumulated Context
 
@@ -44,25 +50,13 @@ Progress: v0.1 ✅ | v0.2 ✅ | v0.3 ✅ | v0.4 ✅ | v0.5 ✅ | v0.6 ✅ | v0.7
 
 See PROJECT.md Key Decisions table for full decision log.
 
-Recent decisions affecting v0.8.2 work:
-- [Phase 52.1-post-fix]: Per-collection Zustand state requires reactive selectors — getters are not subscriptions
-- [Phase 52.1-post-fix]: CollectionCard uses router.push on Card onClick (not Link wrapper) — avoids nested interactive element navigation issue
-- [Phase 52.1-post-fix]: Pulse 402 insufficient_credits error handled with toast in catch block
-- [Phase 53]: Fixed header strip uses shrink-0 border-b as direct child of outer flex-col container for SidebarTrigger visibility in MyFilesPage
-- [Phase 53-02]: ChatInterface logo retained in active-chat header (CHAT-01 applies to WelcomeScreen only); WelcomeScreen expand button guarded by sessionId; ChatInterface header restructured to flex row for true-edge toggle pinning
-- [Phase 53-01]: WorkspacePage uses flex flex-col h-full with shrink-0 header strip — not sticky/fixed positioning
-- [Phase 53-01]: Nav item padding fix uses pl-1 on Link/anchor children of SidebarMenuButton asChild
-- [Phase 53]: 53-04: LBAR-01 requires broader fix — SidebarTrigger header needed in Collection details, Signal detail, and Report views (not just WorkspacePage)
-- [Phase 53]: 53-04: LBAR-02 padding incomplete — pl-1 fix insufficient; icon centering in collapsed sidebar also misaligned
-- [Phase 53]: 53-04: New gap identified — 'Chat with Spectra' button missing from Signal detail view (not in original scope)
-- [Phase 53-shell-and-navigation-fixes]: LBAR-01 gap closed: SidebarTrigger added to all workspace sub-view pages (collection detail, signal view, report view) across all render states
-- [Phase 53-shell-and-navigation-fixes]: LBAR-02 gap closed: pl-1 removed from UnifiedSidebar nav asChild children — shadcn p-2 default is the sole padding source for correct icon alignment
-- [Phase 54-01]: COALESCE(SUM(credit_cost), 0.0) correlated subquery returns 0.0 when no completed runs — no null from DB
-- [Phase 54-01]: credits_used: float = 0.0 schema default ensures create_collection response valid without passing field
-- [Phase 54-pulse-analysis-fixes]: toLocaleString used instead of toLocaleDateString for Pulse timestamps — toLocaleDateString silently ignores hour/minute options in all browsers
-- [Phase 54-pulse-analysis-fixes]: Mobile toggle uses showDetail boolean in signals/page.tsx — list panel and detail panel each wrapped in div with sm:flex breakpoint classes; selecting a signal sets showDetail true
-- [Phase 54-pulse-analysis-fixes]: Chat bridge button in SignalDetailPanel disabled when collectionFiles.length === 0 to prevent empty session creation
-- [Phase 54]: PULSE-03 post-verification fix: Chat bridge button styled green and opens new chat session in a new tab (not same-tab navigation)
+Recent decisions affecting current work:
+
+- [v0.9]: Subscription pricing stored in platform_settings (stripe_price_standard_monthly, stripe_price_premium_monthly)
+- [v0.9]: Credit packages stored in credit_packages table (3 rows: Starter Pack, Value Pack, Pro Pack)
+- [v0.9]: Billing settings PUT auto-creates Stripe Price objects when price changes
+- [v0.10]: Config-driven pricing -- user_classes.yaml gets has_plan + price_cents fields
+- [v0.10]: Startup sync fills gaps only, never overwrites admin-customized Stripe Price IDs
 
 ### Pending Todos
 
@@ -74,19 +68,10 @@ Recent decisions affecting v0.8.2 work:
 
 ### Blockers/Concerns
 
-- slowapi>=0.1.9 compatibility with FastAPI 0.115+ and custom key_func — verify before writing rate limiting middleware
-- Confirm spectra-api and spectra-public share same Dokploy host — spectra_uploads volume sharing is automatic only on single host
-- Statistical severity thresholds (Z-score >3 = critical, etc.) are starting values only — externalize to YAML from day one
-
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 5 | update the query suggestion on the chat dashboard design and style to make it beautiful. use a nice card (Similar to Signal card item on the Signal view). Sort it as multiple columns grouped by the Category. | 2026-03-10 | 43343e9 | [5-update-the-query-suggestion-on-the-chat-](./quick/5-update-the-query-suggestion-on-the-chat-/) |
-| 6 | Fix bug on the signal list panel where the spacing between signal cards is too wide on Safari (h-screen -> h-full, space-y -> flex gap) | 2026-03-14 | 492c7b8 | [6-fix-bug-on-the-signal-list-panel-where-t](./quick/6-fix-bug-on-the-signal-list-panel-where-t/) |
+None.
 
 ## Session Continuity
 
-Last session: 2026-03-14T14:25:47Z
-Stopped at: Completed quick-6 (Safari signal list panel spacing fix)
-Resume with: /gsd:new-milestone
+Last session: 2026-04-26
+Stopped at: v0.10 shipped — release tagged and merged
+Resume with: /gsd-new-milestone for v0.11

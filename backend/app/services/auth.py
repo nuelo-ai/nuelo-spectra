@@ -1,5 +1,6 @@
 """Authentication service layer for business logic."""
 
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from uuid import UUID
 
@@ -58,6 +59,12 @@ async def create_user(
         user_class=default_class,
     )
 
+    # Set trial expiration for free_trial users
+    if default_class == "free_trial":
+        class_cfg = get_class_config(default_class)
+        trial_days = class_cfg.get("trial_duration_days", 7) if class_cfg else 7
+        user.trial_expires_at = datetime.now(timezone.utc) + timedelta(days=trial_days)
+
     db.add(user)
     await db.flush()  # Flush to get user.id for UserCredit FK
 
@@ -70,7 +77,7 @@ async def create_user(
     else:
         initial_balance = Decimal("0")
 
-    credit = UserCredit(user_id=user.id, balance=initial_balance)
+    credit = UserCredit(user_id=user.id, balance=initial_balance, purchased_balance=Decimal("0"))
     db.add(credit)
 
     # TODO: Existing users have balance=0 from migration backfill. Consider a

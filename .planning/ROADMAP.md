@@ -2,193 +2,84 @@
 
 ## Milestones
 
-- ✅ **v0.1 Beta MVP** — Phases 1-6 (shipped 2026-02-06)
-- ✅ **v0.2 Intelligence & Integration** — Phases 7-13 (shipped 2026-02-10)
-- ✅ **v0.3 Multi-file Conversation Support** — Phases 14-19 (shipped 2026-02-12)
-- ✅ **v0.4 Data Visualization** — Phases 20-25 (shipped 2026-02-15)
-- ✅ **v0.5 Admin Portal** — Phases 26-32 (shipped 2026-02-18)
-- ✅ **v0.6 Docker and Dokploy Support** — Phases 33-37 (shipped 2026-02-21)
-- ✅ **v0.7 API Services & MCP** — Phases 38-41 (shipped 2026-02-25)
-- ✅ **v0.7.12 Spectra Pulse Mockup** — Phases 42-46 (shipped 2026-03-05)
-- ✅ **v0.8 Spectra Pulse (Detection)** — Phases 47-52.1 (shipped 2026-03-10)
-- ✅ **v0.8.1 UI Fixes & Enhancement** — Phases 53–54 (shipped 2026-03-10)
-- ✅ **v0.8.2 Chat Query Suggestions Redesign** — quick-5 (shipped 2026-03-10)
+- ✅ **v0.1 Beta MVP** - Phases 1-6 (shipped 2026-02-06)
+- ✅ **v0.2 Intelligence & Integration** - Phases 7-13 (shipped 2026-02-10)
+- ✅ **v0.3 Multi-file Conversation Support** - Phases 14-19 (shipped 2026-02-12)
+- ✅ **v0.4 Data Visualization** - Phases 20-25 (shipped 2026-02-15)
+- ✅ **v0.5 Admin Portal** - Phases 26-32 (shipped 2026-02-18)
+- ✅ **v0.6 Docker and Dokploy Support** - Phases 33-37 (shipped 2026-02-21)
+- ✅ **v0.7 API Services & MCP** - Phases 38-41 (shipped 2026-02-25)
+- ✅ **v0.7.12 Spectra Pulse Mockup** - Phases 42-46 (shipped 2026-03-05)
+- ✅ **v0.8 Spectra Pulse (Detection)** - Phases 47-52.1 (shipped 2026-03-10)
+- ✅ **v0.8.1 UI Fixes & Enhancement** - Phases 53-54 (shipped 2026-03-10)
+- ✅ **v0.9 Monetization** - Phases 55-59 (shipped 2026-04-14)
+- ✅ **v0.10 Streamline Pricing Configuration** - Phases 60-61 (shipped 2026-04-26)
 
 ## Phases
 
-<details>
-<summary>✅ v0.1 Beta MVP (Phases 1-6) — SHIPPED 2026-02-06</summary>
+**Phase Numbering:**
+- Integer phases (1, 2, 3): Planned milestone work
+- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [x] Phase 1: Foundation Setup (6/6 plans) — completed 2026-02-06
-- [x] Phase 2: File Upload & AI Profiling (6/6 plans) — completed 2026-02-06
-- [x] Phase 3: Multi-File Management (4/4 plans) — completed 2026-02-06
-- [x] Phase 4: AI Agent System & Code Generation (8/8 plans) — completed 2026-02-06
-- [x] Phase 5: Secure Code Execution & E2B (6/6 plans) — completed 2026-02-06
-- [x] Phase 6: Interactive Data Cards & Frontend Polish (6/6 plans) — completed 2026-02-06
+Decimal phases appear between their surrounding integers in numeric order.
+
+<details>
+<summary>Phases 1-59 (v0.1 through v0.9) - SHIPPED</summary>
+
+See MILESTONES.md for completed phase details.
 
 </details>
 
-<details>
-<summary>✅ v0.2 Intelligence & Integration (Phases 7-13) — SHIPPED 2026-02-10</summary>
+### v0.10 Streamline Pricing Configuration
 
-- [x] Phase 7: Multi-LLM Provider Infrastructure (5/5 plans) — completed 2026-02-09
-- [x] Phase 8: Session Memory with PostgreSQL Checkpointing (2/2 plans) — completed 2026-02-08
-- [x] Phase 9: Manager Agent with Intelligent Query Routing (3/3 plans) — completed 2026-02-08
-- [x] Phase 10: Smart Query Suggestions (2/2 plans) — completed 2026-02-08
-- [x] Phase 11: Web Search Tool Integration (3/3 plans) — completed 2026-02-09
-- [x] Phase 12: Production Email Infrastructure (2/2 plans) — completed 2026-02-09
-- [x] Phase 13: Migrate Web Search (Tavily) (2/2 plans) — completed 2026-02-09
+- [x] **Phase 60: Config-Driven Pricing & Startup Sync** - Add pricing fields to config, seed defaults to DB, auto-create Stripe Products/Prices on startup (completed 2026-04-23)
+- [x] **Phase 61: Admin Pricing Management UI** - Admin can view, edit, and reset subscription pricing and credit packages (completed 2026-04-26)
 
-</details>
+## Phase Details
 
-<details>
-<summary>✅ v0.3 Multi-file Conversation Support (Phases 14-19) — SHIPPED 2026-02-12</summary>
+### Phase 60: Config-Driven Pricing & Startup Sync
+**Goal**: Subscription pricing and credit packages are fully defined in config files and automatically provisioned in both the database and Stripe on first startup -- zero manual setup required
+**Depends on**: Phase 59 (v0.9 Monetization complete)
+**Requirements**: SUB-01, SUB-02, SUB-03, SUB-04, PKG-01, PKG-02, PKG-03, SAFE-01, SAFE-02
+**Success Criteria** (what must be TRUE):
+  1. user_classes.yaml includes `has_plan` and `price_cents` fields for subscription tiers, and the backend reads them correctly
+  2. A config file defines default credit packages (name, price_cents, credit_amount, display_order) and the backend reads them correctly
+  3. On first startup with an empty database, subscription pricing is seeded to platform_settings and credit packages are seeded to the credit_packages table from config defaults
+  4. On startup, Stripe Products and Prices are auto-created for any subscription tier or credit package that is missing a Stripe Price ID -- no manual Stripe Dashboard configuration required
+  5. Existing admin-customized Stripe Price IDs in the database are never overwritten by the startup sync (fills gaps only)
+**Plans:** 3/3 plans complete
+Plans:
+- [x] 60-01-PLAN.md -- Extend user_classes.yaml with pricing fields and add get_credit_packages() loader
+- [x] 60-02-PLAN.md -- Create pricing_sync.py service with seeding, Stripe sync, readiness check, and unit tests
+- [x] 60-03-PLAN.md -- Wire pricing sync into lifespan() and add monetization toggle guard
 
-- [x] Phase 14: Database Foundation & Migration (4/4 plans) — completed 2026-02-11
-- [x] Phase 15: Agent System Enhancement (3/3 plans) — completed 2026-02-11
-- [x] Phase 16: Frontend Restructure (3/3 plans) — completed 2026-02-11
-- [x] Phase 17: File Management & Linking (3/3 plans) — completed 2026-02-11
-- [x] Phase 18: Integration & Polish (3/3 plans) — completed 2026-02-11
-- [x] Phase 19: v0.3 Gap Closure (7/7 plans) — completed 2026-02-12
-
-</details>
-
-<details>
-<summary>✅ v0.4 Data Visualization (Phases 20-25) — SHIPPED 2026-02-15</summary>
-
-- [x] Phase 20: Infrastructure & Pipeline (2/2 plans) — completed 2026-02-13
-- [x] Phase 21: Visualization Agent (1/1 plan) — completed 2026-02-13
-- [x] Phase 22: Graph Integration & Chart Intelligence (2/2 plans) — completed 2026-02-13
-- [x] Phase 23: Frontend Chart Rendering (2/2 plans) — completed 2026-02-13
-- [x] Phase 24: Chart Types & Export (3/3 plans) — completed 2026-02-13
-- [x] Phase 25: Theme Integration (1/1 plan) — completed 2026-02-14
-
-</details>
-
-<details>
-<summary>✅ v0.5 Admin Portal (Phases 26-32) — SHIPPED 2026-02-18</summary>
-
-- [x] Phase 26: Foundation (3/3 plans) — completed 2026-02-16
-- [x] Phase 27: Credit System (4/4 plans) — completed 2026-02-16
-- [x] Phase 28: Platform Config (2/2 plans) — completed 2026-02-16
-- [x] Phase 29: User Management (3/3 plans) — completed 2026-02-16
-- [x] Phase 30: Invitation System (3/3 plans) — completed 2026-02-17
-- [x] Phase 31: Dashboard & Admin Frontend (8/8 plans) — completed 2026-02-17
-- [x] Phase 32: Production Readiness (1/1 plan) — completed 2026-02-18
-
-</details>
-
-<details>
-<summary>✅ v0.6 Docker and Dokploy Support (Phases 33-37) — SHIPPED 2026-02-21</summary>
-
-- [x] Phase 33: Pre-Work and Version API (2/2 plans) — completed 2026-02-19
-- [x] Phase 34: Dockerfiles and Entrypoint (3/3 plans) — completed 2026-02-19
-- [x] Phase 35: Docker Compose and Local Validation (1/1 plan) — completed 2026-02-19
-- [x] Phase 36: Dokploy Deployment and DEPLOYMENT.md (3/3 plans) — completed 2026-02-20
-- [x] Phase 37: Admin Seed on Startup and Mandatory Credentials (1/1 plan) — completed 2026-02-21
-
-</details>
-
-<details>
-<summary>✅ v0.7 API Services & MCP (Phases 38-41) — SHIPPED 2026-02-25</summary>
-
-- [x] Phase 38: API Key Infrastructure (4/4 plans) — completed 2026-02-23
-- [x] Phase 39: API Key Management UI + Deployment Mode (5/5 plans) — completed 2026-02-24
-- [x] Phase 40: REST API v1 Endpoints (4/4 plans) — completed 2026-02-24
-- [x] Phase 41: MCP Server (2/2 plans) — completed 2026-02-24
-
-</details>
-
-<details>
-<summary>✅ v0.7.12 Spectra Pulse Mockup (Phases 42-46) — SHIPPED 2026-03-05</summary>
-
-- [x] Phase 42: Analysis Workspace & Pulse Detection (4/4 plans) — completed 2026-03-04
-- [x] Phase 43: Collections & Reports (3/3 plans) — completed 2026-03-04
-- [x] Phase 44: Guided Investigation (Explain) (4/4 plans) — completed 2026-03-05
-- [x] Phase 45: What-If Scenarios (3/3 plans) — completed 2026-03-05
-- [x] Phase 46: Admin Workspace Management (3/3 plans) — completed 2026-03-05
-
-</details>
-
-<details>
-<summary>✅ v0.8 Spectra Pulse (Detection) (Phases 47-52.1) — SHIPPED 2026-03-10</summary>
-
-- [x] Phase 47: Data Foundation (2/2 plans) — completed 2026-03-06
-- [x] Phase 48: Backend CRUD API (2/2 plans) — completed 2026-03-07
-- [x] Phase 49: Pulse Agent (2/2 plans) — completed 2026-03-07
-- [x] Phase 50: Pulse Endpoint Wire-Up (2/2 plans) — completed 2026-03-07
-- [x] Phase 51: Frontend Migration (4/4 plans) — completed 2026-03-08
-- [x] Phase 51.1: Pipeline Refactor (3/3 plans, INSERTED) — completed 2026-03-08
-- [x] Phase 52: Admin and QA (2/2 plans) — completed 2026-03-09
-- [x] Phase 52.1: Delete and Rename Collection (3/3 plans, INSERTED) — completed 2026-03-09
-
-</details>
-
-<details>
-<summary>✅ v0.8.1 UI Fixes & Enhancement (Phases 53–54) — SHIPPED 2026-03-10</summary>
-
-- [x] Phase 53: Shell & Navigation Fixes (6/6 plans) — completed 2026-03-10
-- [x] Phase 54: Pulse Analysis Fixes (4/4 plans) — completed 2026-03-10
-
-</details>
+### Phase 61: Admin Pricing Management UI
+**Goal**: Admin can view, edit, and reset both subscription pricing and credit packages from the admin portal
+**Depends on**: Phase 60
+**Requirements**: SUB-05, SUB-06, SUB-07, PKG-04, PKG-05, PKG-06, UI-01, UI-02
+**Success Criteria** (what must be TRUE):
+  1. Admin can view all subscription pricing plans showing both config-file defaults and current database values side by side
+  2. Admin can edit subscription pricing (price changes auto-create new Stripe Prices)
+  3. Admin can reset subscription pricing back to config-file defaults with a single action
+  4. Admin can view all credit packages from the database with their current configuration
+  5. Admin can edit credit package details (name, price, credits, active status) with changes persisted to the database
+  6. Admin can reset credit packages to config-file defaults with a single action
+  7. Plan Selection page dynamically renders subscription plans from tiers with `has_plan: true` instead of hardcoded entries
+  8. Billing page displays credit packages and pricing as defined in the database
+**Plans:** 4/4 plans complete
+**UI hint**: yes
+Plans:
+- [x] 61-01-PLAN.md -- Backend API: schemas, billing-settings extensions, credit-packages router
+- [x] 61-02-PLAN.md -- Config features + dynamic /subscriptions/plans endpoint
+- [x] 61-03-PLAN.md -- Admin frontend: PasswordConfirmDialog + extended hooks
+- [x] 61-04-PLAN.md -- Admin frontend: billing-settings page refactor with view/edit/reset modals
 
 ## Progress
 
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|----------------|--------|-----------|
-| 1. Foundation Setup | v0.1 | 6/6 | Complete | 2026-02-06 |
-| 2. File Upload & AI Profiling | v0.1 | 6/6 | Complete | 2026-02-06 |
-| 3. Multi-File Management | v0.1 | 4/4 | Complete | 2026-02-06 |
-| 4. AI Agent System & Code Generation | v0.1 | 8/8 | Complete | 2026-02-06 |
-| 5. Secure Code Execution & E2B | v0.1 | 6/6 | Complete | 2026-02-06 |
-| 6. Interactive Data Cards | v0.1 | 6/6 | Complete | 2026-02-06 |
-| 7. Multi-LLM Infrastructure | v0.2 | 5/5 | Complete | 2026-02-09 |
-| 8. Session Memory | v0.2 | 2/2 | Complete | 2026-02-08 |
-| 9. Manager Agent Routing | v0.2 | 3/3 | Complete | 2026-02-08 |
-| 10. Smart Query Suggestions | v0.2 | 2/2 | Complete | 2026-02-08 |
-| 11. Web Search Integration | v0.2 | 3/3 | Complete | 2026-02-09 |
-| 12. Production Email | v0.2 | 2/2 | Complete | 2026-02-09 |
-| 13. Migrate Web Search (Tavily) | v0.2 | 2/2 | Complete | 2026-02-09 |
-| 14. Database Foundation & Migration | v0.3 | 4/4 | Complete | 2026-02-11 |
-| 15. Agent System Enhancement | v0.3 | 3/3 | Complete | 2026-02-11 |
-| 16. Frontend Restructure | v0.3 | 3/3 | Complete | 2026-02-11 |
-| 17. File Management & Linking | v0.3 | 3/3 | Complete | 2026-02-11 |
-| 18. Integration & Polish | v0.3 | 3/3 | Complete | 2026-02-11 |
-| 19. v0.3 Gap Closure | v0.3 | 7/7 | Complete | 2026-02-12 |
-| 20. Infrastructure & Pipeline | v0.4 | 2/2 | Complete | 2026-02-13 |
-| 21. Visualization Agent | v0.4 | 1/1 | Complete | 2026-02-13 |
-| 22. Graph Integration & Chart Intelligence | v0.4 | 2/2 | Complete | 2026-02-13 |
-| 23. Frontend Chart Rendering | v0.4 | 2/2 | Complete | 2026-02-13 |
-| 24. Chart Types & Export | v0.4 | 3/3 | Complete | 2026-02-13 |
-| 25. Theme Integration | v0.4 | 1/1 | Complete | 2026-02-14 |
-| 26. Foundation | v0.5 | 3/3 | Complete | 2026-02-16 |
-| 27. Credit System | v0.5 | 4/4 | Complete | 2026-02-16 |
-| 28. Platform Config | v0.5 | 2/2 | Complete | 2026-02-16 |
-| 29. User Management | v0.5 | 3/3 | Complete | 2026-02-16 |
-| 30. Invitation System | v0.5 | 3/3 | Complete | 2026-02-17 |
-| 31. Dashboard & Admin Frontend | v0.5 | 8/8 | Complete | 2026-02-17 |
-| 32. Production Readiness | v0.5 | 1/1 | Complete | 2026-02-18 |
-| 33. Pre-Work and Version API | v0.6 | 2/2 | Complete | 2026-02-19 |
-| 34. Dockerfiles and Entrypoint | v0.6 | 3/3 | Complete | 2026-02-19 |
-| 35. Docker Compose and Local Validation | v0.6 | 1/1 | Complete | 2026-02-19 |
-| 36. Dokploy Deployment and DEPLOYMENT.md | v0.6 | 3/3 | Complete | 2026-02-20 |
-| 37. Admin Seed on Startup | v0.6 | 1/1 | Complete | 2026-02-21 |
-| 38. API Key Infrastructure | v0.7 | 4/4 | Complete | 2026-02-23 |
-| 39. API Key Management UI + Deployment Mode | v0.7 | 5/5 | Complete | 2026-02-24 |
-| 40. REST API v1 Endpoints | v0.7 | 4/4 | Complete | 2026-02-24 |
-| 41. MCP Server | v0.7 | 2/2 | Complete | 2026-02-24 |
-| 42. Analysis Workspace & Pulse Detection | v0.7.12 | 4/4 | Complete | 2026-03-04 |
-| 43. Collections & Reports | v0.7.12 | 3/3 | Complete | 2026-03-04 |
-| 44. Guided Investigation (Explain) | v0.7.12 | 4/4 | Complete | 2026-03-05 |
-| 45. What-If Scenarios | v0.7.12 | 3/3 | Complete | 2026-03-05 |
-| 46. Admin Workspace Management | v0.7.12 | 3/3 | Complete | 2026-03-05 |
-| 47. Data Foundation | v0.8 | 2/2 | Complete | 2026-03-06 |
-| 48. Backend CRUD API | v0.8 | 2/2 | Complete | 2026-03-07 |
-| 49. Pulse Agent | v0.8 | 2/2 | Complete | 2026-03-07 |
-| 50. Pulse Endpoint Wire-Up | v0.8 | 2/2 | Complete | 2026-03-07 |
-| 51. Frontend Migration | v0.8 | 4/4 | Complete | 2026-03-08 |
-| 51.1. Pipeline Refactor (INSERTED) | v0.8 | 3/3 | Complete | 2026-03-08 |
-| 52. Admin and QA | v0.8 | 2/2 | Complete | 2026-03-09 |
-| 52.1. Delete and Rename Collection (INSERTED) | v0.8 | 3/3 | Complete | 2026-03-09 |
-| 53. Shell & Navigation Fixes | v0.8.1 | 6/6 | Complete | 2026-03-10 |
-| 54. Pulse Analysis Fixes | v0.8.1 | 4/4 | Complete | 2026-03-10 |
+**Execution Order:**
+Phases execute in numeric order: 60 → 61
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 60. Config-Driven Pricing & Startup Sync | 3/3 | Complete    | 2026-04-23 |
+| 61. Admin Pricing Management UI | 4/4 | Complete    | 2026-04-26 |

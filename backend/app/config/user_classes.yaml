@@ -3,29 +3,63 @@ user_classes:
     display_name: "Free Trial"
     credits: 100
     reset_policy: none
+    trial_duration_days: 7
     workspace_access: true
     max_active_collections: 1
-  free:
-    display_name: "Free"
-    credits: 10
-    reset_policy: weekly
-    workspace_access: false
-    max_active_collections: 1
+    has_plan: false
+  on_demand:
+    display_name: "On Demand"
+    credits: 0
+    reset_policy: none
+    workspace_access: true
+    max_active_collections: 3
+    has_plan: false
+    features:
+      - "No monthly commitment"
+      - "Purchase credits as needed"
+      - "Full feature access"
   standard:
     display_name: "Standard"
     credits: 100
-    reset_policy: weekly
+    reset_policy: none
     workspace_access: true
     max_active_collections: 5
+    has_plan: true
+    price_cents: 2900
+    features:
+      - "Priority support via email"
+      - "Full feature access"
   premium:
     display_name: "Premium"
     credits: 500
-    reset_policy: monthly
+    reset_policy: none
     workspace_access: true
     max_active_collections: -1
+    has_plan: true
+    price_cents: 7900
+    features:
+      - "Priority support via email"
+      - "Full feature access"
+      - "Unlimited active collections"
+      - "Advanced analytics"
   internal:
     display_name: "Internal"
     credits: 0
     reset_policy: unlimited
     workspace_access: true
     max_active_collections: -1
+    has_plan: false
+
+credit_packages:
+  - name: "Starter Pack"
+    price_cents: 500
+    credit_amount: 50
+    display_order: 1
+  - name: "Value Pack"
+    price_cents: 1500
+    credit_amount: 200
+    display_order: 2
+  - name: "Pro Pack"
+    price_cents: 3500
+    credit_amount: 500
+    display_order: 3

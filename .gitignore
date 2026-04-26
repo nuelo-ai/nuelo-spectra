@@ -54,6 +54,19 @@ uploads/
 # Logs
 *.log
 
+# Claude Code / GSD
+.claude/
+
+# Pulse mockup build artifacts
+pulse-mockup/.next/
+pulse-mockup/node_modules/
+pulse-mockup/next-env.d.ts
+pulse-mockup/tsconfig.tsbuildinfo
+
 # Personal notes (never commit)
 ms-notes.txt
 ms-milestone-strategy.md
+requirements/multi-version-requirement.md
+requirements/archieved/
+requirements/to-be-removed/
+requirements/monetization-requirement.md

@@ -226,6 +226,14 @@ async def lifespan(app: FastAPI):
     else:
         logging.getLogger("spectra.smtp").info("SMTP not configured - using dev mode (console logging)")
 
+    # Seed pricing config to database and sync Stripe prices
+    from app.services.pricing_sync import seed_pricing_from_config
+    from app.database import async_session_maker
+    async with async_session_maker() as pricing_db:
+        await seed_pricing_from_config(pricing_db)
+        await pricing_db.commit()
+    logging.getLogger("spectra.pricing").info("Pricing config synced to database")
+
     # Initialize PostgreSQL checkpointer for session memory
     from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
     from psycopg_pool import AsyncConnectionPool
@@ -383,6 +391,10 @@ app.include_router(health.router)
 if mode != "api":
     app.include_router(health_llm_router)
 app.include_router(version.router)           # GET /version — for public frontend proxy
+
+# Webhooks must be accessible in ALL modes (Stripe calls directly)
+from app.routers import webhooks
+app.include_router(webhooks.router)
 app.include_router(version.router, prefix="/api")  # GET /api/version — for admin frontend proxy
 
 # Public routes (public and dev modes)
@@ -394,8 +406,9 @@ if mode in ("public", "dev"):
     app.include_router(chat_sessions.router)
     app.include_router(search.router)
 
-    from app.routers import credits
+    from app.routers import credits, subscriptions
     app.include_router(credits.router)
+    app.include_router(subscriptions.router)
 
     from app.routers import credit_costs
     app.include_router(credit_costs.router)

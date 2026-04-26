@@ -29,6 +29,7 @@ class CreditTransaction(Base):
         nullable=True,
         index=True,
     )
+    balance_pool: Mapped[str | None] = mapped_column(String(20), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

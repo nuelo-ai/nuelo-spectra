@@ -1,0 +1,10 @@
+Hi {{ first_name }},
+
+We were unable to process your recent payment for your Spectra subscription.
+
+Please update your payment method to avoid service interruption:
+{{ billing_url }}
+
+If you believe this is an error, please contact support.
+
+- The Spectra Team

@@ -1,0 +1,10 @@
+Hi {{ first_name }},
+
+{{ credit_amount }} credits have been added to your account. You were charged {{ amount_display }}.
+
+View your balance at:
+{{ billing_url }}
+
+If you have any questions, please contact our support team.
+
+- Spectra
