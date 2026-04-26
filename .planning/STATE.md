@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.10
-milestone_name: Streamline Pricing Configuration
+milestone: v0.10.1
+milestone_name: Pricing Adjustment
 status: milestone_complete
-stopped_at: v0.10 shipped — all phases complete, release tagged
+stopped_at: v0.10.1 hotfix — amend default pricing settings
 last_updated: "2026-04-26"
-last_activity: 2026-04-26 -- v0.10 release shipped
+last_activity: 2026-04-26 -- v0.10.1 hotfix shipped
 progress:
   total_phases: 2
   completed_phases: 2
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** v0.10 complete — Streamline Pricing Configuration shipped
+**Current focus:** v0.10.1 shipped — pricing adjustment hotfix
 
 ## Current Position
 
@@ -73,5 +73,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-04-26
-Stopped at: v0.10 shipped — release tagged and merged
+Stopped at: v0.10.1 hotfix shipped — amended default pricing settings
 Resume with: /gsd-new-milestone for v0.11

@@ -341,7 +341,10 @@ allowed_libraries:
 
 Changes to YAML configs require server restart.
 
-## Current Status (v0.10)
+## Current Status (v0.10.1)
+
+### v0.10.1 Pricing Adjustment (April 2026)
+- Amend the default pricing settings
 
 ### v0.10 Streamline Pricing Configuration (April 2026)
 - **Config-driven pricing** — subscription pricing fields (`has_plan`, `price_cents`) added to `user_classes.yaml`; default credit packages defined in config; zero manual setup on first deployment
@@ -518,4 +521,4 @@ MIT License - See LICENSE file for details.
 
 - **GitHub**: [github.com/marwazihs/nuelo-spectra](https://github.com/marwazihs/nuelo-spectra)
 - **Issues**: Report bugs or request features via GitHub Issues
-- **Version**: v0.10 (April 2026)
+- **Version**: v0.10.1 (April 2026)
