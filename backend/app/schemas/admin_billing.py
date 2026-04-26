@@ -93,8 +93,8 @@ class BillingSettingsResponse(BaseModel):
 
 class BillingSettingsUpdateRequest(BaseModel):
     monetization_enabled: bool | None = None
-    price_standard_monthly_cents: int | None = Field(None, ge=0)
-    price_premium_monthly_cents: int | None = Field(None, ge=0)
+    price_standard_monthly_cents: int | None = Field(None, ge=100)  # Minimum $1.00
+    price_premium_monthly_cents: int | None = Field(None, ge=100)  # Minimum $1.00
     password: str | None = None  # Required for price changes, not for monetization toggle
 
 
