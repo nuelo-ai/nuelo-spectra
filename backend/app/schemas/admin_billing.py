@@ -125,7 +125,7 @@ class AdminCreditPackageResponse(BaseModel):
 
 class CreditPackageUpdateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
-    price_cents: int = Field(..., ge=0)
+    price_cents: int = Field(..., ge=100)  # Minimum $1.00
     credit_amount: int = Field(..., ge=1)
     display_order: int = Field(..., ge=0)
     is_active: bool
