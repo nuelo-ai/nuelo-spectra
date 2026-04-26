@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.10
-milestone_name: Streamline Pricing Configuration
-status: milestone_archived
-stopped_at: v0.10 milestone closed — archived, tagged, released on GitHub
+milestone: v0.10.1
+milestone_name: Pricing Adjustment
+status: milestone_complete
+stopped_at: v0.10.1 hotfix — amend default pricing settings
 last_updated: "2026-04-26"
-last_activity: 2026-04-26 -- v0.10 milestone close complete
+last_activity: 2026-04-26 -- v0.10.1 hotfix shipped
 progress:
   total_phases: 2
   completed_phases: 2
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-26)
 
 **Core value:** Accurate data analysis through correct, safe Python code generation
-**Current focus:** v0.10 archived — ready for next milestone
+**Current focus:** v0.10.1 shipped — pricing adjustment hotfix
 
 ## Current Position
 
 Phase: 61 of 61
 Plan: 4 of 4
-Status: Milestone archived
+Status: Milestone complete
 Last activity: 2026-04-26
 
 Progress: [██████████] 100%
@@ -71,14 +71,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-04-26
-Stopped at: v0.10 milestone fully closed — archived, tagged v0.10, GitHub release created, master/develop/remote all in sync at 911b4de
+Stopped at: v0.10.1 hotfix shipped — amended default pricing settings
 Resume with: /gsd-new-milestone for v0.11
-
-### What was done this session:
-- Reviewed uncommitted changes (user_classes.yaml label update + requirements doc)
-- Shipped v0.10: feature branch → develop → release/v0.10 → master, tagged, pushed
-- Completed milestone close: archives (ROADMAP, REQUIREMENTS, phases), MILESTONES.md, RETROSPECTIVE.md, PROJECT.md evolution
-- Removed REQUIREMENTS.md (fresh for next milestone)
-- Deleted feature/v0.10-streamline-pricing-configuration branch
-- Created GitHub release v0.10 (marked Latest)
-- Re-synced master/develop/tag twice after forgetting to batch all work before merge
