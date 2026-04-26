@@ -1,5 +1,38 @@
 # Project Milestones: Spectra
 
+## v0.10 Streamline Pricing Configuration (Shipped: 2026-04-26)
+
+**Phases completed:** 2 phases, 7 plans
+
+**Key accomplishments:**
+
+- Extended user_classes.yaml with `has_plan` and `price_cents` fields; added `get_credit_packages()` config loader for default credit packages
+- Built pricing_sync.py service: seeds subscription pricing and credit packages from config to DB on first startup, auto-creates Stripe Products/Prices for missing items, fills gaps without overwriting admin-customized values
+- Wired pricing sync into FastAPI lifespan with monetization toggle guard and dedicated async session scoping
+- Extended admin billing-settings API with config defaults in GET response, password-verified mutations, and reset-to-defaults endpoints for both subscriptions and credit packages
+- Refactored /subscriptions/plans to dynamically build plans from user_classes.yaml tiers with `has_plan: true`, eliminating all hardcoded feature strings
+- Built PasswordConfirmDialog reusable component and extended useBilling hooks with 4 new mutation hooks for admin pricing operations
+- Shipped complete billing-settings page with 3 card sections (Monetization toggle, Subscription Pricing, Credit Packages), edit modals with config default hints, Stripe readiness checklist, and per-section reset-to-defaults
+
+**Stats:**
+
+- 2 phases (60-61), 7 plans executed
+- 73 commits, 17 source files changed (+2,173 / -183 lines)
+- Timeline: 4 days (2026-04-22 → 2026-04-26)
+
+**Requirements:** 17/17 satisfied (100%)
+
+- Subscription Pricing Config: 7/7 (SUB-01 through SUB-07)
+- Credit Package Config: 6/6 (PKG-01 through PKG-06)
+- User Frontend: 2/2 (UI-01, UI-02)
+- Safeguards: 2/2 (SAFE-01, SAFE-02)
+
+**Testing:** UAT 12/12 passed, HUMAN-UAT 4/4 passed (including live Stripe E2E checkout flows), Security verification 14/14 closed
+
+**Git range:** `v0.9` → `v0.10`
+
+---
+
 ## v0.9 Monetization (Shipped: 2026-04-14)
 
 **Phases completed:** 5 phases, 15 plans, 32 tasks

@@ -1,5 +1,5 @@
 ---
-status: partial
+status: complete
 phase: 61-admin-pricing-management-ui
 source: [61-VERIFICATION.md]
 started: 2025-04-25T00:00:00Z
@@ -22,18 +22,18 @@ result: passed (verified via npx tsc --noEmit)
 
 ### 3. End-to-end subscription checkout flow
 expected: Admin edits subscription price → new Stripe Price created → user can subscribe at new price → payment succeeds → subscription active in DB
-result: [pending]
+result: passed (verified on live Stripe environment 2026-04-26)
 
 ### 4. End-to-end credit package purchase flow
 expected: Admin edits credit package price → new Stripe Price created → user can purchase credits at new price → payment succeeds → credits added to account
-result: [pending]
+result: passed (verified on live Stripe environment 2026-04-26)
 
 ## Summary
 
 total: 4
-passed: 2
+passed: 4
 issues: 0
-pending: 2
+pending: 0
 skipped: 0
 blocked: 0
 

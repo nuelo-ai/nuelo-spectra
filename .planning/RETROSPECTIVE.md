@@ -221,6 +221,54 @@
 
 ---
 
+## Milestone: v0.10 — Streamline Pricing Configuration
+
+**Shipped:** 2026-04-26
+**Phases:** 2 (Phases 60-61) | **Plans:** 7
+
+### What Was Built
+
+- Extended user_classes.yaml with `has_plan`, `price_cents`, and `features` fields; added `get_credit_packages()` config loader
+- Built pricing_sync.py: seeds subscription pricing and credit packages from config, auto-creates Stripe Products/Prices for missing items, fills gaps without overwriting admin values
+- Wired pricing sync into FastAPI lifespan with monetization toggle guard
+- Extended admin billing-settings API with config defaults, password-verified mutations, and reset endpoints
+- Refactored /subscriptions/plans to dynamically build from config tiers (no hardcoded features)
+- Built PasswordConfirmDialog reusable component and 4 new mutation hooks
+- Complete billing-settings page with view/edit/reset for subscriptions and credit packages
+
+### What Worked
+
+- **Config-driven approach:** Defining pricing in YAML and syncing to DB on startup eliminated all manual Stripe configuration — zero-touch deployment achieved
+- **Fill-gaps-only sync strategy:** Never overwriting admin-customized Stripe Price IDs was the right design — preserves production customizations while still provisioning new deployments automatically
+- **Password confirmation on destructive actions:** PasswordConfirmDialog pattern with inline 403 error display (not logout redirect) was validated in live testing
+- **Compact milestone scope:** 2 phases, 7 plans — tightly scoped milestone shipped cleanly in 4 days with no rework
+
+### What Was Inefficient
+
+- **STATE.md progress tracking:** `completed_plans: 3` was stuck at 3 even though all 7 plans were done — progress counter wasn't updated during Phase 61 execution
+- **HUMAN-UAT for live Stripe flows:** End-to-end checkout flows (tests 3 & 4) required live Stripe environment testing that couldn't happen until post-deploy — delayed final sign-off
+
+### Patterns Established
+
+- **Config → DB → Stripe sync pattern:** YAML config defines defaults, startup seeds DB if empty, then syncs missing Stripe Price IDs — reusable for any config-driven pricing
+- **PasswordConfirmDialog shared component:** Reusable across admin mutations with variant support (default/destructive) and inline error handling
+- **Config defaults in GET response:** Including config_defaults alongside current DB values in API responses enables side-by-side comparison UI without extra requests
+
+### Key Lessons
+
+1. **Config-driven pricing simplifies deployment** — Instead of documenting manual Stripe setup steps, just define prices in YAML and let startup sync handle it
+2. **Password confirmation UX matters** — Inline 403 error in dialog (not page redirect) keeps user context and avoids confusion
+3. **Live Stripe testing is a post-deploy gate** — Plan for it explicitly in UAT rather than treating it as a gap
+
+### Cost Observations
+
+- Model profile: quality (opus)
+- 2 phases, 7 plans, 4 days (2026-04-22 → 2026-04-26)
+- 17 source files changed, +2,173 / -183 lines
+- Smallest code milestone since v0.8.1 — clean scope, no rework
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -238,6 +286,7 @@
 | v0.8 | 8 | 20 | 4 days | Decimal phase insertions for mid-milestone urgents; Pydantic structured output on all pipelines |
 | v0.8.1 | 2 | 10 | 2 days | Patch milestone pattern; verification plans catching post-impl gaps before close |
 | v0.9 | 5 | 15 | 8 days | Stripe webhook-driven billing; hosted checkout over embedded; dual-balance credit model |
+| v0.10 | 2 | 7 | 4 days | Config-driven pricing with startup sync; admin view/edit/reset; password confirmation pattern |
 
 ### Cumulative Quality
 
@@ -254,6 +303,7 @@
 | v0.8 | 35 | 100% | 0 |
 | v0.8.1 | 12 | 100% | 0 |
 | v0.9 | 59 | 100% | 0 |
+| v0.10 | 17 | 100% | 0 |
 
 ### Top Lessons (Verified Across Milestones)
 

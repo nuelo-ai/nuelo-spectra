@@ -95,6 +95,10 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 - ✅ Admin billing tools: user billing detail (subscription status, payment history, Stripe event log), force-set tier with Stripe sync, admin cancel subscription, refund with credit deduction
 - ✅ Admin billing settings: monetization toggle, trial duration, trial credits, subscription pricing with Stripe Price auto-creation
 - ✅ Admin discount codes: CRUD with Stripe Coupon + Promotion Code sync, promotion code entry enabled on Checkout
+- ✅ Config-driven pricing: user_classes.yaml extended with has_plan, price_cents, and features fields; default credit packages defined in config
+- ✅ Startup pricing sync: auto-seeds subscription pricing and credit packages from config to DB; auto-creates Stripe Products/Prices for missing items; fills gaps only, never overwrites admin customizations
+- ✅ Admin pricing management UI: view/edit/reset subscription pricing and credit packages with config defaults side-by-side, password confirmation on destructive actions, Stripe readiness checklist
+- ✅ Dynamic plan rendering: Plan Selection page builds from config tiers with has_plan: true; Billing page displays credit packages from database (zero hardcoded entries)
 
 **Known limitations:**
 - E2B sandboxes created per-execution (no warm pools - ~150ms cold start per query)
@@ -585,16 +589,34 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 **v0.9 Total: 59/59 requirements satisfied (100%)**
 
-## Current Milestone: v0.10 Streamline Pricing Configuration
+**✅ v0.10 Streamline Pricing Configuration — Shipped 2026-04-26**
 
-**Goal:** Unify and streamline how Stripe pricing is configured for both subscription plans and credit top-up packages — config-file driven defaults with admin override capability.
+**Subscription Pricing Config (7/7):**
+- ✓ User classes config includes has_plan flag for subscription tiers — v0.10
+- ✓ User classes config includes price_cents for tiers with has_plan: true — v0.10
+- ✓ Default subscription pricing seeded to platform_settings on first startup — v0.10
+- ✓ Stripe Products/Prices auto-created on startup for missing subscription tiers — v0.10
+- ✓ Admin can view subscription pricing with config defaults side by side — v0.10
+- ✓ Admin can edit subscription pricing (auto-creates new Stripe Prices) — v0.10
+- ✓ Admin can reset subscription pricing to config defaults — v0.10
 
-**Target features:**
-- Add pricing fields (price_cents, has_plan flag) to user_classes.yaml for subscription tiers
-- Define default credit packages in config file (name, price, credits)
-- Auto-create Stripe Products/Prices on startup for missing items (zero-touch first deploy)
-- Admin can view/edit subscription pricing and credit packages
-- Admin can reset pricing to config-file defaults
+**Credit Package Config (6/6):**
+- ✓ Default credit packages defined in config file — v0.10
+- ✓ Credit packages seeded to DB on first startup — v0.10
+- ✓ Stripe Products/Prices auto-created for credit packages missing Stripe Price ID — v0.10
+- ✓ Admin can view all credit packages from database — v0.10
+- ✓ Admin can edit credit packages (name, price, credits, active status) — v0.10
+- ✓ Admin can reset credit packages to config defaults — v0.10
+
+**User Frontend (2/2):**
+- ✓ Plan Selection page dynamically renders from config tiers with has_plan: true — v0.10
+- ✓ Billing page displays credit packages from database — v0.10
+
+**Safeguards (2/2):**
+- ✓ Existing admin-customized Stripe Price IDs preserved (startup sync fills gaps only) — v0.10
+- ✓ No manual Stripe Price ID configuration needed for initial deployment — v0.10
+
+**v0.10 Total: 17/17 requirements satisfied (100%)**
 
 ### Out of Scope
 
@@ -737,4 +759,4 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | What-If credit costs configurable in v0.9 Admin settings | Credit costs must be editable the moment the feature ships, not deferred to v0.10 admin dashboard | ✓ Decided 2026-03-14 — What-If cost fields added to Platform Settings page in v0.9; v0.10 consolidates UI |
 
 ---
-*Last updated: 2026-04-23 after v0.10 Phase 60 (Config-Driven Pricing & Startup Sync)*
+*Last updated: 2026-04-26 after v0.10 milestone complete*
