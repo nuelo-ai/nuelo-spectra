@@ -14,6 +14,7 @@
 - ✅ **v0.8.1 UI Fixes & Enhancement** - Phases 53-54 (shipped 2026-03-10)
 - ✅ **v0.9 Monetization** - Phases 55-59 (shipped 2026-04-14)
 - ✅ **v0.10 Streamline Pricing Configuration** - Phases 60-61 (shipped 2026-04-26)
+- ✅ **v0.10.1 Pricing Adjustment** - Hotfix (shipped 2026-04-26)
 
 ## Phases
 

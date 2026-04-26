@@ -13,7 +13,7 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 **GitHub:** https://github.com/marwazihs/nuelo-spectra.git (private)
 **Remote:** origin
 **Branch:** master
-**Latest Tag:** v0.10 (2026-04-26)
+**Latest Tag:** v0.10.1 (2026-04-26)
 
 ## Previous Milestones
 
