@@ -410,14 +410,7 @@ export default function BillingSettingsPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {TIER_KEYS.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No subscription tiers with pricing found. Check
-                    user_classes.yaml configuration.
-                  </p>
-                ) : (
-                  <>
-                    {TIER_KEYS.map((tierKey, idx) => {
+                {TIER_KEYS.map((tierKey, idx) => {
                       const priceKey =
                         `price_${tierKey}_monthly_cents` as keyof BillingSettings;
                       const currentCents =
@@ -461,8 +454,6 @@ export default function BillingSettingsPage() {
                         </div>
                       );
                     })}
-                  </>
-                )}
                 <Separator />
                 <Button
                   variant="outline"
