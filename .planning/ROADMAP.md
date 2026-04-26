@@ -13,7 +13,7 @@
 - ✅ **v0.8 Spectra Pulse (Detection)** - Phases 47-52.1 (shipped 2026-03-10)
 - ✅ **v0.8.1 UI Fixes & Enhancement** - Phases 53-54 (shipped 2026-03-10)
 - ✅ **v0.9 Monetization** - Phases 55-59 (shipped 2026-04-14)
-- 🚧 **v0.10 Streamline Pricing Configuration** - Phases 60-61 (in progress)
+- ✅ **v0.10 Streamline Pricing Configuration** - Phases 60-61 (shipped 2026-04-26)
 
 ## Phases
 
@@ -32,8 +32,8 @@ See MILESTONES.md for completed phase details.
 
 ### v0.10 Streamline Pricing Configuration
 
-- [ ] **Phase 60: Config-Driven Pricing & Startup Sync** - Add pricing fields to config, seed defaults to DB, auto-create Stripe Products/Prices on startup
-- [ ] **Phase 61: Admin Pricing Management UI** - Admin can view, edit, and reset subscription pricing and credit packages
+- [x] **Phase 60: Config-Driven Pricing & Startup Sync** - Add pricing fields to config, seed defaults to DB, auto-create Stripe Products/Prices on startup (completed 2026-04-23)
+- [x] **Phase 61: Admin Pricing Management UI** - Admin can view, edit, and reset subscription pricing and credit packages (completed 2026-04-26)
 
 ## Phase Details
 
@@ -47,11 +47,11 @@ See MILESTONES.md for completed phase details.
   3. On first startup with an empty database, subscription pricing is seeded to platform_settings and credit packages are seeded to the credit_packages table from config defaults
   4. On startup, Stripe Products and Prices are auto-created for any subscription tier or credit package that is missing a Stripe Price ID -- no manual Stripe Dashboard configuration required
   5. Existing admin-customized Stripe Price IDs in the database are never overwritten by the startup sync (fills gaps only)
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 Plans:
-- [ ] 60-01-PLAN.md -- Extend user_classes.yaml with pricing fields and add get_credit_packages() loader
-- [ ] 60-02-PLAN.md -- Create pricing_sync.py service with seeding, Stripe sync, readiness check, and unit tests
-- [ ] 60-03-PLAN.md -- Wire pricing sync into lifespan() and add monetization toggle guard
+- [x] 60-01-PLAN.md -- Extend user_classes.yaml with pricing fields and add get_credit_packages() loader
+- [x] 60-02-PLAN.md -- Create pricing_sync.py service with seeding, Stripe sync, readiness check, and unit tests
+- [x] 60-03-PLAN.md -- Wire pricing sync into lifespan() and add monetization toggle guard
 
 ### Phase 61: Admin Pricing Management UI
 **Goal**: Admin can view, edit, and reset both subscription pricing and credit packages from the admin portal
@@ -66,8 +66,13 @@ Plans:
   6. Admin can reset credit packages to config-file defaults with a single action
   7. Plan Selection page dynamically renders subscription plans from tiers with `has_plan: true` instead of hardcoded entries
   8. Billing page displays credit packages and pricing as defined in the database
-**Plans**: TBD
+**Plans:** 4/4 plans complete
 **UI hint**: yes
+Plans:
+- [x] 61-01-PLAN.md -- Backend API: schemas, billing-settings extensions, credit-packages router
+- [x] 61-02-PLAN.md -- Config features + dynamic /subscriptions/plans endpoint
+- [x] 61-03-PLAN.md -- Admin frontend: PasswordConfirmDialog + extended hooks
+- [x] 61-04-PLAN.md -- Admin frontend: billing-settings page refactor with view/edit/reset modals
 
 ## Progress
 
@@ -76,5 +81,5 @@ Phases execute in numeric order: 60 → 61
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 60. Config-Driven Pricing & Startup Sync | 0/3 | Not started | - |
-| 61. Admin Pricing Management UI | 0/TBD | Not started | - |
+| 60. Config-Driven Pricing & Startup Sync | 3/3 | Complete    | 2026-04-23 |
+| 61. Admin Pricing Management UI | 4/4 | Complete    | 2026-04-26 |

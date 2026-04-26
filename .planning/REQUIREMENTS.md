@@ -9,32 +9,32 @@ Requirements for v0.10 Streamline Pricing Configuration. Each maps to roadmap ph
 
 ### Subscription Pricing Config
 
-- [ ] **SUB-01**: User classes config includes `has_plan` flag indicating whether a tier has a subscription pricing plan
-- [ ] **SUB-02**: User classes config includes `price_cents` for tiers with `has_plan: true`
-- [ ] **SUB-03**: Default subscription pricing is seeded to platform_settings on first startup when no value exists
-- [ ] **SUB-04**: Stripe Products/Prices are auto-created on startup for subscription tiers missing a Stripe Price ID
-- [ ] **SUB-05**: Admin can view all subscription pricing plans with their config defaults and current DB values
-- [ ] **SUB-06**: Admin can edit subscription pricing plans (existing functionality)
-- [ ] **SUB-07**: Admin can reset subscription pricing to config-file defaults
+- [x] **SUB-01**: User classes config includes `has_plan` flag indicating whether a tier has a subscription pricing plan
+- [x] **SUB-02**: User classes config includes `price_cents` for tiers with `has_plan: true`
+- [x] **SUB-03**: Default subscription pricing is seeded to platform_settings on first startup when no value exists
+- [x] **SUB-04**: Stripe Products/Prices are auto-created on startup for subscription tiers missing a Stripe Price ID
+- [x] **SUB-05**: Admin can view all subscription pricing plans with their config defaults and current DB values
+- [x] **SUB-06**: Admin can edit subscription pricing plans (existing functionality)
+- [x] **SUB-07**: Admin can reset subscription pricing to config-file defaults
 
 ### Credit Package Config
 
-- [ ] **PKG-01**: Default credit packages are defined in a config file (name, price_cents, credit_amount, display_order)
-- [ ] **PKG-02**: Credit packages from config are seeded to DB on first startup when no packages exist
-- [ ] **PKG-03**: Stripe Products/Prices are auto-created on startup for credit packages missing a Stripe Price ID
-- [ ] **PKG-04**: Admin can view all credit packages from the database
-- [ ] **PKG-05**: Admin can edit credit packages (name, price, credits, active status)
-- [ ] **PKG-06**: Admin can reset credit packages to config-file defaults
+- [x] **PKG-01**: Default credit packages are defined in a config file (name, price_cents, credit_amount, display_order)
+- [x] **PKG-02**: Credit packages from config are seeded to DB on first startup when no packages exist
+- [x] **PKG-03**: Stripe Products/Prices are auto-created on startup for credit packages missing a Stripe Price ID
+- [x] **PKG-04**: Admin can view all credit packages from the database
+- [x] **PKG-05**: Admin can edit credit packages (name, price, credits, active status)
+- [x] **PKG-06**: Admin can reset credit packages to config-file defaults
 
 ### User Frontend
 
-- [ ] **UI-01**: Plan Selection page (`/settings/plan`) dynamically renders subscription plans from tiers with `has_plan: true` instead of hardcoded entries
-- [ ] **UI-02**: Billing page (`/settings/billing`) displays credit packages and pricing as defined in the database
+- [x] **UI-01**: Plan Selection page (`/settings/plan`) dynamically renders subscription plans from tiers with `has_plan: true` instead of hardcoded entries
+- [x] **UI-02**: Billing page (`/settings/billing`) displays credit packages and pricing as defined in the database
 
 ### Safeguards
 
-- [ ] **SAFE-01**: Existing admin-customized Stripe Price IDs in the database are preserved (startup sync fills gaps, never overwrites)
-- [ ] **SAFE-02**: No manual Stripe Price ID configuration needed for initial deployment
+- [x] **SAFE-01**: Existing admin-customized Stripe Price IDs in the database are preserved (startup sync fills gaps, never overwrites)
+- [x] **SAFE-02**: No manual Stripe Price ID configuration needed for initial deployment
 
 ## Out of Scope
 
@@ -49,23 +49,23 @@ Requirements for v0.10 Streamline Pricing Configuration. Each maps to roadmap ph
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SUB-01 | Phase 60 | Pending |
-| SUB-02 | Phase 60 | Pending |
-| SUB-03 | Phase 60 | Pending |
-| SUB-04 | Phase 60 | Pending |
-| SUB-05 | Phase 61 | Pending |
-| SUB-06 | Phase 61 | Pending |
-| SUB-07 | Phase 61 | Pending |
-| PKG-01 | Phase 60 | Pending |
-| PKG-02 | Phase 60 | Pending |
-| PKG-03 | Phase 60 | Pending |
-| PKG-04 | Phase 61 | Pending |
-| PKG-05 | Phase 61 | Pending |
-| PKG-06 | Phase 61 | Pending |
-| UI-01 | Phase 61 | Pending |
-| UI-02 | Phase 61 | Pending |
-| SAFE-01 | Phase 60 | Pending |
-| SAFE-02 | Phase 60 | Pending |
+| SUB-01 | Phase 60 | Complete |
+| SUB-02 | Phase 60 | Complete |
+| SUB-03 | Phase 60 | Complete |
+| SUB-04 | Phase 60 | Complete |
+| SUB-05 | Phase 61 | Complete |
+| SUB-06 | Phase 61 | Complete |
+| SUB-07 | Phase 61 | Complete |
+| PKG-01 | Phase 60 | Complete |
+| PKG-02 | Phase 60 | Complete |
+| PKG-03 | Phase 60 | Complete |
+| PKG-04 | Phase 61 | Complete |
+| PKG-05 | Phase 61 | Complete |
+| PKG-06 | Phase 61 | Complete |
+| UI-01 | Phase 61 | Complete |
+| UI-02 | Phase 61 | Complete |
+| SAFE-01 | Phase 60 | Complete |
+| SAFE-02 | Phase 60 | Complete |
 
 **Coverage:**
 - v0.10 requirements: 17 total

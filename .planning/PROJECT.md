@@ -13,7 +13,7 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 **GitHub:** https://github.com/marwazihs/nuelo-spectra.git (private)
 **Remote:** origin
 **Branch:** master
-**Latest Tag:** v0.9 (2026-04-14)
+**Latest Tag:** v0.10 (2026-04-26)
 
 ## Previous Milestones
 
@@ -29,8 +29,8 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 ## Current State
 
-**Shipped:** v0.9 Monetization (2026-04-14)
-**Status:** v0.9 complete — planning next milestone
+**Shipped:** v0.10 Streamline Pricing Configuration (2026-04-26)
+**Status:** v0.10 complete — Config-driven pricing & admin pricing management UI shipped
 **Codebase:** ~96,000 LOC (Python app + TypeScript/TSX across public frontend + admin frontend + pulse-mockup + Docker/shell infra)
 **Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily + Plotly + APScheduler (backend), Next.js 16 + React 19 + TanStack + Zustand + shadcn/ui + next-themes + Plotly.js + Recharts + Sonner (frontend + admin frontend), Docker + Dokploy + Tailscale (deployment), Next.js + shadcn/ui + Recharts (pulse-mockup)
 
@@ -737,4 +737,4 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 | What-If credit costs configurable in v0.9 Admin settings | Credit costs must be editable the moment the feature ships, not deferred to v0.10 admin dashboard | ✓ Decided 2026-03-14 — What-If cost fields added to Platform Settings page in v0.9; v0.10 consolidates UI |
 
 ---
-*Last updated: 2026-04-14 after v0.9 Monetization milestone*
+*Last updated: 2026-04-23 after v0.10 Phase 60 (Config-Driven Pricing & Startup Sync)*

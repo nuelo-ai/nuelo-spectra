@@ -1,0 +1,49 @@
+# Problem statement
+The current implementation of billing settings is inconsistent and unclear. 
+
+For Subscription plans:
+- The user classes are defined in the /backend/app/config/user_classes.yaml file 
+- On each class, there is no clear indication whether a class has a pricing plan or not.
+- The only way to know is to see if the class is defined in one of the platform_settings table. 
+- Admin frontend /billing-settings page shows subscription pricing which will then be used to create new Stripe Price object for the plans
+- During first migration or config, there is no way to configure the stripe price id for the first time.
+
+For On-demand plans:
+- No config file or admin to define the plans 
+- No mechanism to setup the stripe price-id
+
+# Proposed Requirement Solutions
+
+During deployment or initial setup, there should be a configuration file to:
+For Subscription plans:
+- Configure User classes with their respective pricing plans if applicable (could be a flag that shows if the class has a pricing plan)
+- Define the default Subscription plan pricing 
+For On-demand plans:
+- Define the default On-Demand credit package via config file, including the Package Name, Price, Credit
+
+As admin, I should be able to:
+For Subscription plans:
+- See all classes that have pricing plans (based on the config file)
+- Make changes of the pricing plans (this is available currently)
+- Load the "default" pricing plan from the config file if needed
+
+For On-demand plans:
+- See all the defined on-demand package (based on the config file)
+- Make changes to the defined on-demand package (this is available currently)
+- Load the "default" pricing plan from the config file if needed
+
+
+# Acceptance Criteria
+- [ ] User classes config file includes pricing fields (price_cents, has_plan flag)
+- [ ] Default subscription pricing is loaded from config on app initial migration and loaded to the database
+- [ ] Default credit packages are created from config on first migration and loaded to the database
+- [ ] Admin can view all subscription pricing plans
+- [ ] Admin can edit subscription pricing plans
+- [ ] Admin can view all credit packages from the database
+- [ ] Admin can edit credit packages
+- [ ] Admin can reset subscription pricing to config defaults
+- [ ] Admin can reset credit packages to config defaults
+- [ ] Stripe Products/Prices are auto-created for missing config-defined items
+- [ ] No manual Stripe price ID configuration needed for initial deployment
+- [ ] Existing admin-customized Stripe Price IDs in the database are preserved (startup sync only fills gaps, never overwrites)
+

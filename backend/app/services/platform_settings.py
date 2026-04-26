@@ -6,7 +6,7 @@ platform_settings table, with validation and upsert support.
 
 import json
 import time
-from typing import Any
+from typing import Any, Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -33,7 +33,7 @@ DEFAULTS: dict[str, str] = {
     "stripe_price_premium_monthly": json.dumps(""),
     "price_standard_monthly_cents": json.dumps(2900),   # $29.00
     "price_premium_monthly_cents": json.dumps(7900),     # $79.00
-    "monetization_enabled": json.dumps(True),
+    "monetization_enabled": json.dumps(False),
 }
 
 VALID_KEYS = set(DEFAULTS.keys())
@@ -80,14 +80,14 @@ async def get(db: AsyncSession, key: str) -> Any:
     return json.loads(raw)
 
 
-async def upsert(db: AsyncSession, key: str, value: Any, admin_id: UUID) -> None:
+async def upsert(db: AsyncSession, key: str, value: Any, admin_id: Optional[UUID] = None) -> None:
     """Upsert a single setting key.
 
     Args:
         db: Database session.
         key: Setting key name.
         value: Python value to store (will be JSON-encoded).
-        admin_id: UUID of the admin performing the change.
+        admin_id: UUID of the admin performing the change, or None for system operations.
     """
     result = await db.execute(
         select(PlatformSetting).where(PlatformSetting.key == key)
@@ -98,7 +98,8 @@ async def upsert(db: AsyncSession, key: str, value: Any, admin_id: UUID) -> None
 
     if existing:
         existing.value = json_value
-        existing.updated_by = admin_id
+        if admin_id is not None:
+            existing.updated_by = admin_id
     else:
         setting = PlatformSetting(
             key=key,
@@ -166,8 +167,8 @@ def validate_setting(key: str, value: Any) -> str | None:
     elif key in ("price_standard_monthly_cents", "price_premium_monthly_cents"):
         if not isinstance(value, int) or isinstance(value, bool):
             return f"{key} must be an integer"
-        if value < 0:
-            return f"{key} must be >= 0"
+        if value <= 0:
+            return f"{key} must be > 0"
 
     elif key in ("stripe_price_standard_monthly", "stripe_price_premium_monthly"):
         if not isinstance(value, str):

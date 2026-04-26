@@ -27,7 +27,7 @@ from app.schemas.subscription import (
 )
 from app.services.platform_settings import get_all as get_platform_settings
 from app.services.subscription import SubscriptionService
-from app.services.user_class import get_class_config
+from app.services.user_class import get_class_config, get_user_classes
 
 logger = logging.getLogger(__name__)
 
@@ -92,62 +92,57 @@ async def get_subscription_status(
 async def get_plans(db: DbSession, current_user: CurrentUser):
     """Return plan pricing for Plan Selection page.
 
-    Reads prices from platform_settings and credit allocations from
-    user_classes.yaml. Returns display names (Basic not Standard).
+    Dynamically builds plan list from user_classes.yaml config (D-14).
+    Reads features from config instead of hardcoding (D-13).
     """
     platform_settings = await get_platform_settings(db)
-    standard_price = json.loads(platform_settings.get("price_standard_monthly_cents", "2900"))
-    premium_price = json.loads(platform_settings.get("price_premium_monthly_cents", "7900"))
+    tiers = get_user_classes()
 
-    standard_config = get_class_config("standard") or {}
-    premium_config = get_class_config("premium") or {}
-    on_demand_config = get_class_config("on_demand") or {}
+    plans = []
 
-    plans = [
-        PlanInfo(
+    # Special case: on_demand tier (has_plan: false but shown in plan selection)
+    on_demand = tiers.get("on_demand")
+    if on_demand:
+        on_demand_features = list(on_demand.get("features", []))
+        max_collections = on_demand.get("max_active_collections", 3)
+        if max_collections > 0:
+            on_demand_features.append(f"Up to {max_collections} active collections")
+        plans.append(PlanInfo(
             tier_key="on_demand",
-            display_name="On Demand",
+            display_name=on_demand.get("display_name", "On Demand"),
             price_cents=0,
             price_display="Pay as you go",
-            credit_allocation=on_demand_config.get("credits", 0),
-            features=[
-                "No monthly commitment",
-                "Purchase credits as needed",
-                "Full feature access",
-                f"Up to {on_demand_config.get('max_active_collections', 3)} active collections",
-            ],
+            credit_allocation=on_demand.get("credits", 0),
+            features=on_demand_features,
             is_popular=False,
-        ),
-        PlanInfo(
-            tier_key="standard",
-            display_name="Basic",
-            price_cents=standard_price,
-            price_display=f"${standard_price / 100:.2f}/month",
-            credit_allocation=standard_config.get("credits", 100),
-            features=[
-                f"{standard_config.get('credits', 100)} credits/month",
-                "Priority support",
-                "Full feature access",
-                f"Up to {standard_config.get('max_active_collections', 5)} active collections",
-            ],
-            is_popular=True,
-        ),
-        PlanInfo(
-            tier_key="premium",
-            display_name="Premium",
-            price_cents=premium_price,
-            price_display=f"${premium_price / 100:.2f}/month",
-            credit_allocation=premium_config.get("credits", 500),
-            features=[
-                f"{premium_config.get('credits', 500)} credits/month",
-                "Priority support",
-                "Full feature access",
-                "Unlimited active collections",
-                "Advanced analytics",
-            ],
-            is_popular=False,
-        ),
-    ]
+        ))
+
+    # Dynamic tiers with has_plan: true
+    for tier_name, tier_config in tiers.items():
+        if not tier_config.get("has_plan"):
+            continue
+
+        price_key = f"price_{tier_name}_monthly_cents"
+        price_cents = json.loads(
+            platform_settings.get(price_key, str(tier_config.get("price_cents", 0)))
+        )
+
+        # Build features: start with credits/month, then config features, then collections
+        features = [f"{tier_config.get('credits', 0)} credits/month"]
+        features.extend(tier_config.get("features", []))
+        max_collections = tier_config.get("max_active_collections", -1)
+        if max_collections > 0:
+            features.append(f"Up to {max_collections} active collections")
+
+        plans.append(PlanInfo(
+            tier_key=tier_name,
+            display_name=tier_config.get("display_name", tier_name.title()),
+            price_cents=price_cents,
+            price_display=f"${price_cents / 100:.2f}/month" if price_cents > 0 else "Pay as you go",
+            credit_allocation=tier_config.get("credits", 0),
+            features=features,
+            is_popular=(tier_name == "standard"),
+        ))
 
     return PlanPricingResponse(plans=plans, current_tier=current_user.user_class)
 
@@ -222,13 +217,13 @@ async def preview_plan_change(
         logger.exception("Failed to preview plan change: %s", str(e))
         proration_amount = 0
 
-    display_names = {"standard": "Basic", "premium": "Premium"}
     class_config = get_class_config(plan_tier) or {}
+    display_name = class_config.get("display_name", plan_tier.title())
 
     return PlanChangePreviewResponse(
         proration_amount_cents=proration_amount,
         proration_display=f"${proration_amount / 100:.2f}",
-        new_plan_display=display_names.get(plan_tier, plan_tier),
+        new_plan_display=display_name,
         new_credit_allocation=class_config.get("credits", 0),
         change_type="upgrade" if is_upgrade else "downgrade",
         effective_at="immediately" if is_upgrade else (

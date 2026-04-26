@@ -341,7 +341,21 @@ allowed_libraries:
 
 Changes to YAML configs require server restart.
 
-## Current Status (v0.9)
+## Current Status (v0.10)
+
+### v0.10 Streamline Pricing Configuration (April 2026)
+- **Config-driven pricing** — subscription pricing fields (`has_plan`, `price_cents`) added to `user_classes.yaml`; default credit packages defined in config; zero manual setup on first deployment
+- **Startup sync** — on first startup, subscription pricing seeded to `platform_settings` and credit packages seeded to `credit_packages` table from config defaults; Stripe Products/Prices auto-created for any tier or package missing a Stripe Price ID; existing admin-customized Stripe Price IDs never overwritten (fills gaps only)
+- **Admin Pricing Management UI** — admin can view subscription pricing with config defaults vs current DB values side by side, edit pricing (auto-creates new Stripe Prices), and reset to config defaults; same view/edit/reset for credit packages; password confirmation on destructive actions
+- **Dynamic plan rendering** — Plan Selection page renders subscription plans from tiers with `has_plan: true` instead of hardcoded entries; Billing page displays credit packages from database
+- **Upgrading from v0.9:**
+
+```bash
+git pull origin master
+cd backend && uv sync
+uv run alembic upgrade head
+cd ../admin-frontend && npm install
+```
 
 ### v0.9 Monetization (April 2026)
 - **Stripe billing integration** — full payment infrastructure with Checkout Sessions for subscriptions and credit top-ups, webhook-driven subscription lifecycle (checkout.session.completed, invoice.paid, invoice.payment_failed, customer.subscription.updated/deleted)
@@ -504,4 +518,4 @@ MIT License - See LICENSE file for details.
 
 - **GitHub**: [github.com/marwazihs/nuelo-spectra](https://github.com/marwazihs/nuelo-spectra)
 - **Issues**: Report bugs or request features via GitHub Issues
-- **Version**: v0.9 (April 2026)
+- **Version**: v0.10 (April 2026)

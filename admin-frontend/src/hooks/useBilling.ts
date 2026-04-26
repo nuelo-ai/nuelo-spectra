@@ -42,6 +42,26 @@ export interface BillingSettings {
   price_premium_monthly_cents: number;
   stripe_price_standard_monthly: string;
   stripe_price_premium_monthly: string;
+  config_defaults: Record<string, number>;
+  stripe_readiness: { ready: boolean; missing: string[] };
+}
+
+export interface AdminCreditPackageConfigDefaults {
+  name: string;
+  price_cents: number;
+  credit_amount: number;
+  display_order: number;
+}
+
+export interface AdminCreditPackage {
+  id: string;
+  name: string;
+  price_cents: number;
+  credit_amount: number;
+  display_order: number;
+  is_active: boolean;
+  stripe_price_id: string;
+  config_defaults: AdminCreditPackageConfigDefaults | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -156,7 +176,7 @@ export function useRefundPayment() {
 export function useUpdateBillingSettings() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: Partial<BillingSettings>) => {
+    mutationFn: async (payload: Partial<BillingSettings> & { password?: string }) => {
       const res = await adminApiClient.put(
         "/api/admin/billing-settings",
         payload
@@ -168,6 +188,90 @@ export function useUpdateBillingSettings() {
       return res.json();
     },
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "billing-settings"] });
+    },
+  });
+}
+
+export function useAdminCreditPackages() {
+  return useQuery<AdminCreditPackage[]>({
+    queryKey: ["admin", "credit-packages"],
+    queryFn: async () => {
+      const res = await adminApiClient.get("/api/admin/credit-packages");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || "Failed to fetch credit packages");
+      }
+      return res.json();
+    },
+  });
+}
+
+export function useUpdateCreditPackage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      packageId: string;
+      name: string;
+      price_cents: number;
+      credit_amount: number;
+      display_order: number;
+      is_active: boolean;
+      password: string;
+    }) => {
+      const { packageId, ...body } = payload;
+      const res = await adminApiClient.put(
+        `/api/admin/credit-packages/${packageId}`,
+        body
+      );
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(errBody.detail || "Operation failed");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "credit-packages"] });
+    },
+  });
+}
+
+export function useResetSubscriptionPricing() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { password: string }) => {
+      const res = await adminApiClient.post(
+        "/api/admin/billing-settings/reset",
+        payload
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || "Operation failed");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "billing-settings"] });
+    },
+  });
+}
+
+export function useResetCreditPackages() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { password: string }) => {
+      const res = await adminApiClient.post(
+        "/api/admin/credit-packages/reset",
+        payload
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || "Operation failed");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "credit-packages"] });
       qc.invalidateQueries({ queryKey: ["admin", "billing-settings"] });
     },
   });
