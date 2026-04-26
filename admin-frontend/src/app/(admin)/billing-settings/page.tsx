@@ -157,14 +157,21 @@ export default function BillingSettingsPage() {
 
   function handleSavePackage() {
     if (!editingPackage) return;
+    const priceCents = displayToCents(editPkgPrice);
+    const creditAmount = parseInt(editCredits, 10);
+    const displayOrder = parseInt(editDisplayOrder, 10);
+    if (priceCents <= 0 || isNaN(creditAmount) || isNaN(displayOrder)) {
+      toast.error("Please fill in all fields with valid numbers");
+      return;
+    }
     setConfirmAction({
       type: "edit-package",
       payload: {
         packageId: editingPackage.id,
         name: editName,
-        priceCents: displayToCents(editPkgPrice),
-        creditAmount: parseInt(editCredits, 10),
-        displayOrder: parseInt(editDisplayOrder, 10),
+        priceCents,
+        creditAmount,
+        displayOrder,
         isActive: editActive,
       },
     });
