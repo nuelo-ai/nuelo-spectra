@@ -33,7 +33,7 @@ See MILESTONES.md for completed phase details.
 ### v0.10 Streamline Pricing Configuration
 
 - [x] **Phase 60: Config-Driven Pricing & Startup Sync** - Add pricing fields to config, seed defaults to DB, auto-create Stripe Products/Prices on startup (completed 2026-04-23)
-- [ ] **Phase 61: Admin Pricing Management UI** - Admin can view, edit, and reset subscription pricing and credit packages
+- [x] **Phase 61: Admin Pricing Management UI** - Admin can view, edit, and reset subscription pricing and credit packages (completed 2026-04-26)
 
 ## Phase Details
 
@@ -66,13 +66,13 @@ Plans:
   6. Admin can reset credit packages to config-file defaults with a single action
   7. Plan Selection page dynamically renders subscription plans from tiers with `has_plan: true` instead of hardcoded entries
   8. Billing page displays credit packages and pricing as defined in the database
-**Plans:** 4 plans
+**Plans:** 4/4 plans complete
 **UI hint**: yes
 Plans:
-- [ ] 61-01-PLAN.md -- Backend API: schemas, billing-settings extensions, credit-packages router
-- [ ] 61-02-PLAN.md -- Config features + dynamic /subscriptions/plans endpoint
-- [ ] 61-03-PLAN.md -- Admin frontend: PasswordConfirmDialog + extended hooks
-- [ ] 61-04-PLAN.md -- Admin frontend: billing-settings page refactor with view/edit/reset modals
+- [x] 61-01-PLAN.md -- Backend API: schemas, billing-settings extensions, credit-packages router
+- [x] 61-02-PLAN.md -- Config features + dynamic /subscriptions/plans endpoint
+- [x] 61-03-PLAN.md -- Admin frontend: PasswordConfirmDialog + extended hooks
+- [x] 61-04-PLAN.md -- Admin frontend: billing-settings page refactor with view/edit/reset modals
 
 ## Progress
 
@@ -82,4 +82,4 @@ Phases execute in numeric order: 60 → 61
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 60. Config-Driven Pricing & Startup Sync | 3/3 | Complete    | 2026-04-23 |
-| 61. Admin Pricing Management UI | 0/4 | Not started | - |
+| 61. Admin Pricing Management UI | 4/4 | Complete    | 2026-04-26 |
