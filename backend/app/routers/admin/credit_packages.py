@@ -146,7 +146,7 @@ async def update_credit_package(
                 )
                 raise HTTPException(
                     status_code=500,
-                    detail=f"Failed to create Stripe price: {str(e)}",
+                    detail="Failed to create Stripe price. Please try again or contact support.",
                 )
         else:
             # No Stripe in this mode -- clear stripe_price_id so it's re-synced later

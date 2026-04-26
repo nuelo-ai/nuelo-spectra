@@ -188,7 +188,7 @@ async def update_billing_settings(
                 )
                 raise HTTPException(
                     status_code=500,
-                    detail=f"Failed to create Stripe price for {tier} plan: {str(e)}",
+                    detail=f"Failed to create Stripe price for {tier} plan. Please try again or contact support.",
                 )
 
     # Upsert all non-None fields
