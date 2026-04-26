@@ -46,7 +46,9 @@ function centsToDisplay(cents: number): string {
 }
 
 function displayToCents(display: string): number {
-  return Math.round(parseFloat(display) * 100);
+  const parsed = parseFloat(display);
+  if (isNaN(parsed) || parsed < 0) return 0;
+  return Math.round(parsed * 100);
 }
 
 // ---------------------------------------------------------------------------
@@ -143,6 +145,10 @@ export default function BillingSettingsPage() {
   function handleSaveSubscription() {
     if (!editingTier) return;
     const priceCents = displayToCents(editPrice);
+    if (priceCents <= 0) {
+      toast.error("Please enter a valid price greater than zero");
+      return;
+    }
     setConfirmAction({
       type: "edit-subscription",
       payload: { tier: editingTier, priceCents },
