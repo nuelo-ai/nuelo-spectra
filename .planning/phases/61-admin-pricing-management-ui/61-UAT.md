@@ -3,7 +3,7 @@ status: complete
 phase: 61-admin-pricing-management-ui
 source: [61-01-SUMMARY.md, 61-02-SUMMARY.md, 61-03-SUMMARY.md, 61-04-SUMMARY.md]
 started: 2026-04-25T10:00:00Z
-updated: 2026-04-26T12:00:00Z
+updated: 2026-04-26T16:00:00Z
 ---
 
 ## Current Test
@@ -45,17 +45,31 @@ note: Verified dynamic config by changing "Priority support" to "Priority suppor
 ### 8. Price Override Flow (Admin → Consumer)
 expected: Admin changes Standard price via Edit modal + password confirmation. After save: Admin UI shows new price with hint "Default: $29.00". Consumer GET /subscriptions/plans reflects new price. YAML remains unchanged at 2900.
 result: pass
-note: User confirmed Stripe dashboard also shows the correct new price. Action item — show Stripe Price ID on subscription tiers (like credit packages already do).
+note: User confirmed Stripe dashboard also shows the correct new price.
 
 ### 9. Reset to Defaults
 expected: Admin clicks Reset to Defaults on subscriptions + password confirmation. Standard reverts to $29.00, Premium reverts to $79.00 (matching YAML price_cents). Config default hints match current values. Consumer API reflects the reset prices.
 result: pass
 note: Fixed password field retention bug — PasswordConfirmDialog now clears password on every open via useEffect. Fix in PasswordConfirmDialog.tsx.
 
+### 10. Stripe Price ID on Subscription Tiers
+expected: Admin /billing-settings page shows Stripe Price ID below each subscription tier's default hint, in the same font-mono muted style as credit packages (e.g. "Stripe: price_1T..."). Both Standard and Premium tiers display their respective Stripe Price IDs.
+result: pass
+
+### 11. End-to-End Subscription Checkout
+expected: As a regular user, go to plan selection. Choose a subscription plan (Standard or Premium). Complete Stripe Checkout. After payment succeeds: user's tier updates, subscription is active in DB, Stripe dashboard shows the subscription, and the user sees their new plan on the settings page.
+result: pass
+note: Required Stripe CLI webhook forwarding (`stripe listen --forward-to localhost:3000/api/webhooks/stripe`). Verified subscribe (Standard), upgrade (→ Premium), DB records, credit allocation reset, and confirmation email received.
+
+### 12. End-to-End Credit Package Purchase
+expected: As a regular user, go to credit purchase page. Select a credit package. Complete Stripe Checkout. After payment succeeds: credits are added to the user's purchased balance, transaction is recorded in DB, Stripe dashboard shows the payment, and the user sees their updated credit balance.
+result: pass
+note: Tested 2 purchases (Starter 50cr + Value 150cr). Purchased balance correctly accumulated to 200.0, subscription balance unchanged at 500.0, total 700.0. Confirmation emails received. Fixed sidebar showing subscription balance instead of total balance (UserSection.tsx).
+
 ## Summary
 
-total: 9
-passed: 9
+total: 12
+passed: 12
 issues: 0
 pending: 0
 skipped: 0
@@ -65,9 +79,7 @@ blocked: 0
 
 1. **Stripe readiness checklist not visible when ready** — Added green checkmark state to Monetization card showing configured items (billing-settings/page.tsx)
 2. **Password field retaining value between modal opens** — Added useEffect to clear password on dialog open (PasswordConfirmDialog.tsx)
-
-## Action Items
-
-1. Show Stripe Price ID on subscription tier rows in Admin UI (matching credit packages pattern)
+3. **Stripe Price ID on subscription tiers** — Added Stripe Price ID display to subscription tier rows matching credit packages pattern (billing-settings/page.tsx)
+4. **Sidebar showing wrong credit balance** — Changed sidebar UserSection to display total_balance instead of subscription-only balance (UserSection.tsx)
 
 ## Gaps

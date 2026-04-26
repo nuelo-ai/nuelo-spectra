@@ -461,6 +461,8 @@ export default function BillingSettingsPage() {
                         data.config_defaults?.[
                           `price_${tierKey}_monthly_cents`
                         ] ?? null;
+                      const stripePriceId =
+                        data[`stripe_price_${tierKey}_monthly` as keyof BillingSettings] as string;
 
                       return (
                         <div key={tierKey}>
@@ -478,6 +480,9 @@ export default function BillingSettingsPage() {
                                   Default: ${centsToDisplay(defaultCents)}
                                 </p>
                               )}
+                              <p className="text-xs font-mono text-muted-foreground">
+                                Stripe: {stripePriceId || "Not set"}
+                              </p>
                             </div>
                             <Button
                               variant="outline"
