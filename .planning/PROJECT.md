@@ -13,7 +13,7 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 **GitHub:** https://github.com/marwazihs/nuelo-spectra.git (private)
 **Remote:** origin
 **Branch:** master
-**Latest Tag:** v0.9 (2026-04-14)
+**Latest Tag:** v0.10 (2026-04-26)
 
 ## Previous Milestones
 
@@ -29,8 +29,8 @@ Accurate data analysis. The AI must generate correct, safe Python code that prod
 
 ## Current State
 
-**Shipped:** v0.9 Monetization (2026-04-14)
-**Status:** v0.10 in progress — Phase 60 complete (Config-Driven Pricing & Startup Sync)
+**Shipped:** v0.10 Streamline Pricing Configuration (2026-04-26)
+**Status:** v0.10 complete — Config-driven pricing & admin pricing management UI shipped
 **Codebase:** ~96,000 LOC (Python app + TypeScript/TSX across public frontend + admin frontend + pulse-mockup + Docker/shell infra)
 **Tech Stack:** FastAPI + PostgreSQL + LangGraph + E2B + Tavily + Plotly + APScheduler (backend), Next.js 16 + React 19 + TanStack + Zustand + shadcn/ui + next-themes + Plotly.js + Recharts + Sonner (frontend + admin frontend), Docker + Dokploy + Tailscale (deployment), Next.js + shadcn/ui + Recharts (pulse-mockup)
 
