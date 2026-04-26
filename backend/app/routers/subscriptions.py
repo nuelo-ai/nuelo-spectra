@@ -217,13 +217,13 @@ async def preview_plan_change(
         logger.exception("Failed to preview plan change: %s", str(e))
         proration_amount = 0
 
-    display_names = {"standard": "Basic", "premium": "Premium"}
     class_config = get_class_config(plan_tier) or {}
+    display_name = class_config.get("display_name", plan_tier.title())
 
     return PlanChangePreviewResponse(
         proration_amount_cents=proration_amount,
         proration_display=f"${proration_amount / 100:.2f}",
-        new_plan_display=display_names.get(plan_tier, plan_tier),
+        new_plan_display=display_name,
         new_credit_allocation=class_config.get("credits", 0),
         change_type="upgrade" if is_upgrade else "downgrade",
         effective_at="immediately" if is_upgrade else (
