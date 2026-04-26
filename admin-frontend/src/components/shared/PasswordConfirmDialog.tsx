@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +37,12 @@ export function PasswordConfirmDialog({
   error,
 }: PasswordConfirmDialogProps) {
   const [password, setPassword] = useState("");
+
+  useEffect(() => {
+    if (open) {
+      setPassword("");
+    }
+  }, [open]);
 
   function handleOpenChange(v: boolean) {
     if (!v) {

@@ -375,30 +375,59 @@ export default function BillingSettingsPage() {
                   subscribers keep their plan and can still cancel. New users
                   receive Free Trial as default.
                 </p>
-                {!data.stripe_readiness.ready && (
-                  <div className="space-y-2 pt-2">
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
-                      <span className="text-sm font-medium">
-                        Stripe configuration incomplete:
-                      </span>
-                    </div>
-                    <div className="space-y-1 pl-6">
-                      {data.stripe_readiness.missing.map((item) => (
-                        <div
-                          key={item}
-                          className="flex items-center gap-2"
-                        >
-                          <X className="h-3 w-3 text-destructive shrink-0" />
-                          <span className="text-sm">{item}</span>
+                <div className="space-y-2 pt-2">
+                  {data.stripe_readiness.ready ? (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-green-500 shrink-0" />
+                        <span className="text-sm font-medium text-green-500">
+                          Stripe configuration complete
+                        </span>
+                      </div>
+                      <div className="space-y-1 pl-6">
+                        {data.stripe_price_standard_monthly && (
+                          <div className="flex items-center gap-2">
+                            <Check className="h-3 w-3 text-green-500 shrink-0" />
+                            <span className="text-sm text-muted-foreground">Standard subscription price</span>
+                          </div>
+                        )}
+                        {data.stripe_price_premium_monthly && (
+                          <div className="flex items-center gap-2">
+                            <Check className="h-3 w-3 text-green-500 shrink-0" />
+                            <span className="text-sm text-muted-foreground">Premium subscription price</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <Check className="h-3 w-3 text-green-500 shrink-0" />
+                          <span className="text-sm text-muted-foreground">Stripe API key configured</span>
                         </div>
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground pl-6">
-                      Toggle will be enabled when all items are configured.
-                    </p>
-                  </div>
-                )}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+                        <span className="text-sm font-medium">
+                          Stripe configuration incomplete:
+                        </span>
+                      </div>
+                      <div className="space-y-1 pl-6">
+                        {data.stripe_readiness.missing.map((item) => (
+                          <div
+                            key={item}
+                            className="flex items-center gap-2"
+                          >
+                            <X className="h-3 w-3 text-destructive shrink-0" />
+                            <span className="text-sm">{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground pl-6">
+                        Toggle will be enabled when all items are configured.
+                      </p>
+                    </>
+                  )}
+                </div>
               </>
             )}
           </CardContent>
