@@ -27,7 +27,7 @@ user_classes:
     has_plan: true
     price_cents: 2900
     features:
-      - "Priority support"
+      - "Priority support via email"
       - "Full feature access"
   premium:
     display_name: "Premium"
@@ -38,7 +38,7 @@ user_classes:
     has_plan: true
     price_cents: 7900
     features:
-      - "Priority support"
+      - "Priority support via email"
       - "Full feature access"
       - "Unlimited active collections"
       - "Advanced analytics"
