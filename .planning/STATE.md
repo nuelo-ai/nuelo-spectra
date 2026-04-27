@@ -71,5 +71,13 @@ None.
 ## Session Continuity
 
 Last session: 2026-04-26
-Stopped at: v0.10.1 hotfix shipped — amended default pricing settings
+Stopped at: v0.10.1 shipped + DEPLOYMENT.md updated on develop (not yet merged to master)
 Resume with: /gsd-new-milestone for v0.11
+
+### What was done this session:
+- Pricing analysis: identified subscription vs On Demand incentive inversion, modeled new pricing
+- Fixed reset_policy: Standard/Premium changed from `none` to `monthly`
+- Shipped v0.10.1 hotfix: Standard $9/150cr, Premium $29/800cr/10 collections, revised credit packages
+- Created pricing_analysis.md in requirements/brainstorm/ (gitignored) with full analysis and migration plan
+- Set up Dokploy autodeploy via GitHub webhooks
+- Updated DEPLOYMENT.md: fixed env var gaps, added autodeploy section, added billing/Pulse smoke tests (on develop, pending merge)
