@@ -131,26 +131,31 @@ General tab:
 | `FRONTEND_URL` | `https://app.yourdomain.com` |
 | `CORS_ORIGINS` | `["https://app.yourdomain.com"]` |
 | `ADMIN_CORS_ORIGIN` | *(leave empty)* |
-| `APP_VERSION` | `v0.6.0` |
-| `ANTHROPIC_API_KEY` | `sk-ant-...` |
-| `OPENAI_API_KEY` | *(optional)* |
-| `GOOGLE_API_KEY` | *(optional)* |
-| `OLLAMA_BASE_URL` | *(optional)* |
-| `OPENROUTER_API_KEY` | *(optional)* |
-| `E2B_API_KEY` | *(required for code execution sandbox)* |
-| `TAVILY_API_KEY` | *(required for web search)* |
-| `SEARCH_DEPTH` | `basic` |
-| `SMTP_HOST` | *(optional — leave empty for console email logging)* |
+| `APP_VERSION` | *(use latest version from [GitHub releases](https://github.com/nuelo-ai/nuelo-spectra/releases))* |
+| `ANTHROPIC_API_KEY` | `sk-ant-...` *(required — default LLM provider)* |
+| `OPENAI_API_KEY` | *(optional — required if using OpenAI models)* |
+| `GOOGLE_API_KEY` | *(optional — required if using Gemini models)* |
+| `OLLAMA_BASE_URL` | *(optional, default: `http://localhost:11434`)* |
+| `OPENROUTER_API_KEY` | *(optional — required if using OpenRouter models)* |
+| `E2B_API_KEY` | *(required — code execution sandbox for chat and Pulse)* |
+| `TAVILY_API_KEY` | *(required — web search integration)* |
+| `SEARCH_DEPTH` | `basic` *(optional, default: `basic` — or `advanced`)* |
+| `STRIPE_SECRET_KEY` | `sk_live_...` or `sk_test_...` *(required for billing)* |
+| `STRIPE_WEBHOOK_SECRET` | `whsec_...` *(required for Stripe webhook signature verification)* |
+| `SMTP_HOST` | *(recommended — leave empty for console email logging)* |
 | `SMTP_PORT` | `587` |
-| `SMTP_USER` | *(optional)* |
-| `SMTP_PASS` | *(optional)* |
-| `SMTP_FROM_EMAIL` | *(optional)* |
-| `SMTP_FROM_NAME` | *(optional)* |
+| `SMTP_USER` | *(required if SMTP_HOST is set)* |
+| `SMTP_PASS` | *(required if SMTP_HOST is set)* |
+| `SMTP_FROM_EMAIL` | *(optional, default: `noreply@spectra.app`)* |
+| `SMTP_FROM_NAME` | *(optional, default: `Spectra`)* |
+| `PULSE_ORPHAN_TIMEOUT_MINUTES` | *(optional, default: `10` — refund credits for stuck Pulse runs)* |
+| `MAX_FILE_SIZE_MB` | *(optional, default: `50` — max upload size in MB)* |
+| `UVICORN_WORKERS` | *(optional, default: `1` — number of uvicorn worker processes)* |
 | `ENABLE_SCHEDULER` | `true` |
-| `ADMIN_EMAIL` | *(for seed-admin CLI)* |
-| `ADMIN_PASSWORD` | *(for seed-admin CLI)* |
-| `ADMIN_FIRST_NAME` | *(optional, default: "Admin")* |
-| `ADMIN_LAST_NAME` | *(optional, default: "User")* |
+| `ADMIN_EMAIL` | *(required — backend refuses to start without this)* |
+| `ADMIN_PASSWORD` | *(required — backend refuses to start without this)* |
+| `ADMIN_FIRST_NAME` | *(optional, default: `Admin`)* |
+| `ADMIN_LAST_NAME` | *(optional, default: `User`)* |
 
 ### Step 5c — Volume Mount (configure BEFORE deploying)
 
@@ -206,9 +211,19 @@ General tab:
 | `FRONTEND_URL` | *(leave empty)* |
 | `CORS_ORIGINS` | `["http://<TAILSCALE_IP>:3001"]` |
 | `ADMIN_CORS_ORIGIN` | `http://<TAILSCALE_IP>:3001` |
-| `APP_VERSION` | `v0.6.0` |
+| `APP_VERSION` | *(use latest version from [GitHub releases](https://github.com/nuelo-ai/nuelo-spectra/releases))* |
 | `ANTHROPIC_API_KEY` | *Same as public backend* |
-| *(other API keys)* | *Same as public backend* |
+| `OPENAI_API_KEY` | *Same as public backend (if set)* |
+| `GOOGLE_API_KEY` | *Same as public backend (if set)* |
+| `OPENROUTER_API_KEY` | *Same as public backend (if set)* |
+| `E2B_API_KEY` | *Same as public backend* |
+| `TAVILY_API_KEY` | *Same as public backend* |
+| `STRIPE_SECRET_KEY` | *Same as public backend* |
+| `STRIPE_WEBHOOK_SECRET` | *(not needed — webhooks only hit public backend)* |
+| `SMTP_HOST` | *Same as public backend (if set)* |
+| `SMTP_PORT` | *Same as public backend* |
+| `SMTP_USER` | *Same as public backend (if set)* |
+| `SMTP_PASS` | *Same as public backend (if set)* |
 | `ENABLE_SCHEDULER` | `false` |
 | `ADMIN_EMAIL` | *Same as public backend* |
 | `ADMIN_PASSWORD` | *Same as public backend* |
@@ -217,6 +232,7 @@ General tab:
 - `SECRET_KEY` must match the public backend (they share the same database)
 - `ENABLE_SCHEDULER=false` — only one service should run the credit reset scheduler
 - `CORS_ORIGINS` and `ADMIN_CORS_ORIGIN` must use the Tailscale IP
+- `STRIPE_SECRET_KEY` is needed for admin billing operations (force-set tier, refunds)
 
 ### Step 6c — Published Port (Advanced tab)
 
@@ -316,7 +332,7 @@ General tab:
 | `ALGORITHM` | `HS256` | JWT signing algorithm |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | `30` | |
-| `APP_VERSION` | `v0.7` | Returned in `/health` and `/api/v1/health` responses |
+| `APP_VERSION` | *(use latest version from [GitHub releases](https://github.com/nuelo-ai/nuelo-spectra/releases))* | Returned in `/health` and `/api/v1/health` responses |
 | `ANTHROPIC_API_KEY` | *(your key)* | Required for analysis queries |
 | `E2B_API_KEY` | *(your key)* | Required for code execution sandbox |
 | `TAVILY_API_KEY` | *(your key)* | Required for web search in queries |
@@ -446,15 +462,48 @@ Uses `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_FIRST_NAME`, and `ADMIN_LAST_NAME` 
 - [ ] User management page shows user list
 - [ ] Platform settings page loads and saves
 
+### Billing (Stripe)
+- [ ] Plan Selection page loads with live pricing from backend
+- [ ] Stripe Checkout redirects correctly (use Stripe test card `4242 4242 4242 4242`)
+- [ ] Webhook endpoint reachable: `curl -s https://app.yourdomain.com/api/webhooks/stripe` → 400 (no payload, but not 404)
+- [ ] Credit balance updates after subscription activation
+- [ ] Credit top-up purchase completes and credits appear
+
+### Pulse (Anomaly Detection)
+- [ ] Create a collection and upload a CSV file
+- [ ] Run Pulse analysis — signals appear with Plotly charts
+- [ ] Credits deducted after Pulse run (5 credits per run)
+
 ### Isolation Verification (from non-Tailscale network)
 - [ ] `curl --max-time 5 http://<SERVER_PUBLIC_IP>:8001/health` → timeout
 - [ ] `curl --max-time 5 http://<SERVER_PUBLIC_IP>:3001` → timeout
 
 ## Redeployment
 
-To redeploy any service with updated code:
+### Auto-Deploy via GitHub Webhooks (Recommended)
+
+Each Dokploy application has a unique webhook URL. When configured, pushing to `master` triggers automatic redeployment.
+
+**Setup (per service):**
+
+1. In Dokploy: Application → General tab → toggle **Auto Deploy** ON
+2. In Dokploy: Application → Deployments tab → copy the **Webhook URL**
+3. In GitHub: Repository → Settings → Webhooks → Add webhook:
+   - Payload URL: paste the Dokploy webhook URL
+   - Content type: `application/json`
+   - Trigger: **Just the push event**
+
+You need **4-5 separate webhooks** in GitHub — one for each Dokploy application service.
+
+**Verify:** After pushing to `master`, check GitHub → Settings → Webhooks → Recent Deliveries for 200 responses, and Dokploy → Deployments tab for build activity.
+
+### Manual Redeployment
+
+To redeploy any service manually:
 1. Push changes to the `master` branch
 2. In Dokploy UI → click the service → click Deploy
+
+### Notes
 
 The backend runs `alembic upgrade head` on every startup. New migrations are applied; already-applied migrations are skipped automatically.
 
